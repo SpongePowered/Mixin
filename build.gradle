@@ -159,9 +159,9 @@ uploadArchives {
                     url 'http://www.spongepowered.org/'
 
                     scm {
-                        url 'https://github.com/SpongePowered/SpongeAPI'
-                        connection 'scm:git:git://github.com/SpongePowered/SpongeAPI.git'
-                        developerConnection 'scm:git:git@github.com:SpongePowered/SpongeAPI.git'
+                        url 'https://github.com/SpongePowered/Mixin'
+                        connection 'scm:git:git://github.com/SpongePowered/Mixin.git'
+                        developerConnection 'scm:git:git@github.com:SpongePowered/Mixin.git'
                     }
 
                     issueManagement {
