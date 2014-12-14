@@ -87,7 +87,7 @@ license {
     header file("HEADER.txt")
     sourceSets = project.sourceSets
     ignoreFailures false
-    strictCheck false
+    strictCheck true
     mapping {
         java = 'SLASHSTAR_STYLE'
     }
