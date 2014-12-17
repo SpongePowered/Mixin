@@ -195,7 +195,7 @@ public class MixinTransformer extends TreeTransformer {
      */
     protected void verifyClasses(ClassNode targetClass, MixinData mixin) {
         String superName = mixin.getClassNode().superName;
-        if (targetClass.superName == null || superName == null || !targetClass.superName.equals(superName)) {
+        if (targetClass.superName == null || superName == null || !(targetClass.superName.equals(superName) || "java/lang/Object".equals(superName))) {
             throw new InvalidMixinException("Mixin classes must have the same superclass as their target class");
         }
     }
