@@ -1,4 +1,4 @@
-/**
+/*
  * This file is part of Sponge, licensed under the MIT License (MIT).
  *
  * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
@@ -33,8 +33,6 @@ import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Data read from an {@link At} annotation and passed into an InjectionPoint ctor
- * 
- * @author Adam Mummery-Smith
  */
 public class InjectionPointData {
 
@@ -126,5 +124,18 @@ public class InjectionPointData {
     
     public int getOpcode() {
         return this.opcode;
+    }
+    
+    public int getOpcode(int defaultOpcode) {
+        return this.opcode > 0 ? this.opcode : defaultOpcode;
+    }
+    
+    public int getOpcode(int defaultOpcode, int... validOpcodes) {
+        for (int validOpcode : validOpcodes) {
+            if (this.opcode == validOpcode) {
+                return this.opcode;
+            }
+        }
+        return defaultOpcode;
     }
 }

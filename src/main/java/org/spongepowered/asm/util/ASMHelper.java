@@ -490,4 +490,74 @@ public class ASMHelper {
     public static boolean fieldIsStatic(FieldNode field) {
         return (field.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
+    
+    /**
+     * Get the first variable index in the supplied method which is not an argument or "this" reference, this corresponds to the size of the arguments
+     * passed in to the method plus an extra spot for "this" if the method is non-static
+     * 
+     * @param method MethodNode to inspect
+     * @return first available local index which is NOT used by a method argument or "this"
+     */
+    public static int getFirstNonArgLocalIndex(MethodNode method) {
+        return ASMHelper.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), (method.access & Opcodes.ACC_STATIC) == 0);
+    }
+
+    /**
+     * Get the first non-arg variable index based on the supplied arg array and whether to include the "this" reference, this corresponds to the size
+     * of the arguments passed in to the method plus an extra spot for "this" is specified
+     * 
+     * @param args Method arguments
+     * @param includeThis Whether to include a slot for "this" (generally true for all non-static methods)
+     * @return first available local index which is NOT used by a method argument or "this"
+     */
+    public static int getFirstNonArgLocalIndex(Type[] args, boolean includeThis) {
+        return ASMHelper.getArgsSize(args) + (includeThis ? 1 : 0);
+    }
+
+    /**
+     * Get the size of the specified args array in local variable terms (eg. doubles and longs take two spaces)
+     * 
+     * @param args Method argument types as array
+     * @return size of the specified arguments array in terms of stack slots
+     */
+    public static int getArgsSize(Type[] args) {
+        int size = 0;
+
+        for (Type type : args) {
+            size += type.getSize();
+        }
+
+        return size;
+    }
+
+    /**
+     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate for each entry in the args array starting at pos
+     * 
+     * @param args Argument types
+     * @param insns Instruction List to inject into
+     * @param pos Start position
+     */
+    public static void loadArgs(Type[] args, InsnList insns, int pos) {
+        ASMHelper.loadArgs(args, insns, pos, -1);
+    }
+
+    /**
+     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate for each entry in the args array starting at start and ending at end
+     * 
+     * @param args Argument types
+     * @param insns Instruction List to inject into
+     * @param start Start position
+     * @param end End position
+     */
+    public static void loadArgs(Type[] args, InsnList insns, int start, int end) {
+        int pos = start;
+
+        for (Type type : args) {
+            insns.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), pos));
+            pos += type.getSize();
+            if (end >= start && pos >= end) {
+                return;
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * This file is part of Sponge, licensed under the MIT License (MIT).
  *
  * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
+package org.spongepowered.asm.mixin.injection.struct;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -33,15 +33,16 @@ import java.util.List;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
  * Contructs information about an injection from an {@link Inject} annotation and allows the injection to be processed
- * 
- * @author Adam Mummery-Smith
  */
 public class InjectionInfo {
     
@@ -120,8 +121,8 @@ public class InjectionInfo {
         MemberInfo targetMember = MemberInfo.parse(method);
         
         if (targetMember.owner != null) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " specifies a target class '" + targetMember.owner + 
-                    "', which is not supported");
+            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " specifies a target class '" + targetMember.owner
+                    + "', which is not supported");
         }
         
         this.findMethods(targetMember);

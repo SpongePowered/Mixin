@@ -52,7 +52,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -106,8 +106,7 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
-        for (MixinConfig config : this.configs)
-        {
+        for (MixinConfig config : this.configs) {
             if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
                 throw new RuntimeException(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
             }
@@ -156,8 +155,9 @@ public class MixinTransformer extends TreeTransformer {
         if (MixinTransformer.DEBUG_EXPORT) {
             try {
                 FileUtils.writeByteArrayToFile(new File(".mixin.out/" + transformedName.replace('.', '/') + ".class"), bytes);
+            } catch (IOException ex) {
+                // don't care
             }
-            catch (IOException ex) {}
         }
         
         return bytes;
@@ -179,7 +179,6 @@ public class MixinTransformer extends TreeTransformer {
      * @param mixin
      */
     protected void applyMixin(ClassNode targetClass, MixinData mixin) {
-
         try {
             this.verifyClasses(targetClass, mixin);
             this.applyMixinInterfaces(targetClass, mixin);
@@ -200,7 +199,9 @@ public class MixinTransformer extends TreeTransformer {
      */
     protected void verifyClasses(ClassNode targetClass, MixinData mixin) {
         String superName = mixin.getClassNode().superName;
-        if (targetClass.superName == null || superName == null || !(targetClass.superName.equals(superName) || "java/lang/Object".equals(superName))) {
+        if (targetClass.superName == null
+                || superName == null
+                || !(targetClass.superName.equals(superName) || "java/lang/Object".equals(superName))) {
             throw new InvalidMixinException("Mixin classes must have the same superclass as their target class");
         }
     }

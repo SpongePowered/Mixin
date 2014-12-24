@@ -1,4 +1,4 @@
-/**
+/*
  * This file is part of Sponge, licensed under the MIT License (MIT).
  *
  * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
@@ -29,15 +29,33 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Specifies that this mixin method should inject a callback (or callback<b>s</b>) to itself in the target method(s) identified by {@link #method}.
+ */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
     
+    /**
+     * String representation of a {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo} which identifies the target method.
+     */
     public String method();
     
+    /**
+     * Array of {@link At} annotations which describe the {@link InjectionPoint}s in the target method. Allows one or more callbacks to be injected in
+     * the target method
+     */
+    public At[] at();
+    
+    /**
+     * Setting an injected callback to <em>cancellable</em> allows the injected callback to inject optional RETURN opcodes into the target method, the
+     * return behaviour can then be controlled from within the callback by interacting with the supplied
+     * {@link org.spongepowered.asm.mixin.injection.callback.CallbackInfo} object.
+     */
     public boolean cancellable() default false;
     
+    /**
+     * Set to true to allow local variables to be captured from the target method as well as method parameters.
+     */
 //    public boolean captureLocals() default false;
-    
-    public At[] at();
 }

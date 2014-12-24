@@ -1,4 +1,4 @@
-/**
+/*
  * This file is part of Sponge, licensed under the MIT License (MIT).
  *
  * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
@@ -24,20 +24,27 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+
 
 /**
  * <p>Information bundle about a member (method or field) parsed from a String token in another annotation, this is used where target members need to
  * be specified as Strings in order to parse the String representation to something useful.</p>
  * 
  * <p>Some examples: <blockquote><pre>
- *   // references a method called func_1234_a, if there are multiple methods with the same signature, matches the first occurrence
+ *   // references a method or field called func_1234_a, if there are multiple members with the same signature, matches the first occurrence
  *   func_1234_a
  *   
- *   // references a method called func_1234_a, if there are multiple methods with the same signature, matches all occurrences
+ *   // references a method or field called func_1234_a, if there are multiple members with the same signature, matches all occurrences
  *   func_1234_a*
  *   
  *   // references a method called func_1234_a which takes 3 ints and returns a bool
  *   func_1234_a(III)Z
+ *   
+ *   // references a field called field_5678_z which is a String
+ *   field_5678_z:Ljava/lang/String;
  *   
  *   // references a ctor which takes a single String argument 
  *   <init>(Ljava/lang/String;)V
@@ -45,14 +52,15 @@ package org.spongepowered.asm.mixin.injection.struct;
  *   // references a method called func_1234_a in class foo.bar.Baz
  *   Lfoo/bar/Baz;func_1234_a
  *  
+ *   // references a field called field_5678_z in class com.example.Dave
+ *   Lcom/example/Dave;field_5678_z
+ *  
  *   // references a method called func_1234_a in class foo.bar.Baz which takes 3 doubles and returns void
  *   Lfoo/bar/Baz;func_1234_a(DDD)V
  *   
  *   // alternate syntax for the same
  *   foo.bar.Baz.func_1234_a(DDD)V</pre></blockquote>
  * </p>
- *  
- * @author Adam Mummery-Smith
  */
 public class MemberInfo {
     
@@ -108,12 +116,33 @@ public class MemberInfo {
         this.matchAll = matchAll;
     }
     
+    /**
+     * Initialise a MemberInfo using the supplied insn which must be an instance of MethodInsnNode or FieldInsnNode
+     */
+    public MemberInfo(AbstractInsnNode insn) {
+        this.matchAll = false;
+        
+        if (insn instanceof MethodInsnNode) {
+            MethodInsnNode methodNode = (MethodInsnNode) insn;
+            this.owner = methodNode.owner;
+            this.name = methodNode.name;
+            this.desc = methodNode.desc;
+        } else if (insn instanceof FieldInsnNode) {
+            FieldInsnNode fieldNode = (FieldInsnNode) insn;
+            this.owner = fieldNode.owner;
+            this.name = fieldNode.name;
+            this.desc = fieldNode.desc;
+        } else {
+            throw new IllegalArgumentException("insn must be an instance of MethodInsnNode or FieldInsnNode");
+        }
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
-        return String.format("MemberInfo[OWNER=%s,NAME=%s,DESC=%s,ALL=%s]", this.owner, this.name, this.desc, this.matchAll);
+        return String.format("[OWNER=%s,NAME=%s,DESC=%s,ALL=%s]", this.owner, this.name, this.desc, this.matchAll);
     }
 
     /**
@@ -173,15 +202,23 @@ public class MemberInfo {
         }
 
         int parenPos = name.indexOf('(');
+        int colonPos = name.indexOf(':');
         if (parenPos > -1) {
             desc = name.substring(parenPos);
             name = name.substring(0, parenPos);
+        } else if (colonPos > -1) {
+            desc = name.substring(colonPos);
+            name = name.substring(0, colonPos);
         }
         
         boolean matchAll = name.endsWith("*");
-        if (matchAll) name = name.substring(0, name.length() - 1);
+        if (matchAll) {
+            name = name.substring(0, name.length() - 1);
+        }
         
-        if (name.isEmpty()) name = null;
+        if (name.isEmpty()) {
+            name = null;
+        }
         
         return new MemberInfo(name, owner, desc, matchAll);
     }
