@@ -447,6 +447,19 @@ public class ASMHelper {
      *
      * @param annotation Annotation node to query
      * @param key Key to search for
+     * @param defaultValue Value to return if the specified key is not found or is null
+     * @return duck-typed annotation value, null if missing, or inevitable ClassCastException if your duck is actually a rooster 
+     */
+    public static <T> T getAnnotationValue(AnnotationNode annotation, String key, T defaultValue) {
+        T returnValue = ASMHelper.getAnnotationValue(annotation, key);
+        return returnValue != null ? returnValue : defaultValue;
+    }
+    
+    /**
+     * Get the value of an annotation node and do pseudo-duck-typing via Java's crappy generics
+     *
+     * @param annotation Annotation node to query
+     * @param key Key to search for
      * @return duck-typed annotation value, null if missing, or inevitable ClassCastException if your duck is actually a rooster 
      */
     @SuppressWarnings("unchecked")
@@ -468,5 +481,13 @@ public class ASMHelper {
         }
 
         return null;
+    }
+
+    public static boolean methodIsStatic(MethodNode method) {
+        return (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
+    }
+    
+    public static boolean fieldIsStatic(FieldNode field) {
+        return (field.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
 }
