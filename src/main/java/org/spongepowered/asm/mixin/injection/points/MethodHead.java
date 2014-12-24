@@ -1,7 +1,27 @@
-/**
- * This file contributed from LiteLoader. Pending refactor. DO NOT ALTER THIS FILE.
+/*
+ * This file is part of Sponge, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
+ * Copyright (c) contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
-
 package org.spongepowered.asm.mixin.injection.points;
 
 import java.util.Collection;
@@ -11,26 +31,24 @@ import org.objectweb.asm.tree.InsnList;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
-//import com.mumfrey.liteloader.transformers.event.Event;
-//import com.mumfrey.liteloader.transformers.event.InjectionPoint;
-
 /**
- * An injection point which locates the first instruction in a method body
- *  
- * @author Adam Mummery-Smith
+ * <p>This injection point simply returns the first instruction in the target method body, allowing the injection to be placed at the "head" of the
+ * target method. It accepts no parameters and only returns a single insn in all circumstances.</p>
+ * 
+ * <p>Example:<blockquote><pre>
+ *   &#064;At("HEAD")</pre>
+ * </blockquote></p> 
  */
-public class MethodHead extends InjectionPoint
-{
+public class MethodHead extends InjectionPoint {
+
     public static final String CODE = "HEAD";
 
-    public MethodHead(InjectionPointData data)
-	{
-	}
-	
-	@Override
-	public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) //, Event event)
-	{
-		nodes.add(insns.getFirst());
-		return true;
-	}
+    public MethodHead(InjectionPointData data) {
+    }
+
+    @Override
+    public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
+        nodes.add(insns.getFirst());
+        return true;
+    }
 }

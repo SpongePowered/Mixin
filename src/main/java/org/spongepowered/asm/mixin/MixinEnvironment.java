@@ -67,7 +67,6 @@ public class MixinEnvironment {
     
     /**
      * Add a mixin configuration to the blackboard
-     * @return 
      */
     public MixinEnvironment addConfiguration(String config) {
         this.getMixinConfigs().add(config);

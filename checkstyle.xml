@@ -158,5 +158,9 @@
             <property name="tokens"
                       value="BAND, BOR, BSR, BXOR, DIV, EQUAL, GE, GT, LAND, LE, LITERAL_INSTANCEOF, LOR, LT, MINUS, MOD, NOT_EQUAL, PLUS, QUESTION, SL, SR, STAR "/>
         </module>
+        
+        <module name="FileContentsHolder" />
     </module>
+
+    <module name="SuppressionCommentFilter" />
 </module>

@@ -1,3 +1,27 @@
+/*
+ * This file is part of Sponge, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
+ * Copyright (c) contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package org.spongepowered.asm.mixin.injection;
 
 import java.lang.reflect.Constructor;
@@ -24,385 +48,287 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Base class for injection point discovery classes. Each subclass describes a strategy for locating code injection
- * points within a method, with the {@code find} method populating a collection with insn nodes from the method
- * which satisfy its strategy.
+ * <p>Base class for injection point discovery classes. Each subclass describes a strategy for locating code injection points within a method, with
+ * the {@link #find} method populating a collection with insn nodes from the method which satisfy its strategy.</p>
  * 
- * This base class also contains composite strategy factory methods such as {@code and} and {@code or} which allow
- * strategies to be combined using intersection (and) or union (or) relationships to allow multiple strategies to
- * be easily combined.
+ * <p>This base class also contains composite strategy factory methods such as {@link #and} and {@link #or} which allow strategies to be combined
+ * using intersection (and) or union (or) relationships to allow multiple strategies to be easily combined.</p>
  * 
- * You are free to create your own injection point subclasses, but take note that it is allowed for a single
- * InjectionPoint instance to be used for multiple injections and thus implementing classes MUST NOT cache the insn
- * list, event, or nodes instance passed to the {@code find} method, as each call to {@code find} must be considered
- * a separate functional contract and the InjectionPoint's lifespan is not linked to the discovery lifespan, therefore
- * it is important that the InjectionPoint implementation is fully STATELESS.
- * 
- * @author Adam Mummery-Smith
+ * <p>You are free to create your own injection point subclasses, but take note that it <b>is allowed</b> for a single InjectionPoint instance to be
+ * used for multiple injections and thus implementing classes MUST NOT cache the insn list, event, or nodes instance passed to the {@link #find}
+ * method, as each call to {@link #find} must be considered a separate functional contract and the InjectionPoint's lifespan is not linked to the
+ * discovery lifespan, therefore it is important that the InjectionPoint implementation is fully <b>stateless</b>.</p>
  */
-public abstract class InjectionPoint
-{	
-	/**
-	 * Capture locals as well as args
-	 */
-	protected boolean captureLocals;
-	
-	protected boolean logLocals;
+public abstract class InjectionPoint {
 
-	/**
-	 * Find injection points in the supplied insn list
-	 * 
-	 * @param desc Method descriptor, supplied to allow return types and arguments etc. to be determined
-	 * @param insns Insn list to search in, the strategy MUST ONLY add nodes from this list to the {@code nodes} collection
-	 * @param nodes Collection of nodes to populate. Injectors should NOT make any assumptions about the state of this collection and should only call add()
-	 * @param event Event being injected here, supplied to allow alteration of behaviour for specific event configurations (eg. cancellable)
-	 * @return true if one or more injection points were found
-	 */
-	public abstract boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes); //, Event event);
-	
-//	/**
-//	 * Set whether this injection point should capture local variables as well as method arguments
-//	 * 
-//	 * @param captureLocals
-//	 * @return this, for fluent interface
-//	 */
-//	public InjectionPoint setCaptureLocals(boolean captureLocals)
-//	{
-//		this.captureLocals = captureLocals;
-//		return this;
-//	}
-//	
-//	/**
-//	 * Get whether capture locals is enabled
-//	 */
-//	public boolean captureLocals()
-//	{
-//		return this.captureLocals;
-//	}
-//	
-//	/**
-//	 * Since it's virtually impossible to know what locals are available at a given injection point by reading the source, this method causes the
-//	 * injection point to dump the locals to the debug log at injection time.
-//	 * 
-//	 * @param logLocals
-//	 * @return this, for fluent interface
-//	 */
-//	public InjectionPoint setLogLocals(boolean logLocals)
-//	{
-//		this.logLocals = logLocals;
-//		return this;
-//	}
-//	
-//	/**
-//	 * Get whether log locals is enabled 
-//	 */
-//	public boolean logLocals()
-//	{
-//		return this.logLocals;
-//	}
+    /**
+     * Find injection points in the supplied insn list
+     * 
+     * @param desc Method descriptor, supplied to allow return types and arguments etc. to be determined
+     * @param insns Insn list to search in, the strategy MUST ONLY add nodes from this list to the {@code nodes} collection
+     * @param nodes Collection of nodes to populate. Injectors should NOT make any assumptions about the state of this collection and should only call
+     *            the <b>add()</b> method
+     * @return true if one or more injection points were found
+     */
+    public abstract boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes);
 
-	@Override
-	public String toString()
-	{
-		return "InjectionPoint(" + this.getClass().getSimpleName() + ")";
-	}
-
-	/**
-	 * Composite injection point
-	 * 
-	 * @author Adam Mummery-Smith
-	 */
-	static abstract class CompositeInjectionPoint extends InjectionPoint
-	{
-		protected final InjectionPoint[] components;
-		
-		protected CompositeInjectionPoint(InjectionPoint... components)
-		{
-			if (components == null || components.length < 2)
-			{
-				throw new IllegalArgumentException("Must supply two or more component injection points for composite point!");
-			}
-
-			this.components = components;
-			
-			for (InjectionPoint component : this.components)
-			{
-				this.captureLocals |= component.captureLocals;
-				this.logLocals |= component.logLocals;
-			}
-		}
-		
-		@Override
-		public String toString()
-		{
-			return "CompositeInjectionPoint(" + this.getClass().getSimpleName() + ")[" + Joiner.on(',').join(this.components) + "]";
-		}
-	}
-	
-	static final class Intersection extends InjectionPoint.CompositeInjectionPoint
-	{
-		public Intersection(InjectionPoint... points)
-		{
-			super(points);
-		}
-
-		@Override
-		public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) //, Event event)
-		{
-			boolean found = false;
-			
-			@SuppressWarnings("unchecked")
-			ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
-			
-			for (int i = 0; i < this.components.length; i++)
-			{
-				allNodes[i] = new ArrayList<AbstractInsnNode>();
-				this.components[i].find(desc, insns, allNodes[i]); //, event);
-			}
-			
-			ArrayList<AbstractInsnNode> alpha = allNodes[0];
-			for (int nodeIndex = 0; nodeIndex < alpha.size(); nodeIndex++)
-			{
-				AbstractInsnNode node = alpha.get(nodeIndex);
-				boolean in = true;
-				
-				for (int b = 1; b < allNodes.length; b++)
-					if (!allNodes[b].contains(node))
-						break;
-				
-				if (!in) continue;
-				
-				nodes.add(node);
-				found = true;
-			}
-			
-			return found;
-		}
-	}
-	
-	static final class Union extends InjectionPoint.CompositeInjectionPoint
-	{
-		public Union(InjectionPoint... points)
-		{
-			super(points);
-		}
-
-		@Override
-		public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) //, Event event)
-		{
-			LinkedHashSet<AbstractInsnNode> allNodes = new LinkedHashSet<AbstractInsnNode>();
-			
-			for (int i = 0; i < this.components.length; i++)
-			{
-				this.components[i].find(desc, insns, allNodes); //, event);
-			}
-			
-			nodes.addAll(allNodes);
-			
-			return allNodes.size() > 0;
-		}
-	}
-	
-	static final class Shift extends InjectionPoint
-	{
-		private final InjectionPoint input;
-		private final int shift;
-		
-		public Shift(InjectionPoint input, int shift)
-		{
-			if (input == null)
-			{
-				throw new IllegalArgumentException("Must supply an input injection point for SHIFT");
-			}
-
-			this.input = input;
-			this.shift = shift;
-		}
-		
-//		@Override
-//		public InjectionPoint setCaptureLocals(boolean captureLocals)
-//		{
-//			return this.input.setCaptureLocals(captureLocals);
-//		}
-//		
-//		@Override
-//		public boolean captureLocals()
-//		{
-//			return this.input.captureLocals();
-//		}
-//		
-//		@Override
-//		public InjectionPoint setLogLocals(boolean logLocals)
-//		{
-//			return this.input.setLogLocals(logLocals);
-//		}
-//		
-//		@Override
-//		public boolean logLocals()
-//		{
-//			return this.input.logLocals();
-//		}
-		
-		@Override
-		public String toString()
-		{
-			return "InjectionPoint(" + this.getClass().getSimpleName() + ")[" + this.input + "]";
-		}
-
-		@Override
-		public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) //, Event event)
-		{
-			List<AbstractInsnNode> list = (nodes instanceof List) ? (List<AbstractInsnNode>)nodes : new ArrayList<AbstractInsnNode>(nodes); 
-			
-			this.input.find(desc, insns, nodes); //, event);
-			
-			for (int i = 0; i < list.size(); i++)
-			{
-				list.set(i, insns.get(insns.indexOf(list.get(i)) + this.shift));
-			}
-			
-			if (nodes != list)
-			{
-				nodes.clear();
-				nodes.addAll(list);
-			}
-			
-			return nodes.size() > 0;
-		}
-	}
-	
-	/**
-	 * Returns a composite injection point which returns the intersection of nodes from all component
-	 * injection points 
-	 * 
-	 * @param operands
-	 */
-	public static InjectionPoint and(InjectionPoint... operands)
-	{
-		return new InjectionPoint.Intersection(operands);
-	}
-	
-	/**
-	 * Returns a composite injection point which returns the union of nodes from all component
-	 * injection points 
-	 * 
-	 * @param operands
-	 */
-	public static InjectionPoint or(InjectionPoint... operands)
-	{
-		return new InjectionPoint.Union(operands);
-	}
-	
-	/**
-	 * Returns an injection point which returns all insns immediately following insns from the supplied injection point
-	 * 
-	 * @param point
-	 */
-	public static InjectionPoint after(InjectionPoint point)
-	{
-		return new InjectionPoint.Shift(point, 1);
-	}
-	
-	/**
-	 * Returns an injection point which returns all insns immediately prior to insns from the supplied injection point
-	 * 
-	 * @param point
-	 */
-	public static InjectionPoint before(InjectionPoint point)
-	{
-		return new InjectionPoint.Shift(point, -1);
-	}
-	
-	/**
-	 * Returns an injection point which returns all insns offset by the specified "count" from insns from the supplied injection point
-	 * 
-	 * @param point
-	 */
-	public static InjectionPoint shift(InjectionPoint point, int count)
-	{
-		return new InjectionPoint.Shift(point, count);
-	}
-	
-    public static InjectionPoint parse(At at)
-    {
-        return InjectionPoint.parse(at.value(), at.shift(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "InjectionPoint(" + this.getClass().getSimpleName() + ")";
     }
-    
-    public static InjectionPoint parse(AnnotationNode node)
-    {
+
+    /**
+     * Composite injection point
+     */
+    abstract static class CompositeInjectionPoint extends InjectionPoint {
+
+        protected final InjectionPoint[] components;
+
+        protected CompositeInjectionPoint(InjectionPoint... components) {
+            if (components == null || components.length < 2) {
+                throw new IllegalArgumentException("Must supply two or more component injection points for composite point!");
+            }
+
+            this.components = components;
+        }
+
+        /* (non-Javadoc)
+         * @see org.spongepowered.asm.mixin.injection.InjectionPoint#toString()
+         */
+        @Override
+        public String toString() {
+            return "CompositeInjectionPoint(" + this.getClass().getSimpleName() + ")[" + Joiner.on(',').join(this.components) + "]";
+        }
+    }
+
+    /**
+     * Intersection of several injection points, returns common nodes that appear in all children
+     */
+    static final class Intersection extends InjectionPoint.CompositeInjectionPoint {
+
+        public Intersection(InjectionPoint... points) {
+            super(points);
+        }
+
+        @Override
+        public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
+            boolean found = false;
+
+            @SuppressWarnings("unchecked") ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
+
+            for (int i = 0; i < this.components.length; i++) {
+                allNodes[i] = new ArrayList<AbstractInsnNode>();
+                this.components[i].find(desc, insns, allNodes[i]);
+            }
+
+            ArrayList<AbstractInsnNode> alpha = allNodes[0];
+            for (int nodeIndex = 0; nodeIndex < alpha.size(); nodeIndex++) {
+                AbstractInsnNode node = alpha.get(nodeIndex);
+                boolean in = true;
+
+                for (int b = 1; b < allNodes.length; b++) {
+                    if (!allNodes[b].contains(node)) {
+                        break;
+                    }
+                }
+
+                if (!in) {
+                    continue;
+                }
+
+                nodes.add(node);
+                found = true;
+            }
+
+            return found;
+        }
+    }
+
+    /**
+     * Union of several injection points, returns all insns returned from all injections
+     */
+    static final class Union extends InjectionPoint.CompositeInjectionPoint {
+
+        public Union(InjectionPoint... points) {
+            super(points);
+        }
+
+        @Override
+        public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
+            LinkedHashSet<AbstractInsnNode> allNodes = new LinkedHashSet<AbstractInsnNode>();
+
+            for (int i = 0; i < this.components.length; i++) {
+                this.components[i].find(desc, insns, allNodes);
+            }
+
+            nodes.addAll(allNodes);
+
+            return allNodes.size() > 0;
+        }
+    }
+
+    /**
+     * Shift injection point, takes an input injection point and shifts all returned nodes by a fixed amount
+     */
+    static final class Shift extends InjectionPoint {
+
+        private final InjectionPoint input;
+        private final int shift;
+
+        public Shift(InjectionPoint input, int shift) {
+            if (input == null) {
+                throw new IllegalArgumentException("Must supply an input injection point for SHIFT");
+            }
+
+            this.input = input;
+            this.shift = shift;
+        }
+
+        /* (non-Javadoc)
+         * @see org.spongepowered.asm.mixin.injection.InjectionPoint#toString()
+         */
+        @Override
+        public String toString() {
+            return "InjectionPoint(" + this.getClass().getSimpleName() + ")[" + this.input + "]";
+        }
+
+        @Override
+        public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
+            List<AbstractInsnNode> list = (nodes instanceof List) ? (List<AbstractInsnNode>) nodes : new ArrayList<AbstractInsnNode>(nodes);
+
+            this.input.find(desc, insns, nodes);
+
+            for (int i = 0; i < list.size(); i++) {
+                list.set(i, insns.get(insns.indexOf(list.get(i)) + this.shift));
+            }
+
+            if (nodes != list) {
+                nodes.clear();
+                nodes.addAll(list);
+            }
+
+            return nodes.size() > 0;
+        }
+    }
+
+    /**
+     * Returns a composite injection point which returns the intersection of nodes from all component injection points
+     * 
+     * @param operands injection points to perform intersection
+     */
+    public static InjectionPoint and(InjectionPoint... operands) {
+        return new InjectionPoint.Intersection(operands);
+    }
+
+    /**
+     * Returns a composite injection point which returns the union of nodes from all component injection points
+     * 
+     * @param operands injection points to perform union
+     */
+    public static InjectionPoint or(InjectionPoint... operands) {
+        return new InjectionPoint.Union(operands);
+    }
+
+    /**
+     * Returns an injection point which returns all insns immediately following insns from the supplied injection point
+     * 
+     * @param point injection points to perform shift
+     */
+    public static InjectionPoint after(InjectionPoint point) {
+        return new InjectionPoint.Shift(point, 1);
+    }
+
+    /**
+     * Returns an injection point which returns all insns immediately prior to insns from the supplied injection point
+     * 
+     * @param point injection points to perform shift
+     */
+    public static InjectionPoint before(InjectionPoint point) {
+        return new InjectionPoint.Shift(point, -1);
+    }
+
+    /**
+     * Returns an injection point which returns all insns offset by the specified "count" from insns from the supplied injection point
+     * 
+     * @param point injection points to perform shift
+     */
+    public static InjectionPoint shift(InjectionPoint point, int count) {
+        return new InjectionPoint.Shift(point, count);
+    }
+
+    /**
+     * Parse an InjectionPoint from the supplied {@link At} annotation
+     */
+    public static InjectionPoint parse(At at) {
+        return InjectionPoint.parse(at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
+    }
+
+    /**
+     * Parse an InjectionPoint from the supplied {@link At} annotation supplied as an AnnotationNode instance
+     */
+    public static InjectionPoint parse(AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
         At.Shift shift = ASMHelper.<At.Shift>getAnnotationValue(node, "shift", At.Shift.NONE);
+        int by = ASMHelper.<Integer>getAnnotationValue(node, "by", Integer.valueOf(0));
         int ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
         int opcode = ASMHelper.<Integer>getAnnotationValue(node, "opcode", Integer.valueOf(0));
-        
-        if (args == null) args = ImmutableList.<String>of();
-        
-        return InjectionPoint.parse(at, shift, args, target, ordinal, opcode);
-    }
-        
-	public static InjectionPoint parse(String at, At.Shift shift, List<String> args, String target, int ordinal, int opcode)
-	{
-	    InjectionPointData data = new InjectionPointData(args, target, ordinal, opcode);
-	    InjectionPoint pt = null;
 
-	    if (BeforeFieldAccess.CODE.equals(at))
-	    {
-	        pt = new BeforeFieldAccess(data);
-	    }
-	    else if (BeforeInvoke.CODE.equals(at))
-	    {
-	        pt = new BeforeInvoke(data);
-	    }
-	    else if (BeforeNew.CODE.equals(at))
-	    {
-	        pt = new BeforeNew(data);
-	    }
-	    else if (BeforeReturn.CODE.equals(at))
-	    {
-	        pt = new BeforeReturn(data);
-	    }
-	    else if (BeforeStringInvoke.CODE.equals(at))
-	    {
-	        pt = new BeforeStringInvoke(data);
-	    }
-	    else if (JumpInsnPoint.CODE.equals(at))
-	    {
-	        pt = new JumpInsnPoint(data);
-	    }
-	    else if (MethodHead.CODE.equals(at))
-	    {
-	        pt = new MethodHead(data);
-	    }
-	    else if (at.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$"))
-	    {
-	        try
-	        {
-	            @SuppressWarnings("unchecked")
-                Class<? extends InjectionPoint> cls = (Class<? extends InjectionPoint>)Class.forName(at);
-	            Constructor<? extends InjectionPoint> ctor = cls.getDeclaredConstructor(InjectionPointData.class);
-	            ctor.setAccessible(true);
-	            pt = ctor.newInstance(data);
-	        }
-	        catch (Exception ex)
-	        {
-	            ex.printStackTrace();
-	        }
-	    }
-	    
-	    if (pt != null)
-	    {
-	        if (shift == At.Shift.BEFORE)
-	        {
-	            return InjectionPoint.before(pt);
-	        }
-	        else if (shift == At.Shift.AFTER)
-	        {
-	            return InjectionPoint.after(pt);
-	        }
-	    }
-	    
-	    return pt;
+        if (args == null) {
+            args = ImmutableList.<String>of();
+        }
+
+        return InjectionPoint.parse(at, shift, by, args, target, ordinal, opcode);
+    }
+
+    /**
+     * Parse and instantiate an InjectionPoint from the supplied information. Returns null if an InjectionPoint could not be created.
+     */
+    public static InjectionPoint parse(String at, At.Shift shift, int by, List<String> args, String target, int ordinal, int opcode) {
+        InjectionPointData data = new InjectionPointData(args, target, ordinal, opcode);
+        InjectionPoint point = null;
+
+        if (BeforeFieldAccess.CODE.equals(at)) {
+            point = new BeforeFieldAccess(data);
+        } else if (BeforeInvoke.CODE.equals(at)) {
+            point = new BeforeInvoke(data);
+        } else if (BeforeNew.CODE.equals(at)) {
+            point = new BeforeNew(data);
+        } else if (BeforeReturn.CODE.equals(at)) {
+            point = new BeforeReturn(data);
+        } else if (BeforeStringInvoke.CODE.equals(at)) {
+            point = new BeforeStringInvoke(data);
+        } else if (JumpInsnPoint.CODE.equals(at)) {
+            point = new JumpInsnPoint(data);
+        } else if (MethodHead.CODE.equals(at)) {
+            point = new MethodHead(data);
+        } else if (at.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
+            try {
+                @SuppressWarnings("unchecked") Class<? extends InjectionPoint> cls = (Class<? extends InjectionPoint>) Class.forName(at);
+                Constructor<? extends InjectionPoint> ctor = cls.getDeclaredConstructor(InjectionPointData.class);
+                ctor.setAccessible(true);
+                point = ctor.newInstance(data);
+            } catch (Exception ex) {
+                throw new InvalidInjectionException("The specified class " + at + " could not be instanced or is not a valid InjectionPoint", ex);
+            }
+        } else {
+            throw new InvalidInjectionException(at + " is not a valid injection point specifier");
+        }
+
+        if (point != null) {
+            if (shift == At.Shift.BEFORE) {
+                return InjectionPoint.before(point);
+            } else if (shift == At.Shift.AFTER) {
+                return InjectionPoint.after(point);
+            } else if (shift == At.Shift.BY) {
+                return InjectionPoint.shift(point, by);
+            }
+        }
+
+        return point;
     }
 }
