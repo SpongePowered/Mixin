@@ -67,9 +67,11 @@ public class MixinEnvironment {
     
     /**
      * Add a mixin configuration to the blackboard
+     * @return 
      */
-    public void addConfiguration(String config) {
+    public MixinEnvironment addConfiguration(String config) {
         this.getMixinConfigs().add(config);
+        return this;
     }
 
     public Object getActiveTransformer() {

@@ -55,7 +55,7 @@ class MixinInfo implements Comparable<MixinInfo> {
     /**
      * Logger
      */
-    private final transient Logger logger = LogManager.getLogger("sponge");
+    private final transient Logger logger = LogManager.getLogger("mixin");
     
     /**
      * Parent configuration which declares this mixin 

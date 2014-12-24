@@ -32,7 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -41,6 +40,7 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -51,6 +51,8 @@ import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.InjectionInfo;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -59,12 +61,14 @@ import org.spongepowered.asm.util.ASMHelper;
  */
 public class MixinTransformer extends TreeTransformer {
     
+    private static final String CLINIT = "<clinit>";
+
     private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false);
 
     /**
      * Log all the things
      */
-    private final Logger logger = LogManager.getLogger("sponge");
+    private final Logger logger = LogManager.getLogger("mixin");
     
     /**
      * Mixin configuration bundle
@@ -182,6 +186,7 @@ public class MixinTransformer extends TreeTransformer {
             this.applyMixinAttributes(targetClass, mixin);
             this.applyMixinFields(targetClass, mixin);
             this.applyMixinMethods(targetClass, mixin);
+            this.applyInjections(targetClass, mixin);
         } catch (Exception ex) {
             throw new InvalidMixinException("Unexpecteded error whilst applying the mixin class", ex);
         }
@@ -296,7 +301,7 @@ public class MixinTransformer extends TreeTransformer {
                     throw new InvalidMixinException(String.format("Overwrite target %s was not located in the target class", mixinMethod.name));
                 }
                 targetClass.methods.add(mixinMethod);
-            } else if ("<clinit>".equals(mixinMethod.name)) {
+            } else if (MixinTransformer.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended
                 this.appendInsns(targetClass, mixinMethod.name, mixinMethod);
             }
@@ -372,6 +377,28 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
+     * Process {@link Inject} annotations and inject callbacks to annotated methods
+     * 
+     * @param targetClass
+     * @param mixin
+     */
+    private void applyInjections(ClassNode targetClass, MixinData mixin) {
+        for (MethodNode method : targetClass.methods) {
+            AnnotationNode injectAnnotation = ASMHelper.getVisibleAnnotation(method, Inject.class);
+            if (injectAnnotation == null) {
+                continue;
+            }
+            
+            InjectionInfo injectInfo = new InjectionInfo(targetClass, method, injectAnnotation);
+            if (injectInfo.isValid()) {
+                injectInfo.inject();
+            }
+            
+            method.visibleAnnotations.remove(injectAnnotation);
+        }
+    }
+    
+    /**
      * Finds a method in the target class
      * 
      * @param targetClass
@@ -384,7 +411,7 @@ public class MixinTransformer extends TreeTransformer {
                 return target;
             }
         }
-
+        
         return null;
     }
 
