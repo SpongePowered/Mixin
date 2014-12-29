@@ -46,6 +46,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 
@@ -481,6 +482,29 @@ public class ASMHelper {
         }
 
         return null;
+    }
+
+    /**
+     * Get the enum constant referenced by an annotation node
+     *
+     * @param annotationNode Annotation node to query
+     * @param key Key to search for
+     * @param enumClass Class of enum containing the enum constant to search for
+     * @param defaultValue Value to return if the specified key isn't found
+     * @return duck-typed annotation value or defaultValue if missing
+     * @throws NoSuchFieldException
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T getAnnotationEnumConstantValue(AnnotationNode annotationNode, String key, Class<?> enumClass, T defaultValue) {
+        String[] value = ASMHelper.getAnnotationValue(annotationNode, key);
+        try {
+            Field enumField = enumClass.getField(value[1]);
+            if (enumField.isEnumConstant()) {
+                return (T) enumField;
+            }
+        } catch (NoSuchFieldException e) {
+        }
+        return defaultValue;
     }
 
     public static boolean methodIsStatic(MethodNode method) {
