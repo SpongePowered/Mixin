@@ -49,7 +49,7 @@
             <property name="max" value="150"/>
             <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
         </module>
-        <module name="AvoidStarImport"/>
+        <!--  module name="AvoidStarImport"/>-->
         <!-- Check doesn't exist in current release of checkstyle -->
         <!--<module name="OneTopLevelClass"/>-->
         <!--<module name="NoLineWrap"/>-->
@@ -160,6 +160,7 @@
         </module>
         
         <module name="FileContentsHolder" />
+        <module name="RequireThis" />
     </module>
 
     <module name="SuppressionCommentFilter" />

@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
 /**
  * Specifies that this mixin method should inject a callback (or callback<b>s</b>) to itself in the target method(s) identified by {@link #method}.
  */
-@Target({ElementType.METHOD})
+@Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
     

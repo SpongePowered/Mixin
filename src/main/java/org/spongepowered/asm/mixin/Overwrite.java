@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
 /**
  * Used to indicate a Mixin class member which should overwrite a method in the target class
  */
-@Target({ElementType.METHOD})
+@Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Overwrite {
 

@@ -503,6 +503,7 @@ public class ASMHelper {
                 return (T) enumField;
             }
         } catch (NoSuchFieldException e) {
+            // don't care
         }
         return defaultValue;
     }
