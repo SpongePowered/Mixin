@@ -266,14 +266,14 @@ public abstract class InjectionPoint {
         return InjectionPoint.parse(at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
     }
 
-    /**
+    /*
      * Parse an InjectionPoint from the supplied {@link At} annotation supplied as an AnnotationNode instance
      */
     public static InjectionPoint parse(AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
-        At.Shift shift = ASMHelper.<At.Shift>getAnnotationEnumConstantValue(node, "shift", At.Shift.class, At.Shift.NONE);
+        At.Shift shift = At.Shift.valueOf(ASMHelper.getAnnotationEnumName(node, "shift", At.Shift.NONE.name()));
         int by = ASMHelper.<Integer>getAnnotationValue(node, "by", Integer.valueOf(0));
         int ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
         int opcode = ASMHelper.<Integer>getAnnotationValue(node, "opcode", Integer.valueOf(0));
