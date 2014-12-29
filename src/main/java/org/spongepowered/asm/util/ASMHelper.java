@@ -46,7 +46,6 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 
@@ -485,7 +484,7 @@ public class ASMHelper {
     }
 
     /**
-     * Get the enum constant referenced by an annotation node
+     * Get the value of an annotation node as the specified enum, returns defaultValue if the annotation value is not set
      *
      * @param annotationNode Annotation node to query
      * @param key Key to search for
@@ -494,18 +493,15 @@ public class ASMHelper {
      * @return duck-typed annotation value or defaultValue if missing
      * @throws NoSuchFieldException
      */
-    @SuppressWarnings("unchecked")
-    public static <T> T getAnnotationEnumConstantValue(AnnotationNode annotationNode, String key, Class<?> enumClass, T defaultValue) {
-        String[] value = ASMHelper.getAnnotationValue(annotationNode, key);
-        try {
-            Field enumField = enumClass.getField(value[1]);
-            if (enumField.isEnumConstant()) {
-                return (T) enumField;
-            }
-        } catch (NoSuchFieldException e) {
-            // don't care
+    public static <T extends Enum<T>> T getAnnotationValue(AnnotationNode annotationNode, String key, Class<T> enumClass, T defaultValue) {
+        String[] value = ASMHelper.<String[]>getAnnotationValue(annotationNode, key);
+        if (value == null) {
+            return defaultValue;
         }
-        return defaultValue;
+        if (!enumClass.getName().equals(Type.getType(value[0]).getClassName())) {
+            throw new IllegalArgumentException("The supplied enum class does not match the stored enum value");
+        }
+        return Enum.valueOf(enumClass, value[1]);
     }
 
     public static boolean methodIsStatic(MethodNode method) {

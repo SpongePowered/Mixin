@@ -273,7 +273,7 @@ public abstract class InjectionPoint {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
-        At.Shift shift = ASMHelper.<At.Shift>getAnnotationEnumConstantValue(node, "shift", At.Shift.class, At.Shift.NONE);
+        At.Shift shift = ASMHelper.<At.Shift>getAnnotationValue(node, "shift", At.Shift.class, At.Shift.NONE);
         int by = ASMHelper.<Integer>getAnnotationValue(node, "by", Integer.valueOf(0));
         int ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
         int opcode = ASMHelper.<Integer>getAnnotationValue(node, "opcode", Integer.valueOf(0));
