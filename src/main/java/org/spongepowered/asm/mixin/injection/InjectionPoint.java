@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
 import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.transformer.MixinData;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
@@ -262,14 +263,14 @@ public abstract class InjectionPoint {
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation
      */
-    public static InjectionPoint parse(At at) {
-        return InjectionPoint.parse(at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
+    public static InjectionPoint parse(MixinData mixin, At at) {
+        return InjectionPoint.parse(mixin, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
     }
 
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation supplied as an AnnotationNode instance
      */
-    public static InjectionPoint parse(AnnotationNode node) {
+    public static InjectionPoint parse(MixinData mixin, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
@@ -282,14 +283,14 @@ public abstract class InjectionPoint {
             args = ImmutableList.<String>of();
         }
 
-        return InjectionPoint.parse(at, shift, by, args, target, ordinal, opcode);
+        return InjectionPoint.parse(mixin, at, shift, by, args, target, ordinal, opcode);
     }
 
     /**
      * Parse and instantiate an InjectionPoint from the supplied information. Returns null if an InjectionPoint could not be created.
      */
-    public static InjectionPoint parse(String at, At.Shift shift, int by, List<String> args, String target, int ordinal, int opcode) {
-        InjectionPointData data = new InjectionPointData(args, target, ordinal, opcode);
+    public static InjectionPoint parse(MixinData mixin, String at, At.Shift shift, int by, List<String> args, String target, int ordinal, int opcode) {
+        InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
         InjectionPoint point = null;
 
         if (BeforeFieldAccess.CODE.equals(at)) {

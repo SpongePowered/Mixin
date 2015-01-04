@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.transformer.MixinData;
 
 
 /**
@@ -40,6 +41,11 @@ public class InjectionPointData {
      * K/V arguments parsed from the "args" node in the {@link At} annotation 
      */
     private final Map<String, String> args = new HashMap<String, String>();
+    
+    /**
+     * Mixin 
+     */
+    private final MixinData mixin;
     
     /**
      * Target 
@@ -56,7 +62,8 @@ public class InjectionPointData {
      */
     private final int opcode;
 
-    public InjectionPointData(List<String> args, String target,  int ordinal, int opcode) {
+    public InjectionPointData(MixinData mixin, List<String> args, String target,  int ordinal, int opcode) {
+        this.mixin = mixin;
         this.target = target;
         this.ordinal = Math.max(-1, ordinal);
         this.opcode = opcode;
@@ -95,7 +102,7 @@ public class InjectionPointData {
     }
 
     public MemberInfo get(String key) {
-        return MemberInfo.parse(this.get(key, ""));
+        return MemberInfo.parse(this.get(key, ""), this.mixin);
     }
     
     private int parseInt(String string, int defaultValue) {
@@ -115,7 +122,7 @@ public class InjectionPointData {
     }
     
     public MemberInfo getTarget() {
-        return MemberInfo.parse(this.target);
+        return MemberInfo.parse(this.target, this.mixin);
     }
     
     public int getOrdinal() {

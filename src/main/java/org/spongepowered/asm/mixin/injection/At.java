@@ -81,7 +81,8 @@ public @interface At {
     public String[] args() default { };
     
     /**
-     * Target member used by INVOKE, INVOKE_STRING and FIELD
+     * Target member used by INVOKE, INVOKE_STRING and FIELD. This <b>must be specified as a fully-qualified member path</b> including the class name
+     * and signature. Failing to fully-qualify the target member will result in an error at obfuscation time. 
      */
     public String target() default "";
     

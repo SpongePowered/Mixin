@@ -1,0 +1,2 @@
+org.spongepowered.tools.obfuscation.TargetObfuscationProcessor
+org.spongepowered.tools.obfuscation.InjectionObfuscationProcessor

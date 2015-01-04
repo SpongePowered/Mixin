@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
@@ -62,6 +64,17 @@ class MixinConfig {
     @SerializedName("setSourceFile")
     private boolean setSourceFile = false;
     
+    /**
+     * True to set the sourceFile property when applying mixins
+     */
+    @SerializedName("referenceMap")
+    private String refMapperConfig;
+    
+    /**
+     * Reference mapper for injectors
+     */
+    private transient ReferenceMapper refMapper;
+
     /**
      * Keep track of initialisation state 
      */
@@ -98,6 +111,12 @@ class MixinConfig {
                 ex.printStackTrace();
             }
         }
+        
+        if (this.refMapperConfig == null) {
+            this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
+        }
+        
+        this.refMapper = ReferenceMapper.read(this.refMapperConfig);
     }
     
     /**
@@ -119,6 +138,13 @@ class MixinConfig {
      */
     public boolean shouldSetSourceFile() {
         return this.setSourceFile;
+    }
+    
+    /**
+     * Get the reference remapper for injectors
+     */
+    public ReferenceMapper getReferenceMapper() {
+        return this.refMapper;
     }
     
     /**

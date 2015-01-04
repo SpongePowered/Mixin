@@ -39,7 +39,9 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
+import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -91,6 +93,31 @@ public class MixinData {
     public ClassNode getClassNode() {
         return this.classNode;
     }
+    
+    /**
+     * Get the mixin class name
+     */
+    public String getClassName() {
+        return this.info.getClassName();
+    }
+    
+    /**
+     * Get the internal mixin class name
+     */
+    public String getClassRef() {
+        return this.info.getClassRef();
+    }
+
+    /**
+     * Get the target class reference
+     */
+    public String getTargetClassRef() {
+        List<String> targetClasses = this.info.getTargetClasses();
+        if (targetClasses.size() != 1) {
+            throw new InvalidMixinException("Multiple targets found for " + this.getClassName() + " but exactly one is required");
+        }
+        return targetClasses.get(0);
+    }
 
     /**
      * Get all interfaces for this mixin
@@ -104,6 +131,13 @@ public class MixinData {
      */
     public boolean shouldSetSourceFile() {
         return this.info.getParent().shouldSetSourceFile();
+    }
+    
+    /**
+     * Get the reference mapper for this mixin
+     */
+    public ReferenceMapper getReferenceMapper() {
+        return this.info.getParent().getReferenceMapper();
     }
 
     /**

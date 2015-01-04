@@ -24,9 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import net.minecraftforge.srg2source.rangeapplier.MethodData;
+
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.transformer.MixinData;
 
 
 /**
@@ -137,12 +140,69 @@ public class MemberInfo {
         }
     }
     
+    /**
+     * Initialise a MemberInfo using the supplied MethodData object
+     */
+    public MemberInfo(MethodData methodData) {
+        int slashPos = methodData.name.lastIndexOf('/');
+        this.owner = methodData.name.substring(0, slashPos);
+        this.name = methodData.name.substring(slashPos + 1);
+        this.desc = methodData.sig;
+        this.matchAll = false;
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString() {
-        return String.format("[OWNER=%s,NAME=%s,DESC=%s,ALL=%s]", this.owner, this.name, this.desc, this.matchAll);
+        String owner = this.owner != null ? "L" + this.owner + ";" : "";
+        String name = this.name != null ? this.name : "";
+        String qualifier = this.matchAll ? "*" : "";
+        String desc = this.desc != null ? this.desc : "";
+        String separator = desc.startsWith("(") ? "" : (this.desc != null ? ":" : "");
+        return owner + name + qualifier + separator + desc;
+    }
+    
+    /**
+     * Return this MemberInfo as an SRG mapping
+     */
+    public String toSrg() {
+        if (!this.isFullyQualified()) {
+            throw new RuntimeException("Cannot convert unqalified reference to SRG mapping");
+        }
+        
+        if (this.desc.startsWith("(")) {
+            return this.owner + "/" + this.name + " " + this.desc;
+        }
+        
+        return this.owner + "/" + this.name;
+    }
+    
+    public MethodData asMethodData() {
+        if (!this.isFullyQualified()) {
+            throw new RuntimeException("Cannot convert unqalified reference to MethodData");
+        }
+        
+        if (this.isField()) {
+            throw new RuntimeException("Cannot convert a non-method reference to MethodData");
+        }
+        
+        return new MethodData(this.owner + "/" + this.name, this.desc);
+    }
+    
+    /**
+     * Get whether this reference is fully qualified
+     */
+    public boolean isFullyQualified() {
+        return this.owner != null && this.name != null && this.desc != null;
+    }
+    
+    /**
+     * Get whether this MemberInfo is definitely a field, the output of this method is undefined if {@link #isFullyQualified} returns false
+     */
+    public boolean isField() {
+        return this.desc != null && !this.desc.startsWith("(");
     }
 
     /**
@@ -188,8 +248,35 @@ public class MemberInfo {
      * Parse a MemberInfo from a string
      */
     public static MemberInfo parse(String name) {
+        return MemberInfo.parse(name, null, null);
+    }
+    
+    /**
+     * Parse a MemberInfo from a string
+     */
+    public static MemberInfo parse(String name, MixinData mixin) {
+        return MemberInfo.parse(name, mixin.getReferenceMapper(), mixin.getClassRef());
+    }
+    
+    /**
+     * Parse a MemberInfo from a string
+     */
+    public static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
         String desc = null;
         String owner = null;
+        
+        String n = name;
+        if (refMapper != null) {
+            name = refMapper.remap(mixinClass, name);
+        }
+        
+        System.err.println("==============================================================================");
+        System.err.println("==============================================================================");
+        System.err.println("==============================================================================");
+        System.err.println("Remapped [" + n + "] to [" + name + "] for " + mixinClass);
+        System.err.println("==============================================================================");
+        System.err.println("==============================================================================");
+        System.err.println("==============================================================================");
         
         int lastDotPos = name.lastIndexOf('.');
         int semiColonPos = name.indexOf(';');
@@ -207,7 +294,7 @@ public class MemberInfo {
             desc = name.substring(parenPos);
             name = name.substring(0, parenPos);
         } else if (colonPos > -1) {
-            desc = name.substring(colonPos);
+            desc = name.substring(colonPos + 1);
             name = name.substring(0, colonPos);
         }
         
@@ -221,5 +308,16 @@ public class MemberInfo {
         }
         
         return new MemberInfo(name, owner, desc, matchAll);
+    }
+
+    public static MemberInfo fromSrgField(String srgName, String desc) {
+        int slashPos = srgName.lastIndexOf('/');
+        String owner = srgName.substring(0, slashPos);
+        String name = srgName.substring(slashPos + 1);
+        return new MemberInfo(name, owner, desc, false);
+    }
+    
+    public static MemberInfo fromSrgMethod(MethodData methodData) {
+        return new MemberInfo(methodData);
     }
 }

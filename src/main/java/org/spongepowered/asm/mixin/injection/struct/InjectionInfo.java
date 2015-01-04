@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
+import org.spongepowered.asm.mixin.transformer.MixinData;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -55,7 +56,7 @@ public class InjectionInfo {
      * Annotated method
      */
     private final MethodNode method;
-    
+
     /**
      * Annotated method is static 
      */
@@ -93,17 +94,17 @@ public class InjectionInfo {
      * @param method Method
      * @param injectAnnotation Annotation to parse
      */
-    public InjectionInfo(ClassNode classNode, MethodNode method, AnnotationNode injectAnnotation) {
+    public InjectionInfo(ClassNode classNode, MethodNode method, MixinData mixin, AnnotationNode injectAnnotation) {
         this.classNode = classNode;
         this.method = method;
         this.isStatic = ASMHelper.methodIsStatic(method);
-        this.parse(injectAnnotation);
+        this.parse(mixin, injectAnnotation);
     }
 
     /**
      * Parse the info from the supplied annotation
      */
-    private void parse(AnnotationNode injectAnnotation) {
+    private void parse(MixinData mixin, AnnotationNode injectAnnotation) {
         if (injectAnnotation == null) {
             return;
         }
@@ -118,9 +119,9 @@ public class InjectionInfo {
             throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " is missing 'at' value(s)");
         }
         
-        MemberInfo targetMember = MemberInfo.parse(method);
+        MemberInfo targetMember = MemberInfo.parse(method, mixin);
         
-        if (targetMember.owner != null) {
+        if (targetMember.owner != null && targetMember.owner.equals(mixin.getTargetClassRef())) {
             throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " specifies a target class '" + targetMember.owner
                     + "', which is not supported");
         }
@@ -128,14 +129,14 @@ public class InjectionInfo {
         this.findMethods(targetMember);
         
         if (this.targets.size() == 0) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " could not find specified method '" + method + "'");
+            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
         }
         
         this.cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
         this.captureLocals = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "captureLocals", false);
         
         for (AnnotationNode at : ats) {
-            InjectionPoint injectionPoint = InjectionPoint.parse(at);
+            InjectionPoint injectionPoint = InjectionPoint.parse(mixin, at);
             if (injectionPoint != null) {
                 this.injectionPoints.add(injectionPoint);
             }
