@@ -265,18 +265,9 @@ public class MemberInfo {
         String desc = null;
         String owner = null;
         
-        String n = name;
         if (refMapper != null) {
             name = refMapper.remap(mixinClass, name);
         }
-        
-        System.err.println("==============================================================================");
-        System.err.println("==============================================================================");
-        System.err.println("==============================================================================");
-        System.err.println("Remapped [" + n + "] to [" + name + "] for " + mixinClass);
-        System.err.println("==============================================================================");
-        System.err.println("==============================================================================");
-        System.err.println("==============================================================================");
         
         int lastDotPos = name.lastIndexOf('.');
         int semiColonPos = name.indexOf(';');
