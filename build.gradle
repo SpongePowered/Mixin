@@ -45,6 +45,16 @@ targetCompatibility = '1.6'
 repositories {
     mavenCentral()
     maven {
+        // for srg2source
+        name = "forge"
+        url = "http://files.minecraftforge.net/maven"
+    }
+    maven {
+        // because Srg2Source needs an eclipse dependency.
+        name = "eclipse"
+        url = "https://repo.eclipse.org/content/groups/eclipse/"
+    }
+    maven {
         name = 'minecraft'
         url = 'https://libraries.minecraft.net/'
     }
@@ -52,6 +62,14 @@ repositories {
 
 configurations {
     deployerJars // maven stuff
+}
+
+
+// Include annotation processor sourceSet
+sourceSets {
+    ap {
+        compileClasspath += main.output
+    }
 }
 
 // Project dependencies
@@ -68,6 +86,10 @@ dependencies {
     
     // maven
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
+
+    // for annotation processor
+    compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
+    apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 }
 
 // Filter, process, and include resources
@@ -104,23 +126,30 @@ checkstyle {
 }
 
 // Source compiler configuration
-configure([compileJava, compileTestJava]) {
+tasks.withType(JavaCompile) {
     options.compilerArgs += ['-Xlint:all', '-Xlint:-path']
     options.deprecation = true
     options.encoding = 'utf8'
 }
 
-// JAR manifest configuration
-jar.manifest.mainAttributes(
+jar {
+    // Include annotation processor
+    from sourceSets.ap.output
+    
+    // JAR manifest configuration
+    manifest.mainAttributes(
         "Built-By": System.properties['user.name'],
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
         "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
         "Implementation-Vendor": url)
+}
 
 task sourceJar(type: Jar) {
 	from sourceSets.main.java
 	from sourceSets.main.resources
+	from sourceSets.ap.java
+	from sourceSets.ap.resources
 	classifier = "sources"
 }
 

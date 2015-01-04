@@ -390,7 +390,7 @@ public class MixinTransformer extends TreeTransformer {
                 continue;
             }
             
-            InjectionInfo injectInfo = new InjectionInfo(targetClass, method, injectAnnotation);
+            InjectionInfo injectInfo = new InjectionInfo(targetClass, method, mixin, injectAnnotation);
             if (injectInfo.isValid()) {
                 injectInfo.inject();
             }
