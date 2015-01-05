@@ -65,4 +65,12 @@ public @interface Shadow {
      */
     public String prefix() default "shadow$";
 
+    /**
+     * By default, the annotation processor will attempt to locate an obfuscation mapping for all {@link Shadow} methods since it is anticipated that
+     * in general the target of a {@link Shadow} annotation will be an obfuscated field or method in the target class. However since it is possible
+     * to also apply mixins to non-obfuscated targets (or non-obfuscated methods in obfuscated targets, such as methods added by Forge) it may be
+     * desirable to suppress the compiler warning which would otherwise be generated. Setting this value to <em>false</em> will cause the annotation
+     * processor to skip this annotation when attempting to build the obfuscation table for the mixin.
+     */
+    public boolean remap() default true;
 }

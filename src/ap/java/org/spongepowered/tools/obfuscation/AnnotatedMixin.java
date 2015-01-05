@@ -142,6 +142,11 @@ class AnnotatedMixin {
     private final String classRef;
     
     /**
+     * True if we will actually process remappings for this mixin
+     */
+    private final boolean remap;
+    
+    /**
      * Stored (ordered) field mappings
      */
     private final Set<String> fieldMappings = new LinkedHashSet<String>();
@@ -152,13 +157,16 @@ class AnnotatedMixin {
     private final Set<String> methodMappings = new LinkedHashSet<String>();
     
     public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type) {
+        AnnotationMirror annotation = MirrorUtils.getAnnotation(type, Mixin.class);
+        
         this.mixins = mixins;
         this.mixin = type;
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
+        this.remap = AnnotatedMixins.getRemapValue(annotation);
         
         String targetRef = null;
         TypeElement targetType = null;
-        List<AnnotationValue> targetList = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(type, Mixin.class);
+        List<AnnotationValue> targetList = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(annotation);
         for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(targetList)) {
             Element element = ((DeclaredType)target).asElement();
             String targetName = ((TypeElement)element).getQualifiedName().toString();
@@ -185,6 +193,13 @@ class AnnotatedMixin {
      */
     public List<String> getTargets() {
         return this.targets;
+    }
+    
+    /**
+     * Get whether to remap annotations in this mixin
+     */
+    public boolean remap() {
+        return this.remap;
     }
     
     /**

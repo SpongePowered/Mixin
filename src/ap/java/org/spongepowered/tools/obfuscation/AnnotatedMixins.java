@@ -245,7 +245,10 @@ class AnnotatedMixins {
                     "Found @Shadow annotation on a non-mixin field " + field + " in " + mixinType);
             return;
         }
-        mixinClass.registerShadow(field, shadow);
+        
+        if (this.shouldRemap(mixinClass, shadow)) {
+            mixinClass.registerShadow(field, shadow);
+        }
     }
 
     /**
@@ -262,7 +265,10 @@ class AnnotatedMixins {
                     "Found @Shadow annotation on a non-mixin method " + method + " in " + mixinType);
             return;
         }
-        mixinClass.registerShadow(method, shadow);
+
+        if (this.shouldRemap(mixinClass, shadow)) {
+            mixinClass.registerShadow(method, shadow);
+        }
     }
 
     /**
@@ -279,12 +285,26 @@ class AnnotatedMixins {
                     "Found @Inject annotation on a non-mixin method " + method + " in " + mixinType);
             return;
         }
-        mixinClass.registerInjector(method, inject);
-        
-        List<AnnotationMirror> annotationValue = MirrorUtils.<List<AnnotationMirror>>getAnnotationValue(inject, "at");
-        for (AnnotationMirror at : annotationValue) {
-            mixinClass.registerInjectionPoint(at);
+
+        if (this.shouldRemap(mixinClass, inject)) {
+            mixinClass.registerInjector(method, inject);
+            
+            List<AnnotationMirror> annotationValue = MirrorUtils.<List<AnnotationMirror>>getAnnotationValue(inject, "at");
+            for (AnnotationMirror at : annotationValue) {
+                mixinClass.registerInjectionPoint(at);
+            }
         }
+    }
+
+    private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationMirror annotation) {
+        return mixinClass.remap() && AnnotatedMixins.getRemapValue(annotation);
+    }
+
+    /**
+     * Check whether we should remap the annotated member or skip it
+     */
+    public static boolean getRemapValue(AnnotationMirror annotation) {
+        return MirrorUtils.<Boolean>getAnnotationValue(annotation, "remap", Boolean.TRUE).booleanValue();
     }
 
     /**

@@ -118,7 +118,8 @@ public abstract class InjectionPoint {
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
             boolean found = false;
 
-            @SuppressWarnings("unchecked") ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
+            @SuppressWarnings({ "unchecked", "rawtypes" })
+            ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
 
             for (int i = 0; i < this.components.length; i++) {
                 allNodes[i] = new ArrayList<AbstractInsnNode>();
