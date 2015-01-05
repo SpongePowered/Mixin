@@ -491,7 +491,6 @@ public class ASMHelper {
      * @param enumClass Class of enum containing the enum constant to search for
      * @param defaultValue Value to return if the specified key isn't found
      * @return duck-typed annotation value or defaultValue if missing
-     * @throws NoSuchFieldException
      */
     public static <T extends Enum<T>> T getAnnotationValue(AnnotationNode annotationNode, String key, Class<T> enumClass, T defaultValue) {
         String[] value = ASMHelper.<String[]>getAnnotationValue(annotationNode, key);

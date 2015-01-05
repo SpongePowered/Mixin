@@ -36,7 +36,8 @@ import org.spongepowered.asm.mixin.transformer.MixinData;
  * <p>Information bundle about a member (method or field) parsed from a String token in another annotation, this is used where target members need to
  * be specified as Strings in order to parse the String representation to something useful.</p>
  * 
- * <p>Some examples: <blockquote><pre>
+ * <p>Some examples:</p>
+ * <blockquote><pre>
  *   // references a method or field called func_1234_a, if there are multiple members with the same signature, matches the first occurrence
  *   func_1234_a
  *   
@@ -50,7 +51,7 @@ import org.spongepowered.asm.mixin.transformer.MixinData;
  *   field_5678_z:Ljava/lang/String;
  *   
  *   // references a ctor which takes a single String argument 
- *   <init>(Ljava/lang/String;)V
+ *   &lt;init&gt;(Ljava/lang/String;)V
  *   
  *   // references a method called func_1234_a in class foo.bar.Baz
  *   Lfoo/bar/Baz;func_1234_a
@@ -62,8 +63,8 @@ import org.spongepowered.asm.mixin.transformer.MixinData;
  *   Lfoo/bar/Baz;func_1234_a(DDD)V
  *   
  *   // alternate syntax for the same
- *   foo.bar.Baz.func_1234_a(DDD)V</pre></blockquote>
- * </p>
+ *   foo.bar.Baz.func_1234_a(DDD)V</pre>
+ * </blockquote>
  */
 public class MemberInfo {
     

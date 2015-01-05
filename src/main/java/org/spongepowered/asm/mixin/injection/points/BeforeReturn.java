@@ -48,13 +48,14 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  *      (ordinals are zero-indexed). The default value is <b>-1</b> which supresses ordinal matching</dd>
  * </dl>
  * 
- * <p>Example:<blockquote><pre>
+ * <p>Example:</p>
+ * <blockquote><pre>
  *   &#064;At(value = "RETURN")</pre>
  * </blockquote>
- * Note that if <em>value</em> is the only parameter specified, it can be omitted: 
+ * <p>Note that if <em>value</em> is the only parameter specified, it can be omitted:</p> 
  * <blockquote><pre>
  *   &#064;At("RETURN")</pre>
- * </blockquote></p> 
+ * </blockquote>
  */
 public class BeforeReturn extends InjectionPoint {
 

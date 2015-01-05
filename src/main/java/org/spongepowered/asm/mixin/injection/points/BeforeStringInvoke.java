@@ -55,10 +55,11 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  *   <dd>The value of the LDC node to look for prior to the method invocation</dd>
  * </dl>
  * 
- * <p>Example:<blockquote><pre>
+ * <p>Example:</p>
+ * <blockquote><pre>
  *   &#064;At(value = "INVOKE_STRING", target="startSection(Ljava/lang/String;)V", args = { "ldc=root" })</pre>
  * </blockquote>
- * Notice the use of the <em>named argument</em> "ldc" which specifies the value of the target LDC node.</p> 
+ * <p>Notice the use of the <em>named argument</em> "ldc" which specifies the value of the target LDC node.</p> 
  * 
  * <p>Note that like all standard injection points, this class matches the insn itself, putting the injection point immediately <em>before</em> the
  * access in question. Use the {@link org.spongepowered.asm.mixin.injection.At#shift shift} specifier to adjust the matched opcode as necessary.</p>

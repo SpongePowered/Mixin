@@ -56,7 +56,7 @@ public @interface Shadow {
      * </pre></blockquote>
      *
      * <p>All of these declarations are semantically equivalent, however the third and fourth are the most expressive in terms of making their
-     * intentions clear, and thus specifying prefix is recommended, since it aids readability and maintainability.<p>
+     * intentions clear, and thus specifying prefix is recommended, since it aids readability and maintainability.</p>
      *
      * <p>Note that specifying a <em>prefix</em> does not <b>enforce</b> use of the prefix, the behaviour of <em>prefix</em> is such that the prefix
      * will be stripped from the start of the method name <em>as long as the method name actually starts with the prefix</em>! This has important

@@ -82,7 +82,9 @@ public @interface At {
     
     /**
      * Target member used by INVOKE, INVOKE_STRING and FIELD. This <b>must be specified as a fully-qualified member path</b> including the class name
-     * and signature. Failing to fully-qualify the target member will result in an error at obfuscation time. 
+     * and signature. Failing to fully-qualify the target member will result in an error at obfuscation time.
+     * 
+     * @return target reference for supported InjectionPoint types
      */
     public String target() default "";
     
@@ -90,7 +92,9 @@ public @interface At {
      * Ordinal offset. Many InjectionPoints will return every opcode matching their criteria, specifying <em>ordinal</em> allows a particular opcode
      * to be identified from the returned list. The default value of -1 does not alter the behaviour and returns all matching opcodes. Specifying a
      * value of 0 or higher returns <em>only</em> the requested opcode (if one exists: for example specifying an ordinal of 4 when only 2 opcodes are
-     * matched by the InjectionPoint is not going to work particularly well!) 
+     * matched by the InjectionPoint is not going to work particularly well!)
+     * 
+     * @return ordinal value for supported InjectionPoint types
      */
     public int ordinal() default -1;
     

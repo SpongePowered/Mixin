@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
 /**
  * <p>This injection point searches for GETFIELD and PUTFIELD (and static equivalent) opcodes matching its arguments and returns a list of insns
- * immediately prior to matching instructions. It accepts the following parameters from {@link org.spongepowered.asm.mixin.injection.At At}:<p>
+ * immediately prior to matching instructions. It accepts the following parameters from {@link org.spongepowered.asm.mixin.injection.At At}:</p>
  * 
  * <dl>
  *   <dt>target</dt>
@@ -43,9 +43,10 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  *      specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The default value is <b>-1</b> which supresses ordinal matching</dd>
  * </dl>
  * 
- * <p>Example:<blockquote><pre>
+ * <p>Example:</p>
+ * <blockquote><pre>
  *   &#064;At(value = "FIELD", target="field_5678_z:I", opcode = Opcodes.GETFIELD)</pre>
- * </blockquote></p> 
+ * </blockquote>
  * 
  * <p>Note that like all standard injection points, this class matches the insn itself, putting the injection point immediately <em>before</em> the
  * access in question. Use the {@link org.spongepowered.asm.mixin.injection.At#shift shift} specifier to adjust the matched opcode as necessary.</p>

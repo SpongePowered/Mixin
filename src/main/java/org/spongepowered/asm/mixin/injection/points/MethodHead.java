@@ -35,9 +35,10 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  * <p>This injection point simply returns the first instruction in the target method body, allowing the injection to be placed at the "head" of the
  * target method. It accepts no parameters and only returns a single insn in all circumstances.</p>
  * 
- * <p>Example:<blockquote><pre>
+ * <p>Example:</p>
+ * <blockquote><pre>
  *   &#064;At("HEAD")</pre>
- * </blockquote></p> 
+ * </blockquote> 
  */
 public class MethodHead extends InjectionPoint {
 
