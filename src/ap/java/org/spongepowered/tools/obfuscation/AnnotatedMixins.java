@@ -82,14 +82,19 @@ class AnnotatedMixins {
     private final File reobfSrgFile;
     
     /**
-     * SRG container for mcp->srg mappings
-     */
-    private final SrgContainer srgs = new SrgContainer();
-    
-    /**
      * Reference mapper for reference mapping 
      */
     private final ReferenceMapper refMapper = new ReferenceMapper();
+    
+    /**
+     * SRG container for mcp->srg mappings
+     */
+    private SrgContainer srgs;
+    
+    /**
+     * True once we've tried to initialise the srgs, initially false so that we can do srg init lazily
+     */
+    private boolean initDone;
     
     /**
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
@@ -105,13 +110,26 @@ class AnnotatedMixins {
         
         this.processingEnv = processingEnv;
         this.reobfSrgFile = new File(reobfSrgFileName);
-        
-        try {
-            this.srgs.readSrg(this.reobfSrgFile);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            processingEnv.getMessager().printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
+    }
+    
+    /**
+     * Lazy initialisation for srgs, so that we only initialise the srgs if they're actually required.
+     */
+    private boolean initSrgs() {
+        if (!this.initDone) {
+            this.initDone = true;
+            
+            try {
+                this.processingEnv.getMessager().printMessage(Kind.NOTE, "Loading SRGs from " + this.reobfSrgFile.getAbsolutePath());
+                this.srgs = new SrgContainer().readSrg(this.reobfSrgFile);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                this.processingEnv.getMessager().printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
+                this.srgs = null;
+            }
         }
+        
+        return this.srgs != null;
     }
 
     /**
@@ -318,20 +336,20 @@ class AnnotatedMixins {
      * Get an obfuscation mapping for a method
      */
     public MethodData getObfMethod(MethodData method) {
-        if (this.srgs == null) {
-            return null;
+        if (this.initSrgs()) {
+            return this.srgs.methodMap.get(method);
         }
-        return this.srgs.methodMap.get(method);
+        return null;
     }
 
     /**
      * Get an obfuscation mapping for a field
      */
     public String getObfField(String field) {
-        if (this.srgs == null) {
-            return null;
+        if (this.initSrgs()) {
+            return this.srgs.fieldMap.get(field);
         }
-        return this.srgs.fieldMap.get(field);
+        return null;
     }
 
     /**
