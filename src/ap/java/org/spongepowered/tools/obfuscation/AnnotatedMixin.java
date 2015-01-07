@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -39,6 +41,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
@@ -249,7 +252,19 @@ class AnnotatedMixin {
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + mcpName, mcpSignature));
         
         if (obfMethod == null) {
-            this.mixins.printMessage(Kind.ERROR, "No obfuscation mapping for @Overwrite method " + mcpName + " in " + this.mixin);
+            Kind error = Kind.ERROR;
+            
+            try {
+                // Try to access isStatic from com.sun.tools.javac.code.Symbol
+                Method md = method.getClass().getMethod("isStatic");
+                if (((Boolean)md.invoke(method)).booleanValue()) {
+                    error = Kind.WARNING;
+                }
+            } catch (Exception ex) {
+                // well, we tried
+            }
+            
+            this.mixins.printMessage(error, "No obfuscation mapping for @Overwrite method " + mcpName + " in " + this.mixin);
             return;
         }
         

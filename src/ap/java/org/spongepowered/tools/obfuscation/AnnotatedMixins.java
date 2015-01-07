@@ -246,7 +246,10 @@ class AnnotatedMixins {
                     "Found @Overwrite annotation on a non-mixin method " + method + " in " + mixinType);
             return;
         }
-        mixinClass.registerOverwrite(method);
+        
+        if (mixinClass.remap()) {
+            mixinClass.registerOverwrite(method);
+        }
     }
 
     /**
