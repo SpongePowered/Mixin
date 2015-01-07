@@ -61,6 +61,7 @@ import org.spongepowered.asm.util.ASMHelper;
  */
 public class MixinTransformer extends TreeTransformer {
     
+    private static final String INIT = "<init>";
     private static final String CLINIT = "<clinit>";
 
     private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false);
@@ -180,7 +181,6 @@ public class MixinTransformer extends TreeTransformer {
      */
     protected void applyMixin(ClassNode targetClass, MixinData mixin) {
         try {
-            this.verifyClasses(targetClass, mixin);
             this.applyMixinInterfaces(targetClass, mixin);
             this.applyMixinAttributes(targetClass, mixin);
             this.applyMixinFields(targetClass, mixin);
@@ -188,21 +188,6 @@ public class MixinTransformer extends TreeTransformer {
             this.applyInjections(targetClass, mixin);
         } catch (Exception ex) {
             throw new InvalidMixinException("Unexpecteded error whilst applying the mixin class", ex);
-        }
-    }
-
-    /**
-     * Perform pre-flight checks on the mixin and target classes
-     * 
-     * @param targetClass
-     * @param mixin
-     */
-    protected void verifyClasses(ClassNode targetClass, MixinData mixin) {
-        String superName = mixin.getClassNode().superName;
-        if (targetClass.superName == null
-                || superName == null
-                || !(targetClass.superName.equals(superName) || "java/lang/Object".equals(superName))) {
-            throw new InvalidMixinException("Mixin classes must have the same superclass as their target class");
         }
     }
 
@@ -274,7 +259,7 @@ public class MixinTransformer extends TreeTransformer {
     private void applyMixinMethods(ClassNode targetClass, MixinData mixin) {
         for (MethodNode mixinMethod : mixin.getClassNode().methods) {
             // Reparent all mixin methods into the target class
-            this.transformMethod(mixinMethod, mixin.getClassNode().name, targetClass.name);
+            this.transformMethod(mixin, targetClass, mixinMethod);
 
             boolean isShadow = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class) != null;
             boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
@@ -311,14 +296,17 @@ public class MixinTransformer extends TreeTransformer {
 
     /**
      * Handles "re-parenting" the method supplied, changes all references to the mixin class to refer to the target class (for field accesses and
-     * method invokations) and also renames fields accesses to their obfuscated versions
+     * method invokations) and also handles fixing up the targets of INVOKESPECIAL opcodes for mixins with detached targets.
      * 
+     * @param mixin
+     * @param target
      * @param method
-     * @param fromClass
-     * @param toClass
      * @return
      */
-    private void transformMethod(MethodNode method, String fromClass, String toClass) {
+    private void transformMethod(MixinData mixin, ClassNode target, MethodNode method) {
+        String fromClass = mixin.getClassRef();
+        boolean detached = !mixin.getClassNode().superName.equals(target.superName);
+        
         Iterator<AbstractInsnNode> iter = method.instructions.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
@@ -326,15 +314,36 @@ public class MixinTransformer extends TreeTransformer {
             if (insn instanceof MethodInsnNode) {
                 MethodInsnNode methodInsn = (MethodInsnNode) insn;
                 if (methodInsn.owner.equals(fromClass)) {
-                    methodInsn.owner = toClass;
+                    methodInsn.owner = target.name;
+                } else if (detached && methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                    this.updateStaticBindings(mixin, target, method, methodInsn);
                 }
-            }
-            if (insn instanceof FieldInsnNode) {
+            } else if (insn instanceof FieldInsnNode) {
                 FieldInsnNode fieldInsn = (FieldInsnNode) insn;
                 if (fieldInsn.owner.equals(fromClass)) {
-                    fieldInsn.owner = toClass;
+                    fieldInsn.owner = target.name;
                 }
             }
+        }
+    }
+
+    /**
+     * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy which contains the specified method.
+     * 
+     * @param mixin
+     * @param target
+     * @param method
+     * @param insn
+     */
+    private void updateStaticBindings(MixinData mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
+        if (INIT.equals(method.name) || insn.owner.equals(target.name) || target.name.startsWith("<")) {
+            return;
+        }
+        
+        ClassInfo targetClass = ClassInfo.forName(target.name);
+        String newOwner = targetClass.findMethodInHierarchy(insn.name, insn.desc, false);
+        if (newOwner != null) {
+            insn.owner = newOwner;
         }
     }
 
