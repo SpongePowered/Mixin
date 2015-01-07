@@ -29,12 +29,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -45,7 +41,7 @@ import org.spongepowered.asm.util.ASMHelper;
 /**
  * Runtime information bundle about a mixin
  */
-class MixinInfo implements Comparable<MixinInfo> {
+class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     
     /**
      * Global order of mixin infos, used to determine ordering between mixins with equivalent priority
@@ -73,9 +69,9 @@ class MixinInfo implements Comparable<MixinInfo> {
     private final String className;
 
     /**
-     * Name of the mixin class, internal notation
+     * Mixin ClassInfo
      */
-    private final transient String classRef;
+    private final transient ClassInfo classInfo;
     
     /**
      * Mixin priority, read from the {@link Mixin} annotation on the mixin class
@@ -85,8 +81,13 @@ class MixinInfo implements Comparable<MixinInfo> {
     /**
      * Mixin targets, read from the {@link Mixin} annotation on the mixin class
      */
-    private final List<String> targetClasses; 
-
+    private final List<String> targetClasses;
+    
+    /**
+     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets 
+     */
+    private final boolean detachedSuper;
+    
     /**
      * Intrinsic order (for sorting mixins with identical priority)
      */
@@ -108,14 +109,15 @@ class MixinInfo implements Comparable<MixinInfo> {
         this.parent = parent;
         this.name = mixinName;
         this.className = parent.getMixinPackage() + mixinName;
-        this.classRef = this.className.replace('.', '/');
         
         // Read the class bytes and transform
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
         
         ClassNode classNode = this.getClassNode(0);
+        this.classInfo = ClassInfo.fromClassNode(classNode);
         this.targetClasses = this.readTargetClasses(classNode);
         this.priority = this.readPriority(classNode);
+        this.detachedSuper = this.validateTargetClasses(classNode);
     }
 
     /**
@@ -155,6 +157,27 @@ class MixinInfo implements Comparable<MixinInfo> {
         return priority == null ? 1000 : priority.intValue();
     }
     
+    private boolean validateTargetClasses(ClassNode classNode) {
+        boolean detached = false;
+        
+        for (String targetClassName : this.targetClasses) {
+            ClassInfo targetClass = ClassInfo.forName(targetClassName);
+            
+            if (classNode.superName.equals(targetClass.getSuperName())) {
+                continue;
+            }
+            
+            if (!targetClass.hasSuperClass(classNode.superName)) {
+                throw new InvalidMixinException("Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
+                        + " was not found in the hierarchy of target class '" + targetClassName + "'");
+            }
+            
+            detached = true;
+        }
+        
+        return detached;
+    }
+
     /**
      * Get the parent config which declares this mixin
      */
@@ -180,7 +203,7 @@ class MixinInfo implements Comparable<MixinInfo> {
      * Get the ref (internal name) of the mixin class
      */
     public String getClassRef() {
-        return this.classRef;
+        return this.classInfo.getName();
     }
 
     /**
@@ -189,15 +212,19 @@ class MixinInfo implements Comparable<MixinInfo> {
     public byte[] getClassBytes() {
         return this.mixinBytes;
     }
+    
+    /**
+     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets
+     */
+    public boolean isDetachedSuper() {
+        return this.detachedSuper;
+    }
 
     /**
      * Get a new tree for the class bytecode
      */
     public ClassNode getClassNode(int flags) {
-        ClassNode classNode = new ClassNode();
-        ClassReader classReader = new ClassReader(this.mixinBytes);
-        classReader.accept(classNode, flags);
-        return classNode;
+        return TreeInfo.getClassNode(this.mixinBytes, flags);
     }
     
     /**
@@ -232,48 +259,15 @@ class MixinInfo implements Comparable<MixinInfo> {
         byte[] mixinBytes = null;
 
         try {
-            if ((mixinBytes = MixinInfo.getClassBytes(mixinClassName)) == null) {
-                throw new InvalidMixinException(String.format("The specified mixin '%s' was not found", mixinClassName));
-            }
-
-            if (runTransformers) {
-                mixinBytes = MixinInfo.applyTransformers(mixinClassName, mixinBytes);
-            }
+            mixinBytes = TreeInfo.loadClass(mixinClassName, runTransformers);
+        } catch (ClassNotFoundException ex) {
+            throw new InvalidMixinException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {
             this.logger.warn("Failed to load mixin %s, the specified mixin will not be applied", mixinClassName);
             throw new InvalidMixinException("An error was encountered whilst loading the mixin class", ex);
         }
 
         return mixinBytes;
-    }
-
-    /**
-     * @param mixinClassName
-     * @return
-     * @throws IOException
-     */
-    static byte[] getClassBytes(String mixinClassName) throws IOException {
-        return Launch.classLoader.getClassBytes(mixinClassName);
-    }
-
-    /**
-     * Since we obtain the mixin class bytes with getClassBytes(), we need to
-     * apply the transformers ourself
-     * 
-     * @param name
-     * @param basicClass
-     * @return
-     */
-    static byte[] applyTransformers(String name, byte[] basicClass) {
-        final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
-
-        for (final IClassTransformer transformer : transformers) {
-            if (!(transformer instanceof MixinTransformer)) {
-                basicClass = transformer.transform(name, name, basicClass);
-            }
-        }
-
-        return basicClass;
     }
 
     /* (non-Javadoc)

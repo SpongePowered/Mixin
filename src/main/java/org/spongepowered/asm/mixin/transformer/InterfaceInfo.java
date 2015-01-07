@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,7 +40,7 @@ import org.spongepowered.asm.util.ASMHelper;
 /**
  * Information about an interface being runtime-patched onto a mixin target class, see {@link Implements}
  */
-public class InterfaceInfo {
+public class InterfaceInfo extends TreeInfo {
     
     /**
      * Prefix for interface methods. Any methods using this prefix must exist in the target interface
@@ -84,9 +83,9 @@ public class InterfaceInfo {
     private void readInterface(String ifaceName) {
         ClassNode ifaceNode = new ClassNode();
         try {
-            ClassReader classReader = new ClassReader(this.loadInterface(ifaceName));
+            ClassReader classReader = new ClassReader(TreeInfo.loadClass(ifaceName, true));
             classReader.accept(ifaceNode, 0);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             throw new InvalidMixinException("An error was encountered parsing the interface " + this.iface.toString());
         }
         
@@ -99,15 +98,6 @@ public class InterfaceInfo {
             String sif = superIface.replace('/', '.');
             this.readInterface(sif);
         }
-    }
-
-    /**
-     * Fires ze missiles
-     */
-    private byte[] loadInterface(String ifaceName) throws IOException {
-        byte[] ifaceBytes = MixinInfo.getClassBytes(ifaceName);
-        ifaceBytes = MixinInfo.applyTransformers(ifaceName, ifaceBytes);
-        return ifaceBytes;
     }
 
     /**
