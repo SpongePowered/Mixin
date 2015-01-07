@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -196,13 +197,18 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param targetClass
      * @param mixin
+     * @throws IOException
      */
-    protected void verifyClasses(ClassNode targetClass, MixinData mixin) {
+    protected void verifyClasses(ClassNode targetClass, MixinData mixin) throws IOException {
         String superName = mixin.getClassNode().superName;
-        if (targetClass.superName == null
-                || superName == null
-                || !(targetClass.superName.equals(superName) || "java/lang/Object".equals(superName))) {
-            throw new InvalidMixinException("Mixin classes must have the same superclass as their target class");
+        if ("java/lang/Object".equals(superName)) {
+            return;
+        }
+        while (targetClass.superName != null && !targetClass.superName.equals(superName)) {
+            targetClass = this.readClass(Launch.classLoader.getClassBytes(targetClass.superName));
+        }
+        if (targetClass.superName == null) {
+            throw new InvalidMixinException("Mixin classes must have a superclass that is also a superclass of their target class");
         }
     }
 
