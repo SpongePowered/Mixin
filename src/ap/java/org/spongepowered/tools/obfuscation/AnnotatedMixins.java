@@ -147,9 +147,7 @@ class AnnotatedMixins {
         PrintWriter writer = null;
         
         try {
-            Filer filer = this.processingEnv.getFiler();
-            FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outSrgFileName);
-            writer = new PrintWriter(outSrg.openWriter());
+            writer = this.openSrgFileWriter();
             for (String fieldMapping : fieldMappings) {
                 writer.println(fieldMapping);
             }
@@ -167,6 +165,23 @@ class AnnotatedMixins {
                 }
             }
         }
+    }
+
+    /**
+     * Open a writer for the output SRG file 
+     */
+    private PrintWriter openSrgFileWriter() throws IOException {
+        if (this.outSrgFileName.matches("^.*[\\\\/:].*$")) {
+            File outSrgFile = new File(this.outSrgFileName);
+            outSrgFile.getParentFile().mkdirs();
+            this.processingEnv.getMessager().printMessage(Kind.NOTE, "Writing output SRGs to " + outSrgFile.getAbsolutePath());
+            return new PrintWriter(outSrgFile);
+        }
+        
+        Filer filer = this.processingEnv.getFiler();
+        FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outSrgFileName);
+        this.processingEnv.getMessager().printMessage(Kind.NOTE, "Writing output SRGs to " + new File(outSrg.toUri()).getAbsolutePath());
+        return new PrintWriter(outSrg.openWriter());
     }
 
     /**
