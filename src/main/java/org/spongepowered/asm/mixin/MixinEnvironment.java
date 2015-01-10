@@ -27,6 +27,8 @@ package org.spongepowered.asm.mixin;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.spongepowered.asm.launch.MixinBootstrap;
+
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
 
@@ -36,20 +38,22 @@ import net.minecraft.launchwrapper.Launch;
  */
 public class MixinEnvironment {
 
-    public static final String CONFIGS_KEY = "mixin.configs";
-    public static final String TRANSFORMER_KEY = "mixin.transformer";
-    public static final String MIXIN_TRANSFORMER_PACKAGE = "org.spongepowered.asm.mixin.transformer.";
-    public static final String MIXIN_TRANSFORMER_CLASS = MixinEnvironment.MIXIN_TRANSFORMER_PACKAGE + "MixinTransformer";
+    private static final String CONFIGS_KEY = "mixin.configs";
+    private static final String TRANSFORMER_KEY = "mixin.transformer";
 
     private static MixinEnvironment env;
     
     private MixinEnvironment() {
         // Sanity check
+        Object version = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+        if (version == null || !MixinBootstrap.VERSION.equals(version)) {
+            throw new RuntimeException("Environment conflict, mismatched versions or you didn't call MixinBootstrap.init()");
+        }
+        
+        // Also sanity check
         if (this.getClass().getClassLoader() != Launch.class.getClassLoader()) {
             throw new RuntimeException("Attempted to init the mixin environment in the wrong classloader");
         }
-        
-        Launch.classLoader.addClassLoaderExclusion(MixinEnvironment.MIXIN_TRANSFORMER_PACKAGE);
     }
     
     /**
@@ -69,7 +73,10 @@ public class MixinEnvironment {
      * Add a mixin configuration to the blackboard
      */
     public MixinEnvironment addConfiguration(String config) {
-        this.getMixinConfigs().add(config);
+        List<String> configs = this.getMixinConfigs();
+        if (!configs.contains(config)) {
+            configs.add(config);
+        }
         return this;
     }
 

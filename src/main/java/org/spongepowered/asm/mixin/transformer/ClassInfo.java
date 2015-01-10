@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,13 +42,17 @@ import com.google.common.collect.ImmutableList;
  */
 class ClassInfo extends TreeInfo {
     
+    private static final String JAVA_LANG_OBJECT = "java/lang/Object";
+
     /**
      * Loading and parsing classes is expensive, so keep a cache of all the information we generate
      */
     private static final Map<String, ClassInfo> cache = new HashMap<String, ClassInfo>();
     
+    private static final ClassInfo OBJECT = new ClassInfo();
+    
     static {
-        ClassInfo.cache.put("java/lang/Object", new ClassInfo());
+        ClassInfo.cache.put(ClassInfo.JAVA_LANG_OBJECT, ClassInfo.OBJECT);
     }
     
     /**
@@ -61,6 +66,11 @@ class ClassInfo extends TreeInfo {
     private final String superName;
     
     /**
+     * Interfaces
+     */
+    private final List<String> interfaces;
+    
+    /**
      * Public and protected methods (instance) methods in this class 
      */
     private final List<String> methods;
@@ -71,12 +81,17 @@ class ClassInfo extends TreeInfo {
     private ClassInfo superClass;
     
     /**
+     * True if this is an interface 
+     */
+    private boolean isInterface;
+    
+    /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
      */
     private ClassInfo() {
-        this.name = "java/lang/Object";
+        this.name = ClassInfo.JAVA_LANG_OBJECT;
         this.superName = null;
-        this.methods = ImmutableList.<String>of (
+        this.methods = ImmutableList.<String>of(
             "getClass()Ljava/lang/Class;",
             "hashCode()I",
             "equals(Ljava/lang/Object;)Z",
@@ -89,6 +104,8 @@ class ClassInfo extends TreeInfo {
             "wait()V",
             "finalize()V"
         );
+        this.isInterface = false;
+        this.interfaces = Collections.<String>emptyList();
     }
     
     /**
@@ -97,13 +114,11 @@ class ClassInfo extends TreeInfo {
      * @param classNode Class node to inspect
      */
     private ClassInfo(ClassNode classNode) {
-        if ((classNode.access & Opcodes.ACC_INTERFACE) != 0) {
-            throw new RuntimeException("Unexpected hierarchy: " + classNode.name + " is an interface");
-        }
-        
         this.name = classNode.name;
-        this.superName = classNode.superName;
+        this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
         this.methods = new ArrayList<String>();
+        this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
+        this.interfaces = Collections.unmodifiableList(classNode.interfaces);
         
         for (MethodNode method : classNode.methods) {
             if (!method.name.startsWith("<")
@@ -112,6 +127,20 @@ class ClassInfo extends TreeInfo {
                 this.methods.add(method.name + method.desc);
             }
         }
+    }
+    
+    /**
+     * Get whether this is an interface or not
+     */
+    public boolean isInterface() {
+        return this.isInterface;
+    }
+    
+    /**
+     * Returns the answer to life, the universe and everything
+     */
+    public List<String> getInterfaces() {
+        return this.interfaces;
     }
     
     /**
@@ -145,13 +174,30 @@ class ClassInfo extends TreeInfo {
      * @return true if the specified class appears in the class's hierarchy anywhere
      */
     public boolean hasSuperClass(String superClass) {
-        if ("java/lang/Object".equals(superClass)) {
+        if (ClassInfo.JAVA_LANG_OBJECT.equals(superClass)) {
             return true;
         }
         
         ClassInfo superClassInfo = this.getSuperClass();
         while (superClassInfo != null) {
             if (superClass.equals(superClassInfo.getName())) {
+                return true;
+            }
+            
+            superClassInfo = superClassInfo.getSuperClass();
+        }
+        
+        return false;
+    }
+    
+    public boolean isAssignableFrom(ClassInfo superClass) {
+        if (ClassInfo.OBJECT == superClass) {
+            return true;
+        }
+        
+        ClassInfo superClassInfo = this.getSuperClass();
+        while (superClassInfo != null) {
+            if (superClass == superClassInfo) {
                 return true;
             }
             
@@ -192,7 +238,7 @@ class ClassInfo extends TreeInfo {
     public boolean hasMethod(String name, String desc) {
         return this.methods.contains(name + desc);
     }
-
+    
     /**
      * Return a ClassInfo for the supplied {@link ClassNode}. If a ClassInfo for the class was already defined, then the original ClassInfo is
      * returned from the internal cache. Otherwise a new ClassInfo is created and returned.

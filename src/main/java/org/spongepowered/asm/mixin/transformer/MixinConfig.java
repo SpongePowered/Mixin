@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.launchwrapper.Launch;
+
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 
 import com.google.gson.Gson;
@@ -86,6 +88,23 @@ class MixinConfig {
     private MixinConfig() {}
 
     /**
+     * Called immediately after deserialisation 
+     */
+    private void onLoad() {
+        if (!this.mixinPackage.endsWith(".")) {
+            this.mixinPackage += ".";
+        }
+        
+        Launch.classLoader.addClassLoaderExclusion(this.mixinPackage);
+        
+        if (this.refMapperConfig == null) {
+            this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
+        }
+        
+        this.refMapper = ReferenceMapper.read(this.refMapperConfig);
+    }
+
+    /**
      * <p>Initialisation routine. It's important that we call this routine as late as possible. In general we want to call it on the first call to
      * transform() in the parent transformer. At the very least we want to be called <em>after</em> all the transformers for the current environment
      * have been spawned, because we will run the mixin bytecode through the transformer chain and naturally we want this to happen at a point when
@@ -97,26 +116,16 @@ class MixinConfig {
     private void initialise() {
         this.initialised = true;
         
-        if (!this.mixinPackage.endsWith(".")) {
-            this.mixinPackage += ".";
-        }
-        
         for (String mixinClass : this.mixinClasses) {
             try {
                 MixinInfo mixin = new MixinInfo(this, mixinClass, true);
                 for (String targetClass : mixin.getTargetClasses()) {
-                    this.getMixinsFor(targetClass).add(mixin);
+                    this.mixinsFor(targetClass).add(mixin);
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
-        
-        if (this.refMapperConfig == null) {
-            this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
-        }
-        
-        this.refMapper = ReferenceMapper.read(this.refMapperConfig);
     }
     
     /**
@@ -172,6 +181,10 @@ class MixinConfig {
             this.initialise();
         }
         
+        return this.mixinsFor(targetClass);
+    }
+
+    private List<MixinInfo> mixinsFor(String targetClass) {
         List<MixinInfo> mixins = this.mixinMapping.get(targetClass);
         if (mixins == null) {
             mixins = new ArrayList<MixinInfo>();
@@ -188,7 +201,9 @@ class MixinConfig {
      */
     static MixinConfig create(String configFile) {
         try {
-            return new Gson().fromJson(new InputStreamReader(MixinConfig.class.getResourceAsStream("/" + configFile)), MixinConfig.class);
+            MixinConfig config = new Gson().fromJson(new InputStreamReader(MixinConfig.class.getResourceAsStream("/" + configFile)), MixinConfig.class);
+            config.onLoad();
+            return config;
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new IllegalArgumentException(String.format("The specified configuration file '%s' was invalid or could not be read", configFile));

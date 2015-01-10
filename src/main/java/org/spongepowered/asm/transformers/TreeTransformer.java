@@ -29,6 +29,7 @@ import net.minecraft.launchwrapper.IClassTransformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.transformer.MixinClassWriter;
 
 /**
  * Base class for transformers which work with ASM tree model
@@ -68,7 +69,7 @@ public abstract class TreeTransformer implements IClassTransformer {
         // Use optimised writer for speed
         if (this.classReader != null && this.classNode == classNode) {
             this.classNode = null;
-            ClassWriter writer = new ClassWriter(this.classReader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+            ClassWriter writer = new MixinClassWriter(this.classReader, ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             this.classReader = null;
             classNode.accept(writer);
             return writer.toByteArray();
@@ -76,7 +77,7 @@ public abstract class TreeTransformer implements IClassTransformer {
 
         this.classNode = null;
 
-        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        ClassWriter writer = new MixinClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classNode.accept(writer);
         return writer.toByteArray();
     }

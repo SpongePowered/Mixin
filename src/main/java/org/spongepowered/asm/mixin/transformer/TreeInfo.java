@@ -25,19 +25,33 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLClassLoader;
 import java.util.List;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
-
+import net.minecraft.launchwrapper.IClassNameTransformer;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
+
+import org.apache.commons.io.IOUtils;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
 
 /**
  * Base class for "info" objects which use ASM tree API to do stuff, with things
  */
 abstract class TreeInfo {
     
+    private static IClassNameTransformer nameTransformer;
+    
+    static {
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            if (transformer instanceof IClassNameTransformer) {
+                TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
+            }
+        }
+    }
+
     static ClassNode getClassNode(String className) throws ClassNotFoundException, IOException {
         return TreeInfo.getClassNode(TreeInfo.loadClass(className, true), 0);
     }
@@ -75,12 +89,26 @@ abstract class TreeInfo {
     }
 
     /**
-     * @param mixinClassName
+     * @param className
      * @return
      * @throws IOException
      */
-    private static byte[] getClassBytes(String mixinClassName) throws IOException {
-        return Launch.classLoader.getClassBytes(mixinClassName);
+    private static byte[] getClassBytes(String className) throws IOException {
+        byte[] classBytes = Launch.classLoader.getClassBytes(TreeInfo.unmap(className));
+        if (classBytes != null) {
+            return classBytes;
+        }
+        
+        URLClassLoader appClassLoader = (URLClassLoader)Launch.class.getClassLoader();
+        
+        InputStream classStream = null;
+        try {
+            final String resourcePath = className.replace('.', '/').concat(".class");
+            classStream = appClassLoader.getResourceAsStream(resourcePath);
+            return IOUtils.toByteArray(classStream);
+        } finally {
+            IOUtils.closeQuietly(classStream);
+        }
     }
 
     /**
@@ -100,5 +128,19 @@ abstract class TreeInfo {
         }
 
         return basicClass;
+    }
+
+    /**
+     * Map a class name back to its obfuscated counterpart 
+     * 
+     * @param className
+     * @return
+     */
+    static String unmap(String className) {
+        if (TreeInfo.nameTransformer != null) {
+            return TreeInfo.nameTransformer.unmapClassName(className);
+        }
+        
+        return className;
     }
 }
