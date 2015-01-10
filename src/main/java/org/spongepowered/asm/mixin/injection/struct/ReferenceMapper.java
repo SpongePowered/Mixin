@@ -63,7 +63,8 @@ public final class ReferenceMapper implements Serializable {
         if (classMappings == null) {
             return reference;
         }
-        return classMappings.get(reference);
+        String remappedReference = classMappings.get(reference);
+        return remappedReference != null ? remappedReference : reference;
     }
     
     public void addMapping(String className, String reference, String newReference) {
