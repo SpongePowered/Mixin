@@ -201,7 +201,7 @@ class MixinConfig {
      */
     static MixinConfig create(String configFile) {
         try {
-            MixinConfig config = new Gson().fromJson(new InputStreamReader(MixinConfig.class.getResourceAsStream("/" + configFile)), MixinConfig.class);
+            MixinConfig config = new Gson().fromJson(new InputStreamReader(Launch.classLoader.getResourceAsStream(configFile)), MixinConfig.class);
             config.onLoad();
             return config;
         } catch (Exception ex) {
