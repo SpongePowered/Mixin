@@ -91,6 +91,7 @@ public class MixinTweaker implements ITweaker {
     /**
      * Attempts to initialise the FML coremod (if specified in the jar metadata)
      */
+    @SuppressWarnings("unchecked")
     private ITweaker initFMLCoreMod() {
         try {
             String coreModName = this.getManifestAttribute("FMLCorePlugin");
@@ -100,7 +101,17 @@ public class MixinTweaker implements ITweaker {
             Class<?> coreModManager = Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
             Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
             mdLoadCoreMod.setAccessible(true);
-            return (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
+            ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
+            if (wrapper != null && "true".equalsIgnoreCase(this.getManifestAttribute("ForceLoadAsMod"))) {
+                try {
+                    Method mdGetLoadedCoremods = coreModManager.getDeclaredMethod("getLoadedCoremods");
+                    List<String> loadedCoremods = (List<String>)mdGetLoadedCoremods.invoke(null);
+                    loadedCoremods.remove(this.container.getName());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+            return wrapper;
         } catch (Exception ex) {
 //            ex.printStackTrace();
         }
