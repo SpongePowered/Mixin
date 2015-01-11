@@ -46,6 +46,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -389,6 +390,28 @@ public class ASMHelper {
     }
 
     /**
+     * Get a runtime-visible annotation of the specified class from the supplied method node
+     *
+     * @param method Source method
+     * @param annotationClasses Types of annotation to search for
+     * @return the annotation, or null if not present
+     */
+    public static AnnotationNode getSingleVisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
+        return ASMHelper.getSingleAnnotation(method.visibleAnnotations, annotationClasses);
+    }
+
+    /**
+     * Get an invisible annotation of the specified class from the supplied method node
+     *
+     * @param method Source method
+     * @param annotationClasses Types of annotation to search for
+     * @return the annotation, or null if not present
+     */
+    public static AnnotationNode getSingleInvisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
+        return ASMHelper.getSingleAnnotation(method.invisibleAnnotations, annotationClasses);
+    }
+
+    /**
      * Get a runtime-visible annotation of the specified class from the supplied class node
      *
      * @param classNode Source classNode
@@ -430,6 +453,23 @@ public class ASMHelper {
         }
 
         return null;
+    }
+
+    private static AnnotationNode getSingleAnnotation(List<AnnotationNode> annotations, Class<? extends Annotation>... annotationClasses) {
+        List<AnnotationNode> nodes = new ArrayList<AnnotationNode>();
+        for (Class<? extends Annotation> annotationClass : annotationClasses) {
+            AnnotationNode annotation = ASMHelper.getAnnotation(annotations, Type.getDescriptor(annotationClass));
+            if (annotation != null) {
+                nodes.add(annotation);
+            }
+        }
+        
+        int foundNodes = nodes.size();
+        if (foundNodes > 1) {
+            throw new IllegalArgumentException("Conflicting annotations found: " + annotationClasses);
+        }
+    
+        return foundNodes == 0 ? null : nodes.get(0);
     }
 
     /**

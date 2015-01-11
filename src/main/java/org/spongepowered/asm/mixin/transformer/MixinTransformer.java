@@ -40,7 +40,6 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -51,7 +50,6 @@ import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
@@ -143,7 +141,7 @@ public class MixinTransformer extends TreeTransformer {
         
         for (MixinInfo mixin : mixins) {
             this.logger.info("Mixing {} into {}", mixin.getName(), transformedName);
-            this.applyMixin(targetClass, mixin.getData());
+            this.applyMixin(targetClass, mixin.createData(targetClass));
         }
         
         // Extension point
@@ -394,17 +392,16 @@ public class MixinTransformer extends TreeTransformer {
      */
     private void applyInjections(ClassNode targetClass, MixinData mixin) {
         for (MethodNode method : targetClass.methods) {
-            AnnotationNode injectAnnotation = ASMHelper.getVisibleAnnotation(method, Inject.class);
-            if (injectAnnotation == null) {
+            InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
+            if (injectInfo == null) {
                 continue;
             }
             
-            InjectionInfo injectInfo = new InjectionInfo(targetClass, method, mixin, injectAnnotation);
             if (injectInfo.isValid()) {
                 injectInfo.inject();
             }
             
-            method.visibleAnnotations.remove(injectAnnotation);
+            method.visibleAnnotations.remove(injectInfo.getAnnotation());
         }
     }
     

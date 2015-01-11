@@ -230,10 +230,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get a new mixin data container for this info
      * 
+     * @param target
      * @return
      */
-    public MixinData getData() {
-        return new MixinData(this);
+    public MixinData createData(ClassNode target) {
+        return new MixinData(this, target);
     }
     
     /**

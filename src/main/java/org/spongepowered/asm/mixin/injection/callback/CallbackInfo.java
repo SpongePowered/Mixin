@@ -107,7 +107,7 @@ public class CallbackInfo implements Cancellable {
         return CallbackInfo.class.getName();
     }
 
-    static String getCallInfoClassName(Type returnType) {
+    public static String getCallInfoClassName(Type returnType) {
         return (returnType.equals(Type.VOID_TYPE) ? CallbackInfo.class.getName() : CallbackInfoReturnable.class.getName()).replace('.', '/');
     }
 

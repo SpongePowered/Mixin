@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.callback;
+package org.spongepowered.asm.mixin.injection.code;
 
 import java.util.ListIterator;
 
@@ -33,7 +33,7 @@ import org.objectweb.asm.tree.InsnList;
  * Read-only wrapper for InsnList, defensively passed to InjectionPoint instances so that custom InjectionPoint implementations cannot modify the insn
  * list whilst inspecting it.
  */
-public class ReadOnlyInsnList extends InsnList {
+class ReadOnlyInsnList extends InsnList {
 
     private InsnList insnList;
 

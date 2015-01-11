@@ -325,9 +325,16 @@ class AnnotatedMixins {
         if (this.shouldRemap(mixinClass, inject)) {
             mixinClass.registerInjector(method, inject);
             
-            List<AnnotationMirror> annotationValue = MirrorUtils.<List<AnnotationMirror>>getAnnotationValue(inject, "at");
-            for (AnnotationMirror at : annotationValue) {
-                mixinClass.registerInjectionPoint(at);
+            Object ats = MirrorUtils.getAnnotationValue(inject, "at");
+            
+            if (ats instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<AnnotationMirror> annotationValue = (List<AnnotationMirror>)ats;
+                for (AnnotationMirror at : annotationValue) {
+                    mixinClass.registerInjectionPoint(at);
+                }
+            } else if (ats instanceof AnnotationMirror) {
+                mixinClass.registerInjectionPoint((AnnotationMirror)ats);
             }
         }
     }

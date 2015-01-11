@@ -290,7 +290,8 @@ public abstract class InjectionPoint {
     /**
      * Parse and instantiate an InjectionPoint from the supplied information. Returns null if an InjectionPoint could not be created.
      */
-    public static InjectionPoint parse(MixinData mixin, String at, At.Shift shift, int by, List<String> args, String target, int ordinal, int opcode) {
+    public static InjectionPoint parse(MixinData mixin, String at, At.Shift shift, int by,
+            List<String> args, String target, int ordinal, int opcode) {
         InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
         InjectionPoint point = null;
 

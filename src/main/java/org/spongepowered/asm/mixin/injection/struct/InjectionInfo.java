@@ -33,11 +33,13 @@ import java.util.List;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.transformer.MixinData;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -45,103 +47,113 @@ import org.spongepowered.asm.util.ASMHelper;
 /**
  * Contructs information about an injection from an {@link Inject} annotation and allows the injection to be processed
  */
-public class InjectionInfo {
+public abstract class InjectionInfo {
+    
+    protected final AnnotationNode annotation;
     
     /**
      * Class
      */
-    private final ClassNode classNode;
+    protected final ClassNode classNode;
     
     /**
      * Annotated method
      */
-    private final MethodNode method;
+    protected final MethodNode method;
+
+    /**
+     * Mixin data
+     */
+    protected final MixinData mixin;
+
 
     /**
      * Annotated method is static 
      */
-    private final boolean isStatic;
-    
-    /**
-     * True if the injection should be cancellable
-     */
-    private boolean cancellable;
-    
-    /**
-     * True if the injection should capture local variables
-     */
-    private boolean captureLocals;
+    protected final boolean isStatic;
     
     /**
      * Target method(s)
      */
-    private final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
+    protected final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
     
     /**
-     * Injection points parsed from {@link At} annotations
+     * Injection points parsed from {@link org.spongepowered.asm.mixin.injection.At} annotations
      */
-    private final List<InjectionPoint> injectionPoints = new ArrayList<InjectionPoint>();
+    protected final List<InjectionPoint> injectionPoints = new ArrayList<InjectionPoint>();
     
     /**
      * Bytecode injector
      */
-    private CallbackInjector injector;
+    protected Injector injector;
     
     /**
      * ctor
      * 
-     * @param classNode Class
+     * @param mixin
      * @param method Method
-     * @param injectAnnotation Annotation to parse
+     * @param annotation Annotation to parse
      */
-    public InjectionInfo(ClassNode classNode, MethodNode method, MixinData mixin, AnnotationNode injectAnnotation) {
-        this.classNode = classNode;
+    protected InjectionInfo(MixinData mixin, MethodNode method, AnnotationNode annotation) {
+        this.annotation = annotation;
         this.method = method;
+        this.mixin = mixin;
+        this.classNode = mixin.getTargetClass();
         this.isStatic = ASMHelper.methodIsStatic(method);
-        this.parse(mixin, injectAnnotation);
+        this.readAnnotation();
     }
 
     /**
      * Parse the info from the supplied annotation
      */
-    private void parse(MixinData mixin, AnnotationNode injectAnnotation) {
-        if (injectAnnotation == null) {
+    @SuppressWarnings("unchecked")
+    protected void readAnnotation() {
+        if (this.annotation == null) {
             return;
         }
         
-        String method = ASMHelper.<String>getAnnotationValue(injectAnnotation, "method");
+        String type = "@" + this.annotation.desc.substring(this.annotation.desc.lastIndexOf('/') + 1, this.annotation.desc.length() - 1);
+        
+        String method = ASMHelper.<String>getAnnotationValue(this.annotation, "method");
         if (method == null) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " is missing method name");
+            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " is missing method name");
         }
         
-        List<AnnotationNode> ats = ASMHelper.<List<AnnotationNode>>getAnnotationValue(injectAnnotation, "at");
-        if (ats == null) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " is missing 'at' value(s)");
+        List<AnnotationNode> ats = null;
+        Object atValue = ASMHelper.getAnnotationValue(this.annotation, "at");
+        if (atValue instanceof List) {
+            ats = (List<AnnotationNode>)atValue;
+        } else if (atValue instanceof AnnotationNode) {
+            ats = new ArrayList<AnnotationNode>();
+            ats.add((AnnotationNode)atValue);
+        } else {
+            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
         
-        MemberInfo targetMember = MemberInfo.parse(method, mixin);
+        MemberInfo targetMember = MemberInfo.parse(method, this.mixin);
         
-        if (targetMember.owner != null && targetMember.owner.equals(mixin.getTargetClassRef())) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " specifies a target class '" + targetMember.owner
-                    + "', which is not supported");
+        if (targetMember.owner != null && targetMember.owner.equals(this.mixin.getTargetClassRef())) {
+            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " specifies a target class '"
+                    + targetMember.owner + "', which is not supported");
         }
         
         this.findMethods(targetMember);
         
         if (this.targets.size() == 0) {
-            throw new InvalidInjectionException("@Inject annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
+            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
         }
         
-        this.cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
-        this.captureLocals = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "captureLocals", false);
-        
         for (AnnotationNode at : ats) {
-            InjectionPoint injectionPoint = InjectionPoint.parse(mixin, at);
+            InjectionPoint injectionPoint = InjectionPoint.parse(this.mixin, at);
             if (injectionPoint != null) {
                 this.injectionPoints.add(injectionPoint);
             }
         }
+        
+        this.injector = this.initInjector(this.annotation);
     }
+
+    protected abstract Injector initInjector(AnnotationNode injectAnnotation);
     
     /**
      * Get whether there is enough valid information in this info to actually perform an injection
@@ -154,21 +166,14 @@ public class InjectionInfo {
      * Perform the injection
      */
     public void inject() {
-        CallbackInjector injector = this.getInjector();
         while (this.targets.size() > 0) {
-            injector.injectInto(this.targets.removeFirst(), this.injectionPoints);
+            Target target = this.mixin.getTargetMethod(this.targets.removeFirst());
+            this.injector.injectInto(target, this.injectionPoints);
         }
     }
     
-    /**
-     * Performs a full-body massage with scented oils
-     */
-    private CallbackInjector getInjector() {
-        if (this.injector == null) {
-            this.injector = new CallbackInjector(this);
-        }
-        
-        return this.injector;
+    public AnnotationNode getAnnotation() {
+        return this.annotation;
     }
 
     /**
@@ -193,20 +198,6 @@ public class InjectionInfo {
     }
 
     /**
-     * Get whether cancellable or not
-     */
-    public boolean getCancellable() {
-        return this.cancellable;
-    }
-
-    /**
-     * Get whether injection should capture locals
-     */
-    public boolean getCaptureLocals() {
-        return this.captureLocals;
-    }
-
-    /**
      * Finds methods in the target class which match searchFor
      * 
      * @param searchFor member info to search for
@@ -225,5 +216,29 @@ public class InjectionInfo {
                 ordinal++;
             }
         }
+    }
+    
+    @SuppressWarnings("unchecked")
+    public static InjectionInfo parse(MixinData mixin, MethodNode method) {
+        AnnotationNode annotation = null;
+        try {
+            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidMixinException("Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": " + ex.getMessage());
+        }
+        
+        if (annotation == null) {
+            return null;
+        }
+        
+        if (annotation.desc.endsWith(Inject.class.getSimpleName() + ";")) {
+            return new CallbackInjectionInfo(mixin, method, annotation);
+        } else if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
+            return new ModifyArgInjectionInfo(mixin, method, annotation);
+        } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
+            return new RedirectInjectionInfo(mixin, method, annotation);
+        }
+        
+        return null;
     }
 }

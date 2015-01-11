@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -62,6 +63,11 @@ public class MixinData {
     private final ClassNode classNode;
     
     /**
+     * 
+     */
+    private final ClassNode targetClass;
+    
+    /**
      * Methods we need to rename
      */
     private final Map<String, String> renamedMethods = new HashMap<String, String>();
@@ -75,15 +81,21 @@ public class MixinData {
      * All interfaces implemented by this mixin, including soft implementations
      */
     private final Set<String> interfaces = new HashSet<String>();
+    
+    /**
+     * Information about methods in the target class, used to keep track of transformations we apply
+     */
+    private final Map<String, Target> targetMethods = new HashMap<String, Target>();
 
     /**
      * ctor
      * 
      * @param info
      */
-    MixinData(MixinInfo info) {
+    MixinData(MixinInfo info, ClassNode target) {
         this.info = info;
         this.classNode = info.getClassNode(ClassReader.EXPAND_FRAMES);
+        this.targetClass = target;
         this.prepare();
     }
 
@@ -118,6 +130,30 @@ public class MixinData {
         }
         return targetClasses.get(0);
     }
+    
+    /**
+     * Get the target class
+     */
+    public ClassNode getTargetClass() {
+        return this.targetClass;
+    }
+    
+    /**
+     * Get a method from the target class
+     */
+    public Target getTargetMethod(MethodNode method) {
+        if (!this.targetClass.methods.contains(method)) {
+            throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
+        }
+        
+        String targetName = method.name + method.desc;
+        Target target = this.targetMethods.get(targetName);
+        if (target == null) {
+            target = new Target(method);
+            this.targetMethods.put(targetName, target);
+        }
+        return target;
+    }
 
     /**
      * Get all interfaces for this mixin
@@ -139,7 +175,7 @@ public class MixinData {
     public ReferenceMapper getReferenceMapper() {
         return this.info.getParent().getReferenceMapper();
     }
-
+    
     /**
      * Prepare the mixin, applies any pre-processing transformations
      */

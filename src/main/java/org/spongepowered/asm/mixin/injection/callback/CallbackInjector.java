@@ -24,112 +24,33 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
+import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Locals;
 
 /**
  * This class is responsible for generating the bytecode for injected callbacks
  */
-public class CallbackInjector {
-
-    private static final String CTOR = "<init>";
-
-    /**
-     * Information about the current injection target, mainly just convenience rather than passing a bunch of values around
-     */
-    class Target {
-
-        /**
-         * Target method
-         */
-        final MethodNode method;
-        
-        /**
-         * Method arguments
-         */
-        final Type[] arguments;
-        
-        /**
-         * Return type computed from the method descriptor 
-         */
-        final Type returnType;
-        
-        /**
-         * Method's (original) MAXS 
-         */
-        // CHECKSTYLE:OFF
-        final int MAXS;
-        // CHECKSTYLE:ON
-
-        /**
-         * Callback method descriptor based on this target 
-         */
-        final String callbackDescriptor;
-        
-        /**
-         * Callback info class
-         */
-        final String callbackInfoClass;
-
-        /**
-         * Make a new Target for the supplied method
-         */
-        Target(MethodNode method) {
-            this.method = method;
-            this.arguments = Type.getArgumentTypes(method.desc);
-
-            this.returnType = Type.getReturnType(method.desc);
-            this.MAXS = method.maxStack;
-            this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
-            this.callbackDescriptor = String.format("(%sL%s;)V", method.desc.substring(1, method.desc.indexOf(')')), this.callbackInfoClass);
-        }
-
-        /**
-         * Get the callback descriptor
-         */
-        String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex) {
-            if (!captureLocals) {
-                return this.callbackDescriptor;
-            }
-
-            String descriptor = this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')'));
-            for (int l = startIndex; l < locals.length; l++) {
-                if (locals[l] != null) {
-                    descriptor += locals[l].getDescriptor();
-                }
-            }
-
-            return descriptor + ")V";
-        }
-    }
-
-    /**
-     * True if the callback method is static
-     */
-    private final boolean isStatic;
-    
-    /**
-     * Class node
-     */
-    private final ClassNode classNode;
-    
-    /**
-     * Callback method 
-     */
-    private final MethodNode methodNode;
+public class CallbackInjector extends Injector {
     
     /**
      * True if cancellable 
@@ -142,74 +63,25 @@ public class CallbackInjector {
     private final boolean captureLocals;
 
     /**
-     * Make a new CallbackInjector for the supplied InjectionInfo
-     */
-    public CallbackInjector(InjectionInfo info) {
-        this(info.getClassNode(), info.getMethod(), info.getCancellable(), info.getCaptureLocals());
-    }
-
-    /**
      * Make a new CallbackInjector with the supplied args
      */
-    public CallbackInjector(ClassNode classNode, MethodNode methodNode, boolean cancellable, boolean captureLocals) {
-        this.classNode = classNode;
-        this.methodNode = methodNode;
+    public CallbackInjector(InjectionInfo info, boolean cancellable, boolean captureLocals) {
+        super(info);
         this.cancellable = cancellable;
         this.captureLocals = captureLocals;
-        this.isStatic = ASMHelper.methodIsStatic(methodNode);
     }
 
-    /**
-     * Inject into the specified method at the specified injection points
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
+     *      java.util.List)
      */
-    public void injectInto(MethodNode into, List<InjectionPoint> injectionPoints) {
-        this.sanityCheck(into, injectionPoints);
-
-        for (AbstractInsnNode targetNode : this.findTargetNodes(into, injectionPoints)) {
-            Type[] localTypes = null;
-
-            if (this.captureLocals) {
-                LocalVariableNode[] locals = Locals.getLocalsAt(this.classNode, into, targetNode);
-
-                if (locals != null) {
-                    localTypes = new Type[locals.length];
-                    for (int l = 0; l < locals.length; l++) {
-                        if (locals[l] != null) {
-                            localTypes[l] = Type.getType(locals[l].desc);
-                        }
-                    }
-                }
-            }
-
-            Target target = new Target(into);
-            this.inject(target, targetNode, localTypes);
-        }
-    }
-
-    private Set<AbstractInsnNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
-        Set<AbstractInsnNode> targetNodes = new HashSet<AbstractInsnNode>();
-
-        // Defensive objects, so that injectionPoint instances can't modify our working copies
-        ReadOnlyInsnList insns = new ReadOnlyInsnList(into.instructions);
-        Collection<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
-
-        for (InjectionPoint injectionPoint : injectionPoints) {
-            nodes.clear();
-            if (injectionPoint.find(into.desc, insns, nodes)) {
-                targetNodes.addAll(nodes);
-            }
-        }
-        
-        insns.dispose();
-        return targetNodes;
-    }
-
-    private void sanityCheck(MethodNode target, List<InjectionPoint> injectionPoints) {
-        if (ASMHelper.methodIsStatic(target) != this.isStatic) {
+    @Override
+    protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
             throw new InvalidInjectionException("'static' modifier of callback method does not match target in " + this.methodNode.name);
         }
 
-        if (CallbackInjector.CTOR.equals(target.name)) {
+        if (Injector.CTOR.equals(target.method.name)) {
             for (InjectionPoint injectionPoint : injectionPoints) {
                 if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
                     throw new InvalidInjectionException("Found injection point type " + injectionPoint.getClass().getSimpleName()
@@ -219,10 +91,34 @@ public class CallbackInjector {
         }
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#inject(org.spongepowered.asm.mixin.injection.callback.Target,
+     *      org.objectweb.asm.tree.AbstractInsnNode)
+     */
+    @Override
+    protected void inject(Target target, AbstractInsnNode node) {
+        Type[] localTypes = null;
+
+        if (this.captureLocals) {
+            LocalVariableNode[] locals = Locals.getLocalsAt(this.classNode, target.method, node);
+
+            if (locals != null) {
+                localTypes = new Type[locals.length];
+                for (int l = 0; l < locals.length; l++) {
+                    if (locals[l] != null) {
+                        localTypes[l] = Type.getType(locals[l].desc);
+                    }
+                }
+            }
+        }
+
+        this.inject(target, node, localTypes);
+    }
+
     /**
      * Generate the actual bytecode
      */
-    private void inject(Target target, final AbstractInsnNode targetNode, final Type[] locals) {
+    private void inject(Target target, final AbstractInsnNode node, final Type[] locals) {
         // Calculate the initial frame size based on the target method's arguments
         int initialFrameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !this.isStatic);
 
@@ -234,7 +130,7 @@ public class CallbackInjector {
         
         // If it doesn't match, then cry
         if (!callbackDescriptor.equals(this.methodNode.desc)) {
-            throw new InvalidInjectionException("Invalid descriptor on callback method, expected " + callbackDescriptor);
+            throw new InvalidInjectionException("Invalid descriptor on callback: expected " + callbackDescriptor + " found " + this.methodNode.desc);
         }
 
         // These two variables keep track of the (additional) stack size required for the two actions we're going to be injecting insns to perform,
@@ -256,7 +152,7 @@ public class CallbackInjector {
 
         // If this is a ReturnEventInfo AND we are right before a RETURN opcode (so we can expect the *original* return value to be on the stack,
         // then we dup the return value into a local var so we can push it later when we invoke the ReturnEventInfo ctor
-        if (targetNode instanceof InsnNode && targetNode.getOpcode() >= Opcodes.IRETURN && targetNode.getOpcode() < Opcodes.RETURN) {
+        if (node instanceof InsnNode && node.getOpcode() >= Opcodes.IRETURN && node.getOpcode() < Opcodes.RETURN) {
             pushReturnValue = true;
             insns.add(new InsnNode(Opcodes.DUP));
             insns.add(new VarInsnNode(target.returnType.getOpcode(Opcodes.ISTORE), marshallVar));
@@ -292,12 +188,12 @@ public class CallbackInjector {
 
         if (this.cancellable) {
             // Inject the if (e.isCancelled()) return e.getReturnValue();
-            this.injectCancellationCode(target, insns, targetNode, marshallVar);
+            this.injectCancellationCode(target, insns, node, marshallVar);
         }
 
         // Inject our generated code into the method
-        target.method.instructions.insertBefore(targetNode, insns);
-        target.method.maxStack = Math.max(target.method.maxStack, Math.max(target.MAXS + ctorMAXS, target.MAXS + invokeMAXS));
+        target.method.instructions.insertBefore(node, insns);
+        target.method.maxStack = Math.max(target.method.maxStack, Math.max(target.maxStack + ctorMAXS, target.maxStack + invokeMAXS));
     }
 
     protected int invokeCallbackInfoCtor(Target target, InsnList insns, boolean cancellable, boolean pushReturnValue, int marshallVar) {
@@ -311,10 +207,10 @@ public class CallbackInjector {
         if (pushReturnValue) {
             insns.add(new VarInsnNode(target.returnType.getOpcode(Opcodes.ILOAD), marshallVar));
             insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    target.callbackInfoClass, CallbackInjector.CTOR, CallbackInfo.getConstructorDescriptor(target.returnType), false));
+                    target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(target.returnType), false));
         } else {
             insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    target.callbackInfoClass, CallbackInjector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+                    target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
         }
 
         return ctorMAXS;
@@ -323,11 +219,12 @@ public class CallbackInjector {
     /**
      * if (e.isCancelled()) return e.getReturnValue();
      * 
+     * @param target
      * @param insns
-     * @param targetNode
+     * @param node
      * @param marshallVar
      */
-    protected void injectCancellationCode(Target target, final InsnList insns, final AbstractInsnNode targetNode, int marshallVar) {
+    protected void injectCancellationCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
         insns.add(new VarInsnNode(Opcodes.ALOAD, marshallVar));
         insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, target.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
                 CallbackInfo.getIsCancelledMethodSig(), false));
@@ -336,7 +233,7 @@ public class CallbackInjector {
         insns.add(new JumpInsnNode(Opcodes.IFEQ, notCancelled));
 
         // If this is a void method, just injects a RETURN opcode, otherwise we need to get the return value from the EventInfo
-        this.injectReturnCode(target, insns, targetNode, marshallVar);
+        this.injectReturnCode(target, insns, node, marshallVar);
 
         insns.add(notCancelled);
     }
@@ -344,11 +241,12 @@ public class CallbackInjector {
     /**
      * Inject the appropriate return code for the method type
      * 
+     * @param target
      * @param insns
-     * @param targetNode
+     * @param node
      * @param marshallVar
      */
-    protected void injectReturnCode(Target target, final InsnList insns, final AbstractInsnNode targetNode, int marshallVar) {
+    protected void injectReturnCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
         if (target.returnType.equals(Type.VOID_TYPE)) {
             // Void method, so just return void
             insns.add(new InsnNode(Opcodes.RETURN));

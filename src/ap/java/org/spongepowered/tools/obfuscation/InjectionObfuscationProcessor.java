@@ -24,6 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.annotation.Annotation;
 import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
@@ -38,15 +39,21 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.tools.MirrorUtils;
 
 /**
  * Annotation processor which finds {@link Inject} and {@link At} annotations in mixin classes and generates SRG mappings
  */
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
-@SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.injection.Inject", "org.spongepowered.asm.mixin.injection.At" })
+@SupportedAnnotationTypes({
+    "org.spongepowered.asm.mixin.injection.Inject",
+    "org.spongepowered.asm.mixin.injection.ModifyArg",
+    "org.spongepowered.asm.mixin.injection.Redirect",
+    "org.spongepowered.asm.mixin.injection.At"
+})
 @SupportedOptions({ "reobfSrgFile", "outSrgFile" })
 public class InjectionObfuscationProcessor extends MixinProcessor {
     
@@ -60,7 +67,9 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
         }
         
         this.processMixins(roundEnv);
-        this.processInjectors(roundEnv);
+        this.processInjectors(roundEnv, Inject.class);
+        this.processInjectors(roundEnv, ModifyArg.class);
+        this.processInjectors(roundEnv, Redirect.class);
         
         try {
             this.mixins.writeRefs();
@@ -74,20 +83,21 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
     /**
      * Searches for {@link Inject} annotations and registers them with their parent mixins
      */
-    private void processInjectors(RoundEnvironment roundEnv) {
-        for (Element elem : roundEnv.getElementsAnnotatedWith(Inject.class)) {
+    private void processInjectors(RoundEnvironment roundEnv, Class<? extends Annotation> injectorClass) {
+        for (Element elem : roundEnv.getElementsAnnotatedWith(injectorClass)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                throw new IllegalStateException("@Shadow element has unexpected parent with type " + MirrorUtils.getElementType(parent));
+                throw new IllegalStateException("@" + injectorClass.getSimpleName() + " element has unexpected parent with type "
+                        + MirrorUtils.getElementType(parent));
             }
             
-            AnnotationMirror inject = MirrorUtils.getAnnotation(elem, Inject.class);
+            AnnotationMirror inject = MirrorUtils.getAnnotation(elem, injectorClass);
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerInjector((TypeElement)parent, (ExecutableElement)elem, inject);
             } else {
                 this.processingEnv.getMessager().printMessage(Kind.WARNING,
-                        "Found an @Inject annotation on an element which is not a method: " + elem.toString());
+                        "Found an @" + injectorClass.getSimpleName() + " annotation on an element which is not a method: " + elem.toString());
             }
         }
     }

@@ -1,0 +1,121 @@
+/*
+ * This file is part of Sponge, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) SpongePowered.org <http://www.spongepowered.org>
+ * Copyright (c) contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.spongepowered.asm.mixin.injection.code;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.util.ASMHelper;
+
+import com.google.common.base.Joiner;
+
+
+/**
+ * Base class for bytecode injectors
+ */
+public abstract class Injector {
+    
+    protected static final String CTOR = "<init>";
+
+    /**
+     * Class node
+     */
+    protected final ClassNode classNode;
+    
+    /**
+     * Callback method 
+     */
+    protected final MethodNode methodNode;
+
+    /**
+     * True if the callback method is static
+     */
+    protected final boolean isStatic;
+
+    /**
+     * Make a new CallbackInjector for the supplied InjectionInfo
+     */
+    public Injector(InjectionInfo info) {
+        this(info.getClassNode(), info.getMethod());
+    }
+
+    /**
+     * Make a new CallbackInjector with the supplied args
+     */
+    private Injector(ClassNode classNode, MethodNode methodNode) {
+        this.classNode = classNode;
+        this.methodNode = methodNode;
+        this.isStatic = ASMHelper.methodIsStatic(this.methodNode);
+    }
+
+    /**
+     * Inject into the specified method at the specified injection points
+     */
+    public final void injectInto(Target target, List<InjectionPoint> injectionPoints) {
+        this.sanityCheck(target, injectionPoints);
+        
+        for (AbstractInsnNode node : this.findTargetNodes(target.method, injectionPoints)) {
+            this.inject(target, node);
+        }
+    }
+
+    protected Set<AbstractInsnNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
+        Set<AbstractInsnNode> targetNodes = new HashSet<AbstractInsnNode>();
+
+        // Defensive objects, so that injectionPoint instances can't modify our working copies
+        ReadOnlyInsnList insns = new ReadOnlyInsnList(into.instructions);
+        Collection<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
+
+        for (InjectionPoint injectionPoint : injectionPoints) {
+            nodes.clear();
+            if (injectionPoint.find(into.desc, insns, nodes)) {
+                targetNodes.addAll(nodes);
+            }
+        }
+        
+        insns.dispose();
+        return targetNodes;
+    }
+
+    protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        // stub for subclasses
+    }
+
+    protected abstract void inject(Target target, AbstractInsnNode node);
+
+    protected static String printArgs(Type[] args) {
+        return "(" + Joiner.on("").join(args) + ")";
+    }
+}

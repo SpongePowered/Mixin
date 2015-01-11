@@ -176,6 +176,7 @@ public class MixinTweaker implements ITweaker {
             Attributes manifestAttributes = jarFile.getManifest().getMainAttributes();
             return manifestAttributes.getValue(key);
         } catch (IOException ex) {
+            // be quiet checkstyle
         } finally {
             if (jarFile != null) {
                 try {
