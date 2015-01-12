@@ -106,6 +106,8 @@ abstract class TreeInfo {
             final String resourcePath = className.replace('.', '/').concat(".class");
             classStream = appClassLoader.getResourceAsStream(resourcePath);
             return IOUtils.toByteArray(classStream);
+        } catch (Exception ex) {
+            return null;
         } finally {
             IOUtils.closeQuietly(classStream);
         }

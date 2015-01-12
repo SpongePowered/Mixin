@@ -32,6 +32,9 @@ import java.util.Map;
 
 import net.minecraft.launchwrapper.Launch;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 
 import com.google.gson.Gson;
@@ -41,6 +44,11 @@ import com.google.gson.annotations.SerializedName;
  * Mixin configuration bundle
  */
 class MixinConfig {
+
+    /**
+     * Log even more things
+     */
+    private final Logger logger = LogManager.getLogger("mixin");
     
     /**
      * Map of mixin target classes to mixin infos
@@ -61,6 +69,18 @@ class MixinConfig {
     private List<String> mixinClasses;
     
     /**
+     * Mixin classes to load ONLY on client, mixinPackage will be prepended
+     */
+    @SerializedName("client")
+    private List<String> mixinClassesClient;
+    
+    /**
+     * Mixin classes to load ONLY on dedicated server, mixinPackage will be prepended
+     */
+    @SerializedName("server")
+    private List<String> mixinClassesServer;
+    
+    /**
      * True to set the sourceFile property when applying mixins
      */
     @SerializedName("setSourceFile")
@@ -71,6 +91,11 @@ class MixinConfig {
      */
     @SerializedName("referenceMap")
     private String refMapperConfig;
+    
+    /**
+     * Name of the file this config was initialised from
+     */
+    private transient String name;
     
     /**
      * Reference mapper for injectors
@@ -90,7 +115,9 @@ class MixinConfig {
     /**
      * Called immediately after deserialisation 
      */
-    private void onLoad() {
+    private void onLoad(String name) {
+        this.name = name;
+        
         if (!this.mixinPackage.endsWith(".")) {
             this.mixinPackage += ".";
         }
@@ -116,7 +143,30 @@ class MixinConfig {
     private void initialise() {
         this.initialised = true;
         
-        for (String mixinClass : this.mixinClasses) {
+        this.initialiseSide(this.mixinClasses);
+        
+        switch (MixinEnvironment.getCurrentEnvironment().getSide()) {
+            case CLIENT :
+                this.initialiseSide(this.mixinClassesClient);
+                break;
+            case SERVER :
+                this.initialiseSide(this.mixinClassesServer);
+                break;
+            case UNKNOWN :
+                this.logger.warn("Mixin environment was unable to detect the current side, sided mixins will not be applied");
+                break;
+        }
+    }
+
+    private void initialiseSide(List<String> mixinClasses) {
+        if (mixinClasses == null) {
+            return;
+        }
+        
+        for (String mixinClass : mixinClasses) {
+            if (mixinClass == null) {
+                continue;
+            }
             try {
                 MixinInfo mixin = new MixinInfo(this, mixinClass, true);
                 for (String targetClass : mixin.getTargetClasses()) {
@@ -127,7 +177,14 @@ class MixinConfig {
             }
         }
     }
-    
+
+    /**
+     * Get the name of the file from which this configuration object was initialised
+     */
+    public String getName() {
+        return this.name;
+    }
+
     /**
      * Get the package containing all mixin classes
      */
@@ -202,7 +259,7 @@ class MixinConfig {
     static MixinConfig create(String configFile) {
         try {
             MixinConfig config = new Gson().fromJson(new InputStreamReader(Launch.classLoader.getResourceAsStream(configFile)), MixinConfig.class);
-            config.onLoad();
+            config.onLoad(configFile);
             return config;
         } catch (Exception ex) {
             ex.printStackTrace();

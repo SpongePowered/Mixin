@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,11 +38,71 @@ import net.minecraft.launchwrapper.Launch;
  * Env interaction for mixins
  */
 public class MixinEnvironment {
+    
+    public static enum Side {
+        /**
+         * The environment was unable to determine current side
+         */
+        UNKNOWN {
+            @Override
+            protected boolean detect() {
+                return false;
+            }
+        },
+        
+        /**
+         * Client-side environment 
+         */
+        CLIENT {
+            @Override
+            protected boolean detect() {
+                String sideName = this.getSideName();
+                return "CLIENT".equals(sideName);
+            }
+        },
+        
+        /**
+         * (Dedicated) Server-side environment 
+         */
+        SERVER {
+            @Override
+            protected boolean detect() {
+                String sideName = this.getSideName();
+                return "SERVER".equals(sideName) || "DEDICATEDSERVER".equals(sideName);
+            }
+        };
+        
+        protected abstract boolean detect();
+
+        protected final String getSideName() {
+            try {
+                Class<?> fmlLaunchHandler = Class.forName("net.minecraftforge.fml.relauncher.FMLLaunchHandler", false, Launch.classLoader);
+                Method mdSide = fmlLaunchHandler.getDeclaredMethod("side");
+                Enum<?> side = (Enum<?>)mdSide.invoke(null);
+                return side.name();
+            } catch (Exception ex) {
+                // nope
+            }
+            
+            try {
+                Class<?> liteLoaderCore = Class.forName("com.mumfrey.liteloader.core.LiteLoader", false, Launch.classLoader);
+                Method mdEnvironment = liteLoaderCore.getDeclaredMethod("getEnvironmentType");
+                Enum<?> envType = (Enum<?>)mdEnvironment.invoke(null);
+                return envType.name();
+            } catch (Exception ex) {
+                // nope
+            }
+            
+            return "UNKNOWN";
+        }
+    }
 
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
-
+    
     private static MixinEnvironment env;
+    
+    private Side side;
     
     private MixinEnvironment() {
         // Sanity check
@@ -86,6 +147,26 @@ public class MixinEnvironment {
 
     public void setActiveTransformer(IClassTransformer transformer) {
         Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, this);        
+    }
+    
+    public MixinEnvironment setSide(Side side) {
+        if (side != null && this.getSide() == Side.UNKNOWN && side != Side.UNKNOWN) {
+            this.side = side;
+        }
+        return this;
+    }
+    
+    public Side getSide() {
+        if (this.side == null) {
+            for (Side side : Side.values()) {
+                if (side.detect()) {
+                    this.side = side;
+                    break;
+                }
+            }
+        }
+        
+        return this.side != null ? this.side : Side.UNKNOWN;
     }
 
     public static MixinEnvironment getCurrentEnvironment() {

@@ -98,6 +98,14 @@ public class MixinData {
         this.targetClass = target;
         this.prepare();
     }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return String.format("%s:%s", this.info.getParent().getName(), this.info.getName());
+    }
 
     /**
      * Get the mixin tree
