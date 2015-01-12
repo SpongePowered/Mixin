@@ -75,25 +75,32 @@ public class MixinEnvironment {
         protected abstract boolean detect();
 
         protected final String getSideName() {
-            try {
-                Class<?> fmlLaunchHandler = Class.forName("net.minecraftforge.fml.relauncher.FMLLaunchHandler", false, Launch.classLoader);
-                Method mdSide = fmlLaunchHandler.getDeclaredMethod("side");
-                Enum<?> side = (Enum<?>)mdSide.invoke(null);
-                return side.name();
-            } catch (Exception ex) {
-                // nope
+            String name = this.getSideName("net.minecraftforge.fml.relauncher.FMLLaunchHandler", "side");
+            if (name != null) {
+                return name;
             }
             
-            try {
-                Class<?> liteLoaderCore = Class.forName("com.mumfrey.liteloader.core.LiteLoader", false, Launch.classLoader);
-                Method mdEnvironment = liteLoaderCore.getDeclaredMethod("getEnvironmentType");
-                Enum<?> envType = (Enum<?>)mdEnvironment.invoke(null);
-                return envType.name();
-            } catch (Exception ex) {
-                // nope
+            name = this.getSideName("cpw.mods.fml.relauncher.FMLLaunchHandler", "side");
+            if (name != null) {
+                return name;
+            }
+            
+            name = this.getSideName("com.mumfrey.liteloader.core.LiteLoader", "getEnvironmentType");
+            if (name != null) {
+                return name;
             }
             
             return "UNKNOWN";
+        }
+
+        private String getSideName(String className, String methodName) {
+            try {
+                Class<?> clazz = Class.forName(className, false, Launch.classLoader);
+                Method method = clazz.getDeclaredMethod(methodName);
+                return ((Enum<?>)method.invoke(null)).name();
+            } catch (Exception ex) {
+                return null;
+            }
         }
     }
 
