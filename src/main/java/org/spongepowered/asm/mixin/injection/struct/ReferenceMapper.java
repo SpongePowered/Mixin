@@ -31,6 +31,8 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.minecraft.launchwrapper.Launch;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -83,7 +85,7 @@ public final class ReferenceMapper implements Serializable {
     public static ReferenceMapper read(String resource) {
         Reader reader = null;
         try {
-            reader = new InputStreamReader(ReferenceMapper.class.getResourceAsStream("/" + resource));
+            reader = new InputStreamReader(Launch.classLoader.getResourceAsStream(resource));
             return ReferenceMapper.read(reader);
         } catch (Exception ex) {
             return new ReferenceMapper();
