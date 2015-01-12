@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLClassLoader;
 import java.util.List;
+import java.util.Set;
 
 import net.minecraft.launchwrapper.IClassNameTransformer;
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -37,10 +38,16 @@ import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * Base class for "info" objects which use ASM tree API to do stuff, with things
  */
 abstract class TreeInfo {
+    
+    private static final Set<String> reEntrantTransformers = ImmutableSet.<String>of(
+        "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer"
+    );
     
     private static IClassNameTransformer nameTransformer;
     
@@ -124,7 +131,7 @@ abstract class TreeInfo {
         final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
 
         for (final IClassTransformer transformer : transformers) {
-            if (!(transformer instanceof MixinTransformer)) {
+            if (!(transformer instanceof MixinTransformer) && !TreeInfo.reEntrantTransformers.contains(transformer.getClass().getName())) {
                 basicClass = transformer.transform(name, name, basicClass);
             }
         }
