@@ -77,6 +77,11 @@ class AnnotatedMixins {
     private final String outSrgFileName;
     
     /**
+     * Name of the resource to write remapped refs to
+     */
+    private final String outRefMapFileName;
+    
+    /**
      * File containing the reobfd srgs
      */
     private final File reobfSrgFile;
@@ -101,7 +106,10 @@ class AnnotatedMixins {
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         String outSrgFileName = processingEnv.getOptions().get("outSrgFile");
-        this.outSrgFileName = (outSrgFileName != null) ? outSrgFileName : "mixins.srg"; 
+        this.outSrgFileName = (outSrgFileName != null) ? outSrgFileName : "mixins.srg";
+        
+        String outRefMapFileName = processingEnv.getOptions().get("outRefMapFile");
+        this.outRefMapFileName = (outRefMapFileName != null) ? outRefMapFileName : ReferenceMapper.DEFAULT_RESOURCE; 
         
         String reobfSrgFileName = processingEnv.getOptions().get("reobfSrgFile");
         if (reobfSrgFileName == null) {
@@ -192,7 +200,7 @@ class AnnotatedMixins {
         
         try {
             Filer filer = this.processingEnv.getFiler();
-            FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", ReferenceMapper.DEFAULT_RESOURCE);
+            FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outRefMapFileName);
             writer = new PrintWriter(outSrg.openWriter());
             this.refMapper.write(writer);
         } catch (IOException ex) {
