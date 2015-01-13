@@ -36,12 +36,14 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**
  * Runtime information bundle about a mixin
  */
-class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
+class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     /**
      * Global order of mixin infos, used to determine ordering between mixins with equivalent priority
@@ -99,24 +101,34 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     private final transient byte[] mixinBytes;
 
     /**
+     * Configuration plugin
+     */
+    private final transient IMixinConfigPlugin plugin;
+
+    /**
      * Internal ctor, called by {@link MixinConfig}
      * 
      * @param parent
      * @param mixinName
      * @param runTransformers
+     * @param plugin 
+     * @param suppressPlugin 
+     * @throws ClassNotFoundException 
      */
-    MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers) {
+    MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin)
+            throws ClassNotFoundException {
         this.parent = parent;
         this.name = mixinName;
         this.className = parent.getMixinPackage() + mixinName;
+        this.plugin = plugin;
         
         // Read the class bytes and transform
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
         
         ClassNode classNode = this.getClassNode(0);
         this.classInfo = ClassInfo.fromClassNode(classNode);
-        this.targetClasses = this.readTargetClasses(classNode);
         this.priority = this.readPriority(classNode);
+        this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
         this.detachedSuper = this.validateTargetClasses(classNode);
     }
 
@@ -124,9 +136,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
      * Read the target class names from the {@link Mixin} annotation
      * 
      * @param classNode
+     * @param suppressPlugin 
      * @return
      */
-    private List<String> readTargetClasses(ClassNode classNode) {
+    private List<String> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
@@ -135,7 +148,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
         List<Type> targetClasses = ASMHelper.getAnnotationValue(mixin);
         List<String> targetClassNames = new ArrayList<String>();
         for (Type targetClass : targetClasses) {
-            targetClassNames.add(targetClass.getClassName());
+            String targetClassName = targetClass.getClassName();
+            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
+                targetClassNames.add(targetClassName);
+            }
         }
         
         return targetClassNames;
@@ -188,6 +204,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get the simple name of the mixin
      */
+    @Override
     public String getName() {
         return this.name;
     }
@@ -195,6 +212,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get the name of the mixin class
      */
+    @Override
     public String getClassName() {
         return this.className;
     }
@@ -202,6 +220,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get the ref (internal name) of the mixin class
      */
+    @Override
     public String getClassRef() {
         return this.classInfo.getName();
     }
@@ -209,6 +228,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get the class bytecode
      */
+    @Override
     public byte[] getClassBytes() {
         return this.mixinBytes;
     }
@@ -216,6 +236,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets
      */
+    @Override
     public boolean isDetachedSuper() {
         return this.detachedSuper;
     }
@@ -223,8 +244,25 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     /**
      * Get a new tree for the class bytecode
      */
+    @Override
     public ClassNode getClassNode(int flags) {
         return TreeInfo.getClassNode(this.mixinBytes, flags);
+    }
+    
+    /**
+     * Get the target classes for this mixin
+     */
+    @Override
+    public List<String> getTargetClasses() {
+        return Collections.unmodifiableList(this.targetClasses);
+    }
+    
+    /**
+     * Get the mixin priority
+     */
+    @Override
+    public int getPriority() {
+        return this.priority;
     }
     
     /**
@@ -236,33 +274,20 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
     public MixinData createData(ClassNode target) {
         return new MixinData(this, target);
     }
-    
-    /**
-     * Get the target classes for this mixin
-     */
-    public List<String> getTargetClasses() {
-        return Collections.unmodifiableList(this.targetClasses);
-    }
-    
-    /**
-     * Get the mixin priority
-     */
-    public int getPriority() {
-        return this.priority;
-    }
 
     /**
      * @param mixinClassName
      * @param runTransformers
      * @return
+     * @throws ClassNotFoundException 
      */
-    private byte[] loadMixinClass(String mixinClassName, boolean runTransformers) {
+    private byte[] loadMixinClass(String mixinClassName, boolean runTransformers) throws ClassNotFoundException {
         byte[] mixinBytes = null;
 
         try {
             mixinBytes = TreeInfo.loadClass(mixinClassName, runTransformers);
         } catch (ClassNotFoundException ex) {
-            throw new InvalidMixinException(String.format("The specified mixin '%s' was not found", mixinClassName));
+            throw new ClassNotFoundException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {
             this.logger.warn("Failed to load mixin %s, the specified mixin will not be applied", mixinClassName);
             throw new InvalidMixinException("An error was encountered whilst loading the mixin class", ex);
@@ -283,5 +308,23 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo> {
             return this.order - other.order;
         }
         return (this.priority - other.priority);
+    }
+
+    /**
+     * Called immediately before the mixin is applied to targetClass
+     */
+    public void preApply(String transformedName, ClassNode targetClass) {
+        if (this.plugin != null) {
+            this.plugin.preApply(transformedName, targetClass, this.className, this);
+        }
+    }
+
+    /**
+     * Called immediately after the mixin is applied to targetClass
+     */
+    public void postApply(String transformedName, ClassNode targetClass) {
+        if (this.plugin != null) {
+            this.plugin.postApply(transformedName, targetClass, this.className, this);
+        }
     }
 }

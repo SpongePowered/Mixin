@@ -208,9 +208,11 @@ public class MixinTransformer extends TreeTransformer {
         for (StackTraceElement stackElement : Thread.currentThread().getStackTrace()) {
             if (transformerClasses.contains(stackElement.getClassName())) {
                 this.logger.warn("Re-entrance detected from transformer " + stackElement.getClassName() + ", this will cause serious problems.");
-                break;
+                return;
             }
         }
+
+        this.logger.warn("Re-entrance detected from unknown source, this will cause serious problems.", new RuntimeException());
     }
 
     /**
@@ -231,7 +233,7 @@ public class MixinTransformer extends TreeTransformer {
         
         for (MixinInfo mixin : mixins) {
             this.logger.info("Mixing {} into {}", mixin.getName(), transformedName);
-            this.applyMixin(targetClass, mixin.createData(targetClass));
+            this.applyMixin(transformedName, targetClass, mixin.createData(targetClass));
         }
         
         // Extension point
@@ -264,17 +266,20 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Apply the mixin described by mixin to the supplied classNode
      * 
+     * @param transformedName
      * @param targetClass
      * @param mixin
      */
-    protected void applyMixin(ClassNode targetClass, MixinData mixin) {
+    protected void applyMixin(String transformedName, ClassNode targetClass, MixinData mixin) {
         try {
+            mixin.preApply(transformedName, targetClass);
             this.applyMixinInterfaces(targetClass, mixin);
             this.applyMixinAttributes(targetClass, mixin);
             this.applyMixinFields(targetClass, mixin);
             this.applyMixinMethods(targetClass, mixin);
             this.applyInitialisers(targetClass, mixin);
             this.applyInjections(targetClass, mixin);
+            mixin.postApply(transformedName, targetClass);
         } catch (Exception ex) {
             throw new InvalidMixinException("Unexpecteded error whilst applying the mixin class", ex);
         }

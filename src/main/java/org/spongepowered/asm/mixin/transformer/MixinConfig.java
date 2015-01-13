@@ -27,14 +27,17 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.launchwrapper.Launch;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 
 import com.google.gson.Gson;
@@ -44,6 +47,11 @@ import com.google.gson.annotations.SerializedName;
  * Mixin configuration bundle
  */
 class MixinConfig {
+    
+    /**
+     * Global list of mixin classes, so we can skip any duplicates
+     */
+    private static final Set<String> globalMixinList = new HashSet<String>();
 
     /**
      * Log even more things
@@ -98,6 +106,17 @@ class MixinConfig {
     private transient String name;
     
     /**
+     * Name of the {@link IMixinConfigPlugin} to hook onto this MixinConfig 
+     */
+    @SerializedName("plugin")
+    private String pluginClassName;
+    
+    /**
+     * Config plugin, if supplied
+     */
+    private transient IMixinConfigPlugin plugin;
+    
+    /**
      * Reference mapper for injectors
      */
     private transient ReferenceMapper refMapper;
@@ -118,6 +137,20 @@ class MixinConfig {
     private void onLoad(String name) {
         this.name = name;
         
+        if (this.pluginClassName != null) {
+            try {
+                Class<?> pluginClass = Class.forName(this.pluginClassName, true, Launch.classLoader);
+                this.plugin = (IMixinConfigPlugin)pluginClass.newInstance();
+                
+                if (this.plugin != null) {
+                    this.plugin.onLoad(this.mixinPackage);
+                }
+            } catch (Throwable th) {
+                th.printStackTrace();
+                this.plugin = null;
+            }
+        }
+
         if (!this.mixinPackage.endsWith(".")) {
             this.mixinPackage += ".";
         }
@@ -125,7 +158,13 @@ class MixinConfig {
         Launch.classLoader.addClassLoaderExclusion(this.mixinPackage);
         
         if (this.refMapperConfig == null) {
-            this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
+            if (this.plugin != null) {
+                this.refMapperConfig = this.plugin.getRefMapperConfig();
+            }
+            
+            if (this.refMapperConfig == null) {
+                this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
+            }
         }
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
@@ -143,37 +182,46 @@ class MixinConfig {
     private void initialise() {
         this.initialised = true;
         
-        this.initialiseSide(this.mixinClasses);
+        this.initialiseMixins(this.mixinClasses, false);
         
         switch (MixinEnvironment.getCurrentEnvironment().getSide()) {
             case CLIENT :
-                this.initialiseSide(this.mixinClassesClient);
+                this.initialiseMixins(this.mixinClassesClient, false);
                 break;
             case SERVER :
-                this.initialiseSide(this.mixinClassesServer);
+                this.initialiseMixins(this.mixinClassesServer, false);
                 break;
             case UNKNOWN :
                 this.logger.warn("Mixin environment was unable to detect the current side, sided mixins will not be applied");
                 break;
         }
+        
+        if (this.plugin != null) {
+            List<String> pluginMixins = this.plugin.getMixins();
+            this.initialiseMixins(pluginMixins, true);
+        }
     }
 
-    private void initialiseSide(List<String> mixinClasses) {
+    private void initialiseMixins(List<String> mixinClasses, boolean suppressPlugin) {
         if (mixinClasses == null) {
             return;
         }
         
         for (String mixinClass : mixinClasses) {
-            if (mixinClass == null) {
+            if (mixinClass == null || MixinConfig.globalMixinList.contains(mixinClass)) {
                 continue;
             }
+            
             try {
-                MixinInfo mixin = new MixinInfo(this, mixinClass, true);
-                for (String targetClass : mixin.getTargetClasses()) {
-                    this.mixinsFor(targetClass).add(mixin);
+                MixinInfo mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
+                if (mixin.getTargetClasses().size() > 0) {
+                    MixinConfig.globalMixinList.add(mixinClass);
+                    for (String targetClass : mixin.getTargetClasses()) {
+                        this.mixinsFor(targetClass).add(mixin);
+                    }
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
+                this.logger.error(ex.getMessage(), ex);
             }
         }
     }

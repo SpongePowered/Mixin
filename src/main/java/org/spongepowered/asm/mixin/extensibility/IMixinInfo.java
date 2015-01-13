@@ -22,37 +22,51 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.mixin.extensibility;
 
-import net.minecraft.launchwrapper.Launch;
+import java.util.List;
 
-import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.objectweb.asm.tree.ClassNode;
 
-public abstract class MixinBootstrap {
-
-    public static final String VERSION = "0.1";
+public interface IMixinInfo {
     
-    public static final String INIT_KEY = "mixin.initialised";
-    public static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
-    private static final String ASM_PACKAGE = "org.objectweb.asm.";
-    
-    public static final String TRANSFORMER_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer";
+    /**
+     * Get the simple name of the mixin
+     */
+    public abstract String getName();
 
-    
-    static {
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.ASM_PACKAGE);
-        
-        @SuppressWarnings("unused")
-        IMixinConfigPlugin forceClassLoad = null;
-        
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.MIXIN_PACKAGE);
-    }
+    /**
+     * Get the name of the mixin class
+     */
+   public abstract String getClassName();
 
-    private MixinBootstrap() {}
+   /**
+    * Get the ref (internal name) of the mixin class
+    */
+    public abstract String getClassRef();
 
-    public static void init() {
-        Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
-        MixinEnvironment.getCurrentEnvironment();
-    }
+    /**
+     * Get the class bytecode
+     */
+    public abstract byte[] getClassBytes();
+
+    /**
+     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets
+     */
+    public abstract boolean isDetachedSuper();
+
+    /**
+     * Get a new tree for the class bytecode
+     */
+    public abstract ClassNode getClassNode(int flags);
+
+    /**
+     * Get the target classes for this mixin
+     */
+    public abstract List<String> getTargetClasses();
+
+    /**
+     * Get the mixin priority
+     */
+    public abstract int getPriority();
 }

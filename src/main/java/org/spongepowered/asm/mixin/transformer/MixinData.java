@@ -277,4 +277,18 @@ public class MixinData {
         }
         return value;
     }
+
+    /**
+     * Called immediately before the mixin is applied to targetClass
+     */
+    public void preApply(String transformedName, ClassNode targetClass) {
+        this.info.preApply(transformedName, targetClass);
+    }
+
+    /**
+     * Called immediately after the mixin is applied to targetClass
+     */
+    public void postApply(String transformedName, ClassNode targetClass) {
+        this.info.postApply(transformedName, targetClass);
+    }
 }
