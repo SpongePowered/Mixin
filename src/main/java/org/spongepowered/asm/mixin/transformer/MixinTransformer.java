@@ -28,10 +28,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -43,6 +46,8 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -59,9 +64,60 @@ import org.spongepowered.asm.util.ASMHelper;
  */
 public class MixinTransformer extends TreeTransformer {
     
+    /**
+     * Internal struct for representing a range
+     */
+    class Range {
+        /**
+         * Start of the range
+         */
+        final int start;
+        
+        /**
+         * End of the range 
+         */
+        final int end;
+        
+        /**
+         * Range marker
+         */
+        final int marker;
+
+        Range(int start, int end, int marker) {
+            this.start = start;
+            this.end = end;
+            this.marker = marker;
+        }
+        
+        boolean isValid() {
+            return (this.start != 0 && this.end != 0 && this.start >= this.end);
+        }
+        
+        boolean contains(int value) {
+            return value >= this.start && value <= this.end;
+        }
+        
+        boolean excludes(int value) {
+            return value < this.start || value > this.end;
+        }
+    }
+    
     private static final String INIT = "<init>";
     private static final String CLINIT = "<clinit>";
-
+    
+    /**
+     * List of opcodes which must not appear in a class initialiser, mainly a sanity check so that if any of the specified opcodes are found, we can
+     * log it as an error condition and then people can bitch at me to fix it. Essentially if it turns out that field initialisers can somehow make
+     * use of local variables, then I need to write some code to ensure that said locals are shifted so that they don't interfere with locals in the
+     * receiving constructor. 
+     */
+    private static final int[] INITIALISER_OPCODE_BLACKLIST = {
+        Opcodes.RETURN, Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
+        Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE,
+        Opcodes.ASTORE, Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE, Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE,
+        Opcodes.SASTORE
+    };
+    
     private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false);
 
     /**
@@ -73,7 +129,12 @@ public class MixinTransformer extends TreeTransformer {
      * Mixin configuration bundle
      */
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
-
+    
+    /**
+     * Sanity check for this transformer. The transformer should never be re-entrant by design so we need to detect and warn when it happens. 
+     */
+    private int reEntranceCheck = 0;
+    
     /**
      * ctor 
      */
@@ -105,22 +166,51 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
-        for (MixinConfig config : this.configs) {
-            if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
-                throw new RuntimeException(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
-            }
-            
-            if (config.hasMixinsFor(transformedName)) {
-                try {
-                    basicClass = this.applyMixins(config, transformedName, basicClass);
-                } catch (InvalidMixinException th) {
-                    this.logger.warn(String.format("Class mixin failed: %s %s", th.getClass().getName(), th.getMessage()), th);
-                    th.printStackTrace();
+        this.reEntranceCheck++;
+        
+        if (this.reEntranceCheck > 1) {
+            this.detectReEntrance();
+        }
+        
+        try {
+            for (MixinConfig config : this.configs) {
+                if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
+                    throw new RuntimeException(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
+                }
+                
+                if (config.hasMixinsFor(transformedName)) {
+                    try {
+                        basicClass = this.applyMixins(config, transformedName, basicClass);
+                    } catch (InvalidMixinException th) {
+                        this.logger.warn(String.format("Class mixin failed: %s %s", th.getClass().getName(), th.getMessage()), th);
+                        th.printStackTrace();
+                    }
                 }
             }
-        }
 
-        return basicClass;
+            return basicClass;
+        } finally {
+            this.reEntranceCheck--;
+        }
+    }
+
+    /**
+     * If re-entrance is detected, attempt to find the source and log a warning
+     */
+    private void detectReEntrance() {
+        Set<String> transformerClasses = new HashSet<String>();
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            transformerClasses.add(transformer.getClass().getName());
+        }
+        
+        transformerClasses.remove(this.getClass().getName());
+        
+        for (StackTraceElement stackElement : Thread.currentThread().getStackTrace()) {
+            if (transformerClasses.contains(stackElement.getClassName())) {
+                this.logger.warn("Re-entrance detected from transformer " + stackElement.getClassName() + ", this will cause serious problems.");
+                break;
+            }
+        }
     }
 
     /**
@@ -183,6 +273,7 @@ public class MixinTransformer extends TreeTransformer {
             this.applyMixinAttributes(targetClass, mixin);
             this.applyMixinFields(targetClass, mixin);
             this.applyMixinMethods(targetClass, mixin);
+            this.applyInitialisers(targetClass, mixin);
             this.applyInjections(targetClass, mixin);
         } catch (Exception ex) {
             throw new InvalidMixinException("Unexpecteded error whilst applying the mixin class", ex);
@@ -288,7 +379,7 @@ public class MixinTransformer extends TreeTransformer {
             } else if (MixinTransformer.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended
                 this.appendInsns(targetClass, mixinMethod.name, mixinMethod);
-            }
+            } 
         }
     }
 
@@ -380,6 +471,161 @@ public class MixinTransformer extends TreeTransformer {
                         method.instructions.insertBefore(returnNode, insn);
                     }
                 }
+            }
+        }
+    }
+    
+    /**
+     * (Attempts to) find and patch field initialisers from the mixin into the target class
+     * 
+     * @param targetClass
+     * @param mixin
+     */
+    private void applyInitialisers(ClassNode targetClass, MixinData mixin) {
+        // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
+        MethodNode ctor = this.getConstructor(mixin);
+        if (ctor == null) {
+            return;
+        }
+        
+        // Find the initialiser instructions in the candidate ctor
+        InsnList initialiser = this.getInitialiser(ctor);
+        if (initialiser == null || initialiser.size() == 0) {
+            return;
+        }
+        
+        // Patch the initialiser into the target class ctors
+        for (MethodNode method : targetClass.methods) {
+            if (MixinTransformer.INIT.equals(method.name)) {
+                this.injectInitialiser(method, initialiser);
+            }
+        }
+    }
+
+    /**
+     * Finds a suitable ctor for reading the instance initialiser bytecode
+     */
+    private MethodNode getConstructor(MixinData mixin) {
+        MethodNode ctor = null;
+        
+        for (MethodNode mixinMethod : mixin.getClassNode().methods) {
+            if (MixinTransformer.INIT.equals(mixinMethod.name)) {
+                boolean hasLineNumbers = false;
+                for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
+                    if (iter.next() instanceof LineNumberNode) {
+                        hasLineNumbers = true;
+                        break;
+                    }
+                }
+                if (hasLineNumbers) {
+                    if (ctor == null) {
+                        ctor = mixinMethod;
+                    } else {
+                        // Not an error condition, just weird
+                        this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
+                    }
+                }
+            }
+        }
+        
+        return ctor;
+    }
+
+    /**
+     * Identifies line numbers in the supplied ctor which correspond to the start and end of the method body.
+     * 
+     * @param ctor
+     * @return
+     */
+    private Range getConstructorRange(MethodNode ctor) {
+        int line = 0, start = 0, end = 0, superIndex = -1;
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof LineNumberNode) {
+                line = ((LineNumberNode)insn).line;
+            } else if (insn instanceof MethodInsnNode) {
+                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && MixinTransformer.INIT.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
+                    superIndex = ctor.instructions.indexOf(insn);
+                    start = line;
+                }
+            } else if (insn.getOpcode() == Opcodes.RETURN) {
+                end = line;
+            }
+        }
+        
+        return new Range(start, end, superIndex);
+    }
+
+    /**
+     * Get insns corresponding to the instance initialiser (hopefully) from the supplied constructor.
+     * TODO Potentially rewrite this to be less horrible.
+     * 
+     * @param mixin
+     * @param ctor
+     * @return
+     */
+    private InsnList getInitialiser(MethodNode ctor) {
+        // Find the range of line numbers which corresponds to the constructor body
+        Range init = this.getConstructorRange(ctor);
+        if (!init.isValid()) {
+            return null;
+        }
+        
+        // Now we know where the constructor is, look for insns which lie OUTSIDE the method body
+        int line = 0;
+        InsnList initialiser = new InsnList();
+        boolean gatherNodes = false;
+        LabelNode optionalInsn = null;
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(init.marker); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof LineNumberNode) {
+                line = ((LineNumberNode)insn).line;
+                gatherNodes = init.excludes(line);
+            } else if (gatherNodes) {
+                if (optionalInsn != null) {
+                    initialiser.add(optionalInsn);
+                    optionalInsn = null;
+                }
+                
+                if (insn instanceof LabelNode) {
+                    optionalInsn = (LabelNode)insn;
+                } else {
+                    int opcode = insn.getOpcode();
+                    for (int ivalidOp : MixinTransformer.INITIALISER_OPCODE_BLACKLIST) {
+                        if (opcode == ivalidOp) {
+                            // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
+                            // code which will likely break things and fix it if a real test case ever appears
+                            throw new InvalidMixinException("Cannot handle opcode 0x" + Integer.toHexString(opcode) + " in class initialiser");
+                        }
+                    }
+                    
+                    initialiser.add(insn);
+                }
+            }
+        }
+        
+        // Check that the last insn is a PUTFIELD, if it's not then 
+        AbstractInsnNode last = initialiser.getLast();
+        if (last != null) {
+            if (last.getOpcode() != Opcodes.PUTFIELD) {
+                throw new InvalidMixinException("Could not parse initialiser, expected 0xB5, found 0x" + Integer.toHexString(last.getOpcode()));
+            }
+        }
+        
+        return initialiser;
+    }
+
+    /**
+     * Inject initialiser code into the target constructor
+     * 
+     * @param ctor
+     * @param initialiser
+     */
+    private void injectInitialiser(MethodNode ctor, InsnList initialiser) {
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && MixinTransformer.INIT.equals(((MethodInsnNode)insn).name)) {
+                ctor.instructions.insert(insn, initialiser);
             }
         }
     }
