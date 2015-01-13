@@ -46,7 +46,8 @@ import com.google.common.collect.ImmutableSet;
 abstract class TreeInfo {
     
     private static final Set<String> reEntrantTransformers = ImmutableSet.<String>of(
-        "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer"
+        "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer",
+        "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer"
     );
     
     private static IClassNameTransformer nameTransformer;
