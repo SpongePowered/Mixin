@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.extensibility;
 
 import java.util.List;
+import java.util.Set;
 
 import org.objectweb.asm.tree.ClassNode;
 
@@ -65,6 +66,16 @@ public interface IMixinConfigPlugin {
      */
     public abstract boolean shouldApplyMixin(String targetClassName, String mixinClassName);
 
+    /**
+     * Called after all configurations are initialised, this allows this plugin to observe classes targetted by other mixin configs and optionally
+     * remove targets from its own set. The set myTargets is a direct view of the targets collection in this companion config and keys may be removed
+     * from this set to suppress mixins in this config which target the specified class. Adding keys to the set will have no effect.
+     * 
+     * @param myTargets Target class set from the companion config
+     * @param otherTargets Target class set incorporating targets from all other configs, read-only
+     */
+    public abstract void acceptTargets(Set<String> myTargets, Set<String> otherTargets);
+    
     /**
      * After mixins specified in the configuration have been processed, this method is called to allow the plugin to add any additional mixins to
      * load. It should return a list of mixin class names or return null if the plugin does not wish to append any mixins of its own.

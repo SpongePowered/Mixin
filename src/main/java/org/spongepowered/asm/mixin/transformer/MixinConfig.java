@@ -46,8 +46,13 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Mixin configuration bundle
  */
-class MixinConfig {
+class MixinConfig implements Comparable<MixinConfig> {
     
+    /**
+     * Global order of mixin configs, used to determine ordering between configs with equivalent priority
+     */
+    private static int configOrder = 0;
+
     /**
      * Global list of mixin classes, so we can skip any duplicates
      */
@@ -63,6 +68,12 @@ class MixinConfig {
      */
     private final transient Map<String, List<MixinInfo>> mixinMapping = new HashMap<String, List<MixinInfo>>();
     
+    /**
+     * Configuration priority
+     */
+    @SerializedName("priority")
+    private final int priority = 1000;
+
     /**
      * Package containing all mixins. This package will be monitored by the transformer so that we can explode if some dummy tries to reference a
      * mixin class directly.
@@ -100,6 +111,11 @@ class MixinConfig {
     @SerializedName("referenceMap")
     private String refMapperConfig;
     
+    /**
+     * Intrinsic order (for sorting configurations with identical priority)
+     */
+    private final transient int order = MixinConfig.configOrder++;
+
     /**
      * Name of the file this config was initialised from
      */
@@ -179,7 +195,10 @@ class MixinConfig {
      * <p>For this reason we will invoke the initialisation on the first call to either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em>
      * methods.</p>
      */
-    private void initialise() {
+    void initialise() {
+        if (this.initialised) {
+            return;
+        }
         this.initialised = true;
         
         this.initialiseMixins(this.mixinClasses, false);
@@ -195,7 +214,9 @@ class MixinConfig {
                 this.logger.warn("Mixin environment was unable to detect the current side, sided mixins will not be applied");
                 break;
         }
-        
+    }
+    
+    void postInitialise() {
         if (this.plugin != null) {
             List<String> pluginMixins = this.plugin.getMixins();
             this.initialiseMixins(pluginMixins, true);
@@ -262,16 +283,26 @@ class MixinConfig {
     }
     
     /**
+     * Get the companion plugin, if available
+     */
+    public IMixinConfigPlugin getPlugin() {
+        return this.plugin;
+    }
+
+    /**
+     * Get targets for this configuration
+     */
+    public Set<String> getTargets() {
+        return this.mixinMapping.keySet();
+    }
+
+    /**
      * Check whether this configuration bundle has a mixin for the specified class
      * 
      * @param targetClass
      * @return
      */
     public boolean hasMixinsFor(String targetClass) {
-        if (!this.initialised) {
-            this.initialise();
-        }
-        
         return this.mixinMapping.containsKey(targetClass);
     }
     
@@ -282,10 +313,6 @@ class MixinConfig {
      * @return
      */
     public List<MixinInfo> getMixinsFor(String targetClass) {
-        if (!this.initialised) {
-            this.initialise();
-        }
-        
         return this.mixinsFor(targetClass);
     }
 
@@ -296,6 +323,20 @@ class MixinConfig {
             this.mixinMapping.put(targetClass, mixins);
         }
         return mixins;
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Comparable#compareTo(java.lang.Object)
+     */
+    @Override
+    public int compareTo(MixinConfig other) {
+        if (other == null) {
+            return 0;
+        }
+        if (other.priority == this.priority) {
+            return this.order - other.order;
+        }
+        return (this.priority - other.priority);
     }
     
     /**

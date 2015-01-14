@@ -164,6 +164,13 @@ public class MixinData {
     }
 
     /**
+     * Get the mixin priority
+     */
+    public int getPriority() {
+        return this.info.getPriority();
+    }
+
+    /**
      * Get all interfaces for this mixin
      */
     public Set<String> getInterfaces() {

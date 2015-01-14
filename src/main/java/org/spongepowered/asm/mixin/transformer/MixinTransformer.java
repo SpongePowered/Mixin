@@ -32,6 +32,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.UUID;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -43,6 +46,7 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -55,6 +59,8 @@ import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
@@ -131,9 +137,22 @@ public class MixinTransformer extends TreeTransformer {
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
     
     /**
+     * True once initialisation is done. All mixin configs needs to be initialised as late as possible in startup (so that other transformers have
+     * had time to register) but before any game classes are transformed. To do this we initialise the configs on the first call to {@link #transform}
+     * and this flag keeps track of when we've done this. 
+     */
+    private boolean initDone;
+    
+    /**
      * Sanity check for this transformer. The transformer should never be re-entrant by design so we need to detect and warn when it happens. 
      */
     private int reEntranceCheck = 0;
+    
+    /**
+     * Session ID, used as a check when parsing {@link MixinMerged} annotations to prevent them being applied at compile time by people trying to
+     * circumvent mixin application
+     */
+    private final String sessionId = UUID.randomUUID().toString();
     
     /**
      * ctor 
@@ -159,6 +178,8 @@ public class MixinTransformer extends TreeTransformer {
                 }
             }
         }
+        
+        Collections.sort(this.configs);
     }
 
     /* (non-Javadoc)
@@ -172,25 +193,78 @@ public class MixinTransformer extends TreeTransformer {
             this.detectReEntrance();
         }
         
+        if (!this.initDone) {
+            this.initConfigs();
+            this.initDone = true;
+        }
+        
         try {
+            SortedSet<MixinInfo> mixins = null;
+            
             for (MixinConfig config : this.configs) {
                 if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
                     throw new RuntimeException(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
                 }
                 
                 if (config.hasMixinsFor(transformedName)) {
-                    try {
-                        basicClass = this.applyMixins(config, transformedName, basicClass);
-                    } catch (InvalidMixinException th) {
-                        this.logger.warn(String.format("Class mixin failed: %s %s", th.getClass().getName(), th.getMessage()), th);
-                        th.printStackTrace();
+                    if (mixins == null) {
+                        mixins = new TreeSet<MixinInfo>();
                     }
+                    
+                    // Get and sort mixins for the class
+                    mixins.addAll(config.getMixinsFor(transformedName));
+                }
+            }
+            
+            if (mixins != null) {
+                try {
+                    basicClass = this.applyMixins(transformedName, basicClass, mixins);
+                } catch (InvalidMixinException th) {
+                    this.logger.warn(String.format("Class mixin failed: %s %s", th.getClass().getName(), th.getMessage()), th);
+                    th.printStackTrace();
                 }
             }
 
             return basicClass;
         } finally {
             this.reEntranceCheck--;
+        }
+    }
+
+    /**
+     * Initialise mixin configs
+     */
+    private void initConfigs() {
+        for (MixinConfig config : this.configs) {
+            try {
+                config.initialise();
+            } catch (Exception ex) {
+                this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
+            }
+        }
+        
+        for (MixinConfig config : this.configs) {
+            IMixinConfigPlugin plugin = config.getPlugin();
+            if (plugin == null) {
+                continue;
+            }
+            
+            Set<String> otherTargets = new HashSet<String>();
+            for (MixinConfig otherConfig : this.configs) {
+                if (!otherConfig.equals(config)) {
+                    otherTargets.addAll(otherConfig.getTargets());
+                }
+            }
+            
+            plugin.acceptTargets(config.getTargets(), Collections.unmodifiableSet(otherTargets));
+        }
+
+        for (MixinConfig config : this.configs) {
+            try {
+                config.postInitialise();
+            } catch (Exception ex) {
+                this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
+            }
         }
     }
 
@@ -218,18 +292,14 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Apply mixins for specified target class to the class described by the supplied byte array
      * 
-     * @param config
      * @param transformedName 
      * @param basicClass
+     * @param mixins
      * @return
      */
-    private byte[] applyMixins(MixinConfig config, String transformedName, byte[] basicClass) {
+    private byte[] applyMixins(String transformedName, byte[] basicClass, SortedSet<MixinInfo> mixins) {
         // Tree for target class
         ClassNode targetClass = this.readClass(basicClass, true);
-        
-        // Get and sort mixins for the class
-        List<MixinInfo> mixins = config.getMixinsFor(transformedName);
-        Collections.sort(mixins);
         
         for (MixinInfo mixin : mixins) {
             this.logger.info("Mixing {} into {}", mixin.getName(), transformedName);
@@ -259,7 +329,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixins
      */
-    protected void postTransform(String transformedName, ClassNode targetClass, List<MixinInfo> mixins) {
+    protected void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         // Stub for subclasses
     }
 
@@ -374,13 +444,7 @@ public class MixinTransformer extends TreeTransformer {
                             String.format("Mixin classes cannot contain visible static methods or fields, found %s", mixinMethod.name));
                 }
 
-                MethodNode target = this.findTargetMethod(targetClass, mixinMethod);
-                if (target != null) {
-                    targetClass.methods.remove(target);
-                } else if (isOverwrite) {
-                    throw new InvalidMixinException(String.format("Overwrite target %s was not located in the target class", mixinMethod.name));
-                }
-                targetClass.methods.add(mixinMethod);
+                this.mergeMethod(targetClass, mixin, mixinMethod, isOverwrite);
             } else if (MixinTransformer.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended
                 this.appendInsns(targetClass, mixinMethod.name, mixinMethod);
@@ -439,6 +503,48 @@ public class MixinTransformer extends TreeTransformer {
         if (newOwner != null) {
             insn.owner = newOwner;
         }
+    }
+
+    /**
+     * Attempts to merge the supplied method into the target class
+     * 
+     * @param targetClass Target class to merge into
+     * @param mixin Mixin being applied
+     * @param method Method to merge
+     * @param isOverwrite true if the method is annotated with an {@link Overwrite} annotation
+     */
+    private void mergeMethod(ClassNode targetClass, MixinData mixin, MethodNode method, boolean isOverwrite) {
+        MethodNode target = this.findTargetMethod(targetClass, method);
+        
+        if (target != null) {
+            AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
+            if (merged != null) {
+                String sessionId = ASMHelper.getAnnotationValue(merged, "sessionId");
+                
+                if (!this.sessionId.equals(sessionId)) {
+                    throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + targetClass.name);
+                }
+
+                String owner = ASMHelper.getAnnotationValue(merged, "mixin");
+                int priority = ASMHelper.getAnnotationValue(merged, "priority");
+                
+                if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
+                    this.logger.warn("Method overwrite conflict for {}, previously written by {}. Skipping method.", method.name, owner);
+                    return;
+                }
+            }
+
+            targetClass.methods.remove(target);
+        } else if (isOverwrite) {
+            throw new InvalidMixinException(String.format("Overwrite target %s was not located in the target class", method.name));
+        }
+        
+        targetClass.methods.add(method);
+        
+        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
+                "mixin", mixin.getClassName(),
+                "priority", mixin.getPriority(),
+                "sessionId", this.sessionId);
     }
 
     /**

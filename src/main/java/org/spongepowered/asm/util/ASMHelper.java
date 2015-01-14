@@ -24,8 +24,13 @@
  */
 package org.spongepowered.asm.util;
 
-import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
-import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
+import static org.objectweb.asm.ClassWriter.*;
+
+import java.io.PrintWriter;
+import java.lang.annotation.Annotation;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -43,12 +48,6 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.util.CheckClassAdapter;
-
-import java.io.PrintWriter;
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 public class ASMHelper {
 
@@ -343,6 +342,82 @@ public class ASMHelper {
     public static void dumpClass(byte[] bytes) {
         ClassReader cr = new ClassReader(bytes);
         CheckClassAdapter.verify(cr, true, new PrintWriter(System.out));
+    }
+
+    /**
+     * Set a runtime-visible annotation of the specified class on the supplied field node
+     *
+     * @param field Target field
+     * @param annotationClass Type of annotation to search for
+     * @param value Values (interleaved key/value pairs) to set
+     */
+    public static void setVisibleAnnotation(FieldNode field, Class<? extends Annotation> annotationClass, Object... value) {
+        AnnotationNode node = ASMHelper.makeAnnotationNode(Type.getDescriptor(annotationClass), value);
+        field.visibleAnnotations = ASMHelper.addAnnotation(field.visibleAnnotations, node);
+    }
+    
+    /**
+     * Set an invisible annotation of the specified class on the supplied field node
+     *
+     * @param field Target field
+     * @param annotationClass Type of annotation to search for
+     * @param value Values (interleaved key/value pairs) to set
+     */
+    public static void setInvisibleAnnotation(FieldNode field, Class<? extends Annotation> annotationClass, Object... value) {
+        AnnotationNode node = ASMHelper.makeAnnotationNode(Type.getDescriptor(annotationClass), value);
+        field.invisibleAnnotations = ASMHelper.addAnnotation(field.invisibleAnnotations, node);
+    }
+    
+    /**
+     * Set a runtime-visible annotation of the specified class on the supplied method node
+     *
+     * @param method Target method
+     * @param annotationClass Type of annotation to search for
+     * @param value Values (interleaved key/value pairs) to set
+     */
+    public static void setVisibleAnnotation(MethodNode method, Class<? extends Annotation> annotationClass, Object... value) {
+        AnnotationNode node = ASMHelper.makeAnnotationNode(Type.getDescriptor(annotationClass), value);
+        method.visibleAnnotations = ASMHelper.addAnnotation(method.visibleAnnotations, node);
+    }
+    
+    /**
+     * Set a invisible annotation of the specified class on the supplied method node
+     *
+     * @param method Target method
+     * @param annotationClass Type of annotation to search for
+     * @param value Values (interleaved key/value pairs) to set
+     */
+    public static void setInvisibleAnnotation(MethodNode method, Class<? extends Annotation> annotationClass, Object... value) {
+        AnnotationNode node = ASMHelper.makeAnnotationNode(Type.getDescriptor(annotationClass), value);
+        method.invisibleAnnotations = ASMHelper.addAnnotation(method.invisibleAnnotations, node);
+    }
+
+    private static AnnotationNode makeAnnotationNode(String annotationType, Object... value) {
+        AnnotationNode node = new AnnotationNode(annotationType);
+        for (int pos = 0; pos < value.length - 1; pos += 2) {
+            node.visit((String)value[pos], value[pos + 1]);
+        }
+        return node;
+    }
+    
+    private static List<AnnotationNode> addAnnotation(List<AnnotationNode> annotations, AnnotationNode node) {
+        if (annotations == null) {
+            annotations = new ArrayList<AnnotationNode>(1);
+        } else {
+            annotations.remove(ASMHelper.getAnnotation(annotations, node.desc));
+        }
+        annotations.add(node);
+        return annotations;
+    }
+
+    /**
+     * Get an invisible annotation of the specified class from the supplied field node
+     *
+     * @param field Source field
+     * @param annotationClass Type of annotation to search for
+     * @return the annotation, or null if not present
+     */
+    public static void setInvisibleAnnotation(FieldNode field, Class<? extends Annotation> annotationClass) {
     }
 
     /**
