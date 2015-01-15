@@ -271,13 +271,13 @@ public class MixinData {
      * @param annotation
      * @param key
      * @param annotationClass
-     * @return
+     * @return Value of the specified annotation node, default value if not specified, or null if no value or default
      */
     private static String getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
         String value = ASMHelper.getAnnotationValue(annotation, key);
         if (value == null) {
             try {
-                value = (String)Shadow.class.getDeclaredMethod(key).getDefaultValue();
+                value = (String)annotationClass.getDeclaredMethod(key).getDefaultValue();
             } catch (NoSuchMethodException ex) {
                 // Don't care
             }

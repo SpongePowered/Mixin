@@ -295,7 +295,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param transformedName 
      * @param basicClass
      * @param mixins
-     * @return
+     * @return class bytecode after application of mixins
      */
     private byte[] applyMixins(String transformedName, byte[] basicClass, SortedSet<MixinInfo> mixins) {
         // Tree for target class
@@ -459,7 +459,6 @@ public class MixinTransformer extends TreeTransformer {
      * @param mixin
      * @param target
      * @param method
-     * @return
      */
     private void transformMethod(MixinData mixin, ClassNode target, MethodNode method) {
         String fromClass = mixin.getClassRef();
@@ -519,14 +518,14 @@ public class MixinTransformer extends TreeTransformer {
         if (target != null) {
             AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
             if (merged != null) {
-                String sessionId = ASMHelper.getAnnotationValue(merged, "sessionId");
+                String sessionId = ASMHelper.<String>getAnnotationValue(merged, "sessionId");
                 
                 if (!this.sessionId.equals(sessionId)) {
                     throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + targetClass.name);
                 }
 
-                String owner = ASMHelper.getAnnotationValue(merged, "mixin");
-                int priority = ASMHelper.getAnnotationValue(merged, "priority");
+                String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
+                int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
                 
                 if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
                     this.logger.warn("Method overwrite conflict for {}, previously written by {}. Skipping method.", method.name, owner);
@@ -646,7 +645,7 @@ public class MixinTransformer extends TreeTransformer {
      * Identifies line numbers in the supplied ctor which correspond to the start and end of the method body.
      * 
      * @param ctor
-     * @return
+     * @return range indicating the line numbers of the specified constructor and the position of the superclass ctor invocation
      */
     private Range getConstructorRange(MethodNode ctor) {
         int line = 0, start = 0, end = 0, superIndex = -1;
@@ -673,7 +672,7 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param mixin
      * @param ctor
-     * @return
+     * @return initialiser bytecode extracted from the supplied constructor, or null if the constructor range could not be parsed
      */
     private InsnList getInitialiser(MethodNode ctor) {
         // Find the range of line numbers which corresponds to the constructor body
@@ -767,7 +766,7 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param targetClass
      * @param searchFor
-     * @return
+     * @return Target method matching searchFor, or null if not found
      */
     private MethodNode findTargetMethod(ClassNode targetClass, MethodNode searchFor) {
         for (MethodNode target : targetClass.methods) {
@@ -784,7 +783,7 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param targetClass
      * @param searchFor
-     * @return
+     * @return Target field matching searchFor, or null if not found
      */
     private FieldNode findTargetField(ClassNode targetClass, FieldNode searchFor) {
         for (FieldNode target : targetClass.fields) {
@@ -801,7 +800,7 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param method
      * @param flag 
-     * @return
+     * @return True if the specified flag is set in this method's access flags
      */
     private static boolean hasFlag(MethodNode method, int flag) {
         return (method.access & flag) == flag;
@@ -812,7 +811,7 @@ public class MixinTransformer extends TreeTransformer {
      * 
      * @param field
      * @param flag 
-     * @return
+     * @return True if the specified flag is set in this field's access flags
      */
     private static boolean hasFlag(FieldNode field, int flag) {
         return (field.access & flag) == flag;

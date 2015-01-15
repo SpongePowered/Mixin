@@ -392,9 +392,20 @@ public class ASMHelper {
         method.invisibleAnnotations = ASMHelper.addAnnotation(method.invisibleAnnotations, node);
     }
 
+    /**
+     * Create a new annotation node with the supplied values
+     * 
+     * @param annotationType Name (internal name) of the annotation interface to create
+     * @param value Interleaved key/value pairs. Keys must be strings
+     * @return new annotation node
+     */
     private static AnnotationNode makeAnnotationNode(String annotationType, Object... value) {
         AnnotationNode node = new AnnotationNode(annotationType);
         for (int pos = 0; pos < value.length - 1; pos += 2) {
+            if (!(value[pos] instanceof String)) {
+                throw new IllegalArgumentException("Annotation keys must be strings, found " + value[pos].getClass().getSimpleName()
+                        + " with " + value[pos].toString() + " at index " + pos + " creating " + annotationType);
+            }
             node.visit((String)value[pos], value[pos + 1]);
         }
         return node;
@@ -408,16 +419,6 @@ public class ASMHelper {
         }
         annotations.add(node);
         return annotations;
-    }
-
-    /**
-     * Get an invisible annotation of the specified class from the supplied field node
-     *
-     * @param field Source field
-     * @param annotationClass Type of annotation to search for
-     * @return the annotation, or null if not present
-     */
-    public static void setInvisibleAnnotation(FieldNode field, Class<? extends Annotation> annotationClass) {
     }
 
     /**

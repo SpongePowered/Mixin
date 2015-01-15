@@ -204,13 +204,15 @@ class MixinConfig implements Comparable<MixinConfig> {
         this.initialiseMixins(this.mixinClasses, false);
         
         switch (MixinEnvironment.getCurrentEnvironment().getSide()) {
-            case CLIENT :
+            case CLIENT:
                 this.initialiseMixins(this.mixinClassesClient, false);
                 break;
-            case SERVER :
+            case SERVER:
                 this.initialiseMixins(this.mixinClassesServer, false);
                 break;
-            case UNKNOWN :
+            case UNKNOWN:
+                //$FALL-THROUGH$
+            default:
                 this.logger.warn("Mixin environment was unable to detect the current side, sided mixins will not be applied");
                 break;
         }

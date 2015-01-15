@@ -105,6 +105,7 @@ license {
     ext.url = project.url
     ext.year = project.inceptionYear
     exclude "**/*.info"
+    exclude "**/*.Processor"
     exclude "assets/**"
     header file("HEADER.txt")
     sourceSets = project.sourceSets

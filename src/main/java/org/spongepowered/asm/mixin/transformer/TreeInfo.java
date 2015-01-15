@@ -67,7 +67,7 @@ abstract class TreeInfo {
     /**
      * @param classBytes
      * @param flags
-     * @return
+     * @return ASM Tree view of the specified class 
      */
     static ClassNode getClassNode(byte[] classBytes, int flags) {
         ClassNode classNode = new ClassNode();
@@ -79,7 +79,7 @@ abstract class TreeInfo {
     /**
      * @param className
      * @param runTransformers
-     * @return
+     * @return Transformed class bytecode for the specified class
      */
     static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
         className = className.replace('/', '.');
@@ -97,8 +97,8 @@ abstract class TreeInfo {
     }
 
     /**
-     * @param className
-     * @return
+     * @param className Name of the class to load
+     * @return raw class bytecode
      * @throws IOException
      */
     private static byte[] getClassBytes(String className) throws IOException {
@@ -126,7 +126,7 @@ abstract class TreeInfo {
      * 
      * @param name
      * @param basicClass
-     * @return
+     * @return class bytecode after processing by all registered transformers except re-entrant transformers
      */
     private static byte[] applyTransformers(String name, byte[] basicClass) {
         final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
@@ -144,7 +144,7 @@ abstract class TreeInfo {
      * Map a class name back to its obfuscated counterpart 
      * 
      * @param className
-     * @return
+     * @return obfuscated name for the specified deobfuscated reference
      */
     static String unmap(String className) {
         if (TreeInfo.nameTransformer != null) {
