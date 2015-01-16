@@ -5,6 +5,7 @@ buildscript {
     }
     dependencies {
         classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.0'
     }
 }
 
@@ -15,6 +16,7 @@ apply plugin: 'checkstyle'
 apply plugin: 'maven'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 // Default tasks
 defaultTasks 'licenseFormat', 'check', 'build'
@@ -75,7 +77,7 @@ sourceSets {
 // Project dependencies
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.7'
-    compile 'com.google.guava:guava:17.0'
+    compile 'com.google.guava:guava:18.0'
     compile 'org.ow2.asm:asm-debug-all:5.0.3'
     compile 'net.minecraft:launchwrapper:1.11'
     compile 'com.google.code.gson:gson:2.2.4'
@@ -145,6 +147,23 @@ jar {
         "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
         "Implementation-Vendor": url)
 }
+
+// generate shadow jar so we can use the AP standalone
+shadowJar  {
+    from sourceSets.ap.output
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+    dependencies {
+        include(dependency('com.google.guava:guava'))
+        include(dependency('com.google.code.gson:gson'))
+        include(dependency('commons-io:commons-io'))
+        include(dependency('net.minecraftforge.srg2source:Srg2Source'))
+        include(dependency('net.sf.jopt-simple:jopt-simple'))
+    }
+    // classifier = new Date().format('yyyyMMddHHmmss') // for dev 
+    classifier = 'processor'
+}
+build.dependsOn(shadowJar)
 
 task sourceJar(type: Jar) {
 	from sourceSets.main.java
