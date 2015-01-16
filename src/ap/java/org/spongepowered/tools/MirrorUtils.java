@@ -186,12 +186,15 @@ public abstract class MirrorUtils {
                 return "S";
             case DECLARED:
                 return "L" + MirrorUtils.getInternalName((DeclaredType)type) + ";";
+            case ERROR:
+                // TODO figure out a better way to not crash when we get here
+                return "Ljava/lang/Object;";
             case VOID:
                 return "V";
             default:
         }
 
-        throw new IllegalArgumentException("Unable to parse type symbol " + type + " to equivalent bytecode type");
+        throw new IllegalArgumentException("Unable to parse type symbol " + type + " with " + type.getKind() + " to equivalent bytecode type");
     }
     
     public static String getInternalName(DeclaredType type) {

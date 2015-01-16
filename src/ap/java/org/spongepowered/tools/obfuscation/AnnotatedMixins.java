@@ -36,6 +36,8 @@ import java.util.Set;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -56,11 +58,25 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
  */
 class AnnotatedMixins {
     
+    static enum CompilerEnvironment {
+        /**
+         * Default environment
+         */
+        JAVAC,
+        
+        /**
+         * Eclipse 
+         */
+        JDT
+    }
+    
     /**
      * Singleton instances for each ProcessingEnvironment
      */
     private static Map<ProcessingEnvironment, AnnotatedMixins> instances = new HashMap<ProcessingEnvironment, AnnotatedMixins>();
     
+    private final CompilerEnvironment env;
+
     /**
      * Local processing environment
      */
@@ -105,6 +121,9 @@ class AnnotatedMixins {
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
+        this.env = this.detectEnvironment(processingEnv);
+        this.processingEnv = processingEnv;
+        
         String outSrgFileName = processingEnv.getOptions().get("outSrgFile");
         this.outSrgFileName = (outSrgFileName != null) ? outSrgFileName : "mixins.srg";
         
@@ -113,13 +132,20 @@ class AnnotatedMixins {
         
         String reobfSrgFileName = processingEnv.getOptions().get("reobfSrgFile");
         if (reobfSrgFileName == null) {
-            processingEnv.getMessager().printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, processing cannot continue");
+            this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, processing cannot continue");
         }
         
-        this.processingEnv = processingEnv;
         this.reobfSrgFile = new File(reobfSrgFileName);
     }
     
+    private CompilerEnvironment detectEnvironment(ProcessingEnvironment processingEnv) {
+        if (processingEnv.getClass().getName().contains("jdt")) {
+            return CompilerEnvironment.JDT;
+        }
+        
+        return CompilerEnvironment.JAVAC;
+    }
+
     /**
      * Lazy initialisation for srgs, so that we only initialise the srgs if they're actually required.
      */
@@ -128,11 +154,11 @@ class AnnotatedMixins {
             this.initDone = true;
             
             try {
-                this.processingEnv.getMessager().printMessage(Kind.NOTE, "Loading SRGs from " + this.reobfSrgFile.getAbsolutePath());
+                this.printMessage(Kind.NOTE, "Loading SRGs from " + this.reobfSrgFile.getAbsolutePath());
                 this.srgs = new SrgContainer().readSrg(this.reobfSrgFile);
             } catch (Exception ex) {
                 ex.printStackTrace();
-                this.processingEnv.getMessager().printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
+                this.printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
                 this.srgs = null;
             }
         }
@@ -182,13 +208,13 @@ class AnnotatedMixins {
         if (this.outSrgFileName.matches("^.*[\\\\/:].*$")) {
             File outSrgFile = new File(this.outSrgFileName);
             outSrgFile.getParentFile().mkdirs();
-            this.processingEnv.getMessager().printMessage(Kind.NOTE, "Writing output SRGs to " + outSrgFile.getAbsolutePath());
+            this.printMessage(Kind.NOTE, "Writing output SRGs to " + outSrgFile.getAbsolutePath());
             return new PrintWriter(outSrgFile);
         }
         
         Filer filer = this.processingEnv.getFiler();
         FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outSrgFileName);
-        this.processingEnv.getMessager().printMessage(Kind.NOTE, "Writing output SRGs to " + new File(outSrg.toUri()).getAbsolutePath());
+        this.printMessage(Kind.NOTE, "Writing output SRGs to " + new File(outSrg.toUri()).getAbsolutePath());
         return new PrintWriter(outSrg.openWriter());
     }
 
@@ -265,8 +291,7 @@ class AnnotatedMixins {
     public void registerOverwrite(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.processingEnv.getMessager().printMessage(Kind.ERROR,
-                    "Found @Overwrite annotation on a non-mixin method " + method + " in " + mixinType);
+            this.printMessage(Kind.ERROR, "Found @Overwrite annotation on a non-mixin method " + method + " in " + mixinType, method);
             return;
         }
         
@@ -285,8 +310,7 @@ class AnnotatedMixins {
     public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationMirror shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.processingEnv.getMessager().printMessage(Kind.ERROR,
-                    "Found @Shadow annotation on a non-mixin field " + field + " in " + mixinType);
+            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin field " + field + " in " + mixinType, field);
             return;
         }
         
@@ -305,8 +329,7 @@ class AnnotatedMixins {
     public void registerShadow(TypeElement mixinType, ExecutableElement method, AnnotationMirror shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.processingEnv.getMessager().printMessage(Kind.ERROR,
-                    "Found @Shadow annotation on a non-mixin method " + method + " in " + mixinType);
+            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin method " + method + " in " + mixinType, method);
             return;
         }
 
@@ -325,8 +348,7 @@ class AnnotatedMixins {
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.processingEnv.getMessager().printMessage(Kind.ERROR,
-                    "Found @Inject annotation on a non-mixin method " + method + " in " + mixinType);
+            this.printMessage(Kind.ERROR, "Found @Inject annotation on a non-mixin method " + method + " in " + mixinType, method);
             return;
         }
 
@@ -336,13 +358,26 @@ class AnnotatedMixins {
             Object ats = MirrorUtils.getAnnotationValue(inject, "at");
             
             if (ats instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<AnnotationMirror> annotationValue = (List<AnnotationMirror>)ats;
-                for (AnnotationMirror at : annotationValue) {
-                    mixinClass.registerInjectionPoint(at);
+                List<?> annotationList = (List<?>)ats;
+                for (Object at : annotationList) {
+                    // Fix for JDT
+                    if (at instanceof AnnotationValue) {
+                        at = ((AnnotationValue)at).getValue();
+                    }
+                    if (at instanceof AnnotationMirror) {
+                        mixinClass.registerInjectionPoint((AnnotationMirror)at, method);
+                    } else {
+                        this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
+                    }
                 }
             } else if (ats instanceof AnnotationMirror) {
-                mixinClass.registerInjectionPoint((AnnotationMirror)ats);
+                mixinClass.registerInjectionPoint((AnnotationMirror)ats, method);
+            } else if (ats instanceof AnnotationValue) {
+                // Fix for JDT
+                Object mirror = ((AnnotationValue)ats).getValue();
+                if (mirror instanceof AnnotationMirror) {
+                    mixinClass.registerInjectionPoint((AnnotationMirror)mirror, method);
+                }
             }
         }
     }
@@ -362,7 +397,16 @@ class AnnotatedMixins {
      * Print a message to the AP messager
      */
     public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
-        this.processingEnv.getMessager().printMessage(kind, msg);
+        if (this.env == CompilerEnvironment.JAVAC) {
+            this.processingEnv.getMessager().printMessage(kind, msg);
+        }
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element element) {
+        this.processingEnv.getMessager().printMessage(kind, msg, element);
     }
 
     /**
