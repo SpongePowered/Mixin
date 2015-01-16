@@ -397,7 +397,7 @@ class AnnotatedMixins {
      * Print a message to the AP messager
      */
     public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
-        if (this.env == CompilerEnvironment.JAVAC) {
+        if (this.env == CompilerEnvironment.JAVAC && kind != Kind.NOTE) {
             this.processingEnv.getMessager().printMessage(kind, msg);
         }
     }
