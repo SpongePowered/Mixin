@@ -291,7 +291,7 @@ class AnnotatedMixins {
     public void registerOverwrite(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Overwrite annotation on a non-mixin method " + method + " in " + mixinType, method);
+            this.printMessage(Kind.ERROR, "Found @Overwrite annotation on a non-mixin method", method);
             return;
         }
         
@@ -310,7 +310,7 @@ class AnnotatedMixins {
     public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationMirror shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin field " + field + " in " + mixinType, field);
+            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin field", field);
             return;
         }
         
@@ -329,7 +329,7 @@ class AnnotatedMixins {
     public void registerShadow(TypeElement mixinType, ExecutableElement method, AnnotationMirror shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin method " + method + " in " + mixinType, method);
+            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin method", method);
             return;
         }
 
@@ -348,7 +348,7 @@ class AnnotatedMixins {
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Inject annotation on a non-mixin method " + method + " in " + mixinType, method);
+            this.printMessage(Kind.ERROR, "Found @Inject annotation on a non-mixin method", method);
             return;
         }
 
