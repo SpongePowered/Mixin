@@ -45,9 +45,11 @@ import com.google.common.collect.ImmutableSet;
  */
 abstract class TreeInfo {
     
-    private static final Set<String> reEntrantTransformers = ImmutableSet.<String>of(
+    private static final Set<String> excludeTransformers = ImmutableSet.<String>of(
         "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer",
-        "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer"
+        "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer",
+        "net.minecraftforge.fml.common.asm.transformers.TerminalTransformer",
+        "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
     );
     
     private static IClassNameTransformer nameTransformer;
@@ -126,13 +128,13 @@ abstract class TreeInfo {
      * 
      * @param name
      * @param basicClass
-     * @return class bytecode after processing by all registered transformers except re-entrant transformers
+     * @return class bytecode after processing by all registered transformers except the excluded transformers
      */
     private static byte[] applyTransformers(String name, byte[] basicClass) {
         final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
 
         for (final IClassTransformer transformer : transformers) {
-            if (!(transformer instanceof MixinTransformer) && !TreeInfo.reEntrantTransformers.contains(transformer.getClass().getName())) {
+            if (!(transformer instanceof MixinTransformer) && !TreeInfo.excludeTransformers.contains(transformer.getClass().getName())) {
                 basicClass = transformer.transform(name, name, basicClass);
             }
         }

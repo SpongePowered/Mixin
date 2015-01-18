@@ -54,7 +54,7 @@ import org.spongepowered.tools.MirrorUtils;
     "org.spongepowered.asm.mixin.injection.Redirect",
     "org.spongepowered.asm.mixin.injection.At"
 })
-@SupportedOptions({ "reobfSrgFile", "outSrgFile" })
+@SupportedOptions({ "reobfSrgFile", "outSrgFile", "outRefMapFile" })
 public class InjectionObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)

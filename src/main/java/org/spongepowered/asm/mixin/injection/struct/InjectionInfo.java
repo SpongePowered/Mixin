@@ -132,7 +132,7 @@ public abstract class InjectionInfo {
         
         MemberInfo targetMember = MemberInfo.parse(method, this.mixin);
         
-        if (targetMember.owner != null && targetMember.owner.equals(this.mixin.getTargetClassRef())) {
+        if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
             throw new InvalidInjectionException(type + " annotation on " + this.method.name + " specifies a target class '"
                     + targetMember.owner + "', which is not supported");
         }

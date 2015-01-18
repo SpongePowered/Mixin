@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -48,6 +49,11 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.validation.IMixinValidator;
+import org.spongepowered.tools.obfuscation.validation.ParentValidator;
+import org.spongepowered.tools.obfuscation.validation.TargetValidator;
+
+import com.google.common.collect.ImmutableList;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
@@ -56,7 +62,7 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
 /**
  * Mixin info manager, stores all of the mixin info during processing and also manages access to the srgs
  */
-class AnnotatedMixins {
+class AnnotatedMixins implements Messager {
     
     static enum CompilerEnvironment {
         /**
@@ -100,12 +106,17 @@ class AnnotatedMixins {
     /**
      * File containing the reobfd srgs
      */
-    private final File reobfSrgFile;
+    private final String reobfSrgFileName;
     
     /**
      * Reference mapper for reference mapping 
      */
     private final ReferenceMapper refMapper = new ReferenceMapper();
+    
+    /**
+     * Rule validators
+     */
+    private final List<IMixinValidator> validators;
     
     /**
      * SRG container for mcp->srg mappings
@@ -124,18 +135,18 @@ class AnnotatedMixins {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
         
-        String outSrgFileName = processingEnv.getOptions().get("outSrgFile");
-        this.outSrgFileName = (outSrgFileName != null) ? outSrgFileName : "mixins.srg";
+        this.reobfSrgFileName = processingEnv.getOptions().get("reobfSrgFile");
+        this.outSrgFileName = processingEnv.getOptions().get("outSrgFile");
+        this.outRefMapFileName = processingEnv.getOptions().get("outRefMapFile"); 
         
-        String outRefMapFileName = processingEnv.getOptions().get("outRefMapFile");
-        this.outRefMapFileName = (outRefMapFileName != null) ? outRefMapFileName : ReferenceMapper.DEFAULT_RESOURCE; 
-        
-        String reobfSrgFileName = processingEnv.getOptions().get("reobfSrgFile");
-        if (reobfSrgFileName == null) {
-            this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, processing cannot continue");
+        if (this.reobfSrgFileName == null) {
+            this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, obfuscation processing will not occur");
         }
         
-        this.reobfSrgFile = new File(reobfSrgFileName);
+        this.validators = ImmutableList.<IMixinValidator>of(
+            new ParentValidator(processingEnv),
+            new TargetValidator(processingEnv)
+        );
     }
     
     private CompilerEnvironment detectEnvironment(ProcessingEnvironment processingEnv) {
@@ -153,9 +164,14 @@ class AnnotatedMixins {
         if (!this.initDone) {
             this.initDone = true;
             
+            if (this.reobfSrgFileName == null) {
+                return false;
+            }
+            
             try {
-                this.printMessage(Kind.NOTE, "Loading SRGs from " + this.reobfSrgFile.getAbsolutePath());
-                this.srgs = new SrgContainer().readSrg(this.reobfSrgFile);
+                File reobfSrgFile = new File(this.reobfSrgFileName);
+                this.printMessage(Kind.NOTE, "Loading SRGs from " + reobfSrgFile.getAbsolutePath());
+                this.srgs = new SrgContainer().readSrg(reobfSrgFile);
             } catch (Exception ex) {
                 ex.printStackTrace();
                 this.printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
@@ -170,6 +186,10 @@ class AnnotatedMixins {
      * Write out generated srgs
      */
     public void writeSrgs() {
+        if (this.outSrgFileName == null) {
+            return;
+        }
+        
         Set<String> fieldMappings = new LinkedHashSet<String>();
         Set<String> methodMappings = new LinkedHashSet<String>();
         
@@ -181,7 +201,7 @@ class AnnotatedMixins {
         PrintWriter writer = null;
         
         try {
-            writer = this.openSrgFileWriter();
+            writer = this.openFileWriter(this.outSrgFileName, "output SRGs");
             for (String fieldMapping : fieldMappings) {
                 writer.println(fieldMapping);
             }
@@ -202,19 +222,19 @@ class AnnotatedMixins {
     }
 
     /**
-     * Open a writer for the output SRG file 
+     * Open a writer for an output file
      */
-    private PrintWriter openSrgFileWriter() throws IOException {
-        if (this.outSrgFileName.matches("^.*[\\\\/:].*$")) {
-            File outSrgFile = new File(this.outSrgFileName);
+    private PrintWriter openFileWriter(String fileName, String description) throws IOException {
+        if (fileName.matches("^.*[\\\\/:].*$")) {
+            File outSrgFile = new File(fileName);
             outSrgFile.getParentFile().mkdirs();
-            this.printMessage(Kind.NOTE, "Writing output SRGs to " + outSrgFile.getAbsolutePath());
+            this.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
             return new PrintWriter(outSrgFile);
         }
         
         Filer filer = this.processingEnv.getFiler();
-        FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outSrgFileName);
-        this.printMessage(Kind.NOTE, "Writing output SRGs to " + new File(outSrg.toUri()).getAbsolutePath());
+        FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
+        this.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
         return new PrintWriter(outSrg.openWriter());
     }
 
@@ -222,12 +242,14 @@ class AnnotatedMixins {
      * Write out stored mappings
      */
     public void writeRefs() {
+        if (this.outRefMapFileName == null) {
+            return;
+        }
+        
         PrintWriter writer = null;
         
         try {
-            Filer filer = this.processingEnv.getFiler();
-            FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", this.outRefMapFileName);
-            writer = new PrintWriter(outSrg.openWriter());
+            writer = this.openFileWriter(this.outRefMapFileName, "refmap");
             this.refMapper.write(writer);
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -264,7 +286,7 @@ class AnnotatedMixins {
         String name = mixinType.getQualifiedName().toString();
         
         if (!this.mixins.containsKey(name)) {
-            this.mixins.put(name, new AnnotatedMixin(this, mixinType));
+            this.mixins.put(name, new AnnotatedMixin(this, mixinType, this.validators));
         }
     }
     
@@ -365,18 +387,18 @@ class AnnotatedMixins {
                         at = ((AnnotationValue)at).getValue();
                     }
                     if (at instanceof AnnotationMirror) {
-                        mixinClass.registerInjectionPoint((AnnotationMirror)at, method);
+                        mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
                     } else {
                         this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
                     }
                 }
             } else if (ats instanceof AnnotationMirror) {
-                mixinClass.registerInjectionPoint((AnnotationMirror)ats, method);
+                mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
             } else if (ats instanceof AnnotationValue) {
                 // Fix for JDT
                 Object mirror = ((AnnotationValue)ats).getValue();
                 if (mirror instanceof AnnotationMirror) {
-                    mixinClass.registerInjectionPoint((AnnotationMirror)mirror, method);
+                    mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
                 }
             }
         }
@@ -396,8 +418,9 @@ class AnnotatedMixins {
     /**
      * Print a message to the AP messager
      */
+    @Override
     public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
-        if (this.env == CompilerEnvironment.JAVAC && kind != Kind.NOTE) {
+        if (this.env == CompilerEnvironment.JAVAC || kind != Kind.NOTE) {
             this.processingEnv.getMessager().printMessage(kind, msg);
         }
     }
@@ -405,8 +428,39 @@ class AnnotatedMixins {
     /**
      * Print a message to the AP messager
      */
+    @Override
     public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element element) {
         this.processingEnv.getMessager().printMessage(kind, msg, element);
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation) {
+        this.processingEnv.getMessager().printMessage(kind, msg, element, annotation);
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
+        this.processingEnv.getMessager().printMessage(kind, msg, element, annotation, value);
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    public void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
+        this.processingEnv.getMessager().printMessage(kind, msg, mixin.getMixin(), mixin.getAnnotation());
+    }
+    
+    /**
+     * Get a TypeElement representing another type in the current processing environment
+     */
+    public TypeElement getTypeElement(String name) {
+        return this.processingEnv.getElementUtils().getTypeElement(name);
     }
 
     /**

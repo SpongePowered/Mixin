@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import com.google.common.collect.ImmutableList;
@@ -66,6 +67,11 @@ class ClassInfo extends TreeInfo {
     private final String superName;
     
     /**
+     * Outer class name
+     */
+    private final String outerName;
+    
+    /**
      * Interfaces
      */
     private final List<String> interfaces;
@@ -76,14 +82,24 @@ class ClassInfo extends TreeInfo {
     private final List<String> methods;
     
     /**
+     * True if this is an interface 
+     */
+    private final boolean isInterface;
+    
+    /**
+     * Access flags
+     */
+    private final int access;
+    
+    /**
      * Superclass reference, not initialised until required 
      */
     private ClassInfo superClass;
     
     /**
-     * True if this is an interface 
+     * Outer class reference, not initialised until required 
      */
-    private boolean isInterface;
+    private ClassInfo outerClass;
     
     /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
@@ -91,6 +107,7 @@ class ClassInfo extends TreeInfo {
     private ClassInfo() {
         this.name = ClassInfo.JAVA_LANG_OBJECT;
         this.superName = null;
+        this.outerName = null;
         this.methods = ImmutableList.<String>of(
             "getClass()Ljava/lang/Class;",
             "hashCode()I",
@@ -106,6 +123,7 @@ class ClassInfo extends TreeInfo {
         );
         this.isInterface = false;
         this.interfaces = Collections.<String>emptyList();
+        this.access = Opcodes.ACC_PUBLIC;
     }
     
     /**
@@ -119,6 +137,7 @@ class ClassInfo extends TreeInfo {
         this.methods = new ArrayList<String>();
         this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
         this.interfaces = Collections.unmodifiableList(classNode.interfaces);
+        this.access = classNode.access;
         
         for (MethodNode method : classNode.methods) {
             if (!method.name.startsWith("<")
@@ -127,6 +146,34 @@ class ClassInfo extends TreeInfo {
                 this.methods.add(method.name + method.desc);
             }
         }
+
+        String outerName = classNode.outerClass;
+        if (outerName == null) {
+            for (FieldNode field : classNode.fields) {
+                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0 && field.name.startsWith("this$")) {
+                    outerName = field.desc;
+                    if (outerName.startsWith("L")) {
+                        outerName = outerName.substring(1, outerName.length() - 1);
+                    }
+                }
+            }
+        }
+        
+        this.outerName = outerName ;
+    }
+    
+    /**
+     * Get whether this class has ACC_PUBLIC
+     */
+    public boolean isPublic() {
+        return (this.access & Opcodes.ACC_PUBLIC) != 0;
+    }
+    
+    /**
+     * Get whether this class is an inner class
+     */
+    public boolean isInner() {
+        return this.outerName != null;
     }
     
     /**
@@ -141,6 +188,15 @@ class ClassInfo extends TreeInfo {
      */
     public List<String> getInterfaces() {
         return this.interfaces;
+    }
+    
+    @Override
+    public String toString() {
+        return this.name;
+    }
+    
+    public int getAccess() {
+        return this.access;
     }
     
     /**
@@ -166,6 +222,24 @@ class ClassInfo extends TreeInfo {
         }
         
         return this.superClass;
+    }
+    
+    /**
+     * Get the name of the outer class, or null if this is not an inner class
+     */
+    public String getOuterName() {
+        return this.outerName;
+    }
+    
+    /**
+     * Get the outer class info, can return null if the outer class cannot be resolved or if this is not an inner class
+     */
+    public ClassInfo getOuterClass() {
+        if (this.outerClass == null && this.outerName != null) {
+            this.outerClass = ClassInfo.forName(this.outerName);
+        }
+        
+        return this.outerClass;
     }
     
     /**
@@ -239,6 +313,25 @@ class ClassInfo extends TreeInfo {
         return this.methods.contains(name + desc);
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (!(other instanceof ClassInfo)) {
+            return false;
+        }
+        return ((ClassInfo)other).name.equals(this.name);
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+        return this.name.hashCode();
+    }
+
     /**
      * Return a ClassInfo for the supplied {@link ClassNode}. If a ClassInfo for the class was already defined, then the original ClassInfo is
      * returned from the internal cache. Otherwise a new ClassInfo is created and returned.

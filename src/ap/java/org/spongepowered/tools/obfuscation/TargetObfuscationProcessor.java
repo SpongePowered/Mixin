@@ -48,7 +48,7 @@ import org.spongepowered.tools.MirrorUtils;
  */
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.Mixin", "org.spongepowered.asm.mixin.Shadow", "org.spongepowered.asm.mixin.Overwrite" })
-@SupportedOptions({ "reobfSrgFile", "outSrgFile" })
+@SupportedOptions({ "reobfSrgFile", "outSrgFile", "outRefMapFile" })
 public class TargetObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)

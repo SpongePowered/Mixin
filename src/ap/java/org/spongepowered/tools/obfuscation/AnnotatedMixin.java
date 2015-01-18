@@ -26,6 +26,8 @@ package org.spongepowered.tools.obfuscation;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -37,6 +39,7 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
@@ -48,6 +51,7 @@ import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.validation.IMixinValidator;
 
 
 /**
@@ -115,6 +119,11 @@ class AnnotatedMixin {
     private static final String CTOR = "<init>";
     
     /**
+     * Mixin annotation
+     */
+    private final AnnotationMirror annotation;
+    
+   /**
      * Manager
      */
     private final AnnotatedMixins mixins;
@@ -127,7 +136,7 @@ class AnnotatedMixin {
     /**
      * Specified targets
      */
-    private final List<String> targets = new ArrayList<String>();
+    private final List<TypeElement> targets = new ArrayList<TypeElement>();
     
     /**
      * Target "reference" (bytecode name)
@@ -158,34 +167,88 @@ class AnnotatedMixin {
      * Stored (ordered) method mappings
      */
     private final Set<String> methodMappings = new LinkedHashSet<String>();
-    
-    public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type) {
-        AnnotationMirror annotation = MirrorUtils.getAnnotation(type, Mixin.class);
+
+    public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type, Collection<IMixinValidator> validators) {
         
+        this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.mixins = mixins;
         this.mixin = type;
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
-        this.remap = AnnotatedMixins.getRemapValue(annotation);
         
-        String targetRef = null;
-        TypeElement targetType = null;
+        TypeMirror primaryTarget = this.initTargets();
+        if (primaryTarget != null) {
+            this.targetRef = MirrorUtils.getInternalName((DeclaredType)primaryTarget);
+            this.targetType = (TypeElement)((DeclaredType)primaryTarget).asElement(); 
+        } else {
+            this.targetRef = null;
+            this.targetType = null;
+        }
+
+        this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
+        
+        for (IMixinValidator validator : validators) {
+            if (!validator.validate(type, this.annotation, this.targets)) {
+                return;
+            }
+        }
+    }
+
+    private TypeMirror initTargets() {
+        TypeMirror primaryTarget = null;
+        
+        // Public targets, referenced by class
         try {
-            List<AnnotationValue> targetList = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(annotation);
-            for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(targetList)) {
-                Element element = ((DeclaredType)target).asElement();
-                String targetName = ((TypeElement)element).getQualifiedName().toString();
-                this.targets.add(targetName);
-                if (targetRef == null) {
-                    targetRef = MirrorUtils.getInternalName((DeclaredType)target);
-                    targetType = (TypeElement) ((DeclaredType)target).asElement(); 
+            List<AnnotationValue> publiTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "value",
+                    Collections.<AnnotationValue>emptyList());
+            for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(publiTargets)) {
+                TypeElement element = (TypeElement)((DeclaredType)target).asElement();
+                if (this.targets.contains(element)) {
+                    continue;
+                }
+                this.targets.add(element);
+                if (primaryTarget == null) {
+                    primaryTarget = target;
                 }
             }
         } catch (Exception ex) {
-            this.mixins.printMessage(Kind.WARNING, "Error processing target list: " + ex.getClass().getSimpleName() + ": "+ ex.getMessage(), type);
+            this.mixins.printMessage(Kind.WARNING, "Error processing public targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
         }
         
-        this.targetRef = targetRef;
-        this.targetType = targetType;
+        // Private targets, referenced by name
+        try {
+            List<AnnotationValue> privateTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "targets",
+                    Collections.<AnnotationValue>emptyList());
+            for (String privateTarget : MirrorUtils.<String>unfold(privateTargets)) {
+                TypeElement element = this.mixins.getTypeElement(privateTarget);
+                if (this.targets.contains(element)) {
+                    continue;
+                }
+                if (element == null) {
+                    this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " could not be found", this);
+                    return null;
+                } else if (element.getModifiers().contains(Modifier.PUBLIC)) {
+                    this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " is public and must be specified in value", this);
+                    return null;
+                }
+                TypeMirror target = element.asType();
+                this.targets.add(element);
+                if (primaryTarget == null) {
+                    primaryTarget = target;
+                }
+            }
+        } catch (Exception ex) {
+            this.mixins.printMessage(Kind.WARNING, "Error processing private targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
+        }
+        
+        if (primaryTarget == null) {
+            this.mixins.printMessage(Kind.ERROR, "Mixin has no targets", this);
+        }
+        
+        return primaryTarget;
+    }
+    
+    public AnnotationMirror getAnnotation() {
+        return this.annotation;
     }
     
     /**
@@ -198,7 +261,7 @@ class AnnotatedMixin {
     /**
      * Get the mixin's targets
      */
-    public List<String> getTargets() {
+    public List<TypeElement> getTargets() {
         return this.targets;
     }
     
@@ -236,8 +299,9 @@ class AnnotatedMixin {
      * only a single target is registered. Mixins containing annotated methods with these annotations cannot be multi-targetted.
      */
     private boolean validateSingleTarget(String annotation, Element element) {
-        if (this.targetRef == null) {
-            this.mixins.printMessage(Kind.ERROR, "Mixin has multiple targets. " + annotation + " is not supported!", element);
+        if (this.targetRef == null || this.targets.size() > 1) {
+            this.mixins.printMessage(Kind.ERROR, "Mixin with " + annotation + " members must have exactly one target.", element);
+            this.mixins.printMessage(Kind.ERROR, "Mixin with " + annotation + " members must have exactly one target.", this.mixin);
             return false;
         }
         return true;
@@ -287,7 +351,7 @@ class AnnotatedMixin {
         String obfField = this.mixins.getObfField(this.targetRef + "/" + name);
         
         if (obfField == null) {
-            this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow field", field);
+            this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow field", field, shadow);
             return;
         }
 
@@ -307,7 +371,7 @@ class AnnotatedMixin {
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + name, mcpSignature));
         
         if (obfMethod == null) {
-            this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow method", method);
+            this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow method", method, shadow);
             return;
         }
         
@@ -330,14 +394,14 @@ class AnnotatedMixin {
         
         String desc = this.findDescriptor(this.targetType, targetMember);
         if (desc == null) {
-            this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method);
+            this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
             return;
        }
         
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + targetMember.name, desc));
         if (obfMethod == null) {
             Kind error = AnnotatedMixin.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
-            this.mixins.printMessage(error, "No obfuscation mapping for @Inject target " + targetMember.name, method);
+            this.mixins.printMessage(error, "No obfuscation mapping for @Inject target " + targetMember.name, method, inject);
             return;
         }
         
@@ -350,10 +414,10 @@ class AnnotatedMixin {
     /**
      * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation and process the references
      */
-    public void registerInjectionPoint(AnnotationMirror at, Element element) {
+    public void registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
         String type = MirrorUtils.<String>getAnnotationValue(at, "value");
         String target = MirrorUtils.<String>getAnnotationValue(at, "target");
-        this.remapReference(type + ".<target>", target, element);
+        this.remapReference(type + ".<target>", target, element, inject, at);
         
         // Pattern for replacing references in args, not used yet
 //        if ("SOMETYPE".equals(type)) {
@@ -362,7 +426,7 @@ class AnnotatedMixin {
 //        }
     }
 
-    private void remapReference(String key, String target, Element element) {
+    private void remapReference(String key, String target, Element element, AnnotationMirror inject, AnnotationMirror at) {
         if (target == null) {
             return;
         }
@@ -370,7 +434,7 @@ class AnnotatedMixin {
         MemberInfo targetMember = MemberInfo.parse(target);
         if (!targetMember.isFullyQualified()) {
             String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
-            this.mixins.printMessage(Kind.ERROR, "@At(" + key + ") is not fully qualified, " + missing, element);
+            this.mixins.printMessage(Kind.ERROR, "@At(" + key + ") is not fully qualified, " + missing, element, inject);
             return;
         }
         
@@ -378,14 +442,14 @@ class AnnotatedMixin {
         if (targetMember.isField()) {
             String obfField = this.mixins.getObfField(targetMember.toSrg());
             if (obfField == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target, element);
+                this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target, element, inject);
                 return;
             }
             remappedReference = MemberInfo.fromSrgField(obfField, targetMember.desc);
         } else {
             MethodData obfMethod = this.mixins.getObfMethod(targetMember.asMethodData());
             if (obfMethod == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target, element);
+                this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target, element, inject);
                 return;
             }
             remappedReference = MemberInfo.fromSrgMethod(obfMethod);

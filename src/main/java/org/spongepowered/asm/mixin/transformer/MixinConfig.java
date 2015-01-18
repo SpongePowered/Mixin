@@ -108,7 +108,7 @@ class MixinConfig implements Comparable<MixinConfig> {
     /**
      * True to set the sourceFile property when applying mixins
      */
-    @SerializedName("referenceMap")
+    @SerializedName("refmap")
     private String refMapperConfig;
     
     /**
@@ -240,7 +240,7 @@ class MixinConfig implements Comparable<MixinConfig> {
                 if (mixin.getTargetClasses().size() > 0) {
                     MixinConfig.globalMixinList.add(mixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
-                        this.mixinsFor(targetClass).add(mixin);
+                        this.mixinsFor(targetClass.replace('/', '.')).add(mixin);
                     }
                 }
             } catch (Exception ex) {

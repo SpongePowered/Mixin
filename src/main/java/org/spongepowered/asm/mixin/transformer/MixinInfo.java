@@ -40,6 +40,10 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.util.ASMHelper;
 
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
+
 /**
  * Runtime information bundle about a mixin
  */
@@ -83,7 +87,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Mixin targets, read from the {@link Mixin} annotation on the mixin class
      */
-    private final List<String> targetClasses;
+    private final List<ClassInfo> targetClasses;
+    
+    /**
+     * Names of target classes 
+     */
+    private final List<String> targetClassNames;
     
     /**
      * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets 
@@ -126,10 +135,28 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
         
         ClassNode classNode = this.getClassNode(0);
-        this.classInfo = ClassInfo.fromClassNode(classNode);
+        this.classInfo = this.readInfo(classNode);
         this.priority = this.readPriority(classNode);
         this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
+        this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         this.detachedSuper = this.validateTargetClasses(classNode);
+    }
+
+    /**
+     * Initialises the class info and performs some pre-flight checks on the mixin
+     * 
+     * @param classNode
+     * @return
+     */
+    private ClassInfo readInfo(ClassNode classNode) {
+        ClassInfo classInfo = ClassInfo.fromClassNode(classNode);
+        
+        // isInner (shouldn't) return true for static inner classes
+        if (classInfo.isInner()) {
+            throw new InvalidMixinException("Inner class mixin must be declared static");
+        }
+        
+        return classInfo;
     }
 
     /**
@@ -139,22 +166,50 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param suppressPlugin 
      * @return
      */
-    private List<String> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
+    private List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
-        List<Type> targetClasses = ASMHelper.getAnnotationValue(mixin);
-        List<String> targetClassNames = new ArrayList<String>();
-        for (Type targetClass : targetClasses) {
-            String targetClassName = targetClass.getClassName();
-            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
-                targetClassNames.add(targetClassName);
-            }
+        List<ClassInfo> targetClassNames = new ArrayList<ClassInfo>();
+        List<Type> publicTargets = ASMHelper.getAnnotationValue(mixin, "value");
+        List<String> privateTargets = ASMHelper.getAnnotationValue(mixin, "targets");
+
+        if (publicTargets != null) {
+            this.readTargets(targetClassNames, Lists.transform(publicTargets, new Function<Type, String>() {
+                @Override
+                public String apply(Type input) {
+                    return input.getClassName();
+                };
+            }), suppressPlugin, false);
+        }
+        
+        if (privateTargets != null) {
+            this.readTargets(targetClassNames, privateTargets, suppressPlugin, true);
         }
         
         return targetClassNames;
+    }
+
+    /**
+     * Reads a target list into the outTargets list
+     */
+    private void readTargets(List<ClassInfo> outTargets, List<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
+        for (String targetClassName : inTargets) {
+            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
+                ClassInfo targetInfo = ClassInfo.forName(targetClassName);
+                if (targetInfo.isInterface()) {
+                    throw new InvalidMixinException("@Mixin target " + targetClassName + " is an interface in " + this);
+                }
+                if (checkPublic && targetInfo.isPublic()) {
+                    throw new InvalidMixinException("@Mixin target " + targetClassName + " is public in " + this + " and must be specified in value");
+                }
+                if (!outTargets.contains(targetInfo)) {
+                    outTargets.add(targetInfo);
+                }
+            }
+        }
     }
 
     /**
@@ -176,8 +231,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private boolean validateTargetClasses(ClassNode classNode) {
         boolean detached = false;
         
-        for (String targetClassName : this.targetClasses) {
-            ClassInfo targetClass = ClassInfo.forName(targetClassName);
+        for (ClassInfo targetClass : this.targetClasses) {
             
             if (classNode.superName.equals(targetClass.getSuperName())) {
                 continue;
@@ -185,7 +239,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             
             if (!targetClass.hasSuperClass(classNode.superName)) {
                 throw new InvalidMixinException("Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
-                        + " was not found in the hierarchy of target class '" + targetClassName + "'");
+                        + " was not found in the hierarchy of target class '" + targetClass + "'");
             }
             
             detached = true;
@@ -254,7 +308,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     @Override
     public List<String> getTargetClasses() {
-        return Collections.unmodifiableList(this.targetClasses);
+        return this.targetClassNames;
     }
     
     /**

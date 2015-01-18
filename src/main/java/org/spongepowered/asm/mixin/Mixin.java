@@ -39,7 +39,14 @@ public @interface Mixin {
     /**
      * Target class(es) for this mixin
      */
-    public Class<?>[] value();
+    public Class<?>[] value() default { };
+    
+    /**
+     * Since specifying targets in {@link #value} requires that the classes be publicly visible, this property is provided to allow package-private,
+     * anonymous innner, and private inner classes to be referenced. Referencing an otherwise public class using this property is an error condition
+     * and will throw an exception at runtime. It is completely fine to specify both public and private targets for the same mixin however.
+     */
+    public String[] targets() default { };
 
     /**
      * Priority for the mixin, relative to other mixins targetting the same classes

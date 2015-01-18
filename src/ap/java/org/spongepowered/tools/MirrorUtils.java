@@ -167,30 +167,19 @@ public abstract class MirrorUtils {
 
     public static String getInternalName(TypeMirror type) {
         switch (type.getKind()) {
-            case ARRAY: return "[" + MirrorUtils.getInternalName(((ArrayType)type).getComponentType());
-            case BOOLEAN:
-                return "Z";
-            case BYTE:
-                return "B";
-            case CHAR:
-                return "C";
-            case DOUBLE:
-                return "D";
-            case FLOAT:
-                return "F";
-            case INT:
-                return "I";
-            case LONG:
-                return "J";
-            case SHORT:
-                return "S";
-            case DECLARED:
-                return "L" + MirrorUtils.getInternalName((DeclaredType)type) + ";";
-            case ERROR:
-                // TODO figure out a better way to not crash when we get here
-                return "Ljava/lang/Object;";
-            case VOID:
-                return "V";
+            case ARRAY:    return "[" + MirrorUtils.getInternalName(((ArrayType)type).getComponentType());
+            case DECLARED: return "L" + MirrorUtils.getInternalName((DeclaredType)type) + ";";
+            case BOOLEAN:  return "Z";
+            case BYTE:     return "B";
+            case CHAR:     return "C";
+            case DOUBLE:   return "D";
+            case FLOAT:    return "F";
+            case INT:      return "I";
+            case LONG:     return "J";
+            case SHORT:    return "S";
+            case VOID:     return "V";
+            // TODO figure out a better way to not crash when we get here
+            case ERROR:    return "Ljava/lang/Object;";
             default:
         }
 
