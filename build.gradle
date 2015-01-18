@@ -160,8 +160,8 @@ shadowJar  {
         include(dependency('net.minecraftforge.srg2source:Srg2Source'))
         include(dependency('net.sf.jopt-simple:jopt-simple'))
     }
-    classifier = new Date().format('yyyyMMddHHmmss') // for dev 
-    // classifier = 'processor'
+    // classifier = new Date().format('yyyyMMddHHmmss') // for dev 
+    classifier = 'processor'
 }
 build.dependsOn(shadowJar)
 
