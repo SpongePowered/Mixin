@@ -561,8 +561,11 @@ public class MixinTransformer extends TreeTransformer {
             targetMethodName = sourceMethod.name;
         }
 
+        boolean found = false;
+
         for (MethodNode method : targetClass.methods) {
             if ((targetMethodName.equals(method.name)) && sourceMethod.desc.equals(method.desc)) {
+                found = true;
                 AbstractInsnNode returnNode = null;
                 Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
                 while (findReturnIter.hasNext()) {
@@ -581,6 +584,10 @@ public class MixinTransformer extends TreeTransformer {
                     }
                 }
             }
+        }
+        if (!found) {
+            sourceMethod.name = targetMethodName;
+            targetClass.methods.add(sourceMethod);
         }
     }
     
