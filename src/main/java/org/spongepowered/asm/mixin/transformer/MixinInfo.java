@@ -31,6 +31,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -172,12 +173,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             throw new InvalidMixinException(String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
-        List<ClassInfo> targetClassNames = new ArrayList<ClassInfo>();
+        List<ClassInfo> targets = new ArrayList<ClassInfo>();
         List<Type> publicTargets = ASMHelper.getAnnotationValue(mixin, "value");
         List<String> privateTargets = ASMHelper.getAnnotationValue(mixin, "targets");
 
         if (publicTargets != null) {
-            this.readTargets(targetClassNames, Lists.transform(publicTargets, new Function<Type, String>() {
+            this.readTargets(targets, Lists.transform(publicTargets, new Function<Type, String>() {
                 @Override
                 public String apply(Type input) {
                     return input.getClassName();
@@ -186,10 +187,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         if (privateTargets != null) {
-            this.readTargets(targetClassNames, privateTargets, suppressPlugin, true);
+            this.readTargets(targets, privateTargets, suppressPlugin, true);
         }
         
-        return targetClassNames;
+        return targets;
     }
 
     /**
@@ -207,6 +208,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 }
                 if (!outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
+                    targetInfo.addMixin(this);
                 }
             }
         }
@@ -300,15 +302,25 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     @Override
     public ClassNode getClassNode(int flags) {
-        return TreeInfo.getClassNode(this.mixinBytes, flags);
+        MixinClassNode classNode = new MixinClassNode(this);
+        ClassReader classReader = new ClassReader(this.mixinBytes);
+        classReader.accept(classNode, flags);
+        return classNode;
     }
     
     /**
-     * Get the target classes for this mixin
+     * Get the target class names for this mixin
      */
     @Override
     public List<String> getTargetClasses() {
         return this.targetClassNames;
+    }
+    
+    /**
+     * Get the target class list for this mixin
+     */
+    public List<ClassInfo> getTargets() {
+        return Collections.unmodifiableList(this.targetClasses);
     }
     
     /**

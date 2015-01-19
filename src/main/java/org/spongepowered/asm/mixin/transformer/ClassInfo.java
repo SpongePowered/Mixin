@@ -27,8 +27,10 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
@@ -82,6 +84,26 @@ class ClassInfo extends TreeInfo {
     private final List<String> methods;
     
     /**
+     * Public and protected fields in this class
+     */
+    private final List<String> fields;
+    
+    /**
+     * Mixins which target this class
+     */
+    private final Set<MixinInfo> mixins = new HashSet<MixinInfo>();
+    
+    /**
+     * Mixin info if this class is a mixin itself 
+     */
+    private final MixinInfo mixin;
+    
+    /**
+     * True if this is a mixin rather than a class 
+     */
+    private final boolean isMixin;
+    
+    /**
      * True if this is an interface 
      */
     private final boolean isInterface;
@@ -121,9 +143,12 @@ class ClassInfo extends TreeInfo {
             "wait()V",
             "finalize()V"
         );
+        this.fields = Collections.<String>emptyList();
         this.isInterface = false;
         this.interfaces = Collections.<String>emptyList();
         this.access = Opcodes.ACC_PUBLIC;
+        this.isMixin = false;
+        this.mixin = null;
     }
     
     /**
@@ -135,9 +160,12 @@ class ClassInfo extends TreeInfo {
         this.name = classNode.name;
         this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
         this.methods = new ArrayList<String>();
+        this.fields = new ArrayList<String>();
         this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
         this.interfaces = Collections.unmodifiableList(classNode.interfaces);
         this.access = classNode.access;
+        this.isMixin = classNode instanceof MixinClassNode;
+        this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
         
         for (MethodNode method : classNode.methods) {
             if (!method.name.startsWith("<")
@@ -150,16 +178,37 @@ class ClassInfo extends TreeInfo {
         String outerName = classNode.outerClass;
         if (outerName == null) {
             for (FieldNode field : classNode.fields) {
-                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0 && field.name.startsWith("this$")) {
-                    outerName = field.desc;
-                    if (outerName.startsWith("L")) {
-                        outerName = outerName.substring(1, outerName.length() - 1);
+                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
+                    if (field.name.startsWith("this$")) { 
+                        outerName = field.desc;
+                        if (outerName.startsWith("L")) {
+                            outerName = outerName.substring(1, outerName.length() - 1);
+                        }
                     }
+                } else if ((field.access & Opcodes.ACC_PRIVATE) == 0) {
+                    this.fields.add(field.name + "()" + field.desc);
                 }
             }
         }
         
-        this.outerName = outerName ;
+        this.outerName = outerName;
+    }
+    
+    /**
+     * Add a mixin which targets this class
+     */
+    public void addMixin(MixinInfo mixin) {
+        if (this.isMixin) {
+            throw new IllegalArgumentException("Cannot add target " + this.name + " for " + mixin.getClassName() + " because the target is a mixin");
+        }
+        this.mixins.add(mixin);
+    }
+    
+    /**
+     * Get all mixins which target this class
+     */
+    public Set<MixinInfo> getMixins() {
+        return Collections.unmodifiableSet(this.mixins);
     }
     
     /**
@@ -243,6 +292,20 @@ class ClassInfo extends TreeInfo {
     }
     
     /**
+     * Class targets
+     */
+    protected List<ClassInfo> targets() {
+        if (this.mixin != null) {
+            List<ClassInfo> targets = new ArrayList<ClassInfo>();
+            targets.add(this);
+            targets.addAll(this.mixin.getTargets());
+            return targets;
+        }
+        
+        return ImmutableList.<ClassInfo>of(this);
+    }
+    
+    /**
      * Test whether this class has the specified superclass in its hierarchy
      *  
      * @return true if the specified class appears in the class's hierarchy anywhere
@@ -252,13 +315,21 @@ class ClassInfo extends TreeInfo {
             return true;
         }
         
+        return this.hasSuperClass0(superClass);
+    }
+
+    private boolean hasSuperClass0(String superClass) {
         ClassInfo superClassInfo = this.getSuperClass();
-        while (superClassInfo != null) {
+        if (superClassInfo != null) {
             if (superClass.equals(superClassInfo.getName())) {
                 return true;
             }
-            
-            superClassInfo = superClassInfo.getSuperClass();
+
+            for (ClassInfo superTarget : superClassInfo.targets()) {
+                if (superTarget.hasSuperClass0(superClass)) {
+                    return true;
+                }
+            }
         }
         
         return false;
@@ -269,13 +340,21 @@ class ClassInfo extends TreeInfo {
             return true;
         }
         
+        return this.isAssignableFrom0(superClass);
+    }
+
+    private boolean isAssignableFrom0(ClassInfo superClass) {
         ClassInfo superClassInfo = this.getSuperClass();
-        while (superClassInfo != null) {
+        if (superClassInfo != null) {
             if (superClass == superClassInfo) {
                 return true;
             }
-            
-            superClassInfo = superClassInfo.getSuperClass();
+
+            for (ClassInfo superTarget : superClassInfo.targets()) {
+                if (superTarget.isAssignableFrom0(superClass)) {
+                    return true;
+                }
+            }
         }
         
         return false;
@@ -296,7 +375,12 @@ class ClassInfo extends TreeInfo {
         
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
-            return superClassInfo.findMethodInHierarchy(name, desc, true);
+            for (ClassInfo superTarget : superClassInfo.targets()) {
+                String owner = superTarget.findMethodInHierarchy(name, desc, true);
+                if (owner != null) {
+                    return owner;
+                }
+            }
         }
         
         return null;
