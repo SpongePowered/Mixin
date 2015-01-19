@@ -102,6 +102,15 @@ public @interface At {
      * Target opcode for FIELD and JUMP InjectionPoints. See the javadoc for the relevant injection point for more details.
      */
     public int opcode() default -1;
+    
+    /**
+     * By default, the annotation processor will attempt to locate an obfuscation mapping for the {@link #target} member and any other {@link #args}
+     * known to contain potentially obfuscated references, since it is anticipated that in general the target of an {@link At} annotation will be an
+     * obfuscated method or field. However since it is also possible that the target is a non-obfuscated reference it may be necessary to suppress the
+     * compiler error which would otherwise be generated. Setting this value to <em>false</em> will cause the annotation processor to skip this
+     * annotation when attempting to build the obfuscation table for the mixin.
+     */
+    public boolean remap() default true;
 }
 
 

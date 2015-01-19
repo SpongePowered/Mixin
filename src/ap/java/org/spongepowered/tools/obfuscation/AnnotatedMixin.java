@@ -415,6 +415,10 @@ class AnnotatedMixin {
      * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation and process the references
      */
     public void registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
+        if (!AnnotatedMixins.getRemapValue(at)) {
+            return;
+        }
+        
         String type = MirrorUtils.<String>getAnnotationValue(at, "value");
         String target = MirrorUtils.<String>getAnnotationValue(at, "target");
         this.remapReference(type + ".<target>", target, element, inject, at);
