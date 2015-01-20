@@ -41,8 +41,9 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 
 
 /**
- * TweakClass for running mixins in production. Being a tweaker ensures that we get injected into the AppClassLoader but does mean that we will
- * need to inject the FML coremod by hand if running under FML.
+ * TweakClass for running mixins in production. Being a tweaker ensures that we
+ * get injected into the AppClassLoader but does mean that we will need to
+ * inject the FML coremod by hand if running under FML.
  */
 public class MixinTweaker implements ITweaker {
     
@@ -52,17 +53,21 @@ public class MixinTweaker implements ITweaker {
     private final File container;
     
     /**
-     * If running under FML, we will attempt to inject any coremod specified in the metadata, FML's CoremodManager returns an ITweaker instance
-     * which is the "handle" to the injected mod, we will need to proxy calls through to the wrapper. If initialisation fails (for example if we are
-     * not running under FML or if an FMLCorePlugin key is not specified in the metadata) then this handle will be NULL and the tweaker will attempt
-     * to start the Mixin subsystem automatically by looking for a MixinConfigs key in the jar metadata, this should be a comma-separated list of
-     * mixin config JSON file names.
+     * If running under FML, we will attempt to inject any coremod specified in
+     * the metadata, FML's CoremodManager returns an ITweaker instance which is
+     * the "handle" to the injected mod, we will need to proxy calls through to
+     * the wrapper. If initialisation fails (for example if we are not running
+     * under FML or if an FMLCorePlugin key is not specified in the metadata)
+     * then this handle will be NULL and the tweaker will attempt to start the
+     * Mixin subsystem automatically by looking for a MixinConfigs key in the
+     * jar metadata, this should be a comma-separated list of mixin config JSON
+     * file names.
      */
     private final ITweaker fmlWrapper;
     
     /**
-     * If FML init fails the tweaker will look for configs, if it finds any then it will set this flag to signify that it needs to inject the
-     * transformer
+     * If FML init fails the tweaker will look for configs, if it finds any then
+     * it will set this flag to signify that it needs to inject the transformer
      */
     private boolean injectTransformer;
 
@@ -119,7 +124,8 @@ public class MixinTweaker implements ITweaker {
     }
 
     /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#acceptOptions(java.util.List, java.io.File, java.io.File, java.lang.String)
+     * @see net.minecraft.launchwrapper.ITweaker#acceptOptions(java.util.List,
+     *      java.io.File, java.io.File, java.lang.String)
      */
     @Override
     public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
@@ -139,7 +145,8 @@ public class MixinTweaker implements ITweaker {
     }
 
     /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#injectIntoClassLoader(net.minecraft.launchwrapper.LaunchClassLoader)
+     * @see net.minecraft.launchwrapper.ITweaker#injectIntoClassLoader(
+     *      net.minecraft.launchwrapper.LaunchClassLoader)
      */
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {

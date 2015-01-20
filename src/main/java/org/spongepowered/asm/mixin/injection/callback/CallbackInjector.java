@@ -72,7 +72,8 @@ public class CallbackInjector extends Injector {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
      *      java.util.List)
      */
     @Override
@@ -92,7 +93,8 @@ public class CallbackInjector extends Injector {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#inject(org.spongepowered.asm.mixin.injection.callback.Target,
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override

@@ -60,7 +60,8 @@ import org.spongepowered.tools.obfuscation.validation.IMixinValidator;
 class AnnotatedMixin {
     
     /**
-     * Convenience class to store information about an {@link org.spongepowered.asm.mixin.Shadow}ed member's names
+     * Convenience class to store information about an
+     * {@link org.spongepowered.asm.mixin.Shadow}ed member's names
      */
     class ShadowElementName {
         private final boolean hasPrefix;
@@ -295,8 +296,10 @@ class AnnotatedMixin {
     }
 
     /**
-     * Validate method for {@link org.spongepowered.asm.mixin.Shadow} and {@link org.spongepowered.asm.mixin.Overwrite} registrations to check that
-     * only a single target is registered. Mixins containing annotated methods with these annotations cannot be multi-targetted.
+     * Validate method for {@link org.spongepowered.asm.mixin.Shadow} and
+     * {@link org.spongepowered.asm.mixin.Overwrite} registrations to check that
+     * only a single target is registered. Mixins containing annotated methods
+     * with these annotations cannot be multi-targetted.
      */
     private boolean validateSingleTarget(String annotation, Element element) {
         if (this.targetRef == null || this.targets.size() > 1) {
@@ -412,7 +415,8 @@ class AnnotatedMixin {
     }
 
     /**
-     * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation and process the references
+     * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation
+     * and process the references
      */
     public void registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
         if (!AnnotatedMixins.getRemapValue(at)) {

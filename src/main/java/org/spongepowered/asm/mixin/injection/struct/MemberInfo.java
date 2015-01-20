@@ -33,18 +33,23 @@ import org.spongepowered.asm.mixin.transformer.MixinData;
 
 
 /**
- * <p>Information bundle about a member (method or field) parsed from a String token in another annotation, this is used where target members need to
- * be specified as Strings in order to parse the String representation to something useful.</p>
+ * <p>Information bundle about a member (method or field) parsed from a String
+ * token in another annotation, this is used where target members need to be
+ * specified as Strings in order to parse the String representation to something
+ * useful.</p>
  * 
  * <p>Some examples:</p>
  * <blockquote><pre>
- *   // references a method or field called func_1234_a, if there are multiple members with the same signature, matches the first occurrence
+ *   // references a method or field called func_1234_a, if there are multiple
+ *   // members with the same signature, matches the first occurrence
  *   func_1234_a
  *   
- *   // references a method or field called func_1234_a, if there are multiple members with the same signature, matches all occurrences
+ *   // references a method or field called func_1234_a, if there are multiple
+ *   // members with the same signature, matches all occurrences
  *   func_1234_a*
  *   
- *   // references a method called func_1234_a which takes 3 ints and returns a bool
+ *   // references a method called func_1234_a which takes 3 ints and returns
+ *   // a bool
  *   func_1234_a(III)Z
  *   
  *   // references a field called field_5678_z which is a String
@@ -59,7 +64,8 @@ import org.spongepowered.asm.mixin.transformer.MixinData;
  *   // references a field called field_5678_z in class com.example.Dave
  *   Lcom/example/Dave;field_5678_z
  *  
- *   // references a method called func_1234_a in class foo.bar.Baz which takes 3 doubles and returns void
+ *   // references a method called func_1234_a in class foo.bar.Baz which takes
+ *   // three doubles and returns void
  *   Lfoo/bar/Baz;func_1234_a(DDD)V
  *   
  *   // alternate syntax for the same
@@ -97,7 +103,8 @@ public class MemberInfo {
     
     /**
      * @param name Member name, must not be null
-     * @param owner Member owner, can be null otherwise must be in internal form without L;
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
      */
     public MemberInfo(String name, String owner, boolean matchAll) {
         this(name, owner, null, matchAll);
@@ -105,7 +112,8 @@ public class MemberInfo {
     
     /**
      * @param name Member name, must not be null
-     * @param owner Member owner, can be null otherwise must be in internal form without L;
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
      * @param desc Member descriptor, can be null
      * @param matchAll True to match all matching members, not just the first
      */
@@ -121,7 +129,8 @@ public class MemberInfo {
     }
     
     /**
-     * Initialise a MemberInfo using the supplied insn which must be an instance of MethodInsnNode or FieldInsnNode
+     * Initialise a MemberInfo using the supplied insn which must be an instance
+     * of MethodInsnNode or FieldInsnNode.
      */
     public MemberInfo(AbstractInsnNode insn) {
         this.matchAll = false;
@@ -200,21 +209,24 @@ public class MemberInfo {
     }
     
     /**
-     * Get whether this MemberInfo is definitely a field, the output of this method is undefined if {@link #isFullyQualified} returns false
+     * Get whether this MemberInfo is definitely a field, the output of this
+     * method is undefined if {@link #isFullyQualified} returns false.
      */
     public boolean isField() {
         return this.desc != null && !this.desc.startsWith("(");
     }
 
     /**
-     * Test whether this MemberInfo matches the supplied values. Null values are ignored.
+     * Test whether this MemberInfo matches the supplied values. Null values are
+     * ignored.
      */
     public boolean matches(String owner, String name, String desc) {
         return this.matches(owner, name, desc, 0);
     }
     
     /**
-     * Test whether this MemberInfo matches the supplied values at the specified ordinal. Null values are ignored.
+     * Test whether this MemberInfo matches the supplied values at the specified
+     * ordinal. Null values are ignored.
      */
     public boolean matches(String owner, String name, String desc, int ordinal) {
         if (this.desc != null && desc != null && !this.desc.equals(desc)) {
@@ -230,14 +242,16 @@ public class MemberInfo {
     }
 
     /**
-     * Test whether this MemberInfo matches the supplied values. Null values are ignored.
+     * Test whether this MemberInfo matches the supplied values. Null values are
+     * ignored.
      */
     public boolean matches(String name, String desc) {
         return this.matches(name, desc, 0);
     }
     
     /**
-     * Test whether this MemberInfo matches the supplied values at the specified ordinal. Null values are ignored.
+     * Test whether this MemberInfo matches the supplied values at the specified
+     * ordinal. Null values are ignored.
      */
     public boolean matches(String name, String desc, int ordinal) {
         return (this.name == null || this.name.equals(name)) 

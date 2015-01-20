@@ -42,7 +42,8 @@ public abstract class MixinProcessor extends AbstractProcessor {
     protected AnnotatedMixins mixins;
 
     /* (non-Javadoc)
-     * @see javax.annotation.processing.AbstractProcessor#init(javax.annotation.processing.ProcessingEnvironment)
+     * @see javax.annotation.processing.AbstractProcessor
+     *      #init(javax.annotation.processing.ProcessingEnvironment)
      */
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {

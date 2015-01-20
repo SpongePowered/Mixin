@@ -30,8 +30,9 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
 
 /**
- * Read-only wrapper for InsnList, defensively passed to InjectionPoint instances so that custom InjectionPoint implementations cannot modify the insn
- * list whilst inspecting it.
+ * Read-only wrapper for InsnList, defensively passed to InjectionPoint
+ * instances so that custom InjectionPoint implementations cannot modify the
+ * insn list whilst inspecting it.
  */
 class ReadOnlyInsnList extends InsnList {
 
@@ -48,7 +49,9 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#set(org.objectweb.asm.tree.AbstractInsnNode, org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #set(org.objectweb.asm.tree.AbstractInsnNode,
+     *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void set(AbstractInsnNode location, AbstractInsnNode insn) {
@@ -58,7 +61,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#add(org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #add(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void add(AbstractInsnNode insn) {
@@ -78,7 +82,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insert(org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insert(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void insert(AbstractInsnNode insn) {
@@ -88,7 +93,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insert(org.objectweb.asm.tree.InsnList)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insert(org.objectweb.asm.tree.InsnList)
      */
     @Override
     public void insert(InsnList insns) {
@@ -98,7 +104,9 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insert(org.objectweb.asm.tree.AbstractInsnNode, org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insert(org.objectweb.asm.tree.AbstractInsnNode,
+     *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void insert(AbstractInsnNode location, AbstractInsnNode insn) {
@@ -108,7 +116,9 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insert(org.objectweb.asm.tree.AbstractInsnNode, org.objectweb.asm.tree.InsnList)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insert(org.objectweb.asm.tree.AbstractInsnNode,
+     *      org.objectweb.asm.tree.InsnList)
      */
     @Override
     public void insert(AbstractInsnNode location, InsnList insns) {
@@ -118,7 +128,9 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insertBefore(org.objectweb.asm.tree.AbstractInsnNode, org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insertBefore(org.objectweb.asm.tree.AbstractInsnNode,
+     *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void insertBefore(AbstractInsnNode location, AbstractInsnNode insn) {
@@ -128,7 +140,9 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#insertBefore(org.objectweb.asm.tree.AbstractInsnNode, org.objectweb.asm.tree.InsnList)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #insertBefore(org.objectweb.asm.tree.AbstractInsnNode,
+     *      org.objectweb.asm.tree.InsnList)
      */
     @Override
     public void insertBefore(AbstractInsnNode location, InsnList insns) {
@@ -138,7 +152,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#remove(org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #remove(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public void remove(AbstractInsnNode insn) {
@@ -198,7 +213,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#contains(org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #contains(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public boolean contains(AbstractInsnNode insn) {
@@ -208,7 +224,8 @@ class ReadOnlyInsnList extends InsnList {
     /*
      * (non-Javadoc)
      * 
-     * @see org.objectweb.asm.tree.InsnList#indexOf(org.objectweb.asm.tree.AbstractInsnNode)
+     * @see org.objectweb.asm.tree.InsnList
+     *      #indexOf(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
     public int indexOf(AbstractInsnNode insn) {

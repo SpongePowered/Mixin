@@ -30,9 +30,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of children.</p>
+ * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
+ * children.</p>
  * 
- * <p>Decoration annotation used by the {@link MixinTransformer} to mark methods in a class which have been added or overwritten by a mixin.</p>
+ * <p>Decoration annotation used by the {@link MixinTransformer} to mark methods
+ * in a class which have been added or overwritten by a mixin.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -43,8 +45,9 @@ public @interface MixinMerged {
     public String mixin();
     
     /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with higher priority to overwrite methods already overwritten by those
-     * with a lower priority.
+     * Prioriy of the mixin which merged this method, used to allow mixins with
+     * higher priority to overwrite methods already overwritten by those with a
+     * lower priority.
      */
     public int priority();
 }

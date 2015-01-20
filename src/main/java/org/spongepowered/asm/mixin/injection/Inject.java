@@ -30,42 +30,56 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that this mixin method should inject a callback (or callback<b>s</b>) to itself in the target method(s) identified by {@link #method}.
+ * Specifies that this mixin method should inject a callback (or
+ * callback<b>s</b>) to itself in the target method(s) identified by
+ * {@link #method}.
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
     
     /**
-     * String representation of a {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo} which identifies the target method.
+     * String representation of a
+     * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
+     * MemberInfo} which identifies the target method.
      */
     public String method();
     
     /**
-     * Array of {@link At} annotations which describe the {@link InjectionPoint}s in the target method. Allows one or more callbacks to be injected in
-     * the target method
+     * Array of {@link At} annotations which describe the
+     * {@link InjectionPoint}s in the target method. Allows one or more
+     * callbacks to be injected in the target method.
      */
     public At[] at();
     
     /**
-     * Setting an injected callback to <em>cancellable</em> allows the injected callback to inject optional RETURN opcodes into the target method, the
-     * return behaviour can then be controlled from within the callback by interacting with the supplied
-     * {@link org.spongepowered.asm.mixin.injection.callback.CallbackInfo} object.
+     * Setting an injected callback to <em>cancellable</em> allows the injected
+     * callback to inject optional RETURN opcodes into the target method, the
+     * return behaviour can then be controlled from within the callback by
+     * interacting with the supplied
+     * {@link org.spongepowered.asm.mixin.injection.callback.CallbackInfo}
+     * object.
      */
     public boolean cancellable() default false;
     
     /**
-     * Set to true to allow local variables to be captured from the target method as well as method parameters.
+     * Set to true to allow local variables to be captured from the target
+     * method as well as method parameters.
      */
 //    public boolean captureLocals() default false;
 
 
     /**
-     * By default, the annotation processor will attempt to locate an obfuscation mapping for all {@link Inject} methods since it is anticipated that
-     * in general the target of a {@link Inject} annotation will be an obfuscated method in the target class. However since it is possible to also
-     * apply mixins to non-obfuscated targets (or non-obfuscated methods in obfuscated targets, such as methods added by Forge) it may be necessary
-     * to suppress the compiler error which would otherwise be generated. Setting this value to <em>false</em> will cause the annotation processor
-     * to skip this annotation when attempting to build the obfuscation table for the mixin.
+     * By default, the annotation processor will attempt to locate an
+     * obfuscation mapping for all {@link Inject} methods since it is
+     * anticipated that in general the target of a {@link Inject} annotation
+     * will be an obfuscated method in the target class. However since it is
+     * possible to also apply mixins to non-obfuscated targets (or non-
+     * obfuscated methods in obfuscated targets, such as methods added by Forge)
+     * it may be necessary to suppress the compiler error which would otherwise
+     * be generated. Setting this value to <em>false</em> will cause the
+     * annotation processor to skip this annotation when attempting to build the
+     * obfuscation table for the mixin.
      */
     public boolean remap() default true;
 }

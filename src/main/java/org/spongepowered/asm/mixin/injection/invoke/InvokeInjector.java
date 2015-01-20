@@ -62,7 +62,8 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
      *      java.util.List)
      */
     @Override
@@ -73,7 +74,8 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#inject(org.spongepowered.asm.mixin.injection.callback.Target,
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
@@ -108,7 +110,8 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /**
-     * Generate an array containing local indexes for the specified args, returns an array of identical size to the supplied array with an
+     * Generate an array containing local indexes for the specified args,
+     * returns an array of identical size to the supplied array with an
      * allocated local index in each corresponding position
      */
     protected int[] generateArgMap(Type[] args, int start, int local) {
@@ -121,7 +124,8 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /**
-     * Store args on the stack starting at the end and working back to position specified by start, return the generated argMap
+     * Store args on the stack starting at the end and working back to position
+     * specified by start, return the generated argMap
      */
     protected int[] storeArgs(Target target, Type[] args, InsnList insns, int start) {
         int[] argMap = this.generateArgMap(args, start, target.method.maxLocals);

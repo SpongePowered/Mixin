@@ -45,7 +45,8 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.tools.MirrorUtils;
 
 /**
- * Annotation processor which finds {@link Inject} and {@link At} annotations in mixin classes and generates SRG mappings
+ * Annotation processor which finds {@link Inject} and {@link At} annotations in
+ * mixin classes and generates SRG mappings
  */
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedAnnotationTypes({
@@ -58,7 +59,9 @@ import org.spongepowered.tools.MirrorUtils;
 public class InjectionObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)
-     * @see javax.annotation.processing.AbstractProcessor#process(java.util.Set, javax.annotation.processing.RoundEnvironment)
+     * @see javax.annotation.processing.AbstractProcessor
+     *      #process(java.util.Set,
+     *      javax.annotation.processing.RoundEnvironment)
      */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -81,7 +84,8 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
     }
 
     /**
-     * Searches for {@link Inject} annotations and registers them with their parent mixins
+     * Searches for {@link Inject} annotations and registers them with their
+     * parent mixins
      */
     private void processInjectors(RoundEnvironment roundEnv, Class<? extends Annotation> injectorClass) {
         for (Element elem : roundEnv.getElementsAnnotatedWith(injectorClass)) {

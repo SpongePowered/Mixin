@@ -30,7 +30,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Pseudo-implements decorator for Mixins with conflicting methods in a superclass to soft-implement an interface
+ * Pseudo-implements decorator for Mixins with conflicting methods in a
+ * superclass to soft-implement an interface
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.CLASS)

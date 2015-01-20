@@ -37,13 +37,15 @@ import java.lang.annotation.Target;
 public @interface Interface {
     
     /**
-     * Interface that the parent {@link Implements} indicates the mixin implements. The interface will be hot-patched onto the target class as part
-     * of the mixin application.
+     * Interface that the parent {@link Implements} indicates the mixin 
+     * implements. The interface will be hot-patched onto the target class as
+     * part of the mixin application.
      */
     public Class<?> iface();
     
     /**
-     * [Required] prefix for implementing interface methods. Works similarly to {@link Shadow} prefixes, but <b>must</b> end with a dollar sign ($)
+     * [Required] prefix for implementing interface methods. Works similarly to
+     * {@link Shadow} prefixes, but <b>must</b> end with a dollar sign ($)
      */
     public String prefix();
 

@@ -27,8 +27,9 @@ package org.spongepowered.asm.mixin.injection.callback;
 import org.objectweb.asm.Type;
 
 /**
- * For callbacks with a non-void return type, a CallbackInfoReturnable is passed to the callback instead to allow the callback to interact with the
- * method return value.
+ * For callbacks with a non-void return type, a CallbackInfoReturnable is passed
+ * to the callback instead to allow the callback to interact with the method
+ * return value.
  * 
  * @param <R> Return type
  */
@@ -95,7 +96,8 @@ public class CallbackInfoReturnable<R> extends CallbackInfo {
     }
 
     /**
-     * Sets a return value for this callback and cancels the callback (required in order to return the new value)
+     * Sets a return value for this callback and cancels the callback (required
+     * in order to return the new value)
      * 
      * @param returnValue
      */

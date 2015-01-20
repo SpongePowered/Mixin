@@ -124,11 +124,13 @@ abstract class TreeInfo {
     }
 
     /**
-     * Since we obtain the class bytes with getClassBytes(), we need to apply the transformers ourself
+     * Since we obtain the class bytes with getClassBytes(), we need to apply
+     * the transformers ourself
      * 
      * @param name
      * @param basicClass
-     * @return class bytecode after processing by all registered transformers except the excluded transformers
+     * @return class bytecode after processing by all registered transformers
+     * except the excluded transformers
      */
     private static byte[] applyTransformers(String name, byte[] basicClass) {
         final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();

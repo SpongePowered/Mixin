@@ -30,7 +30,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 
 /**
- * Information about the current injection target, mainly just convenience rather than passing a bunch of values around
+ * Information about the current injection target, mainly just convenience
+ * rather than passing a bunch of values around.
  */
 public class Target {
 

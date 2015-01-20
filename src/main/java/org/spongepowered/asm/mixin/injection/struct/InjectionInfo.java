@@ -45,7 +45,8 @@ import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
- * Contructs information about an injection from an {@link Inject} annotation and allows the injection to be processed
+ * Contructs information about an injection from an {@link Inject} annotation
+ * and allows the injection to be processed.
  */
 public abstract class InjectionInfo {
     
@@ -78,7 +79,8 @@ public abstract class InjectionInfo {
     protected final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
     
     /**
-     * Injection points parsed from {@link org.spongepowered.asm.mixin.injection.At} annotations
+     * Injection points parsed from
+     * {@link org.spongepowered.asm.mixin.injection.At} annotations
      */
     protected final List<InjectionPoint> injectionPoints = new ArrayList<InjectionPoint>();
     
@@ -156,7 +158,8 @@ public abstract class InjectionInfo {
     protected abstract Injector initInjector(AnnotationNode injectAnnotation);
     
     /**
-     * Get whether there is enough valid information in this info to actually perform an injection
+     * Get whether there is enough valid information in this info to actually
+     * perform an injection.
      */
     public boolean isValid() {
         return this.targets.size() > 0 && this.injectionPoints.size() > 0;

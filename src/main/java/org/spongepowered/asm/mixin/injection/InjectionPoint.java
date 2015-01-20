@@ -49,26 +49,37 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 /**
- * <p>Base class for injection point discovery classes. Each subclass describes a strategy for locating code injection points within a method, with
- * the {@link #find} method populating a collection with insn nodes from the method which satisfy its strategy.</p>
+ * <p>Base class for injection point discovery classes. Each subclass describes
+ * a strategy for locating code injection points within a method, with the
+ * {@link #find} method populating a collection with insn nodes from the method
+ * which satisfy its strategy.</p>
  * 
- * <p>This base class also contains composite strategy factory methods such as {@link #and} and {@link #or} which allow strategies to be combined
- * using intersection (and) or union (or) relationships to allow multiple strategies to be easily combined.</p>
+ * <p>This base class also contains composite strategy factory methods such as
+ * {@link #and} and {@link #or} which allow strategies to be combined using
+ * intersection (and) or union (or) relationships to allow multiple strategies
+ * to be easily combined.</p>
  * 
- * <p>You are free to create your own injection point subclasses, but take note that it <b>is allowed</b> for a single InjectionPoint instance to be
- * used for multiple injections and thus implementing classes MUST NOT cache the insn list, event, or nodes instance passed to the {@link #find}
- * method, as each call to {@link #find} must be considered a separate functional contract and the InjectionPoint's lifespan is not linked to the
- * discovery lifespan, therefore it is important that the InjectionPoint implementation is fully <b>stateless</b>.</p>
+ * <p>You are free to create your own injection point subclasses, but take note
+ * that it <b>is allowed</b> for a single InjectionPoint instance to be used for
+ * multiple injections and thus implementing classes MUST NOT cache the insn
+ * list, event, or nodes instance passed to the {@link #find} method, as each
+ * call to {@link #find} must be considered a separate functional contract and
+ * the InjectionPoint's lifespan is not linked to the discovery lifespan,
+ * therefore it is important that the InjectionPoint implementation is fully
+ * <b>stateless</b>.</p>
  */
 public abstract class InjectionPoint {
 
     /**
      * Find injection points in the supplied insn list
      * 
-     * @param desc Method descriptor, supplied to allow return types and arguments etc. to be determined
-     * @param insns Insn list to search in, the strategy MUST ONLY add nodes from this list to the {@code nodes} collection
-     * @param nodes Collection of nodes to populate. Injectors should NOT make any assumptions about the state of this collection and should only call
-     *            the <b>add()</b> method
+     * @param desc Method descriptor, supplied to allow return types and
+     *      arguments etc. to be determined
+     * @param insns Insn list to search in, the strategy MUST ONLY add nodes
+     *      from this list to the {@code nodes} collection
+     * @param nodes Collection of nodes to populate. Injectors should NOT make
+     *      any assumptions about the state of this collection and should only
+     *      call the <b>add()</b> method
      * @return true if one or more injection points were found
      */
     public abstract boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes);
@@ -106,7 +117,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Intersection of several injection points, returns common nodes that appear in all children
+     * Intersection of several injection points, returns common nodes that
+     * appear in all children
      */
     static final class Intersection extends InjectionPoint.CompositeInjectionPoint {
 
@@ -150,7 +162,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Union of several injection points, returns all insns returned from all injections
+     * Union of several injection points, returns all insns returned from all
+     * injections
      */
     static final class Union extends InjectionPoint.CompositeInjectionPoint {
 
@@ -173,7 +186,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Shift injection point, takes an input injection point and shifts all returned nodes by a fixed amount
+     * Shift injection point, takes an input injection point and shifts all
+     * returned nodes by a fixed amount
      */
     static final class Shift extends InjectionPoint {
 
@@ -217,7 +231,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Returns a composite injection point which returns the intersection of nodes from all component injection points
+     * Returns a composite injection point which returns the intersection of
+     * nodes from all component injection points
      * 
      * @param operands injection points to perform intersection
      */
@@ -226,7 +241,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Returns a composite injection point which returns the union of nodes from all component injection points
+     * Returns a composite injection point which returns the union of nodes from
+     * all component injection points
      * 
      * @param operands injection points to perform union
      */
@@ -235,7 +251,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Returns an injection point which returns all insns immediately following insns from the supplied injection point
+     * Returns an injection point which returns all insns immediately following
+     * insns from the supplied injection point
      * 
      * @param point injection points to perform shift
      */
@@ -244,7 +261,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Returns an injection point which returns all insns immediately prior to insns from the supplied injection point
+     * Returns an injection point which returns all insns immediately prior to
+     * insns from the supplied injection point
      * 
      * @param point injection points to perform shift
      */
@@ -253,7 +271,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Returns an injection point which returns all insns offset by the specified "count" from insns from the supplied injection point
+     * Returns an injection point which returns all insns offset by the
+     * specified "count" from insns from the supplied injection point
      * 
      * @param point injection points to perform shift
      */
@@ -269,7 +288,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Parse an InjectionPoint from the supplied {@link At} annotation supplied as an AnnotationNode instance
+     * Parse an InjectionPoint from the supplied {@link At} annotation supplied
+     * as an AnnotationNode instance
      */
     public static InjectionPoint parse(MixinData mixin, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
@@ -288,7 +308,8 @@ public abstract class InjectionPoint {
     }
 
     /**
-     * Parse and instantiate an InjectionPoint from the supplied information. Returns null if an InjectionPoint could not be created.
+     * Parse and instantiate an InjectionPoint from the supplied information.
+     * Returns null if an InjectionPoint could not be created.
      */
     public static InjectionPoint parse(MixinData mixin, String at, At.Shift shift, int by,
             List<String> args, String target, int ordinal, int opcode) {

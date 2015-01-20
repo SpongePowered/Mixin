@@ -37,9 +37,11 @@ import org.spongepowered.asm.util.ASMHelper;
 import com.google.common.collect.ObjectArrays;
 
 /**
- * <p>A bytecode injector which allows a method call to be redirected to the annotated handler method. The handler method signature must match the
- * hooked method precisely <b>but</b> prepended with an arg of the owning object's type to accept the object instance the method was going to be
- * invoked on. For example when hooking the following call:</p>
+ * <p>A bytecode injector which allows a method call to be redirected to the
+ * annotated handler method. The handler method signature must match the hooked
+ * method precisely <b>but</b> prepended with an arg of the owning object's type
+ * to accept the object instance the method was going to be invoked on. For
+ * example when hooking the following call:</p>
  * 
  * <blockquote><pre>
  *   int abc = 0;
@@ -52,10 +54,13 @@ import com.google.common.collect.ObjectArrays;
  * 
  * <p>The signature of the redirected method should be:</p>
  * 
- * <blockquote><pre>public boolean barProxy(Foo someObject, int abc, int def)</pre></blockquote>
+ * <blockquote>
+ *      <pre>public boolean barProxy(Foo someObject, int abc, int def)</pre>
+ * </blockquote>
  * 
- * <p>For obvious reasons this does not apply for static methods, for static methods it is sufficient that the signature simply match the hooked
- * method.</p> 
+ * <p>For obvious reasons this does not apply for static methods, for static
+ * methods it is sufficient that the signature simply match the hooked method.
+ * </p> 
  */
 public class RedirectInjector extends InvokeInjector {
 

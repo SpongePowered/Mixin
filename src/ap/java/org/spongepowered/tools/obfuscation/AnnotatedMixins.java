@@ -60,7 +60,8 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
 
 
 /**
- * Mixin info manager, stores all of the mixin info during processing and also manages access to the srgs
+ * Mixin info manager, stores all of the mixin info during processing and also
+ * manages access to the srgs
  */
 class AnnotatedMixins implements Messager {
     
@@ -124,7 +125,8 @@ class AnnotatedMixins implements Messager {
     private SrgContainer srgs;
     
     /**
-     * True once we've tried to initialise the srgs, initially false so that we can do srg init lazily
+     * True once we've tried to initialise the srgs, initially false so that we
+     * can do srg init lazily
      */
     private boolean initDone;
     
@@ -158,7 +160,8 @@ class AnnotatedMixins implements Messager {
     }
 
     /**
-     * Lazy initialisation for srgs, so that we only initialise the srgs if they're actually required.
+     * Lazy initialisation for srgs, so that we only initialise the srgs if
+     * they're actually required.
      */
     private boolean initSrgs() {
         if (!this.initDone) {
@@ -365,7 +368,8 @@ class AnnotatedMixins implements Messager {
      * 
      * @param mixinType Mixin class
      * @param method Injector method
-     * @param inject {@link org.spongepowered.asm.mixin.injection.Inject} annotation
+     * @param inject {@link org.spongepowered.asm.mixin.injection.Inject}
+     *      annotation
      */
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
@@ -457,7 +461,8 @@ class AnnotatedMixins implements Messager {
     }
     
     /**
-     * Get a TypeElement representing another type in the current processing environment
+     * Get a TypeElement representing another type in the current processing
+     * environment
      */
     public TypeElement getTypeElement(String name) {
         return this.processingEnv.getElementUtils().getTypeElement(name);

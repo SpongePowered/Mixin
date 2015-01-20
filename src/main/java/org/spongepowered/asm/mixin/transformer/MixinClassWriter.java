@@ -28,7 +28,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
 /**
- * ClassWriter which resolves common superclasses using Mixin's metadata instead of calling Class.forName
+ * ClassWriter which resolves common superclasses using Mixin's metadata instead
+ * of calling Class.forName
  */
 public class MixinClassWriter extends ClassWriter {
 
@@ -43,7 +44,8 @@ public class MixinClassWriter extends ClassWriter {
     }
 
     /* (non-Javadoc)
-     * @see org.objectweb.asm.ClassWriter#getCommonSuperClass(java.lang.String, java.lang.String)
+     * @see org.objectweb.asm.ClassWriter#getCommonSuperClass(java.lang.String,
+     *      java.lang.String)
      */
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {

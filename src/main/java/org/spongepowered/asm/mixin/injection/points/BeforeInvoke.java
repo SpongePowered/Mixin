@@ -37,15 +37,21 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
 /**
- * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and INVOKESPECIAL opcodes matching its arguments and returns a list of insns
- * immediately prior to matching instructions. It accepts the following parameters from {@link org.spongepowered.asm.mixin.injection.At At}:</p>
+ * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
+ * INVOKESPECIAL opcodes matching its arguments and returns a list of insns
+ * immediately prior to matching instructions. It accepts the following
+ * parameters from {@link org.spongepowered.asm.mixin.injection.At At}:</p>
  * 
  * <dl>
  *   <dt>target</dt>
- *   <dd>A {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo} which identifies the target method</dd>
+ *   <dd>A
+ *   {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo}
+ *   which identifies the target method</dd>
  *   <dt>ordinal</dt>
- *   <dd>The ordinal position of the method invocation to match. For example if the method is invoked 3 times and you want to match the 3rd then you
- *      can specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The default value is <b>-1</b> which supresses ordinal matching</dd>
+ *   <dd>The ordinal position of the method invocation to match. For example if
+ *   the method is invoked 3 times and you want to match the 3rd then you can
+ *   specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The
+ *   default value is <b>-1</b> which supresses ordinal matching</dd>
  * </dl>
  * 
  * <p>Example:</p>
@@ -53,8 +59,10 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  *   &#064;At(value = "INVOKE", target="func_1234_a(III)V")</pre>
  * </blockquote> 
  * 
- * <p>Note that like all standard injection points, this class matches the insn itself, putting the injection point immediately <em>before</em> the
- * access in question. Use the {@link org.spongepowered.asm.mixin.injection.At#shift shift} specifier to adjust the matched opcode as necessary.</p>
+ * <p>Note that like all standard injection points, this class matches the insn
+ * itself, putting the injection point immediately <em>before</em> the access in
+ * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
+ * specifier to adjust the matched opcode as necessary.</p>
  */
 public class BeforeInvoke extends InjectionPoint {
 
@@ -63,7 +71,8 @@ public class BeforeInvoke extends InjectionPoint {
     protected final MemberInfo target;
 
     /**
-     * This strategy can be used to identify a particular invokation if the same method is invoked at multiple points, if this value is -1 then the
+     * This strategy can be used to identify a particular invokation if the same
+     * method is invoked at multiple points, if this value is -1 then the
      * strategy returns <em>all</em> invokations of the method.
      */
     protected final int ordinal;
@@ -92,8 +101,11 @@ public class BeforeInvoke extends InjectionPoint {
     /*
      * (non-Javadoc)
      * 
-     * @see com.mumfrey.liteloader.transformers.event.InjectionStrategy#findInjectionPoint(java.lang.String, org.objectweb.asm.tree.InsnList,
-     * com.mumfrey.liteloader.transformers.event.Event, java.util.Collection)
+     * @see com.mumfrey.liteloader.transformers.event.InjectionStrategy
+     *      #findInjectionPoint(java.lang.String,
+     *      org.objectweb.asm.tree.InsnList,
+     *      com.mumfrey.liteloader.transformers.event.Event,
+     *      java.util.Collection)
      */
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {

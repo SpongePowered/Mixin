@@ -51,7 +51,8 @@ public interface IMixinInfo {
     public abstract byte[] getClassBytes();
 
     /**
-     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets
+     * True if the superclass of the mixin is <b>not</b> the direct superclass
+     * of one or more targets.
      */
     public abstract boolean isDetachedSuper();
 

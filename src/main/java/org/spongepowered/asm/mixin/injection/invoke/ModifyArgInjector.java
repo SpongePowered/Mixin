@@ -37,17 +37,20 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 
 /**
- * A bytecode injector which allows a single argument of a chosen method call to be altered
+ * A bytecode injector which allows a single argument of a chosen method call to
+ * be altered.
  */
 public class ModifyArgInjector extends InvokeInjector {
 
     /**
-     * Index of the target arg or -1 to find the arg automatically (only works where there is only one arg of specified type on the element)
+     * Index of the target arg or -1 to find the arg automatically (only works
+     * where there is only one arg of specified type on the element)
      */
     private final int index;
     
     /**
-     * True if processing in single arg mode, the callback only accepts a single arg of the same type as the return. Otherwise the handler method is
+     * True if processing in single arg mode, the callback only accepts a single
+     * arg of the same type as the return. Otherwise the handler method is
      * expected to have matching args to the target invocation
      */
     private final boolean singleArgMode;
@@ -63,7 +66,8 @@ public class ModifyArgInjector extends InvokeInjector {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector#sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #sanityCheck(org.spongepowered.asm.mixin.injection.callback.Target,
      *      java.util.List)
      */
     @Override

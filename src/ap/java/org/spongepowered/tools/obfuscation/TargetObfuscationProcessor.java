@@ -44,7 +44,8 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.tools.MirrorUtils;
 
 /**
- * Annotation processor which finds {@link Shadow} and {@link Overwrite} annotations in mixin classes and generates SRG mappings
+ * Annotation processor which finds {@link Shadow} and {@link Overwrite}
+ * annotations in mixin classes and generates SRG mappings
  */
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.Mixin", "org.spongepowered.asm.mixin.Shadow", "org.spongepowered.asm.mixin.Overwrite" })
@@ -52,7 +53,9 @@ import org.spongepowered.tools.MirrorUtils;
 public class TargetObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)
-     * @see javax.annotation.processing.AbstractProcessor#process(java.util.Set, javax.annotation.processing.RoundEnvironment)
+     * @see javax.annotation.processing.AbstractProcessor
+     *      #process(java.util.Set,
+     *      javax.annotation.processing.RoundEnvironment)
      */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -74,7 +77,8 @@ public class TargetObfuscationProcessor extends MixinProcessor {
     }
 
     /**
-     * Searches for {@link Shadow} annotations and registers them with their parent mixins
+     * Searches for {@link Shadow} annotations and registers them with their
+     * parent mixins
      */
     private void processShadows(RoundEnvironment roundEnv) {
         for (Element elem : roundEnv.getElementsAnnotatedWith(Shadow.class)) {
@@ -97,7 +101,8 @@ public class TargetObfuscationProcessor extends MixinProcessor {
     }
 
     /**
-     * Searches for {@link Overwrite} annotations and registers them with their parent mixins
+     * Searches for {@link Overwrite} annotations and registers them with their
+     * parent mixins
      */
     private void processOverwrites(RoundEnvironment roundEnv) {
         for (Element elem : roundEnv.getElementsAnnotatedWith(Overwrite.class)) {

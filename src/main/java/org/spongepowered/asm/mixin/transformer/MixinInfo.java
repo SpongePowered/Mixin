@@ -51,7 +51,8 @@ import com.google.common.collect.Lists;
 class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     /**
-     * Global order of mixin infos, used to determine ordering between mixins with equivalent priority
+     * Global order of mixin infos, used to determine ordering between mixins
+     * with equivalent priority
      */
     static int mixinOrder = 0;
     
@@ -96,7 +97,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final List<String> targetClassNames;
     
     /**
-     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets 
+     * True if the superclass of the mixin is <b>not</b> the direct superclass
+     * of one or more targets 
      */
     private final boolean detachedSuper;
     
@@ -144,7 +146,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     /**
-     * Initialises the class info and performs some pre-flight checks on the mixin
+     * Initialises the class info and performs some pre-flight checks on the
+     * mixin
      * 
      * @param classNode
      * @return
@@ -290,7 +293,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
-     * True if the superclass of the mixin is <b>not</b> the direct superclass of one or more targets
+     * True if the superclass of the mixin is <b>not</b> the direct superclass
+     * of one or more targets
      */
     @Override
     public boolean isDetachedSuper() {

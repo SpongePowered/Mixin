@@ -40,11 +40,12 @@ public interface Cancellable {
     public abstract boolean isCancelled();
     
     /**
-     * If the object is cancellable, cancels the object, implementors may throw an EventCancellationException if the object is not actually
-     * cancellable. 
+     * If the object is cancellable, cancels the object, implementors may throw
+     * an EventCancellationException if the object is not actually cancellable. 
      * 
-     * @throws CancellationException (optional) may be thrown if the object is not actually cancellable. Contractually, this object may not throw the
-     * exception if isCancellable() returns true.
+     * @throws CancellationException (optional) may be thrown if the object is
+     *      not actually cancellable. Contractually, this object may not throw
+     *      the exception if isCancellable() returns true.
      */
     public abstract void cancel() throws CancellationException;
 }

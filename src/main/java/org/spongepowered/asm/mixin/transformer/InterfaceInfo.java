@@ -38,12 +38,14 @@ import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
- * Information about an interface being runtime-patched onto a mixin target class, see {@link Implements}
+ * Information about an interface being runtime-patched onto a mixin target
+ * class, see {@link Implements}
  */
 public class InterfaceInfo extends TreeInfo {
     
     /**
-     * Prefix for interface methods. Any methods using this prefix must exist in the target interface
+     * Prefix for interface methods. Any methods using this prefix must exist in
+     * the target interface
      */
     private final String prefix;
     
@@ -78,7 +80,8 @@ public class InterfaceInfo extends TreeInfo {
     }
     
     /**
-     * Reads an interface and its super-interfaces and gathers method names in to the local "methods" collection
+     * Reads an interface and its super-interfaces and gathers method names in
+     * to the local "methods" collection
      */
     private void readInterface(String ifaceName) {
         ClassNode ifaceNode = new ClassNode();
@@ -122,8 +125,10 @@ public class InterfaceInfo extends TreeInfo {
     }
 
     /**
-     * Processes a method node in the mixin and renames it if necessary. If the prefix is found then we verify that the method exists in the target
-     * interface and throw our teddies out of the pram if that's not the case (replacement behaviour for {@link Override} essentially. 
+     * Processes a method node in the mixin and renames it if necessary. If the
+     * prefix is found then we verify that the method exists in the target
+     * interface and throw our teddies out of the pram if that's not the case
+     * (replacement behaviour for {@link Override} essentially. 
      */
     public boolean renameMethod(MethodNode method) {
         if (this.methods == null) {
@@ -145,7 +150,8 @@ public class InterfaceInfo extends TreeInfo {
     }
 
     /**
-     * Convert an {@link Interface} annotation node into an {@link InterfaceInfo}
+     * Convert an {@link Interface} annotation node into an
+     * {@link InterfaceInfo}
      */
     static InterfaceInfo fromAnnotation(AnnotationNode node) {
         String prefix = ASMHelper.<String>getAnnotationValue(node, "prefix");

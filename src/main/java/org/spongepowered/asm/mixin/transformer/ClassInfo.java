@@ -41,14 +41,16 @@ import com.google.common.collect.ImmutableList;
 
 
 /**
- * Information about a class, used as a way of keeping track of class hierarchy information needed to support mixins with detached targets.  
+ * Information about a class, used as a way of keeping track of class hierarchy
+ * information needed to support mixins with detached targets.  
  */
 class ClassInfo extends TreeInfo {
     
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
 
     /**
-     * Loading and parsing classes is expensive, so keep a cache of all the information we generate
+     * Loading and parsing classes is expensive, so keep a cache of all the
+     * information we generate
      */
     private static final Map<String, ClassInfo> cache = new HashMap<String, ClassInfo>();
     
@@ -263,7 +265,8 @@ class ClassInfo extends TreeInfo {
     }
     
     /**
-     * Get the superclass info, can return null if the superclass cannot be resolved
+     * Get the superclass info, can return null if the superclass cannot be
+     * resolved
      */
     public ClassInfo getSuperClass() {
         if (this.superClass == null && this.superName != null) {
@@ -281,7 +284,8 @@ class ClassInfo extends TreeInfo {
     }
     
     /**
-     * Get the outer class info, can return null if the outer class cannot be resolved or if this is not an inner class
+     * Get the outer class info, can return null if the outer class cannot be
+     * resolved or if this is not an inner class
      */
     public ClassInfo getOuterClass() {
         if (this.outerClass == null && this.outerName != null) {
@@ -308,7 +312,8 @@ class ClassInfo extends TreeInfo {
     /**
      * Test whether this class has the specified superclass in its hierarchy
      *  
-     * @return true if the specified class appears in the class's hierarchy anywhere
+     * @return true if the specified class appears in the class's hierarchy
+     * anywhere
      */
     public boolean hasSuperClass(String superClass) {
         if (ClassInfo.JAVA_LANG_OBJECT.equals(superClass)) {
@@ -361,12 +366,15 @@ class ClassInfo extends TreeInfo {
     }
 
     /**
-     * Finds the owner of the specified private or protected method in this class's hierarchy
+     * Finds the owner of the specified private or protected method in this
+     * class's hierarchy
      * 
      * @param name Method name to search for
      * @param desc Method descriptor
-     * @param includeThisClass True to return this class if the method exists here, or false to search only superclasses
-     * @return the name of the class which contains the specified method or null if the method could not be resolved
+     * @param includeThisClass True to return this class if the method exists
+     *      here, or false to search only superclasses
+     * @return the name of the class which contains the specified method or null
+     *      if the method could not be resolved
      */
     public String findMethodInHierarchy(String name, String desc, boolean includeThisClass) {
         if (includeThisClass && this.hasMethod(name, desc)) {
@@ -417,8 +425,10 @@ class ClassInfo extends TreeInfo {
     }
 
     /**
-     * Return a ClassInfo for the supplied {@link ClassNode}. If a ClassInfo for the class was already defined, then the original ClassInfo is
-     * returned from the internal cache. Otherwise a new ClassInfo is created and returned.
+     * Return a ClassInfo for the supplied {@link ClassNode}. If a ClassInfo for
+     * the class was already defined, then the original ClassInfo is returned
+     * from the internal cache. Otherwise a new ClassInfo is created and
+     * returned.
      * 
      * @param classNode
      * @return
@@ -434,10 +444,12 @@ class ClassInfo extends TreeInfo {
     }
 
     /**
-     * Return a ClassInfo for the specified class name, fetches the ClassInfo from the cache where possible
+     * Return a ClassInfo for the specified class name, fetches the ClassInfo
+     * from the cache where possible
      * 
      * @param className Binary name of the class to look up
-     * @return ClassInfo for the specified class name or null if the specified name cannot be resolved for some reason
+     * @return ClassInfo for the specified class name or null if the specified
+     *      name cannot be resolved for some reason
      */
     public static ClassInfo forName(String className) {
         className = className.replace('.', '/');

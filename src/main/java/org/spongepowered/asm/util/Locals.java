@@ -53,14 +53,17 @@ import org.objectweb.asm.tree.analysis.SimpleVerifier;
 public class Locals {
 
     /**
-     * Cached local variable lists, to avoid having to recalculate them (expensive) if multiple injectors are working with the same method
+     * Cached local variable lists, to avoid having to recalculate them
+     * (expensive) if multiple injectors are working with the same method
      */
     private static final Map<String, List<LocalVariableNode>> calculatedLocalVariables = new HashMap<String, List<LocalVariableNode>>();
 
     /**
-     * Injects appropriate LOAD opcodes into the supplied InsnList for each entry in the supplied locals array starting at pos
+     * Injects appropriate LOAD opcodes into the supplied InsnList for each
+     * entry in the supplied locals array starting at pos
      * 
-     * @param locals Local types (can contain nulls for uninitialised, TOP, or RETURN values in locals)
+     * @param locals Local types (can contain nulls for uninitialised, TOP, or
+     *      RETURN values in locals)
      * @param insns Instruction List to inject into
      * @param pos Start position
      */
@@ -73,9 +76,11 @@ public class Locals {
     }
 
     /**
-     * <p>Attempts to identify available locals at an arbitrary point in the bytecode specified by node.</p>
+     * <p>Attempts to identify available locals at an arbitrary point in the
+     * bytecode specified by node.</p>
      * 
-     * <p>This method builds an approximate view of the locals available at an arbitrary point in the bytecode by examining the following features in
+     * <p>This method builds an approximate view of the locals available at an
+     * arbitrary point in the bytecode by examining the following features in
      * the bytecode:</p> 
      * <ul>
      *   <li>Any available stack map frames</li>
@@ -83,22 +88,34 @@ public class Locals {
      *   <li>The local variable table</li>
      * </ul>
      * 
-     * <p>Inference proceeds by walking the bytecode from the start of the method looking for stack frames and STORE opcodes. When either of these is
-     * encountered, an attempt is made to cross-reference the values in the stack map or STORE opcode with the value in the local variable table which
-     * covers the code range. Stack map frames overwrite the entire simulated local variable table with their own value types, STORE opcodes overwrite
-     * only the local slot to which they pertain. Values in the simulated locals array are spaced according to their size (unlike the representation
-     * in FrameNode) and this TOP, NULL and UNINTITIALIZED_THIS opcodes will be represented as null values in the simulated frame.</p>
+     * <p>Inference proceeds by walking the bytecode from the start of the
+     * method looking for stack frames and STORE opcodes. When either of these
+     * is encountered, an attempt is made to cross-reference the values in the
+     * stack map or STORE opcode with the value in the local variable table
+     * which covers the code range. Stack map frames overwrite the entire
+     * simulated local variable table with their own value types, STORE opcodes
+     * overwrite only the local slot to which they pertain. Values in the
+     * simulated locals array are spaced according to their size (unlike the
+     * representation in FrameNode) and this TOP, NULL and UNINTITIALIZED_THIS
+     * opcodes will be represented as null values in the simulated frame.</p>
      * 
-     * <p>This code does not currently simulate the prescribed JVM behaviour where overwriting the second slot of a DOUBLE or LONG actually
-     * invalidates the DOUBLE or LONG stored in the previous location, so we have to hope (for now) that this behaviour isn't emitted by the compiler
-     * or any upstream transformers. I may have to re-think this strategy if this situation is encountered in the wild.</p>
+     * <p>This code does not currently simulate the prescribed JVM behaviour
+     * where overwriting the second slot of a DOUBLE or LONG actually
+     * invalidates the DOUBLE or LONG stored in the previous location, so we
+     * have to hope (for now) that this behaviour isn't emitted by the compiler
+     * or any upstream transformers. I may have to re-think this strategy if
+     * this situation is encountered in the wild.</p>
      * 
-     * @param classNode ClassNode containing the method, used to initialise the implicit "this" reference in simple methods with no stack frames
+     * @param classNode ClassNode containing the method, used to initialise the
+     *      implicit "this" reference in simple methods with no stack frames
      * @param method MethodNode to explore
-     * @param node Node indicating the position at which to determine the locals state. The locals will be enumerated UP TO the specified node, so
-     *            bear in mind that if the specified node is itself a STORE opcode, then we will be looking at the state of the locals PRIOR to its
-     *            invokation
-     * @return A sparse array containing a view (hopefully) of the locals at the specified location
+     * @param node Node indicating the position at which to determine the locals
+     *      state. The locals will be enumerated UP TO the specified node, so
+     *      bear in mind that if the specified node is itself a STORE opcode,
+     *      then we will be looking at the state of the locals PRIOR to its
+     *      invocation
+     * @return A sparse array containing a view (hopefully) of the locals at the
+     *      specified location
      */
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
@@ -156,13 +173,16 @@ public class Locals {
     }
 
     /**
-     * Attempts to locate the appropriate entry in the local variable table for the specified local variable index at the location specified by node.
+     * Attempts to locate the appropriate entry in the local variable table for
+     * the specified local variable index at the location specified by node.
      * 
      * @param classNode Containing class
      * @param method Method
-     * @param node Instruction defining the location to get the local variable table at
+     * @param node Instruction defining the location to get the local variable
+     *      table at
      * @param var Local variable index
-     * @return a LocalVariableNode containing information about the local variable at the specified location in the specified local slot
+     * @return a LocalVariableNode containing information about the local
+     *      variable at the specified location in the specified local slot
      */
     public static LocalVariableNode getLocalVariableAt(ClassNode classNode, MethodNode method, AbstractInsnNode node, int var) {
         LocalVariableNode localVariableNode = null;
@@ -185,8 +205,10 @@ public class Locals {
     }
 
     /**
-     * Fetches or generates the local variable table for the specified method. Since Mojang strip the local variable table as part of the obfuscation
-     * process, we need to generate the local variable table when running obfuscated. We cache the generated tables so that we only need to do the
+     * Fetches or generates the local variable table for the specified method.
+     * Since Mojang strip the local variable table as part of the obfuscation
+     * process, we need to generate the local variable table when running
+     * obfuscated. We cache the generated tables so that we only need to do the
      * relatively expensive calculation once per method we encounter.
      * 
      * @param classNode Containing class
@@ -210,7 +232,8 @@ public class Locals {
     }
 
     /**
-     * Use ASM Analyzer to generate the local variable table for the specified method
+     * Use ASM Analyzer to generate the local variable table for the specified
+     * method
      * 
      * @param classNode Containing class
      * @param method Method

@@ -27,8 +27,10 @@ package org.spongepowered.asm.mixin.injection.callback;
 import org.objectweb.asm.Type;
 
 /**
- * CallbackInfo instances are passed to callbacks in order to provide information and handling opportunities to the callback to interact with the
- * callback itself. For example by allowing the callback to be "cancelled" and return from a method prematurely. 
+ * CallbackInfo instances are passed to callbacks in order to provide
+ * information and handling opportunities to the callback to interact with the
+ * callback itself. For example by allowing the callback to be "cancelled" and
+ * return from a method prematurely. 
  */
 public class CallbackInfo implements Cancellable {
 
@@ -36,7 +38,8 @@ public class CallbackInfo implements Cancellable {
     protected static final String OBJECT = "Ljava/lang/Object;";
 
     /**
-     * Method name being injected into, this is useful if a single callback is injecting into multiple methods
+     * Method name being injected into, this is useful if a single callback is
+     * injecting into multiple methods.
      */
     private final String name;
 
@@ -73,17 +76,11 @@ public class CallbackInfo implements Cancellable {
         return String.format("CallbackInfo[TYPE=%s,NAME=%s,CANCELLABLE=%s]", this.getClass().getSimpleName(), this.name, this.cancellable);
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.Cancellable#isCancellable()
-     */
     @Override
     public final boolean isCancellable() {
         return this.cancellable;
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.Cancellable#isCancelled()
-     */
     @Override
     public final boolean isCancelled() {
         return this.cancelled;

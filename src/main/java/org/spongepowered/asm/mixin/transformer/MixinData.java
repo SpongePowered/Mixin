@@ -47,8 +47,9 @@ import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
- * Data for applying a mixin. Keeps a copy of the mixin tree and also handles any pre-transformations required by the mixin class itself such as
- * method renaming and any other pre-processing of the mixin bytecode.
+ * Data for applying a mixin. Keeps a copy of the mixin tree and also handles
+ * any pre-transformations required by the mixin class itself such as method
+ * renaming and any other pre-processing of the mixin bytecode.
  */
 public class MixinData {
     
@@ -83,7 +84,8 @@ public class MixinData {
     private final Set<String> interfaces = new HashSet<String>();
     
     /**
-     * Information about methods in the target class, used to keep track of transformations we apply
+     * Information about methods in the target class, used to keep track of
+     * transformations we apply
      */
     private final Map<String, Target> targetMethods = new HashMap<String, Target>();
 
@@ -178,7 +180,8 @@ public class MixinData {
     }
 
     /**
-     * Get whether to propogate the source file attribute from a mixin onto the target class
+     * Get whether to propogate the source file attribute from a mixin onto the
+     * target class
      */
     public boolean shouldSetSourceFile() {
         return this.info.getParent().shouldSetSourceFile();
@@ -266,12 +269,14 @@ public class MixinData {
     }
 
     /**
-     * Gets an annotation value or returns the default if the annotation value is not present
+     * Gets an annotation value or returns the default if the annotation value
+     * is not present
      * 
      * @param annotation
      * @param key
      * @param annotationClass
-     * @return Value of the specified annotation node, default value if not specified, or null if no value or default
+     * @return Value of the specified annotation node, default value if not
+     *      specified, or null if no value or default
      */
     private static String getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
         String value = ASMHelper.getAnnotationValue(annotation, key);

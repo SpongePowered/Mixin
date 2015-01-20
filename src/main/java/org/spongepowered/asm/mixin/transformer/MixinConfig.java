@@ -49,7 +49,8 @@ import com.google.gson.annotations.SerializedName;
 class MixinConfig implements Comparable<MixinConfig> {
     
     /**
-     * Global order of mixin configs, used to determine ordering between configs with equivalent priority
+     * Global order of mixin configs, used to determine ordering between configs
+     * with equivalent priority
      */
     private static int configOrder = 0;
 
@@ -75,7 +76,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     private final int priority = 1000;
 
     /**
-     * Package containing all mixins. This package will be monitored by the transformer so that we can explode if some dummy tries to reference a
+     * Package containing all mixins. This package will be monitored by the
+     * transformer so that we can explode if some dummy tries to reference a
      * mixin class directly.
      */
     @SerializedName("package")
@@ -94,7 +96,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     private List<String> mixinClassesClient;
     
     /**
-     * Mixin classes to load ONLY on dedicated server, mixinPackage will be prepended
+     * Mixin classes to load ONLY on dedicated server, mixinPackage will be
+     * prepended
      */
     @SerializedName("server")
     private List<String> mixinClassesServer;
@@ -187,13 +190,17 @@ class MixinConfig implements Comparable<MixinConfig> {
     }
 
     /**
-     * <p>Initialisation routine. It's important that we call this routine as late as possible. In general we want to call it on the first call to
-     * transform() in the parent transformer. At the very least we want to be called <em>after</em> all the transformers for the current environment
-     * have been spawned, because we will run the mixin bytecode through the transformer chain and naturally we want this to happen at a point when
-     * we can be reasonably sure that all transfomers have loaded.</p>
+     * <p>Initialisation routine. It's important that we call this routine as
+     * late as possible. In general we want to call it on the first call to
+     * transform() in the parent transformer. At the very least we want to be
+     * called <em>after</em> all the transformers for the current environment
+     * have been spawned, because we will run the mixin bytecode through the
+     * transformer chain and naturally we want this to happen at a point when we
+     * can be reasonably sure that all transfomers have loaded.</p>
      * 
-     * <p>For this reason we will invoke the initialisation on the first call to either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em>
-     * methods.</p>
+     * <p>For this reason we will invoke the initialisation on the first call to
+     * either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em> methods.
+     * </p>
      */
     void initialise() {
         if (this.initialised) {
@@ -250,7 +257,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     }
 
     /**
-     * Get the name of the file from which this configuration object was initialised
+     * Get the name of the file from which this configuration object was
+     * initialised
      */
     public String getName() {
         return this.name;
@@ -271,7 +279,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     }
 
     /**
-     * Get whether to propogate the source file attribute from a mixin onto the target class
+     * Get whether to propogate the source file attribute from a mixin onto the
+     * target class
      */
     public boolean shouldSetSourceFile() {
         return this.setSourceFile;
@@ -299,7 +308,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     }
 
     /**
-     * Check whether this configuration bundle has a mixin for the specified class
+     * Check whether this configuration bundle has a mixin for the specified
+     * class
      * 
      * @param targetClass
      * @return
@@ -342,7 +352,8 @@ class MixinConfig implements Comparable<MixinConfig> {
     }
     
     /**
-     * Factory method, creates a new mixin configuration bundle from the specified configFile, which must be accessible on the classpath
+     * Factory method, creates a new mixin configuration bundle from the
+     * specified configFile, which must be accessible on the classpath
      * 
      * @param configFile
      * @return

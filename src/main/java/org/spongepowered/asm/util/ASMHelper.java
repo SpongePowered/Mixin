@@ -202,7 +202,8 @@ public class ASMHelper {
     }
 
     /**
-     * Replace a method's code with a forward to an method on its first argument.
+     * Replace a method's code with a forward to an method on its first
+     * argument.
      *
      * @param method Method to replace code of
      * @param forwardname Name of method to forward to
@@ -272,8 +273,9 @@ public class ASMHelper {
     }
 
     /**
-     * Gets an instruction that pushes a integer onto the stack.  The instruction uses
-     * the smallest push possible (ICONST_*, BIPUSH, SIPUSH or Integer constant).
+     * Gets an instruction that pushes a integer onto the stack.  The
+     * instruction uses the smallest push possible (ICONST_*, BIPUSH, SIPUSH or
+     * Integer constant).
      *
      * @param c the integer to push onto the stack
      */
@@ -345,7 +347,8 @@ public class ASMHelper {
     }
 
     /**
-     * Set a runtime-visible annotation of the specified class on the supplied field node
+     * Set a runtime-visible annotation of the specified class on the supplied
+     * field node
      *
      * @param field Target field
      * @param annotationClass Type of annotation to search for
@@ -357,7 +360,8 @@ public class ASMHelper {
     }
     
     /**
-     * Set an invisible annotation of the specified class on the supplied field node
+     * Set an invisible annotation of the specified class on the supplied field
+     * node
      *
      * @param field Target field
      * @param annotationClass Type of annotation to search for
@@ -369,7 +373,8 @@ public class ASMHelper {
     }
     
     /**
-     * Set a runtime-visible annotation of the specified class on the supplied method node
+     * Set a runtime-visible annotation of the specified class on the supplied
+     * method node
      *
      * @param method Target method
      * @param annotationClass Type of annotation to search for
@@ -381,7 +386,8 @@ public class ASMHelper {
     }
     
     /**
-     * Set a invisible annotation of the specified class on the supplied method node
+     * Set a invisible annotation of the specified class on the supplied method
+     * node
      *
      * @param method Target method
      * @param annotationClass Type of annotation to search for
@@ -395,7 +401,8 @@ public class ASMHelper {
     /**
      * Create a new annotation node with the supplied values
      * 
-     * @param annotationType Name (internal name) of the annotation interface to create
+     * @param annotationType Name (internal name) of the annotation interface to
+     *      create
      * @param value Interleaved key/value pairs. Keys must be strings
      * @return new annotation node
      */
@@ -422,7 +429,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get a runtime-visible annotation of the specified class from the supplied field node
+     * Get a runtime-visible annotation of the specified class from the supplied
+     * field node
      *
      * @param field Source field
      * @param annotationClass Type of annotation to search for
@@ -433,7 +441,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get an invisible annotation of the specified class from the supplied field node
+     * Get an invisible annotation of the specified class from the supplied
+     * field node
      *
      * @param field Source field
      * @param annotationClass Type of annotation to search for
@@ -444,7 +453,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get a runtime-visible annotation of the specified class from the supplied method node
+     * Get a runtime-visible annotation of the specified class from the supplied
+     * method node
      *
      * @param method Source method
      * @param annotationClass Type of annotation to search for
@@ -455,7 +465,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get an invisible annotation of the specified class from the supplied method node
+     * Get an invisible annotation of the specified class from the supplied
+     * method node
      *
      * @param method Source method
      * @param annotationClass Type of annotation to search for
@@ -466,7 +477,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get a runtime-visible annotation of the specified class from the supplied method node
+     * Get a runtime-visible annotation of the specified class from the supplied
+     * method node
      *
      * @param method Source method
      * @param annotationClasses Types of annotation to search for
@@ -477,7 +489,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get an invisible annotation of the specified class from the supplied method node
+     * Get an invisible annotation of the specified class from the supplied
+     * method node
      *
      * @param method Source method
      * @param annotationClasses Types of annotation to search for
@@ -488,7 +501,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get a runtime-visible annotation of the specified class from the supplied class node
+     * Get a runtime-visible annotation of the specified class from the supplied
+     * class node
      *
      * @param classNode Source classNode
      * @param annotationClass Type of annotation to search for
@@ -499,7 +513,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get an invisible annotation of the specified class from the supplied class node
+     * Get an invisible annotation of the specified class from the supplied
+     * class node
      *
      * @param classNode Source classNode
      * @param annotationClass Type of annotation to search for
@@ -510,7 +525,8 @@ public class ASMHelper {
     }
 
     /**
-     * Search for and return an annotation node matching the specified type within the supplied
+     * Search for and return an annotation node matching the specified type
+     * within the supplied
      * collection of annotation nodes
      *
      * @param annotations Haystack
@@ -552,19 +568,23 @@ public class ASMHelper {
      * Duck type the "value" entry (if any) of the specified annotation node
      *
      * @param annotation Annotation node to query
-     * @return duck-typed annotation value, null if missing, or inevitable ClassCastException if your duck is actually a rooster 
+     * @return duck-typed annotation value, null if missing, or inevitable
+     *      {@link ClassCastException} if your duck is actually a rooster 
      */
     public static <T> T getAnnotationValue(AnnotationNode annotation) {
         return ASMHelper.getAnnotationValue(annotation, "value");
     }
 
     /**
-     * Get the value of an annotation node and do pseudo-duck-typing via Java's crappy generics
+     * Get the value of an annotation node and do pseudo-duck-typing via Java's
+     * crappy generics
      *
      * @param annotation Annotation node to query
      * @param key Key to search for
-     * @param defaultValue Value to return if the specified key is not found or is null
-     * @return duck-typed annotation value, null if missing, or inevitable ClassCastException if your duck is actually a rooster 
+     * @param defaultValue Value to return if the specified key is not found or
+     *      is null
+     * @return duck-typed annotation value, null if missing, or inevitable
+     *      {@link ClassCastException} if your duck is actually a rooster 
      */
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key, T defaultValue) {
         T returnValue = ASMHelper.getAnnotationValue(annotation, key);
@@ -572,11 +592,13 @@ public class ASMHelper {
     }
     
     /**
-     * Get the value of an annotation node and do pseudo-duck-typing via Java's crappy generics
+     * Get the value of an annotation node and do pseudo-duck-typing via Java's
+     * crappy generics
      *
      * @param annotation Annotation node to query
      * @param key Key to search for
-     * @return duck-typed annotation value, null if missing, or inevitable ClassCastException if your duck is actually a rooster 
+     * @return duck-typed annotation value, null if missing, or inevitable
+     *      {@link ClassCastException} if your duck is actually a rooster 
      */
     @SuppressWarnings("unchecked")
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key) {
@@ -600,7 +622,8 @@ public class ASMHelper {
     }
 
     /**
-     * Get the value of an annotation node as the specified enum, returns defaultValue if the annotation value is not set
+     * Get the value of an annotation node as the specified enum, returns
+     * defaultValue if the annotation value is not set
      *
      * @param annotationNode Annotation node to query
      * @param key Key to search for
@@ -628,30 +651,38 @@ public class ASMHelper {
     }
     
     /**
-     * Get the first variable index in the supplied method which is not an argument or "this" reference, this corresponds to the size of the arguments
-     * passed in to the method plus an extra spot for "this" if the method is non-static
+     * Get the first variable index in the supplied method which is not an
+     * argument or "this" reference, this corresponds to the size of the
+     * arguments passed in to the method plus an extra spot for "this" if the
+     * method is non-static
      * 
      * @param method MethodNode to inspect
-     * @return first available local index which is NOT used by a method argument or "this"
+     * @return first available local index which is NOT used by a method
+     *      argument or "this"
      */
     public static int getFirstNonArgLocalIndex(MethodNode method) {
         return ASMHelper.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), (method.access & Opcodes.ACC_STATIC) == 0);
     }
 
     /**
-     * Get the first non-arg variable index based on the supplied arg array and whether to include the "this" reference, this corresponds to the size
-     * of the arguments passed in to the method plus an extra spot for "this" is specified
+     * Get the first non-arg variable index based on the supplied arg array and
+     * whether to include the "this" reference, this corresponds to the size of
+     * the arguments passed in to the method plus an extra spot for "this" is
+     * specified
      * 
      * @param args Method arguments
-     * @param includeThis Whether to include a slot for "this" (generally true for all non-static methods)
-     * @return first available local index which is NOT used by a method argument or "this"
+     * @param includeThis Whether to include a slot for "this" (generally true
+     *      for all non-static methods)
+     * @return first available local index which is NOT used by a method
+     *      argument or "this"
      */
     public static int getFirstNonArgLocalIndex(Type[] args, boolean includeThis) {
         return ASMHelper.getArgsSize(args) + (includeThis ? 1 : 0);
     }
 
     /**
-     * Get the size of the specified args array in local variable terms (eg. doubles and longs take two spaces)
+     * Get the size of the specified args array in local variable terms (eg.
+     * doubles and longs take two spaces)
      * 
      * @param args Method argument types as array
      * @return size of the specified arguments array in terms of stack slots
@@ -667,7 +698,8 @@ public class ASMHelper {
     }
 
     /**
-     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate for each entry in the args array starting at pos
+     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
+     * for each entry in the args array starting at pos
      * 
      * @param args Argument types
      * @param insns Instruction List to inject into
@@ -678,7 +710,8 @@ public class ASMHelper {
     }
 
     /**
-     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate for each entry in the args array starting at start and ending at end
+     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
+     * for each entry in the args array starting at start and ending at end
      * 
      * @param args Argument types
      * @param insns Instruction List to inject into

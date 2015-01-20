@@ -42,24 +42,34 @@ public @interface Mixin {
     public Class<?>[] value() default { };
     
     /**
-     * Since specifying targets in {@link #value} requires that the classes be publicly visible, this property is provided to allow package-private,
-     * anonymous innner, and private inner classes to be referenced. Referencing an otherwise public class using this property is an error condition
-     * and will throw an exception at runtime. It is completely fine to specify both public and private targets for the same mixin however.
+     * Since specifying targets in {@link #value} requires that the classes be
+     * publicly visible, this property is provided to allow package-private,
+     * anonymous innner, and private inner classes to be referenced. Referencing
+     * an otherwise public class using this property is an error condition and
+     * will throw an exception at runtime. It is completely fine to specify both
+     * public and private targets for the same mixin however.
      */
     public String[] targets() default { };
 
     /**
-     * Priority for the mixin, relative to other mixins targetting the same classes
+     * Priority for the mixin, relative to other mixins targetting the same
+     * classes
      */
     public int priority() default 1000;
 
     /**
-     * By default, the annotation processor will attempt to locate an obfuscation mapping for all {@link Shadow} and
-     * {@link org.spongepowered.asm.mixin.injection.Inject} annotated members since it is anticipated that in general the target of a {@link Mixin}
-     * will be an obfuscated class and all annotated members will need to be added to the obfuscation table. However since it is possible to also
-     * apply mixins to non-obfuscated targets it may be desirable to suppress the compiler warnings which would otherwise be generated. This can be
-     * done on an individual member basis by setting <code>remap</code> to <em>false</em> on the individual annotations, or disabled for the entire
-     * mixin by setting the value here to <em>false</em>. Doing so will cause the annotation processor to skip all annotations in this mixin when
+     * By default, the annotation processor will attempt to locate an
+     * obfuscation mapping for all {@link Shadow} and
+     * {@link org.spongepowered.asm.mixin.injection.Inject} annotated members
+     * since it is anticipated that in general the target of a {@link Mixin}
+     * will be an obfuscated class and all annotated members will need to be
+     * added to the obfuscation table. However since it is possible to also
+     * apply mixins to non-obfuscated targets it may be desirable to suppress
+     * the compiler warnings which would otherwise be generated. This can be
+     * done on an individual member basis by setting <code>remap</code> to
+     * <em>false</em> on the individual annotations, or disabled for the entire
+     * mixin by setting the value here to <em>false</em>. Doing so will cause
+     * the annotation processor to skip all annotations in this mixin when
      * building the obfuscation table.
      */
     public boolean remap() default true;

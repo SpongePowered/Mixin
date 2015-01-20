@@ -30,17 +30,25 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * <p>Annotation used to indicate a mixin class member which must overwrite an obfuscated method in the target class.</p>
+ * <p>Annotation used to indicate a mixin class member which must overwrite an
+ * obfuscated method in the target class.</p>
  * 
- * <p>The default behaviour of mixin classes when merging mixin methods is to replace methods in the target class which already exist, and simply add
- * any other methods to the target class body as new members. This default behaviour allows methods in the target class to be easily overwritten by
- * simply creating a method in the mixin with a signature matching the member to be overwritten.</p>
+ * <p>The default behaviour of mixin classes when merging mixin methods is to
+ * replace methods in the target class which already exist, and simply add any
+ * other methods to the target class body as new members. This default behaviour
+ * allows methods in the target class to be easily overwritten by simply
+ * creating a method in the mixin with a signature matching the member to be
+ * overwritten.</p>
  * 
- * <p>This is not sufficient for obfuscated methods however, since as mixins traverse the obfuscation boundary, this association with the target
- * method is lost because the method name will change. The {@link Overwrite} annotation is used to indicate to the annotation processor that this
- * method is intended to overwrite a member in the target class, and should therefore be added to the obfuscation table.</p>
+ * <p>This is not sufficient for obfuscated methods however, since as mixins
+ * traverse the obfuscation boundary, this association with the target method is
+ * lost because the method name will change. The {@link Overwrite} annotation is
+ * used to indicate to the annotation processor that this method is intended to
+ * overwrite a member in the target class, and should therefore be added to the
+ * obfuscation table.</p>
  * 
- * <p>Adding this annotation to a non-obfuscated method will cause the annotation processor to raise an error at compile time.</p>
+ * <p>Adding this annotation to a non-obfuscated method will cause the
+ * annotation processor to raise an error at compile time.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

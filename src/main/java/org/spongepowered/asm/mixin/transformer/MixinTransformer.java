@@ -111,9 +111,12 @@ public class MixinTransformer extends TreeTransformer {
     private static final String CLINIT = "<clinit>";
     
     /**
-     * List of opcodes which must not appear in a class initialiser, mainly a sanity check so that if any of the specified opcodes are found, we can
-     * log it as an error condition and then people can bitch at me to fix it. Essentially if it turns out that field initialisers can somehow make
-     * use of local variables, then I need to write some code to ensure that said locals are shifted so that they don't interfere with locals in the
+     * List of opcodes which must not appear in a class initialiser, mainly a
+     * sanity check so that if any of the specified opcodes are found, we can
+     * log it as an error condition and then people can bitch at me to fix it.
+     * Essentially if it turns out that field initialisers can somehow make use
+     * of local variables, then I need to write some code to ensure that said
+     * locals are shifted so that they don't interfere with locals in the
      * receiving constructor. 
      */
     private static final int[] INITIALISER_OPCODE_BLACKLIST = {
@@ -136,19 +139,23 @@ public class MixinTransformer extends TreeTransformer {
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
     
     /**
-     * True once initialisation is done. All mixin configs needs to be initialised as late as possible in startup (so that other transformers have
-     * had time to register) but before any game classes are transformed. To do this we initialise the configs on the first call to {@link #transform}
-     * and this flag keeps track of when we've done this. 
+     * True once initialisation is done. All mixin configs needs to be
+     * initialised as late as possible in startup (so that other transformers
+     * have had time to register) but before any game classes are transformed.
+     * To do this we initialise the configs on the first call to
+     * {@link #transform} and this flag keeps track of when we've done this. 
      */
     private boolean initDone;
     
     /**
-     * Sanity check for this transformer. The transformer should never be re-entrant by design so we need to detect and warn when it happens. 
+     * Sanity check for this transformer. The transformer should never be
+     * re-entrant by design so we need to detect and warn when it happens. 
      */
     private int reEntranceCheck = 0;
     
     /**
-     * Session ID, used as a check when parsing {@link MixinMerged} annotations to prevent them being applied at compile time by people trying to
+     * Session ID, used as a check when parsing {@link MixinMerged} annotations
+     * to prevent them being applied at compile time by people trying to
      * circumvent mixin application
      */
     private final String sessionId = UUID.randomUUID().toString();
@@ -182,7 +189,8 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.IClassTransformer#transform(java.lang.String, java.lang.String, byte[])
+     * @see net.minecraft.launchwrapper.IClassTransformer
+     *      #transform(java.lang.String, java.lang.String, byte[])
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
@@ -289,7 +297,8 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Apply mixins for specified target class to the class described by the supplied byte array
+     * Apply mixins for specified target class to the class described by the
+     * supplied byte array.
      * 
      * @param transformedName 
      * @param basicClass
@@ -381,8 +390,10 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Mixin fields from mixin class into the target class. It is vital that this is done before mixinMethods because we need to compute renamed
-     * fields so that transformMethod can rename field references in the method body
+     * Mixin fields from mixin class into the target class. It is vital that
+     * this is done before mixinMethods because we need to compute renamed
+     * fields so that transformMethod can rename field references in the method
+     * body.
      * 
      * @param targetClass
      * @param mixin
@@ -452,8 +463,10 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Handles "re-parenting" the method supplied, changes all references to the mixin class to refer to the target class (for field accesses and
-     * method invokations) and also handles fixing up the targets of INVOKESPECIAL opcodes for mixins with detached targets.
+     * Handles "re-parenting" the method supplied, changes all references to the
+     * mixin class to refer to the target class (for field accesses and method
+     * invokations) and also handles fixing up the targets of INVOKESPECIAL
+     * opcodes for mixins with detached targets.
      * 
      * @param mixin
      * @param target
@@ -484,7 +497,8 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy which contains the specified method.
+     * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy
+     * which contains the specified method.
      * 
      * @param mixin
      * @param target
@@ -509,7 +523,8 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass Target class to merge into
      * @param mixin Mixin being applied
      * @param method Method to merge
-     * @param isOverwrite true if the method is annotated with an {@link Overwrite} annotation
+     * @param isOverwrite true if the method is annotated with an
+     *      {@link Overwrite} annotation
      */
     private void mergeMethod(ClassNode targetClass, MixinData mixin, MethodNode method, boolean isOverwrite) {
         MethodNode target = this.findTargetMethod(targetClass, method);
@@ -546,7 +561,8 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Handles appending instructions from the source method to the target method
+     * Handles appending instructions from the source method to the target
+     * method
      * 
      * @param targetClass
      * @param targetMethodName
@@ -592,7 +608,8 @@ public class MixinTransformer extends TreeTransformer {
     }
     
     /**
-     * (Attempts to) find and patch field initialisers from the mixin into the target class
+     * (Attempts to) find and patch field initialisers from the mixin into the
+     * target class
      * 
      * @param targetClass
      * @param mixin
@@ -648,10 +665,12 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Identifies line numbers in the supplied ctor which correspond to the start and end of the method body.
+     * Identifies line numbers in the supplied ctor which correspond to the
+     * start and end of the method body.
      * 
      * @param ctor
-     * @return range indicating the line numbers of the specified constructor and the position of the superclass ctor invocation
+     * @return range indicating the line numbers of the specified constructor
+     *      and the position of the superclass ctor invocation
      */
     private Range getConstructorRange(MethodNode ctor) {
         int line = 0, start = 0, end = 0, superIndex = -1;
@@ -673,12 +692,15 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Get insns corresponding to the instance initialiser (hopefully) from the supplied constructor.
+     * Get insns corresponding to the instance initialiser (hopefully) from the
+     * supplied constructor.
+     * 
      * TODO Potentially rewrite this to be less horrible.
      * 
      * @param mixin
      * @param ctor
-     * @return initialiser bytecode extracted from the supplied constructor, or null if the constructor range could not be parsed
+     * @return initialiser bytecode extracted from the supplied constructor, or
+     *      null if the constructor range could not be parsed
      */
     private InsnList getInitialiser(MethodNode ctor) {
         // Find the range of line numbers which corresponds to the constructor body
@@ -747,7 +769,8 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Process {@link Inject} annotations and inject callbacks to annotated methods
+     * Process {@link Inject} annotations and inject callbacks to annotated
+     * methods
      * 
      * @param targetClass
      * @param mixin
