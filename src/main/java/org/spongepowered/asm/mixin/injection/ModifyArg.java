@@ -41,6 +41,8 @@ public @interface ModifyArg {
      * String representation of a
      * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo
      * MemberInfo} which identifies the target method.
+     * 
+     * @return target method
      */
     public String method();
     
@@ -49,6 +51,8 @@ public @interface ModifyArg {
      * the target method. The specified {@link InjectionPoint} <i>must only</i>
      * return nodes of type {@link org.objectweb.asm.tree.MethodInsnNode} and an
      * exception will be thrown if this is not the case.
+     * 
+     * @return {@link At} which identifies the target method invocation
      */
     public At at();
     
@@ -60,7 +64,9 @@ public @interface ModifyArg {
      * returns an integer, then the integer parameter will be automatically
      * selected.</p>
      * 
-     * <p>The index is zero-based.</p> 
+     * <p>The index is zero-based.</p>
+     * 
+     * @return argument index to modify or -1 for automatic
      */
     public int index() default -1;
 
@@ -75,6 +81,9 @@ public @interface ModifyArg {
      * be generated. Setting this value to <em>false</em> will cause the
      * annotation processor to skip this annotation when attempting to build the
      * obfuscation table for the mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

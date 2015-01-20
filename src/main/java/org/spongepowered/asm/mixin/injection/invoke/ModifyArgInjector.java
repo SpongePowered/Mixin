@@ -110,7 +110,7 @@ public class ModifyArgInjector extends InvokeInjector {
     private int injectSingleArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
         int[] argMap = this.storeArgs(target, args, insns, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, argIndex, argIndex + 1);
-        this.pushArgs(insns, args, argMap, argIndex + 1, args.length);
+        this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
         return target.method.maxLocals - argMap[argMap.length - 1] - 1 + args[args.length - 1].getSize();
     }
 
@@ -124,9 +124,9 @@ public class ModifyArgInjector extends InvokeInjector {
         }
 
         int[] argMap = this.storeArgs(target, args, insns, 0);
-        this.pushArgs(insns, args, argMap, 0, argIndex);
+        this.pushArgs(args, insns, argMap, 0, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
-        this.pushArgs(insns, args, argMap, argIndex + 1, args.length);
+        this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
         return target.method.maxLocals - argMap[argMap.length - 1] - 1 + args[args.length - 1].getSize();
     }
 

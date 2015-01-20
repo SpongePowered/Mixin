@@ -29,13 +29,18 @@ package org.spongepowered.asm.mixin.injection.callback;
  * Interface for things which can be cancelled
  */
 public interface Cancellable {
+    
     /**
      * Get whether this is actually cancellable
+     * 
+     * @return whether this is actually cancellable
      */
     public abstract boolean isCancellable();
     
     /**
      * Get whether this is cancelled
+     * 
+     * @return whether this is cancelled
      */
     public abstract boolean isCancelled();
     

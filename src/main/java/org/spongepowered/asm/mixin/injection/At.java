@@ -70,6 +70,8 @@ public @interface At {
      * {@link org.spongepowered.asm.mixin.injection.points.JumpInsnPoint JUMP}.
      * See the javadoc for each type for more details on the scheme used by each
      * injection point.</p>
+     * 
+     * @return Injection point specifier or fully-qualified class name
      */
     public String value();
     
@@ -79,12 +81,16 @@ public @interface At {
      * <i>after</i> the invoation. Use {@link At.Shift#BY BY} in conjunction
      * with the {@link #by} parameter to shift by an arbitrary number of
      * opcodes. 
+     * 
+     * @return Type of shift to apply
      */
     public Shift shift() default Shift.NONE;
     
     /**
      * If {@link #shift} is specified as {@link At.Shift#BY BY}, specifies the
      * number of opcodes to shift by (negative numbers are allowed).
+     * 
+     * @return Amount of shift to apply for the {@link At.Shift#BY BY} shift
      */
     public int by() default 0;
     
@@ -92,6 +98,8 @@ public @interface At {
      * <p>The <b>named arguments</b> list is used to expand the scope of the
      * annotation beyond the fixed values below in order to accommodate the
      * needs of custom injection point classes.
+     * 
+     * @return Named arguments for the injection point
      */
     public String[] args() default { };
     
@@ -121,6 +129,8 @@ public @interface At {
     /**
      * Target opcode for FIELD and JUMP InjectionPoints. See the javadoc for the
      * relevant injection point for more details.
+     * 
+     * @return Bytecode opcode for supported InjectionPoints
      */
     public int opcode() default -1;
     
@@ -135,6 +145,9 @@ public @interface At {
      * this value to <em>false</em> will cause the annotation processor to skip
      * this annotation when attempting to build the obfuscation table for the
      * mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

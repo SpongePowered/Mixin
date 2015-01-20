@@ -213,6 +213,7 @@ public class Locals {
      * 
      * @param classNode Containing class
      * @param method Method
+     * @return generated local variable table 
      */
     public static List<LocalVariableNode> getLocalVariableTable(ClassNode classNode, MethodNode method) {
         if (method.localVariables.isEmpty()) {
@@ -237,6 +238,7 @@ public class Locals {
      * 
      * @param classNode Containing class
      * @param method Method
+     * @return generated local variable table
      */
     public static List<LocalVariableNode> generateLocalVariableTable(ClassNode classNode, MethodNode method) {
         List<Type> interfaces = null;

@@ -72,6 +72,8 @@ public class Target {
 
     /**
      * Make a new Target for the supplied method
+     * 
+     * @param method target method
      */
     public Target(MethodNode method) {
         this.method = method;
@@ -86,6 +88,12 @@ public class Target {
 
     /**
      * Get the callback descriptor
+     * 
+     * @param captureLocals True if the callback is capturing locals
+     * @param locals Local variable types
+     * @param argumentTypes Argument types
+     * @param startIndex local index to start at
+     * @return generated descriptor
      */
     public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex) {
         if (!captureLocals) {

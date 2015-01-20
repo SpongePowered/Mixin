@@ -66,6 +66,8 @@ public abstract class Injector {
 
     /**
      * Make a new CallbackInjector for the supplied InjectionInfo
+     * 
+     * @param info Information about this injection
      */
     public Injector(InjectionInfo info) {
         this(info.getClassNode(), info.getMethod());
@@ -73,6 +75,9 @@ public abstract class Injector {
 
     /**
      * Make a new CallbackInjector with the supplied args
+     * 
+     * @param classNode Class containing callback and target methods
+     * @param methodNode Callback method
      */
     private Injector(ClassNode classNode, MethodNode methodNode) {
         this.classNode = classNode;
@@ -82,6 +87,10 @@ public abstract class Injector {
 
     /**
      * Inject into the specified method at the specified injection points
+     * 
+     * @param target Target method to inject into
+     * @param injectionPoints InjectionPoint instances which will identify
+     *      target insns in the target method 
      */
     public final void injectInto(Target target, List<InjectionPoint> injectionPoints) {
         this.sanityCheck(target, injectionPoints);
@@ -91,6 +100,15 @@ public abstract class Injector {
         }
     }
 
+    /**
+     * Use the supplied InjectionPoints to find target insns in the target
+     * method
+     * 
+     * @param into Target method
+     * @param injectionPoints List of injection points parsed from At
+     *      annotations on the callback method
+     * @return Target insn nodes in the target method
+     */
     protected Set<AbstractInsnNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
         Set<AbstractInsnNode> targetNodes = new HashSet<AbstractInsnNode>();
 

@@ -42,6 +42,8 @@ public @interface Inject {
      * String representation of a
      * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
      * MemberInfo} which identifies the target method.
+     * 
+     * @return target method for this injector
      */
     public String method();
     
@@ -49,6 +51,8 @@ public @interface Inject {
      * Array of {@link At} annotations which describe the
      * {@link InjectionPoint}s in the target method. Allows one or more
      * callbacks to be injected in the target method.
+     * 
+     * @return injection point specifiers for this injector
      */
     public At[] at();
     
@@ -59,12 +63,18 @@ public @interface Inject {
      * interacting with the supplied
      * {@link org.spongepowered.asm.mixin.injection.callback.CallbackInfo}
      * object.
+     * 
+     * @return true if this injector should inject appropriate RETURN opcodes
+     *      which allow it to be cancelled
      */
     public boolean cancellable() default false;
     
     /**
      * Set to true to allow local variables to be captured from the target
      * method as well as method parameters.
+     * 
+     * @return true if the injector should capture local variables in the frame
+     *      at the injection point
      */
 //    public boolean captureLocals() default false;
 
@@ -80,6 +90,9 @@ public @interface Inject {
      * be generated. Setting this value to <em>false</em> will cause the
      * annotation processor to skip this annotation when attempting to build the
      * obfuscation table for the mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

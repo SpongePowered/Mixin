@@ -41,6 +41,8 @@ public @interface Redirect {
      * String representation of a
      * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo
      * MemberInfo} which identifies the target method.
+     * 
+     * @return method to inject into
      */
     public String method();
     
@@ -49,6 +51,8 @@ public @interface Redirect {
      * the target method. The specified {@link InjectionPoint} <i>must only</i>
      * return nodes of type {@link org.objectweb.asm.tree.MethodInsnNode} and an
      * exception will be thrown if this is not the case.
+     * 
+     * @return {@link At} which identifies the target method invocation
      */
     public At at();
 
@@ -63,6 +67,9 @@ public @interface Redirect {
      * be generated. Setting this value to <em>false</em> will cause the
      * annotation processor to skip this annotation when attempting to build the
      * obfuscation table for the mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

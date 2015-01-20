@@ -76,6 +76,8 @@ public @interface Shadow {
      * prefix then <em>no renaming will take place</em> likey resulting in a
      * failure state indicated by an {@link InvalidMixinException} at run
      * time.</p>
+     * 
+     * @return the shadow prefix
      */
     public String prefix() default "shadow$";
     // CHECKSTYLE:ON
@@ -91,6 +93,9 @@ public @interface Shadow {
      * otherwise be generated. Setting this value to <em>false</em> will cause
      * the annotation processor to skip this annotation when attempting to build
      * the obfuscation table for the mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

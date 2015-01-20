@@ -95,6 +95,8 @@ public interface IMixinConfigPlugin {
      * method is called to allow the plugin to add any additional mixins to
      * load. It should return a list of mixin class names or return null if the
      * plugin does not wish to append any mixins of its own.
+     * 
+     * @return additional mixins to apply
      */
     public abstract List<String> getMixins();
 

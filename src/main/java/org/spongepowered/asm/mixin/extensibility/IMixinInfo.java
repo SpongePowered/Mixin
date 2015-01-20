@@ -32,42 +32,59 @@ public interface IMixinInfo {
     
     /**
      * Get the simple name of the mixin
+     * 
+     * @return the simple name (mixin tail minus the package)
      */
     public abstract String getName();
 
     /**
      * Get the name of the mixin class
+     * 
+     * @return mixin class name
      */
    public abstract String getClassName();
 
    /**
     * Get the ref (internal name) of the mixin class
+    * 
+    * @return mixin class ref (internal name)
     */
     public abstract String getClassRef();
 
     /**
      * Get the class bytecode
+     * 
+     * @return mixin bytecode (raw bytecode after transformers)
      */
     public abstract byte[] getClassBytes();
 
     /**
      * True if the superclass of the mixin is <b>not</b> the direct superclass
      * of one or more targets.
+     * 
+     * @return true if the mixin has a detached superclass
      */
     public abstract boolean isDetachedSuper();
 
     /**
      * Get a new tree for the class bytecode
+     * 
+     * @param flags Flags to pass to the ClassReader
+     * @return get a new ClassNode representing the mixin's bytecode
      */
     public abstract ClassNode getClassNode(int flags);
 
     /**
      * Get the target classes for this mixin
+     * 
+     * @return list of target classes
      */
     public abstract List<String> getTargetClasses();
 
     /**
      * Get the mixin priority
+     * 
+     * @return the priority
      */
     public abstract int getPriority();
 }

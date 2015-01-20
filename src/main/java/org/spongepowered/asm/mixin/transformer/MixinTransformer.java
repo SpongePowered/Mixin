@@ -333,9 +333,9 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * @param transformedName
-     * @param targetClass
-     * @param mixins
+     * @param transformedName Target class transformed name
+     * @param targetClass Target class
+     * @param mixins Mixin which were just applied
      */
     protected void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         // Stub for subclasses
@@ -344,9 +344,9 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Apply the mixin described by mixin to the supplied classNode
      * 
-     * @param transformedName
-     * @param targetClass
-     * @param mixin
+     * @param transformedName Target class transformed name
+     * @param targetClass Target class
+     * @param mixin Mixin to apply
      */
     protected void applyMixin(String transformedName, ClassNode targetClass, MixinData mixin) {
         try {
@@ -505,7 +505,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param method
      * @param insn
      */
-    private void updateStaticBindings(MixinData mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
+    private void updateStaticBindings(IReferenceMapperContext mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
         if (INIT.equals(method.name) || insn.owner.equals(target.name) || target.name.startsWith("<")) {
             return;
         }

@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 
 
 /**
@@ -45,7 +45,7 @@ public class InjectionPointData {
     /**
      * Mixin 
      */
-    private final MixinData mixin;
+    private final IReferenceMapperContext mixin;
     
     /**
      * Target 
@@ -62,7 +62,7 @@ public class InjectionPointData {
      */
     private final int opcode;
 
-    public InjectionPointData(MixinData mixin, List<String> args, String target,  int ordinal, int opcode) {
+    public InjectionPointData(IReferenceMapperContext mixin, List<String> args, String target,  int ordinal, int opcode) {
         this.mixin = mixin;
         this.target = target;
         this.ordinal = Math.max(-1, ordinal);

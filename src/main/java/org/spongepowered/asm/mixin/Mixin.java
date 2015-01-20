@@ -38,6 +38,8 @@ public @interface Mixin {
 
     /**
      * Target class(es) for this mixin
+     * 
+     * @return classes this mixin targets
      */
     public Class<?>[] value() default { };
     
@@ -48,12 +50,17 @@ public @interface Mixin {
      * an otherwise public class using this property is an error condition and
      * will throw an exception at runtime. It is completely fine to specify both
      * public and private targets for the same mixin however.
+     *
+     * @return protected or package-private classes this mixin targets
      */
     public String[] targets() default { };
 
     /**
      * Priority for the mixin, relative to other mixins targetting the same
      * classes
+     * 
+     * @return the mixin priority (relative to other mixins targetting the same
+     *      class)
      */
     public int priority() default 1000;
 
@@ -71,6 +78,9 @@ public @interface Mixin {
      * mixin by setting the value here to <em>false</em>. Doing so will cause
      * the annotation processor to skip all annotations in this mixin when
      * building the obfuscation table.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
 }

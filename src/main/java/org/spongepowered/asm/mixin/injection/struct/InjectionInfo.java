@@ -92,8 +92,8 @@ public abstract class InjectionInfo {
     /**
      * ctor
      * 
-     * @param mixin
-     * @param method Method
+     * @param mixin Mixin data
+     * @param method Injector method
      * @param annotation Annotation to parse
      */
     protected InjectionInfo(MixinData mixin, MethodNode method, AnnotationNode annotation) {
@@ -155,11 +155,14 @@ public abstract class InjectionInfo {
         this.injector = this.initInjector(this.annotation);
     }
 
+    // stub
     protected abstract Injector initInjector(AnnotationNode injectAnnotation);
     
     /**
      * Get whether there is enough valid information in this info to actually
      * perform an injection.
+     * 
+     * @return true if this InjectionInfo was successfully parsed
      */
     public boolean isValid() {
         return this.targets.size() > 0 && this.injectionPoints.size() > 0;
@@ -175,12 +178,19 @@ public abstract class InjectionInfo {
         }
     }
     
+    /**
+     * Get the annotation which this InjectionInfo was created from
+     *  
+     * @return The annotation which this InjectionInfo was created from 
+     */
     public AnnotationNode getAnnotation() {
         return this.annotation;
     }
 
     /**
      * Get the class node for this injection
+     * 
+     * @return the class containing the injector and the target
      */
     public ClassNode getClassNode() {
         return this.classNode;
@@ -188,6 +198,8 @@ public abstract class InjectionInfo {
 
     /**
      * Get method being called
+     * 
+     * @return injector method
      */
     public MethodNode getMethod() {
         return this.method;
@@ -195,6 +207,8 @@ public abstract class InjectionInfo {
     
     /**
      * Get methods being injected into
+     * 
+     * @return methods being injected into
      */
     public Collection<MethodNode> getTargets() {
         return this.targets;

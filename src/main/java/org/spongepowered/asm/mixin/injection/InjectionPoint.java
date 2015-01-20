@@ -42,7 +42,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
 import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
@@ -235,6 +235,7 @@ public abstract class InjectionPoint {
      * nodes from all component injection points
      * 
      * @param operands injection points to perform intersection
+     * @return adjusted InjectionPoint 
      */
     public static InjectionPoint and(InjectionPoint... operands) {
         return new InjectionPoint.Intersection(operands);
@@ -245,6 +246,7 @@ public abstract class InjectionPoint {
      * all component injection points
      * 
      * @param operands injection points to perform union
+     * @return adjusted InjectionPoint 
      */
     public static InjectionPoint or(InjectionPoint... operands) {
         return new InjectionPoint.Union(operands);
@@ -255,6 +257,7 @@ public abstract class InjectionPoint {
      * insns from the supplied injection point
      * 
      * @param point injection points to perform shift
+     * @return adjusted InjectionPoint 
      */
     public static InjectionPoint after(InjectionPoint point) {
         return new InjectionPoint.Shift(point, 1);
@@ -265,6 +268,7 @@ public abstract class InjectionPoint {
      * insns from the supplied injection point
      * 
      * @param point injection points to perform shift
+     * @return adjusted InjectionPoint 
      */
     public static InjectionPoint before(InjectionPoint point) {
         return new InjectionPoint.Shift(point, -1);
@@ -275,6 +279,8 @@ public abstract class InjectionPoint {
      * specified "count" from insns from the supplied injection point
      * 
      * @param point injection points to perform shift
+     * @param count amount to shift by
+     * @return adjusted InjectionPoint 
      */
     public static InjectionPoint shift(InjectionPoint point, int count) {
         return new InjectionPoint.Shift(point, count);
@@ -282,16 +288,28 @@ public abstract class InjectionPoint {
 
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation
+     * 
+     * @param mixin Data for the mixin containing the annotation, used to obtain
+     *      the refmap, amongst other things
+     * @param at {@link At} annotation to parse information from
+     * @return InjectionPoint parsed from the supplied data or null if parsing
+     *      failed
      */
-    public static InjectionPoint parse(MixinData mixin, At at) {
+    public static InjectionPoint parse(IReferenceMapperContext mixin, At at) {
         return InjectionPoint.parse(mixin, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
     }
 
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation supplied
      * as an AnnotationNode instance
+     * 
+     * @param mixin Data for the mixin containing the annotation, used to obtain
+     *      the refmap, amongst other things
+     * @param node {@link At} annotation to parse information from
+     * @return InjectionPoint parsed from the supplied data or null if parsing
+     *      failed
      */
-    public static InjectionPoint parse(MixinData mixin, AnnotationNode node) {
+    public static InjectionPoint parse(IReferenceMapperContext mixin, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
@@ -310,8 +328,20 @@ public abstract class InjectionPoint {
     /**
      * Parse and instantiate an InjectionPoint from the supplied information.
      * Returns null if an InjectionPoint could not be created.
+     * 
+     * @param mixin Data for the mixin containing the annotation, used to obtain
+     *      the refmap, amongst other things
+     * @param at Injection point specifier
+     * @param shift Shift type to apply
+     * @param by Amount of shift to apply for the BY shift type 
+     * @param args Named parameters
+     * @param target Target for supported injection points
+     * @param ordinal Ordinal offset for supported injection points
+     * @param opcode Bytecode opcode for supported injection points
+     * @return InjectionPoint parsed from the supplied data or null if parsing
+     *      failed
      */
-    public static InjectionPoint parse(MixinData mixin, String at, At.Shift shift, int by,
+    public static InjectionPoint parse(IReferenceMapperContext mixin, String at, At.Shift shift, int by,
             List<String> args, String target, int ordinal, int opcode) {
         InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
         InjectionPoint point = null;

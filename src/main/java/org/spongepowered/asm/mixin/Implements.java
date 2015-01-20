@@ -39,6 +39,8 @@ public @interface Implements {
     
     /**
      * Interfaces implemented, see javadoc in {@link Interface}
+     * 
+     * @return list of interfaces to implement
      */
     public Interface[] value();
 }

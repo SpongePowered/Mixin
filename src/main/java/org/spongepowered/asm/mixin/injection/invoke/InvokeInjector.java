@@ -39,7 +39,9 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 
-
+/**
+ * Base class for injectors which inject at method invokes
+ */
 public abstract class InvokeInjector extends Injector {
     
     /**
@@ -54,6 +56,10 @@ public abstract class InvokeInjector extends Injector {
     
     protected final String annotationType;
 
+    /**
+     * @param info Information about this injection
+     * @param annotationType Annotation type, used for error messages
+     */
     public InvokeInjector(InjectionInfo info, String annotationType) {
         super(info);
         this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
@@ -89,22 +95,25 @@ public abstract class InvokeInjector extends Injector {
     }
     
     /**
-     * Do the injection
+     * Perform a single injection
+     * 
+     * @param target Target to inject into
+     * @param node Discovered instruction node 
      */
     protected abstract void inject(Target target, MethodInsnNode node);
 
     /**
-     * @param args
-     * @param insns
-     * @param argMap
-     * @param startArg
-     * @param endArg
+     * @param args handler arguments
+     * @param insns InsnList to inject insns into
+     * @param argMap Mapping of args to local variables
+     * @param startArg Starting arg to consume
+     * @param endArg Ending arg to consume
      */
     protected void invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap, int startArg, int endArg) {
         if (!this.isStatic) {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
-        this.pushArgs(insns, args, argMap, startArg, endArg);
+        this.pushArgs(args, insns, argMap, startArg, endArg);
         insns.add(new MethodInsnNode(this.isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
                 this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
     }
@@ -113,6 +122,12 @@ public abstract class InvokeInjector extends Injector {
      * Generate an array containing local indexes for the specified args,
      * returns an array of identical size to the supplied array with an
      * allocated local index in each corresponding position
+     * 
+     * @param args Argument types
+     * @param start starting index
+     * @param local starting local index
+     * @return array containing a corresponding local arg index for each member
+     *      of the supplied args array
      */
     protected int[] generateArgMap(Type[] args, int start, int local) {
         int[] argMap = new int[args.length];
@@ -126,6 +141,12 @@ public abstract class InvokeInjector extends Injector {
     /**
      * Store args on the stack starting at the end and working back to position
      * specified by start, return the generated argMap
+     * 
+     * @param target target method
+     * @param args argument types
+     * @param insns instruction list to generate insns into
+     * @param start Starting index
+     * @return the generated argmap
      */
     protected int[] storeArgs(Target target, Type[] args, InsnList insns, int start) {
         int[] argMap = this.generateArgMap(args, start, target.method.maxLocals);
@@ -134,7 +155,13 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /**
-     * Store args on the stack to their positions allocated based on argMap 
+     * Store args on the stack to their positions allocated based on argMap
+     * 
+     * @param args argument types
+     * @param insns instruction list to generate insns into
+     * @param argMap generated argmap containing local indices for all args
+     * @param start Starting index
+     * @param end Ending index
      */
     protected void storeArgs(Type[] args, InsnList insns, int[] argMap, int start, int end) {
         for (int arg = end - 1; arg >= start; arg--) {
@@ -143,9 +170,14 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /**
-     * Load args onto the stack from their positions allocated in argMap 
+     * Load args onto the stack from their positions allocated in argMap
+     * @param args argument types
+     * @param insns instruction list to generate insns into
+     * @param argMap generated argmap containing local indices for all args
+     * @param start Starting index
+     * @param end Ending index
      */
-    protected void pushArgs(InsnList insns, Type[] args, int[] argMap, int start, int end) {
+    protected void pushArgs(Type[] args, InsnList insns, int[] argMap, int start, int end) {
         for (int arg = start; arg < end; arg++) {
             insns.add(new VarInsnNode(args[arg].getOpcode(Opcodes.ILOAD), argMap[arg]));
         }

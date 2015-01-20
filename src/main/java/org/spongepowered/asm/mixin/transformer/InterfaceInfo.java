@@ -61,6 +61,9 @@ public class InterfaceInfo extends TreeInfo {
 
     /**
      * Make with the new thing already
+     * 
+     * @param prefix Method prefix
+     * @param iface Interface to load
      */
     private InterfaceInfo(String prefix, Type iface) {
         if (prefix == null || prefix.length() < 2 || !prefix.endsWith("$")) {
@@ -82,6 +85,8 @@ public class InterfaceInfo extends TreeInfo {
     /**
      * Reads an interface and its super-interfaces and gathers method names in
      * to the local "methods" collection
+     * 
+     * @param ifaceName Name of the interface to read
      */
     private void readInterface(String ifaceName) {
         ClassNode ifaceNode = new ClassNode();
@@ -105,6 +110,8 @@ public class InterfaceInfo extends TreeInfo {
 
     /**
      * Get the prefix string (non null)
+     * 
+     * @return the prefix
      */
     public String getPrefix() {
         return this.prefix;
@@ -112,6 +119,8 @@ public class InterfaceInfo extends TreeInfo {
     
     /**
      * Get the interface type
+     * 
+     * @return interface type
      */
     public Type getIface() {
         return this.iface;
@@ -119,6 +128,8 @@ public class InterfaceInfo extends TreeInfo {
 
     /**
      * Get the internal name of the interface
+     * 
+     * @return the internal name for the interface
      */
     public String getInternalName() {
         return this.iface.getInternalName();
@@ -128,7 +139,10 @@ public class InterfaceInfo extends TreeInfo {
      * Processes a method node in the mixin and renames it if necessary. If the
      * prefix is found then we verify that the method exists in the target
      * interface and throw our teddies out of the pram if that's not the case
-     * (replacement behaviour for {@link Override} essentially. 
+     * (replacement behaviour for {@link Override} essentially.
+     * 
+     * @param method Method to rename
+     * @return true if the method was remapped
      */
     public boolean renameMethod(MethodNode method) {
         if (this.methods == null) {
@@ -152,6 +166,9 @@ public class InterfaceInfo extends TreeInfo {
     /**
      * Convert an {@link Interface} annotation node into an
      * {@link InterfaceInfo}
+     * 
+     * @param node Annotation node to process
+     * @return parsed InterfaceInfo object
      */
     static InterfaceInfo fromAnnotation(AnnotationNode node) {
         String prefix = ASMHelper.<String>getAnnotationValue(node, "prefix");

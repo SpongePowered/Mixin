@@ -114,6 +114,7 @@ public class ASMHelper {
      * @param name Name of method to generate
      * @param forwardname Name of method to call
      * @param rettype Return type of method
+     * @param argtype Argument type
      */
     public static void generateStaticForwardingMethod(ClassNode clazz, String name, String forwardname, Type rettype, Type argtype) {
         MethodNode method = new MethodNode(Opcodes.ASM5,
@@ -133,6 +134,7 @@ public class ASMHelper {
      * @param name Name of method to generate
      * @param forwardname Name of method to call
      * @param rettype Return type of method
+     * @param fowardtype Forward type
      */
     public static void generateForwardingToStaticMethod(ClassNode clazz, String name, String forwardname, Type rettype, Type fowardtype) {
         MethodNode method = new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name,
@@ -151,6 +153,7 @@ public class ASMHelper {
      * @param name Name of method to generate
      * @param forwardname Name of method to call
      * @param rettype Return type of method
+     * @param fowardtype Forward type
      * @param thistype Type to treat 'this' as for overload searching purposes
      */
     public static void generateForwardingToStaticMethod(ClassNode clazz, String name, String forwardname, Type rettype, Type fowardtype,
@@ -278,6 +281,7 @@ public class ASMHelper {
      * Integer constant).
      *
      * @param c the integer to push onto the stack
+     * @return insn node to insert
      */
     public static AbstractInsnNode pushIntConstant(int c) {
         if (c == -1) {
@@ -299,6 +303,7 @@ public class ASMHelper {
      * @param clazz the class to scan
      * @param name the method name
      * @param desc the method descriptor
+     * @return discovered method node or null
      */
     public static MethodNode findMethod(ClassNode clazz, String name, String desc) {
         Iterator<MethodNode> i = clazz.methods.iterator();
@@ -567,6 +572,7 @@ public class ASMHelper {
     /**
      * Duck type the "value" entry (if any) of the specified annotation node
      *
+     * @param <T> duck type
      * @param annotation Annotation node to query
      * @return duck-typed annotation value, null if missing, or inevitable
      *      {@link ClassCastException} if your duck is actually a rooster 
@@ -579,6 +585,7 @@ public class ASMHelper {
      * Get the value of an annotation node and do pseudo-duck-typing via Java's
      * crappy generics
      *
+     * @param <T> duck type
      * @param annotation Annotation node to query
      * @param key Key to search for
      * @param defaultValue Value to return if the specified key is not found or
@@ -595,6 +602,7 @@ public class ASMHelper {
      * Get the value of an annotation node and do pseudo-duck-typing via Java's
      * crappy generics
      *
+     * @param <T> duck type
      * @param annotation Annotation node to query
      * @param key Key to search for
      * @return duck-typed annotation value, null if missing, or inevitable
@@ -625,6 +633,7 @@ public class ASMHelper {
      * Get the value of an annotation node as the specified enum, returns
      * defaultValue if the annotation value is not set
      *
+     * @param <T> duck type
      * @param annotationNode Annotation node to query
      * @param key Key to search for
      * @param enumClass Class of enum containing the enum constant to search for

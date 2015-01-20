@@ -40,12 +40,16 @@ public @interface Interface {
      * Interface that the parent {@link Implements} indicates the mixin 
      * implements. The interface will be hot-patched onto the target class as
      * part of the mixin application.
+     * 
+     * @return interface to implement
      */
     public Class<?> iface();
     
     /**
      * [Required] prefix for implementing interface methods. Works similarly to
      * {@link Shadow} prefixes, but <b>must</b> end with a dollar sign ($)
+     * 
+     * @return prefix to use
      */
     public String prefix();
 

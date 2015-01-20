@@ -39,7 +39,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
-import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -51,7 +50,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * any pre-transformations required by the mixin class itself such as method
  * renaming and any other pre-processing of the mixin bytecode.
  */
-public class MixinData {
+public class MixinData implements IReferenceMapperContext {
     
     /**
      * Mixin info
@@ -92,7 +91,8 @@ public class MixinData {
     /**
      * ctor
      * 
-     * @param info
+     * @param info Mixin information
+     * @param target target class
      */
     MixinData(MixinInfo info, ClassNode target) {
         this.info = info;
@@ -111,6 +111,8 @@ public class MixinData {
 
     /**
      * Get the mixin tree
+     * 
+     * @return mixin tree
      */
     public ClassNode getClassNode() {
         return this.classNode;
@@ -118,38 +120,46 @@ public class MixinData {
     
     /**
      * Get the mixin class name
+     * 
+     * @return the mixin class name
      */
     public String getClassName() {
         return this.info.getClassName();
     }
     
-    /**
-     * Get the internal mixin class name
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IReferenceMapperContext
+     *      #getClassRef()
      */
+    @Override
     public String getClassRef() {
         return this.info.getClassRef();
     }
 
     /**
      * Get the target class reference
+     * 
+     * @return the reference of the target class (only valid on single-target
+     *      mixins)
      */
     public String getTargetClassRef() {
-        List<String> targetClasses = this.info.getTargetClasses();
-        if (targetClasses.size() != 1) {
-            throw new InvalidMixinException("Multiple targets found for " + this.getClassName() + " but exactly one is required");
-        }
-        return targetClasses.get(0);
+        return this.targetClass.name;
     }
     
     /**
      * Get the target class
+     * 
+     * @return the target class
      */
     public ClassNode getTargetClass() {
         return this.targetClass;
     }
     
     /**
-     * Get a method from the target class
+     * Get a target method handle from the target class
+     * 
+     * @param method method to get a target handle for
+     * @return new or existing target handle for the supplied method
      */
     public Target getTargetMethod(MethodNode method) {
         if (!this.targetClass.methods.contains(method)) {
@@ -167,6 +177,8 @@ public class MixinData {
 
     /**
      * Get the mixin priority
+     * 
+     * @return the priority (only meaningful in relation to other mixins)
      */
     public int getPriority() {
         return this.info.getPriority();
@@ -174,6 +186,8 @@ public class MixinData {
 
     /**
      * Get all interfaces for this mixin
+     * 
+     * @return mixin interfaces
      */
     public Set<String> getInterfaces() {
         return this.interfaces;
@@ -182,14 +196,18 @@ public class MixinData {
     /**
      * Get whether to propogate the source file attribute from a mixin onto the
      * target class
+     * 
+     * @return true if the sourcefile property should be set on the target class
      */
     public boolean shouldSetSourceFile() {
         return this.info.getParent().shouldSetSourceFile();
     }
     
-    /**
-     * Get the reference mapper for this mixin
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IReferenceMapperContext
+     *      #getReferenceMapper()
      */
+    @Override
     public ReferenceMapper getReferenceMapper() {
         return this.info.getParent().getReferenceMapper();
     }
@@ -292,6 +310,9 @@ public class MixinData {
 
     /**
      * Called immediately before the mixin is applied to targetClass
+     * 
+     * @param transformedName Target class's transformed name
+     * @param targetClass Target class
      */
     public void preApply(String transformedName, ClassNode targetClass) {
         this.info.preApply(transformedName, targetClass);
@@ -299,6 +320,9 @@ public class MixinData {
 
     /**
      * Called immediately after the mixin is applied to targetClass
+     * 
+     * @param transformedName Target class's transformed name
+     * @param targetClass Target class
      */
     public void postApply(String transformedName, ClassNode targetClass) {
         this.info.postApply(transformedName, targetClass);

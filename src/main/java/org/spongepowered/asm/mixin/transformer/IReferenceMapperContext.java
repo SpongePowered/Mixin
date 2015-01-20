@@ -24,35 +24,25 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the {@link MixinTransformer} to mark methods
- * in a class which have been added or overwritten by a mixin.</p>
+ * Context for performing reference mapping
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
-    
+public interface IReferenceMapperContext {
+
     /**
-     * Mixin which merged this method
+     * Get the internal mixin class name
      * 
-     * @return mixin name 
+     * @return internal class name
      */
-    public String mixin();
-    
+    public abstract String getClassRef();
+
     /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
+     * Get the reference mapper for this mixin
      * 
-     * @return mixin priority
+     * @return ReferenceMapper instance (can be null)
      */
-    public int priority();
+    public abstract ReferenceMapper getReferenceMapper();
+
 }

@@ -126,6 +126,8 @@ public class MixinEnvironment {
     
     /**
      * Get mixin configurations from the blackboard
+     * 
+     * @return list of registered mixin configs
      */
     public List<String> getMixinConfigs() {
         @SuppressWarnings("unchecked")
@@ -139,6 +141,9 @@ public class MixinEnvironment {
     
     /**
      * Add a mixin configuration to the blackboard
+     * 
+     * @param config Name of configuration resource to add
+     * @return fluent interface
      */
     public MixinEnvironment addConfiguration(String config) {
         List<String> configs = this.getMixinConfigs();

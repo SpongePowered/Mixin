@@ -55,6 +55,9 @@ public class CallbackInfo implements Cancellable {
 
     /**
      * This ctor is always called by injected code
+     * 
+     * @param name calling method name
+     * @param cancellable true if the callback can be cancelled
      */
     public CallbackInfo(String name, boolean cancellable) {
         this.name = name;
@@ -63,6 +66,8 @@ public class CallbackInfo implements Cancellable {
 
     /**
      * Get the method name where this callback originated
+     * 
+     * @return the name of the calling method
      */
     public String getName() {
         return this.name;

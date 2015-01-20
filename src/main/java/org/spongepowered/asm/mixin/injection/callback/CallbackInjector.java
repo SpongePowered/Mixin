@@ -64,6 +64,12 @@ public class CallbackInjector extends Injector {
 
     /**
      * Make a new CallbackInjector with the supplied args
+     * 
+     * @param info information about this injector
+     * @param cancellable True if injections performed by this injector should
+     *      be cancellable
+     * @param captureLocals True to capture local variables from the frame at
+     *      the target location
      */
     public CallbackInjector(InjectionInfo info, boolean cancellable, boolean captureLocals) {
         super(info);
@@ -118,7 +124,11 @@ public class CallbackInjector extends Injector {
     }
 
     /**
-     * Generate the actual bytecode
+     * Generate the actual bytecode for the callback
+     * 
+     * @param target Target method to inject callback into
+     * @param node Target node within
+     * @param locals Inferred local types at the target location
      */
     private void inject(Target target, final AbstractInsnNode node, final Type[] locals) {
         // Calculate the initial frame size based on the target method's arguments
@@ -165,7 +175,7 @@ public class CallbackInjector extends Injector {
         insns.add(new TypeInsnNode(Opcodes.NEW, target.callbackInfoClass)); ctorMAXS++;
         insns.add(new InsnNode(Opcodes.DUP)); ctorMAXS++; invokeMAXS++;
         // CHECKSTYLE:ON
-        ctorMAXS += this.invokeCallbackInfoCtor(target, insns, this.cancellable, pushReturnValue, marshallVar);
+        ctorMAXS += this.invokeCallbackInfoCtor(target, insns, pushReturnValue, marshallVar);
         insns.add(new VarInsnNode(Opcodes.ASTORE, marshallVar));
 
         // Push "this" onto the stack if the callback is not static
@@ -198,12 +208,21 @@ public class CallbackInjector extends Injector {
         target.method.maxStack = Math.max(target.method.maxStack, Math.max(target.maxStack + ctorMAXS, target.maxStack + invokeMAXS));
     }
 
-    protected int invokeCallbackInfoCtor(Target target, InsnList insns, boolean cancellable, boolean pushReturnValue, int marshallVar) {
+    /**
+     * @param target target method
+     * @param insns instruction list to append to
+     * @param pushReturnValue True to push the current value on the stack into
+     *      the CallbackInfo ctor, used when injecting at a RETURN opcode in
+     *      order to capture the current return value
+     * @param marshallVar "working" variable used to marshallt temporary values
+     * @return additional MAXS slots required
+     */
+    protected int invokeCallbackInfoCtor(Target target, InsnList insns, boolean pushReturnValue, int marshallVar) {
         int ctorMAXS = 0;
 
         // CHECKSTYLE:OFF
         insns.add(new LdcInsnNode(target.method.name)); ctorMAXS++;
-        insns.add(new InsnNode(cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0)); ctorMAXS++;
+        insns.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0)); ctorMAXS++;
         // CHECKSTYLE:ON
 
         if (pushReturnValue) {
@@ -221,10 +240,10 @@ public class CallbackInjector extends Injector {
     /**
      * if (e.isCancelled()) return e.getReturnValue();
      * 
-     * @param target
-     * @param insns
-     * @param node
-     * @param marshallVar
+     * @param target target method
+     * @param insns instruction list to append to
+     * @param node target node
+     * @param marshallVar "working" variable used to marshallt temporary values
      */
     protected void injectCancellationCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
         insns.add(new VarInsnNode(Opcodes.ALOAD, marshallVar));
@@ -243,10 +262,10 @@ public class CallbackInjector extends Injector {
     /**
      * Inject the appropriate return code for the method type
      * 
-     * @param target
-     * @param insns
-     * @param node
-     * @param marshallVar
+     * @param target target method
+     * @param insns instruction list to append to
+     * @param node target node
+     * @param marshallVar "working" variable used to marshallt temporary values
      */
     protected void injectReturnCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
         if (target.returnType.equals(Type.VOID_TYPE)) {

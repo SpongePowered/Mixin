@@ -29,7 +29,7 @@ import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 
 
 /**
@@ -95,22 +95,32 @@ public class MemberInfo {
     public final boolean matchAll;
 
     /**
+     * ctor
+     * 
      * @param name Member name, must not be null
+     * @param matchAll true if this info should match all matching references,
+     *      or only the first
      */
     public MemberInfo(String name, boolean matchAll) {
         this(name, null, null, matchAll);
     }
     
     /**
+     * ctor
+     * 
      * @param name Member name, must not be null
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
+     * @param matchAll true if this info should match all matching references,
+     *      or only the first
      */
     public MemberInfo(String name, String owner, boolean matchAll) {
         this(name, owner, null, matchAll);
     }
     
     /**
+     * ctor
+     * 
      * @param name Member name, must not be null
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
@@ -131,6 +141,8 @@ public class MemberInfo {
     /**
      * Initialise a MemberInfo using the supplied insn which must be an instance
      * of MethodInsnNode or FieldInsnNode.
+     * 
+     * @param insn instruction node to copy values from
      */
     public MemberInfo(AbstractInsnNode insn) {
         this.matchAll = false;
@@ -152,6 +164,8 @@ public class MemberInfo {
     
     /**
      * Initialise a MemberInfo using the supplied MethodData object
+     * 
+     * @param methodData MethodData object to copy values from
      */
     public MemberInfo(MethodData methodData) {
         int slashPos = methodData.name.lastIndexOf('/');
@@ -176,6 +190,8 @@ public class MemberInfo {
     
     /**
      * Return this MemberInfo as an SRG mapping
+     * 
+     * @return SRG representation of this MemberInfo
      */
     public String toSrg() {
         if (!this.isFullyQualified()) {
@@ -203,6 +219,8 @@ public class MemberInfo {
     
     /**
      * Get whether this reference is fully qualified
+     * 
+     * @return true if all components of this reference are non-null 
      */
     public boolean isFullyQualified() {
         return this.owner != null && this.name != null && this.desc != null;
@@ -211,6 +229,8 @@ public class MemberInfo {
     /**
      * Get whether this MemberInfo is definitely a field, the output of this
      * method is undefined if {@link #isFullyQualified} returns false.
+     * 
+     * @return true if this is definitely a field
      */
     public boolean isField() {
         return this.desc != null && !this.desc.startsWith("(");
@@ -219,6 +239,12 @@ public class MemberInfo {
     /**
      * Test whether this MemberInfo matches the supplied values. Null values are
      * ignored.
+
+     * @param owner Owner to compare with, null to skip
+     * @param name Name to compare with, null to skip
+     * @param desc Signature to compare with, null to skip
+     * @return true if all non-null values in this reference match non-null
+     *      arguments supplied to this method
      */
     public boolean matches(String owner, String name, String desc) {
         return this.matches(owner, name, desc, 0);
@@ -227,6 +253,14 @@ public class MemberInfo {
     /**
      * Test whether this MemberInfo matches the supplied values at the specified
      * ordinal. Null values are ignored.
+     * 
+     * @param owner Owner to compare with, null to skip
+     * @param name Name to compare with, null to skip
+     * @param desc Signature to compare with, null to skip
+     * @param ordinal ordinal position within the class, used to honour the
+     *      matchAll semantics
+     * @return true if all non-null values in this reference match non-null
+     *      arguments supplied to this method
      */
     public boolean matches(String owner, String name, String desc, int ordinal) {
         if (this.desc != null && desc != null && !this.desc.equals(desc)) {
@@ -244,6 +278,11 @@ public class MemberInfo {
     /**
      * Test whether this MemberInfo matches the supplied values. Null values are
      * ignored.
+
+     * @param name Name to compare with, null to skip
+     * @param desc Signature to compare with, null to skip
+     * @return true if all non-null values in this reference match non-null
+     *      arguments supplied to this method
      */
     public boolean matches(String name, String desc) {
         return this.matches(name, desc, 0);
@@ -252,6 +291,13 @@ public class MemberInfo {
     /**
      * Test whether this MemberInfo matches the supplied values at the specified
      * ordinal. Null values are ignored.
+     * 
+     * @param name Name to compare with, null to skip
+     * @param desc Signature to compare with, null to skip
+     * @param ordinal ordinal position within the class, used to honour the
+     *      matchAll semantics
+     * @return true if all non-null values in this reference match non-null
+     *      arguments supplied to this method
      */
     public boolean matches(String name, String desc, int ordinal) {
         return (this.name == null || this.name.equals(name)) 
@@ -261,20 +307,32 @@ public class MemberInfo {
     
     /**
      * Parse a MemberInfo from a string
+     * 
+     * @param string String to parse MemberInfo from
+     * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String name) {
-        return MemberInfo.parse(name, null, null);
+    public static MemberInfo parse(String string) {
+        return MemberInfo.parse(string, null, null);
     }
     
     /**
      * Parse a MemberInfo from a string
+     * 
+     * @param string String to parse MemberInfo from
+     * @param context Context to use for reference mapping
+     * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String name, MixinData mixin) {
-        return MemberInfo.parse(name, mixin.getReferenceMapper(), mixin.getClassRef());
+    public static MemberInfo parse(String string, IReferenceMapperContext context) {
+        return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef());
     }
     
     /**
      * Parse a MemberInfo from a string
+     * 
+     * @param name String to parse MemberInfo from
+     * @param refMapper Reference mapper to use
+     * @param mixinClass Mixin class to use for remapping
+     * @return parsed MemberInfo
      */
     public static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
         String desc = null;

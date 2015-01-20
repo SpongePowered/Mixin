@@ -99,7 +99,7 @@ public class CallbackInfoReturnable<R> extends CallbackInfo {
      * Sets a return value for this callback and cancels the callback (required
      * in order to return the new value)
      * 
-     * @param returnValue
+     * @param returnValue value to return
      */
     public void setReturnValue(R returnValue) throws CancellationException {
         super.cancel();
