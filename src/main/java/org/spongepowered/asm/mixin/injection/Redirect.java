@@ -30,8 +30,44 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies that this mixin method should redirect the specified
- * {@link #method} call to the method decorated with this annotation.
+ * <p>Specifies that this mixin method should redirect the specified
+ * {@link #method} call to the method decorated with this annotation.</p>
+ * 
+ * <p>The handler method signature must match the hooked method precisely
+ * <b>but</b> prepended with an arg of the owning object's type to accept the
+ * object instance the method was going to be invoked on. For example when
+ * hooking the following call:</p>
+ * 
+ * <blockquote><pre>
+ *   public void baz(int someInt, String someString) {
+ *     int abc = 0;
+ *     int def = 1;
+ *     Foo someObject = new Foo();
+ *     
+ *     // Hooking this method
+ *     boolean xyz = someObject.bar(abc, def);
+ *   }</pre>
+ * </blockquote>
+ * 
+ * <p>The signature of the redirected method should be:</p>
+ * 
+ * <blockquote>
+ *      <pre>public boolean barProxy(Foo someObject, int abc, int def)</pre>
+ * </blockquote>
+ * 
+ * <p>For obvious reasons this does not apply for static methods, for static
+ * methods it is sufficient that the signature simply match the hooked method.
+ * </p>
+ * 
+ * <p>It is also possible to capture the arguments of the target method in
+ * addition to the arguments being passed to the method call (for example in
+ * the code above this would be the <em>someInt</em> and <em>someString</em>
+ * arguments) by appending the arguments to the method signature:</p>
+ * 
+ * <blockquote>
+ *      <pre>public boolean barProxy(Foo someObject, int abc, int def,
+ *   int someInt, String someString)</pre>
+ * </blockquote>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.injection.struct;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
@@ -41,9 +42,19 @@ public class Target {
     public final MethodNode method;
     
     /**
+     * True if the method is static 
+     */
+    public final boolean isStatic;
+    
+    /**
      * Method arguments
      */
     public final Type[] arguments;
+    
+    /**
+     * Method argument slots 
+     */
+    public final int[] argIndices;
     
     /**
      * Return type computed from the method descriptor 
@@ -77,13 +88,24 @@ public class Target {
      */
     public Target(MethodNode method) {
         this.method = method;
+        this.isStatic = ASMHelper.methodIsStatic(method);
         this.arguments = Type.getArgumentTypes(method.desc);
+        this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
 
         this.returnType = Type.getReturnType(method.desc);
         this.maxStack = method.maxStack;
         this.maxLocals = method.maxLocals;
         this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
         this.callbackDescriptor = String.format("(%sL%s;)V", method.desc.substring(1, method.desc.indexOf(')')), this.callbackInfoClass);
+    }
+
+    private int[] calcArgIndices(int local) {
+        int[] argIndices = new int[this.arguments.length];
+        for (int arg = 0; arg < this.arguments.length; arg++) {
+            argIndices[arg] = local;
+            local += this.arguments[arg].getSize();
+        }
+        return argIndices;
     }
 
     /**

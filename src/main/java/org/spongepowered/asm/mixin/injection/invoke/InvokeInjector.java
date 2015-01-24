@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.util.ASMHelper;
 
 /**
  * Base class for injectors which inject at method invokes
@@ -74,7 +73,7 @@ public abstract class InvokeInjector extends Injector {
      */
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
-        if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
+        if (target.isStatic != this.isStatic) {
             throw new InvalidInjectionException("'static' modifier of callback method does not match target in " + this.methodNode.name);
         }
     }
@@ -102,6 +101,15 @@ public abstract class InvokeInjector extends Injector {
      */
     protected abstract void inject(Target target, MethodInsnNode node);
 
+    /**
+     * @param args handler arguments
+     * @param insns InsnList to inject insns into
+     * @param argMap Mapping of args to local variables
+     */
+    protected void invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap) {
+        this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
+    }
+    
     /**
      * @param args handler arguments
      * @param insns InsnList to inject insns into

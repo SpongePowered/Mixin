@@ -35,6 +35,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.collect.ObjectArrays;
+import com.google.common.primitives.Ints;
 
 /**
  * <p>A bytecode injector which allows a method call to be redirected to the
@@ -76,6 +77,7 @@ public class RedirectInjector extends InvokeInjector {
      */
     @Override
     protected void inject(Target target, MethodInsnNode node) {
+        boolean injectTargetParams = false;
         boolean targetIsStatic = node.getOpcode() == Opcodes.INVOKESTATIC;
         Type ownerType = Type.getType("L" + node.owner + ";");
         Type returnType = Type.getReturnType(node.desc);
@@ -84,14 +86,23 @@ public class RedirectInjector extends InvokeInjector {
         
         String desc = Injector.printArgs(stackVars) + returnType;
         if (!desc.equals(this.methodNode.desc)) {
-            throw new InvalidInjectionException("@Redirect handler method has an invalid signature "
-                    + ", expected " + desc + " found " + this.methodNode.desc);
+            String alternateDesc = Injector.printArgs(ObjectArrays.concat(stackVars, target.arguments, Type.class)) + returnType;
+            if (alternateDesc.equals(this.methodNode.desc)) {
+                injectTargetParams = true;
+            } else {
+                throw new InvalidInjectionException("@Redirect handler method has an invalid signature "
+                        + ", expected " + desc + " found " + this.methodNode.desc);
+            }
         }
         
         InsnList insns = new InsnList();
         int extraLocals = ASMHelper.getArgsSize(stackVars) + 1;
         int[] argMap = this.storeArgs(target, stackVars, insns, 0);
-        this.invokeHandlerWithArgs(stackVars, insns, argMap, 0, stackVars.length);
+        if (injectTargetParams) {
+            extraLocals += ASMHelper.getArgsSize(target.arguments);
+            argMap = Ints.concat(argMap, target.argIndices);
+        }
+        this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
         
         target.method.instructions.insertBefore(node, insns);
         target.method.instructions.remove(node);
