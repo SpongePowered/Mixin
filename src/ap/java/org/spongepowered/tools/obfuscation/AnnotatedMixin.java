@@ -176,10 +176,10 @@ class AnnotatedMixin {
         this.mixin = type;
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         
-        TypeMirror primaryTarget = this.initTargets();
+        TypeElement primaryTarget = this.initTargets();
         if (primaryTarget != null) {
-            this.targetRef = MirrorUtils.getInternalName((DeclaredType)primaryTarget);
-            this.targetType = (TypeElement)((DeclaredType)primaryTarget).asElement(); 
+            this.targetRef = MirrorUtils.getInternalName(primaryTarget);
+            this.targetType = primaryTarget; 
         } else {
             this.targetRef = null;
             this.targetType = null;
@@ -194,8 +194,8 @@ class AnnotatedMixin {
         }
     }
 
-    private TypeMirror initTargets() {
-        TypeMirror primaryTarget = null;
+    private TypeElement initTargets() {
+        TypeElement primaryTarget = null;
         
         // Public targets, referenced by class
         try {
@@ -208,7 +208,7 @@ class AnnotatedMixin {
                 }
                 this.targets.add(element);
                 if (primaryTarget == null) {
-                    primaryTarget = target;
+                    primaryTarget = element;
                 }
             }
         } catch (Exception ex) {
@@ -231,10 +231,9 @@ class AnnotatedMixin {
                     this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " is public and must be specified in value", this);
                     return null;
                 }
-                TypeMirror target = element.asType();
                 this.targets.add(element);
                 if (primaryTarget == null) {
-                    primaryTarget = target;
+                    primaryTarget = element;
                 }
             }
         } catch (Exception ex) {
@@ -339,7 +338,8 @@ class AnnotatedMixin {
             return;
         }
         
-        this.addMethodMapping(mcpName, obfMethod.name, mcpSignature, obfMethod.sig);
+        String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
+        this.addMethodMapping(mcpName, obfName, mcpSignature, obfMethod.sig);
     }
 
     /**

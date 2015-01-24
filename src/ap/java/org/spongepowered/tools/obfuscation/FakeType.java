@@ -22,35 +22,49 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.validation;
+package org.spongepowered.tools.obfuscation;
 
-import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVisitor;
 
-import org.spongepowered.tools.obfuscation.FakeType;
 
+public class FakeType implements DeclaredType {
 
-public class TargetValidator extends MixinValidator {
+    private final TypeElement element;
 
-    public TargetValidator(ProcessingEnvironment processingEnv) {
-        super(processingEnv);
+    public FakeType(TypeElement element) {
+        this.element = element;
     }
 
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeElement> targets) {
-        TypeMirror superClass = mixin.getSuperclass();
-        
-        for (TypeElement target : targets) {
-            TypeMirror targetType = target.asType();
-            if (!(targetType instanceof FakeType) && !this.processingEnv.getTypeUtils().isAssignable(targetType, superClass)) {
-                this.error("Superclass " + superClass + " of " + mixin + " was not found in the hierarchy of target class " + targetType, mixin);
-            }
-        }
-        
-        return true;
+    public TypeKind getKind() {
+        return TypeKind.DECLARED;
+    }
+
+    @Override
+    public <R, P> R accept(TypeVisitor<R, P> v, P p) {
+        return null;
+    }
+
+    @Override
+    public Element asElement() {
+        return this.element;
+    }
+
+    @Override
+    public TypeMirror getEnclosingType() {
+        return this.element.getEnclosingElement().asType();
+    }
+
+    @Override
+    public List<? extends TypeMirror> getTypeArguments() {
+        return Collections.<TypeMirror>emptyList();
     }
 }

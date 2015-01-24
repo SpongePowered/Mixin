@@ -187,7 +187,10 @@ public abstract class MirrorUtils {
     }
     
     public static String getInternalName(DeclaredType type) {
-        TypeElement elem = (TypeElement)type.asElement();
+        return MirrorUtils.getInternalName((TypeElement)type.asElement());
+    }
+
+    public static String getInternalName(TypeElement elem) {
         StringBuilder reference = new StringBuilder();
         reference.append(elem.getSimpleName());
         Element parent = elem.getEnclosingElement();

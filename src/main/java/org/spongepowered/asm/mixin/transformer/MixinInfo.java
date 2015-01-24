@@ -201,6 +201,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     private void readTargets(List<ClassInfo> outTargets, List<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
         for (String targetClassName : inTargets) {
+            targetClassName = targetClassName.replace('/', '.');
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
                 ClassInfo targetInfo = ClassInfo.forName(targetClassName);
                 if (targetInfo.isInterface()) {
