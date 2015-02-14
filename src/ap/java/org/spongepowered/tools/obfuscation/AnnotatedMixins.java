@@ -463,16 +463,16 @@ class AnnotatedMixins implements Messager {
     }
     
     /**
-     * Get a TypeElement representing another type in the current processing
+     * Get a TypeHandle representing another type in the current processing
      * environment
      */
-    public TypeElement getTypeElement(String name) {
+    public TypeHandle getTypeHandle(String name) {
         name = name.replace('/', '.');
         
         Elements elements = this.processingEnv.getElementUtils();
         TypeElement element = elements.getTypeElement(name);
         if (element != null) {
-            return element;
+            return new TypeHandle(element);
         }
         
         int lastDotPos = name.lastIndexOf('.');
@@ -480,42 +480,11 @@ class AnnotatedMixins implements Messager {
             String pkg = name.substring(0, lastDotPos);
             PackageElement packageElement = elements.getPackageElement(pkg);
             if (packageElement != null) {
-                element = (TypeElement)this.findTypeElement(packageElement, name.substring(lastDotPos + 1).split("[/\\.\\x24]"), 0);
+                return new TypeHandle(packageElement, name);
             }
         }
         
-        return element;
-    }
-
-    /**
-     * When we can't find a TypeElement by directly looking it up (probably
-     * because the element is private or anonymous) recurse as far down the tree
-     * as possible and then fake out the elements which can't be navigated to. 
-     * 
-     * @param search Element to search within
-     * @param parts Path parts following the package declaration, eg. for the
-     *      class name com.foo.bar.Baz$1 will contain the elements "Baz" and "1"
-     * @param index Position within the parts array, each time we recurse down
-     *      the tree this value is incremented
-     * @return found or faked element
-     */
-    private Element findTypeElement(Element search, String[] parts, int index) {
-        if (index >= parts.length) {
-            return null;
-        }
-        
-        for (Element element : search.getEnclosedElements()) {
-            if (element.getSimpleName().contentEquals(parts[index])) {
-                return this.findTypeElement(element, parts, index + 1);
-            }
-        }
-        
-        FakeElement el = new FakeElement(search, parts[index]);
-        for (index++; index < parts.length; index++) {
-            el = el.addChild(parts[index]);
-        }
-        
-        return el;
+        return null;
     }
 
     /**

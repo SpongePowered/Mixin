@@ -39,7 +39,6 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
@@ -137,7 +136,7 @@ class AnnotatedMixin {
     /**
      * Specified targets
      */
-    private final List<TypeElement> targets = new ArrayList<TypeElement>();
+    private final List<TypeHandle> targets = new ArrayList<TypeHandle>();
     
     /**
      * Target "reference" (bytecode name)
@@ -147,7 +146,7 @@ class AnnotatedMixin {
     /**
      * Target type (for single-target mixins) 
      */
-    private final TypeElement targetType;
+    private final TypeHandle targetType;
     
     /**
      * Mixin class "reference" (bytecode name)
@@ -176,9 +175,9 @@ class AnnotatedMixin {
         this.mixin = type;
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         
-        TypeElement primaryTarget = this.initTargets();
+        TypeHandle primaryTarget = this.initTargets();
         if (primaryTarget != null) {
-            this.targetRef = MirrorUtils.getInternalName(primaryTarget);
+            this.targetRef = primaryTarget.getName();
             this.targetType = primaryTarget; 
         } else {
             this.targetRef = null;
@@ -194,21 +193,21 @@ class AnnotatedMixin {
         }
     }
 
-    private TypeElement initTargets() {
-        TypeElement primaryTarget = null;
+    private TypeHandle initTargets() {
+        TypeHandle primaryTarget = null;
         
         // Public targets, referenced by class
         try {
             List<AnnotationValue> publiTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "value",
                     Collections.<AnnotationValue>emptyList());
             for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(publiTargets)) {
-                TypeElement element = (TypeElement)((DeclaredType)target).asElement();
-                if (this.targets.contains(element)) {
+                TypeHandle type = new TypeHandle((DeclaredType)target);
+                if (this.targets.contains(type)) {
                     continue;
                 }
-                this.targets.add(element);
+                this.targets.add(type);
                 if (primaryTarget == null) {
-                    primaryTarget = element;
+                    primaryTarget = type;
                 }
             }
         } catch (Exception ex) {
@@ -220,20 +219,20 @@ class AnnotatedMixin {
             List<AnnotationValue> privateTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "targets",
                     Collections.<AnnotationValue>emptyList());
             for (String privateTarget : MirrorUtils.<String>unfold(privateTargets)) {
-                TypeElement element = this.mixins.getTypeElement(privateTarget);
-                if (this.targets.contains(element)) {
+                TypeHandle type = this.mixins.getTypeHandle(privateTarget);
+                if (this.targets.contains(type)) {
                     continue;
                 }
-                if (element == null) {
+                if (type == null) {
                     this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " could not be found", this);
                     return null;
-                } else if (element.getModifiers().contains(Modifier.PUBLIC)) {
+                } else if (type.isPublic()) {
                     this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " is public and must be specified in value", this);
                     return null;
                 }
-                this.targets.add(element);
+                this.targets.add(type);
                 if (primaryTarget == null) {
-                    primaryTarget = element;
+                    primaryTarget = type;
                 }
             }
         } catch (Exception ex) {
@@ -261,7 +260,7 @@ class AnnotatedMixin {
     /**
      * Get the mixin's targets
      */
-    public List<TypeElement> getTargets() {
+    public List<TypeHandle> getTargets() {
         return this.targets;
     }
     
@@ -397,7 +396,12 @@ class AnnotatedMixin {
         
         String desc = this.findDescriptor(this.targetType, targetMember);
         if (desc == null) {
-            this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
+            if (this.targetType.isImaginary()) {
+                this.mixins.printMessage(Kind.WARNING, "@Inject target requires method signature because enclosing type information is unavailable",
+                        method, inject);
+            } else {
+                this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
+            }
             return;
        }
         
@@ -489,7 +493,7 @@ class AnnotatedMixin {
         this.methodMappings.add(mapping);
     }
 
-    private String findDescriptor(TypeElement targetType, MemberInfo memberInfo) {
+    private String findDescriptor(TypeHandle targetType, MemberInfo memberInfo) {
         String desc = memberInfo.desc;
         if (desc == null) {
             for (Element child : targetType.getEnclosedElements()) {

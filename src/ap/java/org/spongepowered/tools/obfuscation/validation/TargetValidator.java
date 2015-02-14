@@ -31,7 +31,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 
-import org.spongepowered.tools.obfuscation.FakeType;
+import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
 public class TargetValidator extends MixinValidator {
@@ -41,12 +41,12 @@ public class TargetValidator extends MixinValidator {
     }
 
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeElement> targets) {
+    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
         TypeMirror superClass = mixin.getSuperclass();
         
-        for (TypeElement target : targets) {
-            TypeMirror targetType = target.asType();
-            if (!(targetType instanceof FakeType) && !this.processingEnv.getTypeUtils().isAssignable(targetType, superClass)) {
+        for (TypeHandle target : targets) {
+            TypeMirror targetType = target.getType();
+            if (targetType != null && !this.processingEnv.getTypeUtils().isAssignable(targetType, superClass)) {
                 this.error("Superclass " + superClass + " of " + mixin + " was not found in the hierarchy of target class " + targetType, mixin);
             }
         }

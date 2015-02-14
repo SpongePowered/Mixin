@@ -32,6 +32,8 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.TypeHandle;
+
 
 public class ParentValidator extends MixinValidator {
 
@@ -40,7 +42,7 @@ public class ParentValidator extends MixinValidator {
     }
 
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeElement> targets) {
+    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
         if (mixin.getEnclosingElement().getKind() != ElementKind.PACKAGE && !mixin.getModifiers().contains(Modifier.STATIC)) {
             this.error("Inner class mixin must be declared static", mixin);
         }
