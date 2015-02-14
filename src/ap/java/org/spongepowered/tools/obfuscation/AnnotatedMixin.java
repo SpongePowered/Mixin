@@ -399,7 +399,7 @@ class AnnotatedMixin {
             if (this.targetType.isImaginary()) {
                 this.mixins.printMessage(Kind.WARNING, "@Inject target requires method signature because enclosing type information is unavailable",
                         method, inject);
-            } else {
+            } else if (!AnnotatedMixin.CTOR.equals(targetMember.name)) {
                 this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
             }
             return;
@@ -454,14 +454,16 @@ class AnnotatedMixin {
         if (targetMember.isField()) {
             String obfField = this.mixins.getObfField(targetMember.toSrg());
             if (obfField == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target, element, inject);
+                this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
                 return;
             }
             remappedReference = MemberInfo.fromSrgField(obfField, targetMember.desc);
         } else {
             MethodData obfMethod = this.mixins.getObfMethod(targetMember.asMethodData());
             if (obfMethod == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target, element, inject);
+                if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
+                    this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
+                }
                 return;
             }
             remappedReference = MemberInfo.fromSrgMethod(obfMethod);
