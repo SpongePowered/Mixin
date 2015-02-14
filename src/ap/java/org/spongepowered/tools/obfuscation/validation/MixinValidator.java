@@ -29,22 +29,52 @@ import javax.lang.model.element.Element;
 import javax.tools.Diagnostic.Kind;
 
 
+/**
+ * Base class for mixin validators
+ */
 public abstract class MixinValidator implements IMixinValidator {
     
+    /**
+     * Processing environment for this validator, used for raising compiler
+     * errors and warnings 
+     */
     protected final ProcessingEnvironment processingEnv;
 
+    /**
+     * ctor
+     * 
+     * @param processingEnv Processing environment
+     */
     public MixinValidator(ProcessingEnvironment processingEnv) {
         this.processingEnv = processingEnv;
     }
     
+    /**
+     * Output a compiler note
+     * 
+     * @param note Message
+     * @param element Element to attach the note to
+     */
     protected final void note(String note, Element element) {
         this.processingEnv.getMessager().printMessage(Kind.NOTE, note, element);
     }
     
+    /**
+     * Output a compiler note
+     * 
+     * @param warning Message
+     * @param element Element to attach the warning to
+     */
     protected final void warning(String warning, Element element) {
         this.processingEnv.getMessager().printMessage(Kind.WARNING, warning, element);
     }
     
+    /**
+     * Output a compiler note
+     * 
+     * @param error Message
+     * @param element Element to attach the error to
+     */
     protected final void error(String error, Element element) {
         this.processingEnv.getMessager().printMessage(Kind.ERROR, error, element);
     }

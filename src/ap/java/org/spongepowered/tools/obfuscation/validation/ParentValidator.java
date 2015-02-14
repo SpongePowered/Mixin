@@ -35,12 +35,25 @@ import javax.lang.model.element.TypeElement;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
+/**
+ * Validator which checks that the mixin parent is sane
+ */
 public class ParentValidator extends MixinValidator {
 
+    /**
+     * ctor
+     * 
+     * @param processingEnv Processing environment
+     */
     public ParentValidator(ProcessingEnvironment processingEnv) {
         super(processingEnv);
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.validation.IMixinValidator
+     *      #validate(javax.lang.model.element.TypeElement,
+     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
+     */
     @Override
     public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
         if (mixin.getEnclosingElement().getKind() != ElementKind.PACKAGE && !mixin.getModifiers().contains(Modifier.STATIC)) {

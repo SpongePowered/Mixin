@@ -34,12 +34,25 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
+/**
+ * Validator which checks that the mixin targets are sane
+ */
 public class TargetValidator extends MixinValidator {
 
+    /**
+     * ctor
+     * 
+     * @param processingEnv Processing environment
+     */
     public TargetValidator(ProcessingEnvironment processingEnv) {
         super(processingEnv);
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.validation.IMixinValidator
+     *      #validate(javax.lang.model.element.TypeElement,
+     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
+     */
     @Override
     public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
         TypeMirror superClass = mixin.getSuperclass();

@@ -29,8 +29,23 @@ import java.util.Collection;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.TypeHandle;
 
+
+/**
+ * A mixin validator module, basically just a way of making the various sanity
+ * checks modular
+ */
 public interface IMixinValidator {
     
-    public abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeElement> targets);
+    /**
+     * Validate all the things, return false to halt processing of further
+     * validators. Raise compiler errors/warnings directly.
+     * 
+     * @param mixin Mixin being validated
+     * @param annotation Mixin annotation
+     * @param targets Mixin targets
+     * @return False to halt processing of further validators
+     */
+    public abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
 }
