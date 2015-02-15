@@ -88,22 +88,54 @@ public class MixinTransformer extends TreeTransformer {
          */
         final int marker;
 
+        /**
+         * Create a range with the specified values.
+         * 
+         * @param start Start of the range
+         * @param end End of the range
+         * @param marker Arbitrary marker value
+         */
         Range(int start, int end, int marker) {
             this.start = start;
             this.end = end;
             this.marker = marker;
         }
         
+        /**
+         * Range is valid if both start and end are nonzero and end is after or
+         * at start
+         * 
+         * @return true if valid
+         */
         boolean isValid() {
-            return (this.start != 0 && this.end != 0 && this.start >= this.end);
+            return (this.start != 0 && this.end != 0 && this.end >= this.start);
         }
         
+        /**
+         * Returns true if the supplied value is between or equal to start and
+         * end
+         * 
+         * @param value true if the range contains value
+         */
         boolean contains(int value) {
             return value >= this.start && value <= this.end;
         }
         
+        /**
+         * Returns true if the supplied value is outside the range
+         * 
+         * @param value true if the range does not contain value
+         */
         boolean excludes(int value) {
             return value < this.start || value > this.end;
+        }
+        
+        /* (non-Javadoc)
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return String.format("Range[%d-%d,%d,valid=%s)", this.start, this.end, this.marker, this.isValid());
         }
     }
     
