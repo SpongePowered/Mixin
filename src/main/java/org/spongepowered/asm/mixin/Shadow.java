@@ -77,6 +77,10 @@ public @interface Shadow {
      * failure state indicated by an {@link InvalidMixinException} at run
      * time.</p>
      * 
+     * <p>Prefixes on shadow fields are considered an error condition and don't
+     * have any purpose either way, since the scenario described above cannot
+     * actually occur with fields.</p> 
+     * 
      * @return the shadow prefix
      */
     public String prefix() default "shadow$";
