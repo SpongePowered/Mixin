@@ -195,7 +195,9 @@ public class CallbackInjector extends Injector {
         }
         
         // Call the callback!
-        insns.add(new MethodInsnNode(this.isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
+        boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;
+        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
+        insns.add(new MethodInsnNode(invokeOpcode,
                 this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
 
         if (this.cancellable) {

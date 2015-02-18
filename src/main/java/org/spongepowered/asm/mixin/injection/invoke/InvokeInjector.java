@@ -122,7 +122,9 @@ public abstract class InvokeInjector extends Injector {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
         this.pushArgs(args, insns, argMap, startArg, endArg);
-        insns.add(new MethodInsnNode(this.isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
+        boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;
+        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
+        insns.add(new MethodInsnNode(invokeOpcode,
                 this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
     }
 
