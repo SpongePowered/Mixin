@@ -30,9 +30,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -133,6 +136,17 @@ public abstract class Injector {
 
     protected abstract void inject(Target target, AbstractInsnNode node);
 
+    /**
+     * Invoke the handler method
+     * 
+     * @param insns
+     */
+    protected void invokeHandler(InsnList insns) {
+        boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;
+        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
+        insns.add(new MethodInsnNode(invokeOpcode, this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
+    }
+    
     protected static String printArgs(Type[] args) {
         return "(" + Joiner.on("").join(args) + ")";
     }

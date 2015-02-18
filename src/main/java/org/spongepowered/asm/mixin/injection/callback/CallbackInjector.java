@@ -195,10 +195,7 @@ public class CallbackInjector extends Injector {
         }
         
         // Call the callback!
-        boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;
-        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
-        insns.add(new MethodInsnNode(invokeOpcode,
-                this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
+        this.invokeHandler(insns);
 
         if (this.cancellable) {
             // Inject the if (e.isCancelled()) return e.getReturnValue();
