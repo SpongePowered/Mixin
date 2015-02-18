@@ -27,18 +27,30 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Function;
@@ -116,6 +128,16 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Configuration plugin
      */
     private final transient IMixinConfigPlugin plugin;
+    
+    /**
+     * All interfaces implemented by this mixin, including soft implementations
+     */
+    private final transient Set<String> interfaces = new HashSet<String>();
+
+    /**
+     * Interfaces soft-implemented using {@link Implements} 
+     */
+    private final transient List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
 
     /**
      * Internal ctor, called by {@link MixinConfig}
@@ -138,29 +160,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
         
         ClassNode classNode = this.getClassNode(0);
-        this.classInfo = this.readInfo(classNode);
+        this.classInfo = ClassInfo.fromClassNode(classNode);
         this.priority = this.readPriority(classNode);
         this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         this.detachedSuper = this.validateTargetClasses(classNode);
-    }
-
-    /**
-     * Initialises the class info and performs some pre-flight checks on the
-     * mixin
-     * 
-     * @param classNode
-     * @return
-     */
-    private ClassInfo readInfo(ClassNode classNode) {
-        ClassInfo classInfo = ClassInfo.fromClassNode(classNode);
-        
-        // isInner (shouldn't) return true for static inner classes
-        if (classInfo.isInner()) {
-            throw new InvalidMixinException("Inner class mixin must be declared static");
-        }
-        
-        return classInfo;
+        this.validateMixin(classNode);
+        this.readImplementations(classNode);
+        this.prepare(classNode);
     }
 
     /**
@@ -233,7 +240,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
         return priority == null ? 1000 : priority.intValue();
     }
-    
+
     private boolean validateTargetClasses(ClassNode classNode) {
         boolean detached = false;
         
@@ -243,7 +250,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 continue;
             }
             
-            if (!targetClass.hasSuperClass(classNode.superName)) {
+            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.NONE)) {
                 throw new InvalidMixinException("Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
                         + " was not found in the hierarchy of target class '" + targetClass + "'");
             }
@@ -252,6 +259,118 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         return detached;
+    }
+
+    /**
+     * Performs pre-flight checks on the mixin
+     * 
+     * @param classNode
+     */
+    private void validateMixin(ClassNode classNode) {
+        // isInner (shouldn't) return true for static inner classes
+        if (this.classInfo.isInner()) {
+            throw new InvalidMixinException("Inner class mixin must be declared static");
+        }
+
+        // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
+        if (this.targetClasses.size() > 1) {
+            for (FieldNode field : classNode.fields) {
+                this.checkRemappable(Shadow.class, field.name, ASMHelper.getVisibleAnnotation(field, Shadow.class));
+            }
+            
+            for (MethodNode method : classNode.methods) {
+                this.checkRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
+                AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
+                if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
+                    throw new InvalidMixinException("Found @Overwrite annotation on " + method.name + " in " + this);
+                }
+            }
+        }
+    }
+
+    private void checkRemappable(Class<Shadow> annotationClass, String name, AnnotationNode annotation) {
+        if (annotation != null && ASMHelper.getAnnotationValue(annotation, "remap", Boolean.TRUE)) {
+            throw new InvalidMixinException("Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name + " in " + this);
+        }
+    }
+    
+    /**
+     * Prepare the mixin, applies any pre-processing transformations
+     */
+    private ClassNode prepare(ClassNode classNode) {
+        this.findRenamedMethods(classNode);
+        this.transformMethods(classNode);
+        return classNode;
+    }
+
+    /**
+     * Read and process any {@link Implements} annotations on the mixin
+     */
+    private void readImplementations(ClassNode classNode) {
+        this.interfaces.addAll(classNode.interfaces);
+        
+        AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(classNode, Implements.class);
+        if (implementsAnnotation == null) {
+            return;
+        }
+        
+        List<AnnotationNode> interfaces = ASMHelper.getAnnotationValue(implementsAnnotation);
+        if (interfaces == null) {
+            return;
+        }
+        
+        for (AnnotationNode interfaceNode : interfaces) {
+            InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(interfaceNode);
+            this.softImplements.add(interfaceInfo);
+            this.interfaces.add(interfaceInfo.getInternalName());
+        }
+    }
+
+    /**
+     * Let's do this
+     */
+    private void findRenamedMethods(ClassNode classNode) {
+        for (MethodNode mixinMethod : classNode.methods) {
+            Method method = this.classInfo.findMethod(mixinMethod);
+            
+            AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
+            if (shadowAnnotation != null) {
+                String prefix = ASMHelper.<String>getAnnotationValue(shadowAnnotation, "prefix", Shadow.class);
+                if (mixinMethod.name.startsWith(prefix)) {
+                    String newName = mixinMethod.name.substring(prefix.length());
+                    method.renameTo(newName);
+                    mixinMethod.name = newName;
+                }
+            }
+            
+            for (InterfaceInfo iface : this.softImplements) {
+                if (iface.renameMethod(mixinMethod)) {
+                    method.renameTo(mixinMethod.name);
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply discovered method renames to method invokations in the mixin
+     */
+    private void transformMethods(ClassNode classNode) {
+        for (MethodNode mixinMethod : classNode.methods) {
+            for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
+                AbstractInsnNode insn = iter.next();
+                if (insn instanceof MethodInsnNode) {
+                    MethodInsnNode methodNode = (MethodInsnNode)insn;
+                    Method method = this.classInfo.findMethodInHierarchy(methodNode, true);
+                    if (method != null && method.isRenamed()) {
+                        methodNode.name = method.getName();
+                    }
+                }
+            }
+        }
+    }
+
+    ClassInfo getClassInfo() {
+        return this.classInfo;
     }
 
     /**
@@ -335,7 +454,16 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     public int getPriority() {
         return this.priority;
     }
-    
+
+    /**
+     * Get all interfaces for this mixin
+     * 
+     * @return mixin interfaces
+     */
+    public Set<String> getInterfaces() {
+        return this.interfaces;
+    }
+
     /**
      * Get a new mixin data container for this info
      * 
@@ -343,7 +471,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @return
      */
     public MixinData createData(ClassNode target) {
-        return new MixinData(this, target);
+        ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
+        return new MixinData(this, this.prepare(classNode), target);
     }
 
     /**
@@ -397,5 +526,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         if (this.plugin != null) {
             this.plugin.postApply(transformedName, targetClass, this.className, this);
         }
+    }
+
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return String.format("%s:%s", this.parent.getName(), this.name);
     }
 }

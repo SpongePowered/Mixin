@@ -57,10 +57,13 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinTransformerError;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -246,7 +249,7 @@ public class MixinTransformer extends TreeTransformer {
             
             for (MixinConfig config : this.configs) {
                 if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
-                    throw new RuntimeException(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
+                    throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
                 }
                 
                 if (config.hasMixinsFor(transformedName)) {
@@ -269,6 +272,8 @@ public class MixinTransformer extends TreeTransformer {
             }
 
             return basicClass;
+        } catch (Exception ex) {
+            throw new MixinTransformerError("An unexpected critical error was encountered", ex);
         } finally {
             this.reEntranceCheck--;
         }
@@ -441,11 +446,16 @@ public class MixinTransformer extends TreeTransformer {
                 throw new InvalidMixinException(String.format("Mixin classes cannot contain visible static methods or fields, found %s", field.name));
             }
 
+            AnnotationNode shadow = ASMHelper.getVisibleAnnotation(field, Shadow.class);
+            String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
+            if (field.name.startsWith(prefix)) {
+                throw new InvalidMixinException(String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.", field.name, mixin));
+            }
+            
             FieldNode target = this.findTargetField(targetClass, field);
             if (target == null) {
                 // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                boolean isShadow = ASMHelper.getVisibleAnnotation(field, Shadow.class) != null;
-                if (isShadow) {
+                if (shadow != null) {
                     throw new InvalidMixinException(String.format("Shadow field %s was not located in the target class", field.name));
                 }
                 
@@ -541,15 +551,21 @@ public class MixinTransformer extends TreeTransformer {
      * @param method
      * @param insn
      */
-    private void updateStaticBindings(IReferenceMapperContext mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
+    private void updateStaticBindings(MixinData mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
         if (INIT.equals(method.name) || insn.owner.equals(target.name) || target.name.startsWith("<")) {
             return;
         }
         
         ClassInfo targetClass = ClassInfo.forName(target.name);
-        String newOwner = targetClass.findMethodInHierarchy(insn.name, insn.desc, false);
-        if (newOwner != null) {
-            insn.owner = newOwner;
+        Method superMethod = targetClass.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
+        if (superMethod != null) {
+            if (superMethod.getOwner().isMixin()) {
+                throw new InvalidMixinException("Invalid INVOKESPECIAL in " + mixin + " resolved " + insn.owner + " -> " + superMethod.getOwner()
+                        + " for " + insn.name + insn.desc);
+            }
+            insn.owner = superMethod.getOwner().getName();
+        } else if (ClassInfo.forName(insn.owner).isMixin()) {
+            throw new MixinTransformerError("Error resolving INVOKESPECIAL target for " + insn.owner + "." + insn.name + " in " + mixin);
         }
     }
 
@@ -589,6 +605,7 @@ public class MixinTransformer extends TreeTransformer {
         }
         
         targetClass.methods.add(method);
+        mixin.getTargetClassInfo().addMethod(method);
         
         ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
                 "mixin", mixin.getClassName(),

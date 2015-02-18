@@ -24,25 +24,14 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.Implements;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
@@ -55,7 +44,7 @@ public class MixinData implements IReferenceMapperContext {
     /**
      * Mixin info
      */
-    private final MixinInfo info;
+    private final MixinInfo mixin;
     
     /**
      * Tree
@@ -68,19 +57,9 @@ public class MixinData implements IReferenceMapperContext {
     private final ClassNode targetClass;
     
     /**
-     * Methods we need to rename
+     * Target ClassInfo
      */
-    private final Map<String, String> renamedMethods = new HashMap<String, String>();
-    
-    /**
-     * Interfaces soft-implemented using {@link Implements} 
-     */
-    private final List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
-    
-    /**
-     * All interfaces implemented by this mixin, including soft implementations
-     */
-    private final Set<String> interfaces = new HashSet<String>();
+    private final ClassInfo targetClassInfo;
     
     /**
      * Information about methods in the target class, used to keep track of
@@ -92,13 +71,14 @@ public class MixinData implements IReferenceMapperContext {
      * ctor
      * 
      * @param info Mixin information
+     * @param mixin Mixin classnode
      * @param target target class
      */
-    MixinData(MixinInfo info, ClassNode target) {
-        this.info = info;
-        this.classNode = info.getClassNode(ClassReader.EXPAND_FRAMES);
+    MixinData(MixinInfo info, ClassNode mixin, ClassNode target) {
+        this.mixin = info;
+        this.classNode = mixin;
         this.targetClass = target;
-        this.prepare();
+        this.targetClassInfo = ClassInfo.forName(target.name);
     }
     
     /* (non-Javadoc)
@@ -106,7 +86,7 @@ public class MixinData implements IReferenceMapperContext {
      */
     @Override
     public String toString() {
-        return String.format("%s:%s", this.info.getParent().getName(), this.info.getName());
+        return this.mixin.toString();
     }
 
     /**
@@ -124,7 +104,7 @@ public class MixinData implements IReferenceMapperContext {
      * @return the mixin class name
      */
     public String getClassName() {
-        return this.info.getClassName();
+        return this.mixin.getClassName();
     }
     
     /* (non-Javadoc)
@@ -133,7 +113,7 @@ public class MixinData implements IReferenceMapperContext {
      */
     @Override
     public String getClassRef() {
-        return this.info.getClassRef();
+        return this.mixin.getClassRef();
     }
 
     /**
@@ -153,6 +133,15 @@ public class MixinData implements IReferenceMapperContext {
      */
     public ClassNode getTargetClass() {
         return this.targetClass;
+    }
+    
+    /**
+     * Get the target classinfo
+     * 
+     * @return the target class info 
+     */
+    public ClassInfo getTargetClassInfo() {
+        return this.targetClassInfo;
     }
     
     /**
@@ -181,7 +170,7 @@ public class MixinData implements IReferenceMapperContext {
      * @return the priority (only meaningful in relation to other mixins)
      */
     public int getPriority() {
-        return this.info.getPriority();
+        return this.mixin.getPriority();
     }
 
     /**
@@ -190,7 +179,7 @@ public class MixinData implements IReferenceMapperContext {
      * @return mixin interfaces
      */
     public Set<String> getInterfaces() {
-        return this.interfaces;
+        return this.mixin.getInterfaces();
     }
 
     /**
@@ -200,7 +189,7 @@ public class MixinData implements IReferenceMapperContext {
      * @return true if the sourcefile property should be set on the target class
      */
     public boolean shouldSetSourceFile() {
-        return this.info.getParent().shouldSetSourceFile();
+        return this.mixin.getParent().shouldSetSourceFile();
     }
     
     /* (non-Javadoc)
@@ -209,103 +198,7 @@ public class MixinData implements IReferenceMapperContext {
      */
     @Override
     public ReferenceMapper getReferenceMapper() {
-        return this.info.getParent().getReferenceMapper();
-    }
-    
-    /**
-     * Prepare the mixin, applies any pre-processing transformations
-     */
-    private void prepare() {
-        this.readImplementations();
-        this.findRenamedMethods();
-        this.transformMethods();
-    }
-
-    /**
-     * Read and process any {@link Implements} annotations on the mixin
-     */
-    private void readImplementations() {
-        this.interfaces.addAll(this.classNode.interfaces);
-        
-        AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(this.classNode, Implements.class);
-        if (implementsAnnotation == null) {
-            return;
-        }
-        
-        List<AnnotationNode> interfaces = ASMHelper.getAnnotationValue(implementsAnnotation);
-        if (interfaces == null) {
-            return;
-        }
-        
-        for (AnnotationNode interfaceNode : interfaces) {
-            InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(interfaceNode);
-            this.softImplements.add(interfaceInfo);
-            this.interfaces.add(interfaceInfo.getInternalName());
-        }
-    }
-
-    /**
-     * Let's do this
-     */
-    private void findRenamedMethods() {
-        for (MethodNode mixinMethod : this.classNode.methods) {
-            String oldSignature = mixinMethod.name + mixinMethod.desc;
-            AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
-            if (shadowAnnotation != null) {
-                String prefix = MixinData.getAnnotationValue(shadowAnnotation, "prefix", Shadow.class);
-                if (mixinMethod.name.startsWith(prefix)) {
-                    String newName = mixinMethod.name.substring(prefix.length());
-                    this.renamedMethods.put(oldSignature, newName);
-                    mixinMethod.name = newName;
-                }
-            }
-            
-            for (InterfaceInfo iface : this.softImplements) {
-                if (iface.renameMethod(mixinMethod)) {
-                    this.renamedMethods.put(oldSignature, mixinMethod.name);
-                }
-            }
-        }
-    }
-
-    /**
-     * Apply discovered method renames to method invokations in the mixin
-     */
-    private void transformMethods() {
-        for (MethodNode mixinMethod : this.classNode.methods) {
-            for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
-                AbstractInsnNode insn = iter.next();
-                if (insn instanceof MethodInsnNode) {
-                    MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    String newName = this.renamedMethods.get(methodNode.name + methodNode.desc);
-                    if (newName != null) {
-                        methodNode.name = newName;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Gets an annotation value or returns the default if the annotation value
-     * is not present
-     * 
-     * @param annotation
-     * @param key
-     * @param annotationClass
-     * @return Value of the specified annotation node, default value if not
-     *      specified, or null if no value or default
-     */
-    private static String getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
-        String value = ASMHelper.getAnnotationValue(annotation, key);
-        if (value == null) {
-            try {
-                value = (String)annotationClass.getDeclaredMethod(key).getDefaultValue();
-            } catch (NoSuchMethodException ex) {
-                // Don't care
-            }
-        }
-        return value;
+        return this.mixin.getParent().getReferenceMapper();
     }
 
     /**
@@ -315,7 +208,7 @@ public class MixinData implements IReferenceMapperContext {
      * @param targetClass Target class
      */
     public void preApply(String transformedName, ClassNode targetClass) {
-        this.info.preApply(transformedName, targetClass);
+        this.mixin.preApply(transformedName, targetClass);
     }
 
     /**
@@ -325,6 +218,6 @@ public class MixinData implements IReferenceMapperContext {
      * @param targetClass Target class
      */
     public void postApply(String transformedName, ClassNode targetClass) {
-        this.info.postApply(transformedName, targetClass);
+        this.mixin.postApply(transformedName, targetClass);
     }
 }

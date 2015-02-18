@@ -597,7 +597,30 @@ public class ASMHelper {
         T returnValue = ASMHelper.getAnnotationValue(annotation, key);
         return returnValue != null ? returnValue : defaultValue;
     }
-    
+
+    /**
+     * Gets an annotation value or returns the default value of the annotation
+     * if the annotation value is not present
+     * 
+     * @param annotation
+     * @param key
+     * @param annotationClass
+     * @return Value of the specified annotation node, default value if not
+     *      specified, or null if no value or default
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
+        T value = ASMHelper.getAnnotationValue(annotation, key);
+        if (value == null) {
+            try {
+                value = (T)annotationClass.getDeclaredMethod(key).getDefaultValue();
+            } catch (NoSuchMethodException ex) {
+                // Don't care
+            }
+        }
+        return value;
+    }
+
     /**
      * Get the value of an annotation node and do pseudo-duck-typing via Java's
      * crappy generics
@@ -612,7 +635,7 @@ public class ASMHelper {
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key) {
         boolean getNextValue = false;
 
-        if (annotation.values == null) {
+        if (annotation == null || annotation.values == null) {
             return null;
         }
 
