@@ -35,16 +35,183 @@ import java.util.Set;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 
 /**
  * Information about a class, used as a way of keeping track of class hierarchy
- * information needed to support mixins with detached targets.  
+ * information needed to support more complex mixin behaviour such as detached
+ * superclass and mixin inheritance.  
  */
 class ClassInfo extends TreeInfo {
+    
+    /**
+     * <p>To all intents and purposes, the "real" class hierarchy and the mixin
+     * class hierarchy exist in parallel, this means that for some hierarchy
+     * validation operations we need to walk <em>across</em> to the other
+     * hierarchy in order to allow meaningful validation to occur.</p>
+     * 
+     * <p>This enum defines the type of traversal operations which are allowed
+     * for a particular lookup.</p>
+     *  
+     * <p>Each traversal type has a <code>next</code> property which defines
+     * the traversal type to use on the <em>next</em> step of the hierarchy
+     * validation. For example, the type {@link #IMMEDIATE} which requires an 
+     * immediate match falls through to {@link #NONE} on the next step, which
+     * prevents further traversals from occurring in the lookup.</p>
+     */
+    static enum Traversal {
+        
+        /**
+         * No traversals are allowed.
+         */
+        NONE(null, false),
+        
+        /**
+         * Traversal is allowed at all stages.
+         */
+        ALL(null, true),
+        
+        /**
+         * Traversal is allowed at the bottom of the hierarchy but no further.
+         */
+        IMMEDIATE(Traversal.NONE, true),
+        
+        /**
+         * Traversal is allowed only on superclasses and not at the bottom of
+         * the hierarchy.
+         */
+        SUPER(Traversal.ALL, false);
+        
+        private final Traversal next;
+        
+        private final boolean traverse;
+        
+        private Traversal(Traversal next, boolean traverse) {
+            this.next = next != null ? next : this;
+            this.traverse = true;
+        }
+        
+        public Traversal next() {
+            return this.next;
+        }
+        
+        public boolean canTraverse() {
+            return this.traverse;
+        }
+    }
+    
+    /**
+     * Information about a method in this class
+     */
+    class Method {
+        
+        /**
+         * The original name of the method 
+         */
+        private final String methodName;
+        
+        /**
+         * The method signature
+         */
+        private final String methodDesc;
+        
+        /**
+         * True if this method was injected by a mixin, false if it was
+         * originally part of the class
+         */
+        private final boolean isInjected;
+        
+        /**
+         * Current name of the method, may be different from {@link methodName}
+         * if the method has been renamed
+         */
+        private String currentName;
+        
+        public Method(MethodNode method) {
+            this(method, false);
+        }
+        
+        public Method(Method method) {
+            this(method.methodName, method.methodDesc, method.isInjected);
+            this.currentName = method.currentName;
+        }
+        
+        public Method(MethodNode method, boolean injected) {
+            this(method.name, method.desc, injected);
+        }
+
+        public Method(String name, String desc) {
+            this(name, desc, false);
+        }
+
+        public Method(String name, String desc, boolean injected) {
+            this.methodName = name;
+            this.methodDesc = desc;
+            this.isInjected = injected;
+            this.currentName = name;
+        }
+        
+        public String getOriginalName() {
+            return this.methodName;
+        }
+        
+        public String getName() {
+            return this.currentName;
+        }
+        
+        public String getDesc() {
+            return this.methodDesc;
+        }
+        
+        public boolean isInjected() {
+            return this.isInjected;
+        }
+        
+        public boolean isRenamed() {
+            return this.currentName != this.methodName;
+        }
+        
+        public ClassInfo getOwner() {
+            return ClassInfo.this;
+        }
+        
+        public void renameTo(String name) {
+            this.currentName = name;
+        }
+        
+        public boolean equals(String name, String desc) {
+            return (this.methodName.equals(name)
+                    || this.currentName.equals(name))
+                    && this.methodDesc.equals(desc);
+        }
+        
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof Method)) {
+                return false;
+            }
+            
+            Method other = (Method)obj;
+            return (other.methodName.equals(this.methodName) 
+                    || other.currentName.equals(this.currentName))
+                    && other.methodDesc.equals(this.methodDesc);
+        }
+        
+        @Override
+        public int hashCode() {
+            return this.toString().hashCode();
+        }
+        
+        @Override
+        public String toString() {
+            return this.methodName + this.methodDesc;
+        }
+    }
     
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
 
@@ -83,7 +250,7 @@ class ClassInfo extends TreeInfo {
     /**
      * Public and protected methods (instance) methods in this class 
      */
-    private final List<String> methods;
+    private final Set<Method> methods;
     
     /**
      * Public and protected fields in this class
@@ -132,18 +299,18 @@ class ClassInfo extends TreeInfo {
         this.name = ClassInfo.JAVA_LANG_OBJECT;
         this.superName = null;
         this.outerName = null;
-        this.methods = ImmutableList.<String>of(
-            "getClass()Ljava/lang/Class;",
-            "hashCode()I",
-            "equals(Ljava/lang/Object;)Z",
-            "clone()Ljava/lang/Object;",
-            "toString()Ljava/lang/String;",
-            "notify()V",
-            "notifyAll()V",
-            "wait(J)V",
-            "wait(JI)V",
-            "wait()V",
-            "finalize()V"
+        this.methods = ImmutableSet.<Method>of(
+            new Method("getClass", "()Ljava/lang/Class;"),
+            new Method("hashCode", "()I"),
+            new Method("equals", "(Ljava/lang/Object;)Z"),
+            new Method("clone", "()Ljava/lang/Object;"),
+            new Method("toString", "()Ljava/lang/String;"),
+            new Method("notify", "()V"),
+            new Method("notifyAll", "()V"),
+            new Method("wait", "(J)V"),
+            new Method("wait", "(JI)V"),
+            new Method("wait", "()V"),
+            new Method("finalize", "()V")
         );
         this.fields = Collections.<String>emptyList();
         this.isInterface = false;
@@ -161,7 +328,7 @@ class ClassInfo extends TreeInfo {
     private ClassInfo(ClassNode classNode) {
         this.name = classNode.name;
         this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
-        this.methods = new ArrayList<String>();
+        this.methods = new HashSet<Method>();
         this.fields = new ArrayList<String>();
         this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
         this.interfaces = Collections.unmodifiableList(classNode.interfaces);
@@ -170,11 +337,7 @@ class ClassInfo extends TreeInfo {
         this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
         
         for (MethodNode method : classNode.methods) {
-            if (!method.name.startsWith("<")
-                    && (method.access & Opcodes.ACC_PRIVATE) == 0
-                    && (method.access & Opcodes.ACC_STATIC) == 0) {
-                this.methods.add(method.name + method.desc);
-            }
+            this.addMethod(method, false);
         }
 
         String outerName = classNode.outerClass;
@@ -195,11 +358,23 @@ class ClassInfo extends TreeInfo {
         
         this.outerName = outerName;
     }
+
+    void addMethod(MethodNode method) {
+        this.addMethod(method, true);
+    }
+
+    private void addMethod(MethodNode method, boolean injected) {
+        if (!method.name.startsWith("<")
+                && (method.access & Opcodes.ACC_PRIVATE) == 0
+                && (method.access & Opcodes.ACC_STATIC) == 0) {
+            this.methods.add(new Method(method, injected));
+        }
+    }
     
     /**
      * Add a mixin which targets this class
      */
-    public void addMixin(MixinInfo mixin) {
+    void addMixin(MixinInfo mixin) {
         if (this.isMixin) {
             throw new IllegalArgumentException("Cannot add target " + this.name + " for " + mixin.getClassName() + " because the target is a mixin");
         }
@@ -211,6 +386,13 @@ class ClassInfo extends TreeInfo {
      */
     public Set<MixinInfo> getMixins() {
         return Collections.unmodifiableSet(this.mixins);
+    }
+    
+    /**
+     * Get whether this class is a mixin
+     */
+    public boolean isMixin() {
+        return this.isMixin;
     }
     
     /**
@@ -311,82 +493,175 @@ class ClassInfo extends TreeInfo {
     
     /**
      * Test whether this class has the specified superclass in its hierarchy
-     *  
+     * 
+     * @param superClass Name of the superclass to search for in the hierarchy
      * @return true if the specified class appears in the class's hierarchy
      * anywhere
      */
     public boolean hasSuperClass(String superClass) {
+        return this.hasSuperClass(superClass, Traversal.NONE);
+    }
+
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     * 
+     * @param superClass Name of the superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @return true if the specified class appears in the class's hierarchy
+     * anywhere
+     */
+    public boolean hasSuperClass(String superClass, Traversal traversal) {
         if (ClassInfo.JAVA_LANG_OBJECT.equals(superClass)) {
             return true;
         }
         
-        return this.hasSuperClass0(superClass);
-    }
-
-    private boolean hasSuperClass0(String superClass) {
-        ClassInfo superClassInfo = this.getSuperClass();
-        if (superClassInfo != null) {
-            if (superClass.equals(superClassInfo.getName())) {
-                return true;
-            }
-
-            for (ClassInfo superTarget : superClassInfo.targets()) {
-                if (superTarget.hasSuperClass0(superClass)) {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
+        return this.findSuperClass(superClass, traversal) != null;
     }
     
-    public boolean isAssignableFrom(ClassInfo superClass) {
-        if (ClassInfo.OBJECT == superClass) {
-            return true;
-        }
-        
-        return this.isAssignableFrom0(superClass);
-    }
-
-    private boolean isAssignableFrom0(ClassInfo superClass) {
-        ClassInfo superClassInfo = this.getSuperClass();
-        if (superClassInfo != null) {
-            if (superClass == superClassInfo) {
-                return true;
-            }
-
-            for (ClassInfo superTarget : superClassInfo.targets()) {
-                if (superTarget.isAssignableFrom0(superClass)) {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     * 
+     * @param superClass Superclass to search for in the hierarchy
+     * @return true if the specified class appears in the class's hierarchy
+     * anywhere
+     */
+    public boolean hasSuperClass(ClassInfo superClass) {
+        return this.hasSuperClass(superClass, Traversal.NONE);
     }
 
     /**
-     * Finds the owner of the specified private or protected method in this
-     * class's hierarchy
+     * Test whether this class has the specified superclass in its hierarchy
+     * 
+     * @param superClass Superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @return true if the specified class appears in the class's hierarchy
+     * anywhere
+     */
+    public boolean hasSuperClass(ClassInfo superClass, Traversal traversal) {
+        if (ClassInfo.OBJECT == superClass) {
+            return true;
+        }
+
+        return this.findSuperClass(superClass.name, traversal) != null;
+    }
+
+    /**
+     * Search for the specified superclass in this class's hierarchy. If found
+     * returns the ClassInfo, otherwise returns null
+     * 
+     * @param superClass Superclass name to search for
+     * @return Matched superclass or null if not found 
+     */
+    public ClassInfo findSuperClass(String superClass) {
+        return this.findSuperClass(superClass, Traversal.NONE);
+    }
+
+    /**
+     * Search for the specified superclass in this class's hierarchy. If found
+     * returns the ClassInfo, otherwise returns null
+     * 
+     * @param superClass Superclass name to search for
+     * @param traversal Traversal type to allow during this lookup
+     * @return Matched superclass or null if not found 
+     */
+    public ClassInfo findSuperClass(String superClass, Traversal traversal) {
+        ClassInfo superClassInfo = this.getSuperClass();
+        if (superClassInfo != null) {
+            List<ClassInfo> targets = superClassInfo.targets();
+            for (ClassInfo superTarget : targets) {
+                if (superClass.equals(superTarget.getName())) {
+                    return superClassInfo;
+                }
+
+                ClassInfo found = superTarget.findSuperClass(superClass, traversal.next());
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+
+        if (traversal.canTraverse()) {
+            for (MixinInfo mixin : this.mixins) {
+                ClassInfo targetSuper = mixin.getClassInfo().findSuperClass(superClass, traversal);
+                if (targetSuper != null) {
+                    return targetSuper;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Finds the specified private or protected method in this class's hierarchy
+     * 
+     * @param method Method to search for
+     * @param includeThisClass True to return this class if the method exists
+     *      here, or false to search only superclasses
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethodInHierarchy(MethodNode method, boolean includeThisClass) {
+        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class's hierarchy
+     * 
+     * @param method Method to search for
+     * @param includeThisClass True to return this class if the method exists
+     *      here, or false to search only superclasses
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethodInHierarchy(MethodInsnNode method, boolean includeThisClass) {
+        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class's hierarchy
      * 
      * @param name Method name to search for
      * @param desc Method descriptor
      * @param includeThisClass True to return this class if the method exists
      *      here, or false to search only superclasses
-     * @return the name of the class which contains the specified method or null
-     *      if the method could not be resolved
+     * @return the method object or null if the method could not be resolved
      */
-    public String findMethodInHierarchy(String name, String desc, boolean includeThisClass) {
-        if (includeThisClass && this.hasMethod(name, desc)) {
-            return this.name;
+    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass) {
+        return this.findMethodInHierarchy(name, desc, includeThisClass, Traversal.NONE);
+    }
+
+    /**
+     * Finds the specified public or protected method in this class's hierarchy
+     * 
+     * @param name Method name to search for
+     * @param desc Method descriptor
+     * @param includeThisClass True to return this class if the method exists
+     *      here, or false to search only superclasses
+     * @param traversal Traversal type to allow during this lookup
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal) {
+        if (includeThisClass) {
+            Method method = this.findMethod(name, desc);
+            if (method != null) {
+                return method;
+            }
+            
+            if (traversal.canTraverse()) {
+                for (MixinInfo mixin : this.mixins) {
+                    Method mixinMethod = mixin.getClassInfo().findMethod(name, desc);
+                    if (mixinMethod != null) {
+                        return new Method(mixinMethod);
+                    }
+                }               
+            }
         }
         
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
             for (ClassInfo superTarget : superClassInfo.targets()) {
-                String owner = superTarget.findMethodInHierarchy(name, desc, true);
-                if (owner != null) {
-                    return owner;
+                Method method = superTarget.findMethodInHierarchy(name, desc, true, traversal.next());
+                if (method != null) {
+                    return method;
                 }
             }
         }
@@ -395,14 +670,40 @@ class ClassInfo extends TreeInfo {
     }
     
     /**
-     * Get whether this class has a public or protected non-static method
+     * Finds the specified public or protected method in this class
      * 
-     * @param name Method name to search for
-     * @param desc Method descriptor
-     * @return true if the method is defined in this class or false otherwise
+     * @param method Method to search for
+     * @return the method object or null if the method could not be resolved
      */
-    public boolean hasMethod(String name, String desc) {
-        return this.methods.contains(name + desc);
+    public Method findMethod(MethodNode method) {
+        return this.findMethod(method.name, method.desc);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class
+     * 
+     * @param method Method to search for
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethod(MethodInsnNode method) {
+        return this.findMethod(method.name, method.desc);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class
+     * 
+     * @param method Method name to search for
+     * @param desc Method signature to search for
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethod(String name, String desc) {
+        for (Method method : this.methods) {
+            if (method.equals(name, desc)) {
+                return method;
+            }
+        }
+        
+        return null;
     }
     
     /* (non-Javadoc)

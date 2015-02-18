@@ -52,10 +52,10 @@ public class MixinClassWriter extends ClassWriter {
         ClassInfo c = ClassInfo.forName(type1);
         ClassInfo d = ClassInfo.forName(type2);
         
-        if (c.isAssignableFrom(d)) {
+        if (c.hasSuperClass(d)) {
             return type1;
         }
-        if (d.isAssignableFrom(c)) {
+        if (d.hasSuperClass(c)) {
             return type2;
         }
         if (c.isInterface() || d.isInterface()) {
@@ -68,7 +68,7 @@ public class MixinClassWriter extends ClassWriter {
                 return MixinClassWriter.JAVA_LANG_OBJECT;
             }
             
-        } while (!c.isAssignableFrom(d));
+        } while (!c.hasSuperClass(d));
         
         return c.getName();
     }
