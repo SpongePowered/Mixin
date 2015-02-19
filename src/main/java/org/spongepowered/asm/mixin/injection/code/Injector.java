@@ -139,7 +139,7 @@ public abstract class Injector {
     /**
      * Invoke the handler method
      * 
-     * @param insns
+     * @param insns Instruction list to inject into
      */
     protected void invokeHandler(InsnList insns) {
         boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;

@@ -602,9 +602,11 @@ public class ASMHelper {
      * Gets an annotation value or returns the default value of the annotation
      * if the annotation value is not present
      * 
-     * @param annotation
-     * @param key
-     * @param annotationClass
+     * @param <T> duck type
+     * @param annotation Annotation node to query
+     * @param key Key to search for
+     * @param annotationClass Annotation class to query reflectively for the
+     *      default value
      * @return Value of the specified annotation node, default value if not
      *      specified, or null if no value or default
      */
