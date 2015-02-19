@@ -73,14 +73,20 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
         this.processInjectors(roundEnv, Inject.class);
         this.processInjectors(roundEnv, ModifyArg.class);
         this.processInjectors(roundEnv, Redirect.class);
+        this.postProcess(roundEnv);
         
+        return true;
+    }
+    
+    @Override
+    protected void postProcess(RoundEnvironment roundEnv) {
+        super.postProcess(roundEnv);
+
         try {
             this.mixins.writeRefs();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        
-        return true;
     }
 
     /**

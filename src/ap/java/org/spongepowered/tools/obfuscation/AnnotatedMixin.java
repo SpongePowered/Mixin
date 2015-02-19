@@ -50,7 +50,7 @@ import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.validation.IMixinValidator;
+import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 
 
 /**
@@ -168,7 +168,7 @@ class AnnotatedMixin {
      */
     private final Set<String> methodMappings = new LinkedHashSet<String>();
 
-    public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type, Collection<IMixinValidator> validators) {
+    public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type) {
         
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.mixins = mixins;
@@ -185,12 +185,16 @@ class AnnotatedMixin {
         }
 
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
-        
+    }
+
+    AnnotatedMixin runValidators(ValidationPass pass, Collection<IMixinValidator> validators) {
         for (IMixinValidator validator : validators) {
-            if (!validator.validate(type, this.annotation, this.targets)) {
-                return;
+            if (!validator.validate(pass, this.mixin, this.annotation, this.targets)) {
+                break;
             }
         }
+        
+        return this;
     }
 
     private TypeHandle initTargets() {
@@ -244,6 +248,11 @@ class AnnotatedMixin {
         }
         
         return primaryTarget;
+    }
+    
+    @Override
+    public String toString() {
+        return this.mixin.getSimpleName().toString();
     }
     
     public AnnotationMirror getAnnotation() {

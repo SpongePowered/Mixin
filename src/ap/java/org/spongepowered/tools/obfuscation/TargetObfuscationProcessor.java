@@ -66,14 +66,20 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         this.processMixins(roundEnv);
         this.processShadows(roundEnv);
         this.processOverwrites(roundEnv);
+        this.postProcess(roundEnv);
+        
+        return true;
+    }
+    
+    @Override
+    protected void postProcess(RoundEnvironment roundEnv) {
+        super.postProcess(roundEnv);
         
         try {
             this.mixins.writeSrgs();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        
-        return true;
     }
 
     /**

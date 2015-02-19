@@ -22,10 +22,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.validation;
+package org.spongepowered.tools.obfuscation;
+
+import java.util.Collection;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
 
@@ -39,15 +44,38 @@ public abstract class MixinValidator implements IMixinValidator {
      * errors and warnings 
      */
     protected final ProcessingEnvironment processingEnv;
+    
+    /**
+     * Pass to run this validator in 
+     */
+    protected final ValidationPass pass;
 
     /**
      * ctor
      * 
      * @param processingEnv Processing environment
      */
-    public MixinValidator(ProcessingEnvironment processingEnv) {
+    public MixinValidator(ProcessingEnvironment processingEnv, ValidationPass pass) {
         this.processingEnv = processingEnv;
+        this.pass = pass;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.IMixinValidator#validate(
+     *      org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass,
+     *      javax.lang.model.element.TypeElement,
+     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
+     */
+    @Override
+    public final boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+        if (pass != this.pass) {
+            return true;
+        }
+        
+        return this.validate(mixin, annotation, targets);
+    }
+
+    protected abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
     
     /**
      * Output a compiler note
@@ -77,5 +105,9 @@ public abstract class MixinValidator implements IMixinValidator {
      */
     protected final void error(String error, Element element) {
         this.processingEnv.getMessager().printMessage(Kind.ERROR, error, element);
+    }
+
+    protected final Collection<TypeMirror> getMixinsTargeting(TypeMirror targetType) {
+        return AnnotatedMixins.getMixinsForEnvironment(this.processingEnv).getMixinsTargeting(targetType);
     }
 }

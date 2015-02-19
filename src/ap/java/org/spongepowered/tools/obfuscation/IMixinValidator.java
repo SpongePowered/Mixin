@@ -22,14 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.validation;
+package org.spongepowered.tools.obfuscation;
 
 import java.util.Collection;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
 /**
@@ -38,14 +36,20 @@ import org.spongepowered.tools.obfuscation.TypeHandle;
  */
 public interface IMixinValidator {
     
+    public enum ValidationPass {
+        EARLY,
+        LATE
+    }
+    
     /**
      * Validate all the things, return false to halt processing of further
      * validators. Raise compiler errors/warnings directly.
-     * 
+     * @param pass TODO
      * @param mixin Mixin being validated
      * @param annotation Mixin annotation
      * @param targets Mixin targets
+     * 
      * @return False to halt processing of further validators
      */
-    public abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
+    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
 }
