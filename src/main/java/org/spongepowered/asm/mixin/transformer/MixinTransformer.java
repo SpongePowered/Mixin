@@ -48,7 +48,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.LabelNode;
@@ -62,8 +61,6 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
-import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -352,7 +349,7 @@ public class MixinTransformer extends TreeTransformer {
         
         for (MixinInfo mixin : mixins) {
             this.logger.info("Mixing {} into {}", mixin.getName(), transformedName);
-            this.applyMixin(transformedName, targetClass, mixin.createData(targetClass));
+            this.applyMixin(transformedName, targetClass, mixin.createContextForTarget(targetClass));
         }
         
         // Extension point
@@ -389,7 +386,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass Target class
      * @param mixin Mixin to apply
      */
-    protected void applyMixin(String transformedName, ClassNode targetClass, MixinData mixin) {
+    protected void applyMixin(String transformedName, ClassNode targetClass, MixinTargetContext mixin) {
         try {
             mixin.preApply(transformedName, targetClass);
             this.applyMixinInterfaces(targetClass, mixin);
@@ -410,7 +407,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixin
      */
-    private void applyMixinInterfaces(ClassNode targetClass, MixinData mixin) {
+    private void applyMixinInterfaces(ClassNode targetClass, MixinTargetContext mixin) {
         for (String interfaceName : mixin.getInterfaces()) {
             if (!targetClass.interfaces.contains(interfaceName)) {
                 targetClass.interfaces.add(interfaceName);
@@ -424,7 +421,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixin
      */
-    private void applyMixinAttributes(ClassNode targetClass, MixinData mixin) {
+    private void applyMixinAttributes(ClassNode targetClass, MixinTargetContext mixin) {
         if (mixin.shouldSetSourceFile()) {
             targetClass.sourceFile = mixin.getClassNode().sourceFile;
         }
@@ -439,18 +436,11 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixin
      */
-    private void applyMixinFields(ClassNode targetClass, MixinData mixin) {
+    private void applyMixinFields(ClassNode targetClass, MixinTargetContext mixin) {
         for (FieldNode field : mixin.getClassNode().fields) {
-            // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-            if (MixinTransformer.hasFlag(field, Opcodes.ACC_STATIC) && !MixinTransformer.hasFlag(field, Opcodes.ACC_PRIVATE)) {
-                throw new InvalidMixinException(String.format("Mixin classes cannot contain visible static methods or fields, found %s", field.name));
-            }
-
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(field, Shadow.class);
-            String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
-            if (field.name.startsWith(prefix)) {
-                throw new InvalidMixinException(String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.", field.name, mixin));
-            }
+            this.validateField(mixin, field, shadow);
+            mixin.transformField(field);
             
             FieldNode target = this.findTargetField(targetClass, field);
             if (target == null) {
@@ -471,15 +461,34 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
+     * Field sanity checks
+     * @param mixin
+     * @param field
+     * @param shadow
+     */
+    private void validateField(MixinTargetContext mixin, FieldNode field, AnnotationNode shadow) {
+        // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
+        if (MixinTransformer.hasFlag(field, Opcodes.ACC_STATIC) && !MixinTransformer.hasFlag(field, Opcodes.ACC_PRIVATE)) {
+            throw new InvalidMixinException(String.format("Mixin classes cannot contain visible static methods or fields, found %s", field.name));
+        }
+
+        // Shadow fields can't have prefixes, it's meaningless for them anyway
+        String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
+        if (field.name.startsWith(prefix)) {
+            throw new InvalidMixinException(String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.", field.name, mixin));
+        }
+    }
+
+    /**
      * Mixin methods from the mixin class into the target class
      * 
      * @param targetClass
      * @param mixin
      */
-    private void applyMixinMethods(ClassNode targetClass, MixinData mixin) {
+    private void applyMixinMethods(ClassNode targetClass, MixinTargetContext mixin) {
         for (MethodNode mixinMethod : mixin.getClassNode().methods) {
             // Reparent all mixin methods into the target class
-            this.transformMethod(mixin, targetClass, mixinMethod);
+            mixin.transformMethod(mixinMethod);
 
             boolean isShadow = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class) != null;
             boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
@@ -509,67 +518,6 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * Handles "re-parenting" the method supplied, changes all references to the
-     * mixin class to refer to the target class (for field accesses and method
-     * invokations) and also handles fixing up the targets of INVOKESPECIAL
-     * opcodes for mixins with detached targets.
-     * 
-     * @param mixin
-     * @param target
-     * @param method
-     */
-    private void transformMethod(MixinData mixin, ClassNode target, MethodNode method) {
-        String fromClass = mixin.getClassRef();
-        boolean detached = !mixin.getClassNode().superName.equals(target.superName);
-        
-        Iterator<AbstractInsnNode> iter = method.instructions.iterator();
-        while (iter.hasNext()) {
-            AbstractInsnNode insn = iter.next();
-
-            if (insn instanceof MethodInsnNode) {
-                MethodInsnNode methodInsn = (MethodInsnNode) insn;
-                if (methodInsn.owner.equals(fromClass)) {
-                    methodInsn.owner = target.name;
-                } else if (detached && methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                    this.updateStaticBindings(mixin, target, method, methodInsn);
-                }
-            } else if (insn instanceof FieldInsnNode) {
-                FieldInsnNode fieldInsn = (FieldInsnNode) insn;
-                if (fieldInsn.owner.equals(fromClass)) {
-                    fieldInsn.owner = target.name;
-                }
-            }
-        }
-    }
-
-    /**
-     * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy
-     * which contains the specified method.
-     * 
-     * @param mixin
-     * @param target
-     * @param method
-     * @param insn
-     */
-    private void updateStaticBindings(MixinData mixin, ClassNode target, MethodNode method, MethodInsnNode insn) {
-        if (INIT.equals(method.name) || insn.owner.equals(target.name) || target.name.startsWith("<")) {
-            return;
-        }
-        
-        ClassInfo targetClass = ClassInfo.forName(target.name);
-        Method superMethod = targetClass.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
-        if (superMethod != null) {
-            if (superMethod.getOwner().isMixin()) {
-                throw new InvalidMixinException("Invalid INVOKESPECIAL in " + mixin + " resolved " + insn.owner + " -> " + superMethod.getOwner()
-                        + " for " + insn.name + insn.desc);
-            }
-            insn.owner = superMethod.getOwner().getName();
-        } else if (ClassInfo.forName(insn.owner).isMixin()) {
-            throw new MixinTransformerError("Error resolving INVOKESPECIAL target for " + insn.owner + "." + insn.name + " in " + mixin);
-        }
-    }
-
-    /**
      * Attempts to merge the supplied method into the target class
      * 
      * @param targetClass Target class to merge into
@@ -578,7 +526,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param isOverwrite true if the method is annotated with an
      *      {@link Overwrite} annotation
      */
-    private void mergeMethod(ClassNode targetClass, MixinData mixin, MethodNode method, boolean isOverwrite) {
+    private void mergeMethod(ClassNode targetClass, MixinTargetContext mixin, MethodNode method, boolean isOverwrite) {
         MethodNode target = this.findTargetMethod(targetClass, method);
         
         if (target != null) {
@@ -667,7 +615,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixin
      */
-    private void applyInitialisers(ClassNode targetClass, MixinData mixin) {
+    private void applyInitialisers(ClassNode targetClass, MixinTargetContext mixin) {
         // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
         MethodNode ctor = this.getConstructor(mixin);
         if (ctor == null) {
@@ -691,7 +639,7 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Finds a suitable ctor for reading the instance initialiser bytecode
      */
-    private MethodNode getConstructor(MixinData mixin) {
+    private MethodNode getConstructor(MixinTargetContext mixin) {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getClassNode().methods) {
@@ -828,7 +776,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param targetClass
      * @param mixin
      */
-    private void applyInjections(ClassNode targetClass, MixinData mixin) {
+    private void applyInjections(ClassNode targetClass, MixinTargetContext mixin) {
         for (MethodNode method : targetClass.methods) {
             InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
             if (injectInfo == null) {

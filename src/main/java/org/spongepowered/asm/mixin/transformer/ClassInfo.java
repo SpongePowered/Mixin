@@ -263,6 +263,12 @@ class ClassInfo extends TreeInfo {
     private final Set<MixinInfo> mixins = new HashSet<MixinInfo>();
     
     /**
+     * Map of mixin types to corresponding supertypes, to avoid repeated 
+     * lookups 
+     */
+    private final Map<ClassInfo, ClassInfo> correspondingTypes = new HashMap<ClassInfo, ClassInfo>();
+    
+    /**
      * Mixin info if this class is a mixin itself 
      */
     private final MixinInfo mixin;
@@ -590,6 +596,73 @@ class ClassInfo extends TreeInfo {
         }
         
         return null;
+    }
+
+    /**
+     * Walks up this class's hierarchy to find the first class targetted by the
+     * specified mixin. This is used during mixin application to translate a
+     * mixin reference to a "real class" reference <em>in the context of <b>this
+     * </b> class</em>.
+     * 
+     * @param mixin Mixin class to search for
+     * @return corresponding (target) class for the specified mixin or null if
+     *      no corresponding mixin was found
+     */
+    ClassInfo findCorrespondingType(ClassInfo mixin) {
+        if (mixin == null || !mixin.isMixin || this.isMixin) {
+            return null;
+        }
+        
+        ClassInfo correspondingType = this.correspondingTypes.get(mixin);
+        if (correspondingType == null) {
+            correspondingType = this.findSuperTypeForMixin(mixin);
+            this.correspondingTypes.put(mixin, correspondingType);
+        }
+        return correspondingType;
+    }
+
+    /* (non-Javadoc)
+     * Only used by findCorrespondingType(), used as a convenience so that
+     * sanity checks and caching can be handled more elegantly
+     */
+    private ClassInfo findSuperTypeForMixin(ClassInfo mixin) {
+        ClassInfo superClass = this;
+        
+        while (superClass != null && superClass != ClassInfo.OBJECT) {
+            for (MixinInfo minion : superClass.mixins) {
+                if (minion.getClassInfo().equals(mixin)) {
+                    return superClass;
+                }
+            }
+            
+            superClass = superClass.getSuperClass();
+        }
+        
+        return null;
+    }
+
+    /**
+     * Find out whether this (mixin) class has another mixin in its superclass
+     * hierarchy. This method always returns false for non-mixin classes.
+     * 
+     * @return true if and only if one or more mixins are found in the hierarchy
+     *      of this mixin
+     */
+    public boolean hasMixinInHierarchy() {
+        if (!this.isMixin) {
+            return false;
+        }
+        
+        ClassInfo superClass = this.getSuperClass();
+        
+        while (superClass != null && superClass != ClassInfo.OBJECT) {
+            if (superClass.isMixin) {
+                return true;
+            }
+            superClass = superClass.getSuperClass();
+        }
+
+        return false;
     }
 
     /**

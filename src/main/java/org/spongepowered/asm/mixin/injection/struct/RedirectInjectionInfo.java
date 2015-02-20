@@ -28,11 +28,11 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 public class RedirectInjectionInfo extends InjectionInfo {
 
-    public RedirectInjectionInfo(MixinData mixin, MethodNode method, AnnotationNode annotation) {
+    public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
     }
     

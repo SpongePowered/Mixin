@@ -25,12 +25,16 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -67,6 +71,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * with equivalent priority
      */
     static int mixinOrder = 0;
+    
+    static final Set<String> invalidClasses = MixinInfo.$getInvalidClassesSet();
     
     /**
      * Logger
@@ -465,14 +471,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     /**
-     * Get a new mixin data container for this info
+     * Get a new mixin target context object for the specified target
      * 
      * @param target
      * @return
      */
-    public MixinData createData(ClassNode target) {
+    public MixinTargetContext createContextForTarget(ClassNode target) {
         ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
-        return new MixinData(this, this.prepare(classNode), target);
+        return new MixinTargetContext(this, this.prepare(classNode), target);
     }
 
     /**
@@ -491,6 +497,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         } catch (IOException ex) {
             this.logger.warn("Failed to load mixin %s, the specified mixin will not be applied", mixinClassName);
             throw new InvalidMixinException("An error was encountered whilst loading the mixin class", ex);
+        }
+        
+        // Inject the mixin class name into the LaunchClassLoader's invalid
+        // classes set so that any classes referencing the mixin directly will
+        // cause the game to crash
+        if (MixinInfo.invalidClasses != null) {
+            MixinInfo.invalidClasses.add(mixinClassName);
         }
 
         return mixinBytes;
@@ -534,5 +547,17 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public String toString() {
         return String.format("%s:%s", this.parent.getName(), this.name);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Set<String> $getInvalidClassesSet() {
+        try {
+            Field invalidClasses = LaunchClassLoader.class.getDeclaredField("invalidClasses");
+            invalidClasses.setAccessible(true);
+            return (Set<String>)invalidClasses.get(Launch.classLoader);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 }

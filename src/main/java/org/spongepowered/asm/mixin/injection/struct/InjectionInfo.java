@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -65,7 +65,7 @@ public abstract class InjectionInfo {
     /**
      * Mixin data
      */
-    protected final MixinData mixin;
+    protected final MixinTargetContext mixin;
 
 
     /**
@@ -96,7 +96,7 @@ public abstract class InjectionInfo {
      * @param method Injector method
      * @param annotation Annotation to parse
      */
-    protected InjectionInfo(MixinData mixin, MethodNode method, AnnotationNode annotation) {
+    protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         this.annotation = annotation;
         this.method = method;
         this.mixin = mixin;
@@ -236,7 +236,7 @@ public abstract class InjectionInfo {
     }
     
     @SuppressWarnings("unchecked")
-    public static InjectionInfo parse(MixinData mixin, MethodNode method) {
+    public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
             annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class);

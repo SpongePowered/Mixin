@@ -174,8 +174,6 @@ class MixinConfig implements Comparable<MixinConfig> {
             this.mixinPackage += ".";
         }
         
-        Launch.classLoader.addClassLoaderExclusion(this.mixinPackage);
-        
         if (this.refMapperConfig == null) {
             if (this.plugin != null) {
                 this.refMapperConfig = this.plugin.getRefMapperConfig();
