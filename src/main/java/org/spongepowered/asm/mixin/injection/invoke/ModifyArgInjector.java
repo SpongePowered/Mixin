@@ -89,7 +89,6 @@ public class ModifyArgInjector extends InvokeInjector {
     protected void inject(Target target, MethodInsnNode node) {
         Type[] args = Type.getArgumentTypes(node.desc);
         int argIndex = this.findArgIndex(target, args);
-        
         InsnList insns = new InsnList();
         int extraLocals = 0;
         
@@ -100,8 +99,8 @@ public class ModifyArgInjector extends InvokeInjector {
         }
         
         target.method.instructions.insertBefore(node, insns);
-        target.method.maxLocals = Math.max(target.method.maxLocals, target.maxLocals + extraLocals);
-        target.method.maxStack = Math.max(target.method.maxStack, target.maxStack + 2 - extraLocals);
+        target.method.maxLocals = Math.max(target.maxLocals, target.method.maxLocals + extraLocals);
+        target.method.maxStack = Math.max(target.maxStack, target.method.maxStack + 2 - (extraLocals - 1));
     }
 
     /**
@@ -111,7 +110,7 @@ public class ModifyArgInjector extends InvokeInjector {
         int[] argMap = this.storeArgs(target, args, insns, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, argIndex, argIndex + 1);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return target.method.maxLocals - argMap[argMap.length - 1] - 1 + args[args.length - 1].getSize();
+        return (target.method.maxLocals - argMap[argMap.length - 1]) + 1 + args[args.length - 1].getSize();
     }
 
     /**
@@ -127,7 +126,7 @@ public class ModifyArgInjector extends InvokeInjector {
         this.pushArgs(args, insns, argMap, 0, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return target.method.maxLocals - argMap[argMap.length - 1] - 1 + args[args.length - 1].getSize();
+        return (target.method.maxLocals - argMap[argMap.length - 1]) + 1 + args[args.length - 1].getSize();
     }
 
     protected int findArgIndex(Target target, Type[] args) {

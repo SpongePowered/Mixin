@@ -640,6 +640,7 @@ public class MixinTransformer extends TreeTransformer {
         // Patch the initialiser into the target class ctors
         for (MethodNode method : targetClass.methods) {
             if (MixinTransformer.INIT.equals(method.name)) {
+                method.maxStack = Math.max(method.maxStack, ctor.maxStack);
                 this.injectInitialiser(method, initialiser);
             }
         }
