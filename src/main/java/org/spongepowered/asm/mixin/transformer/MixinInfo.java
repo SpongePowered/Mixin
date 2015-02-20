@@ -36,6 +36,7 @@ import java.util.Set;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
@@ -425,6 +426,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public boolean isDetachedSuper() {
         return this.detachedSuper;
+    }
+
+    /**
+     * Get the logging level for this mixin
+     */
+    public Level getLoggingLevel() {
+        return this.parent.getLoggingLevel();
     }
 
     /**

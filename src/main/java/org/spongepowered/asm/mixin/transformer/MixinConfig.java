@@ -34,8 +34,10 @@ import java.util.Set;
 
 import net.minecraft.launchwrapper.Launch;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
@@ -115,6 +117,12 @@ class MixinConfig implements Comparable<MixinConfig> {
     private String refMapperConfig;
     
     /**
+     * True to output "mixing in" messages at INFO level rather than DEBUG 
+     */
+    @SerializedName("verbose")
+    private boolean verboseLogging;
+    
+    /**
      * Intrinsic order (for sorting configurations with identical priority)
      */
     private final transient int order = MixinConfig.configOrder++;
@@ -185,6 +193,7 @@ class MixinConfig implements Comparable<MixinConfig> {
         }
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
+        this.verboseLogging |= Booleans.parseBoolean(System.getProperty("mixin.debug.verbose"), false) | MixinTransformer.DEBUG_ALL;
     }
 
     /**
@@ -303,6 +312,13 @@ class MixinConfig implements Comparable<MixinConfig> {
      */
     public Set<String> getTargets() {
         return this.mixinMapping.keySet();
+    }
+    
+    /**
+     * Get the logging level for this config
+     */
+    public Level getLoggingLevel() {
+        return this.verboseLogging ? Level.INFO : Level.DEBUG;
     }
 
     /**

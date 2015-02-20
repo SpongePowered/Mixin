@@ -158,7 +158,8 @@ public class MixinTransformer extends TreeTransformer {
         Opcodes.SASTORE
     };
     
-    private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false);
+    public static final boolean DEBUG_ALL = Booleans.parseBoolean(System.getProperty("mixin.debug"), false);
+    private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false) | MixinTransformer.DEBUG_ALL;
 
     /**
      * Log all the things
@@ -348,7 +349,7 @@ public class MixinTransformer extends TreeTransformer {
         ClassNode targetClass = this.readClass(basicClass, true);
         
         for (MixinInfo mixin : mixins) {
-            this.logger.info("Mixing {} into {}", mixin.getName(), transformedName);
+            this.logger.log(mixin.getLoggingLevel(), "Mixing {} into {}", mixin.getName(), transformedName);
             this.applyMixin(transformedName, targetClass, mixin.createContextForTarget(targetClass));
         }
         
