@@ -724,12 +724,20 @@ public class MixinTransformer extends TreeTransformer {
         int line = 0;
         InsnList initialiser = new InsnList();
         boolean gatherNodes = false;
+        int trimAtOpcode = -1;
         LabelNode optionalInsn = null;
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(init.marker); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof LineNumberNode) {
                 line = ((LineNumberNode)insn).line;
-                gatherNodes = init.excludes(line);
+                AbstractInsnNode next = ctor.instructions.get(ctor.instructions.indexOf(insn) + 1);
+                if (line == init.end && next.getOpcode() != Opcodes.RETURN) {
+                    gatherNodes = true;
+                    trimAtOpcode = Opcodes.RETURN;
+                } else {
+                    gatherNodes = init.excludes(line);
+                    trimAtOpcode = -1;
+                }
             } else if (gatherNodes) {
                 if (optionalInsn != null) {
                     initialiser.add(optionalInsn);
@@ -740,6 +748,10 @@ public class MixinTransformer extends TreeTransformer {
                     optionalInsn = (LabelNode)insn;
                 } else {
                     int opcode = insn.getOpcode();
+                    if (opcode == trimAtOpcode) {
+                        trimAtOpcode = -1;
+                        continue;
+                    }
                     for (int ivalidOp : MixinTransformer.INITIALISER_OPCODE_BLACKLIST) {
                         if (opcode == ivalidOp) {
                             // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
