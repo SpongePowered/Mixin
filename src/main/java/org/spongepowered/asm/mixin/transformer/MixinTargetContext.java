@@ -192,7 +192,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * Transforms field descriptors which contain mixin types to their
      * appropriate target type
      * 
-     * @param field
+     * @param field Field to transform
      */
     public void transformField(FieldNode field) {
         this.transformDescriptor(field);
@@ -204,9 +204,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * invokations) and also handles fixing up the targets of INVOKESPECIAL
      * opcodes for mixins with detached targets.
      * 
-     * @param targetClass
-     * @param mixin
-     * @param method
+     * @param method Method to transform
      */
     public void transformMethod(MethodNode method) {
         this.transformDescriptor(method);
@@ -268,7 +266,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Transforms a field descriptor in the context of this mixin target
      * 
-     * @param field
+     * @param field Field node to transform
      */
     public void transformDescriptor(FieldNode field) {
         if (!this.inheritsFromMixin) {
@@ -280,7 +278,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Transforms a field insn descriptor in the context of this mixin target
      * 
-     * @param field
+     * @param field Field instruction node to transform
      */
     public void transformDescriptor(FieldInsnNode field) {
         if (!this.inheritsFromMixin) {
@@ -292,7 +290,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Transforms a method descriptor in the context of this mixin target
      * 
-     * @param method
+     * @param method Method node to transform
      */
     public void transformDescriptor(MethodNode method) {
         if (!this.inheritsFromMixin) {
@@ -304,7 +302,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Transforms a method insn descriptor in the context of this mixin target
      * 
-     * @param method
+     * @param method Method instruction node to transform
      */
     public void transformDescriptor(MethodInsnNode method) {
         if (!this.inheritsFromMixin) {
@@ -316,7 +314,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Transforms a type insn descriptor in the context of this mixin target
      * 
-     * @param typeInsn
+     * @param typeInsn Type instruction node to transform
      */
     public void transformDescriptor(TypeInsnNode typeInsn) {
         if (!this.inheritsFromMixin) {
