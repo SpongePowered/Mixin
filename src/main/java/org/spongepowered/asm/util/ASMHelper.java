@@ -406,7 +406,7 @@ public class ASMHelper {
      * @return Approximate opcode name (approximate because some constants in
      *      the {@link Opcodes} class have the same value as opcodes
      */
-    private static String getOpcodeName(int opcode) {
+    public static String getOpcodeName(int opcode) {
         if (opcode > 0) {
             boolean found = false;
             
