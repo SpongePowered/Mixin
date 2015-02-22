@@ -226,6 +226,10 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
+        if (basicClass == null) {
+            return basicClass;
+        }
+
         this.reEntranceCheck++;
         
         if (this.reEntranceCheck > 1) {
