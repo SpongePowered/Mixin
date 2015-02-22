@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +36,8 @@ import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 
@@ -52,8 +55,12 @@ abstract class TreeInfo {
         "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
     );
     
-    private static IClassNameTransformer nameTransformer;
+    private static List<IClassTransformer> transformers;
     
+    private static IClassNameTransformer nameTransformer;
+
+    private static final Logger logger = LogManager.getLogger("mixin");
+
     static {
         for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
             if (transformer instanceof IClassNameTransformer) {
@@ -130,10 +137,10 @@ abstract class TreeInfo {
      * @param name
      * @param basicClass
      * @return class bytecode after processing by all registered transformers
-     * except the excluded transformers
+     *      except the excluded transformers
      */
     private static byte[] applyTransformers(String name, byte[] basicClass) {
-        final List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
+        final List<IClassTransformer> transformers = TreeInfo.getTransformers();
 
         for (final IClassTransformer transformer : transformers) {
             if (!(transformer instanceof MixinTransformer) && !TreeInfo.excludeTransformers.contains(transformer.getClass().getName())) {
@@ -142,6 +149,38 @@ abstract class TreeInfo {
         }
 
         return basicClass;
+    }
+
+    /**
+     * Gets the transformer list to apply to loaded mixin bytecode. Since
+     * generating this list requires inspecting each transformer by name (to
+     * cope with the new wrapper functionality added by FML) we generate the
+     * list just once and cache the result.
+     */
+    private static List<IClassTransformer> getTransformers() {
+        if (TreeInfo.transformers == null) {
+            TreeInfo.logger.debug("Building transformer delegation list:");
+            TreeInfo.transformers = new ArrayList<IClassTransformer>();
+            for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+                String transformerName = transformer.getClass().getName();
+                boolean include = true;
+                for (String excludeClass : TreeInfo.excludeTransformers) {
+                    if (transformerName.contains(excludeClass)) {
+                        include = false;
+                        break;
+                    }
+                }
+                if (include && !transformerName.contains(MixinTransformer.class.getName())) {
+                    TreeInfo.logger.debug("  Adding:    {}", transformerName);
+                    TreeInfo.transformers.add(transformer);
+                } else {
+                    TreeInfo.logger.debug("  Excluding: {}", transformerName);
+                }
+            }
+            TreeInfo.logger.debug("Transformer delegation list created with {} entries", TreeInfo.transformers.size());
+        }
+        
+        return TreeInfo.transformers;
     }
 
     /**
