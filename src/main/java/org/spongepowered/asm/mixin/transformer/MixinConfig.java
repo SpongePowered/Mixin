@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +71,11 @@ class MixinConfig implements Comparable<MixinConfig> {
      * Map of mixin target classes to mixin infos
      */
     private final transient Map<String, List<MixinInfo>> mixinMapping = new HashMap<String, List<MixinInfo>>();
+    
+    /**
+     * All mixins loaded by this config 
+     */
+    private final transient List<MixinInfo> mixins = new ArrayList<MixinInfo>();
     
     /**
      * Configuration priority
@@ -237,6 +243,27 @@ class MixinConfig implements Comparable<MixinConfig> {
             List<String> pluginMixins = this.plugin.getMixins();
             this.initialiseMixins(pluginMixins, true);
         }
+        
+        for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
+            MixinInfo mixin = iter.next();
+            try {
+                mixin.validate();
+            } catch (Exception ex) {
+                this.logger.error(ex.getMessage(), ex);
+                this.removeMixin(mixin);
+                iter.remove();
+            }
+        }
+    }
+
+    private void removeMixin(MixinInfo remove) {
+        for (List<MixinInfo> mixinsFor : this.mixinMapping.values()) {
+            for (Iterator<MixinInfo> iter = mixinsFor.iterator(); iter.hasNext();) {
+                if (remove == iter.next()) {
+                    iter.remove();
+                }
+            }
+        }
     }
 
     private void initialiseMixins(List<String> mixinClasses, boolean suppressPlugin) {
@@ -256,6 +283,7 @@ class MixinConfig implements Comparable<MixinConfig> {
                     for (String targetClass : mixin.getTargetClasses()) {
                         this.mixinsFor(targetClass.replace('/', '.')).add(mixin);
                     }
+                    this.mixins.add(mixin);
                 }
             } catch (Exception ex) {
                 this.logger.error(ex.getMessage(), ex);

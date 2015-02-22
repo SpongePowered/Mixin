@@ -116,12 +116,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final List<String> targetClassNames;
     
     /**
-     * True if the superclass of the mixin is <b>not</b> the direct superclass
-     * of one or more targets 
-     */
-    private final boolean detachedSuper;
-    
-    /**
      * Intrinsic order (for sorting mixins with identical priority)
      */
     private final transient int order = MixinInfo.mixinOrder++;
@@ -145,6 +139,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Interfaces soft-implemented using {@link Implements} 
      */
     private final transient List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
+    
+    /**
+     * Initial ClassNode created for mixin validation, not used for actual
+     * application 
+     */
+    private ClassNode validationClassNode;
+    
+    /**
+     * True if the superclass of the mixin is <b>not</b> the direct superclass
+     * of one or more targets 
+     */
+    private boolean detachedSuper;
 
     /**
      * Internal ctor, called by {@link MixinConfig}
@@ -171,10 +177,15 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.priority = this.readPriority(classNode);
         this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
-        this.detachedSuper = this.validateTargetClasses(classNode);
-        this.validateMixin(classNode);
-        this.readImplementations(classNode);
-        this.prepare(classNode);
+        this.validationClassNode = classNode;
+    }
+    
+    void validate() {
+        this.detachedSuper = this.validateTargetClasses(this.validationClassNode);
+        this.validateMixin(this.validationClassNode);
+        this.readImplementations(this.validationClassNode);
+        this.prepare(this.validationClassNode);
+        this.validationClassNode = null;
     }
 
     /**
