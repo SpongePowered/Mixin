@@ -103,7 +103,7 @@ public class MixinTweaker implements ITweaker {
             if (coreModName == null) {
                 return null;
             }
-            Class<?> coreModManager = Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
+            Class<?> coreModManager = this.getCoreModManagerClass();
             Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
             mdLoadCoreMod.setAccessible(true);
             ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
@@ -121,6 +121,18 @@ public class MixinTweaker implements ITweaker {
 //            ex.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * Attempt to get the FML CoreModManager, tries the post-1.8 namespace first
+     * and falls back to 1.7.10 if class lookup fails
+     */
+    private Class<?> getCoreModManagerClass() throws ClassNotFoundException {
+        try {
+            return Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
+        } catch (ClassNotFoundException ex) {
+            return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
+        }
     }
 
     /* (non-Javadoc)
