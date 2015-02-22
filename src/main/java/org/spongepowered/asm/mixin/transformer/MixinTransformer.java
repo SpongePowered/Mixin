@@ -446,10 +446,14 @@ public class MixinTransformer extends TreeTransformer {
      * @param mixin
      */
     private void applyMixinFields(ClassNode targetClass, MixinTargetContext mixin) {
-        for (FieldNode field : mixin.getClassNode().fields) {
+        for (Iterator<FieldNode> iter = mixin.getClassNode().fields.iterator(); iter.hasNext();) {
+            FieldNode field = iter.next();
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(field, Shadow.class);
             this.validateField(mixin, field, shadow);
-            mixin.transformField(field);
+            if (!mixin.transformField(field)) {
+                iter.remove();
+                continue;
+            }
             
             FieldNode target = this.findTargetField(targetClass, field);
             if (target == null) {
@@ -517,7 +521,7 @@ public class MixinTransformer extends TreeTransformer {
                     throw new InvalidMixinException(
                             String.format("Mixin classes cannot contain visible static methods or fields, found %s", mixinMethod.name));
                 }
-
+                
                 this.mergeMethod(targetClass, mixin, mixinMethod, isOverwrite);
             } else if (MixinTransformer.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended

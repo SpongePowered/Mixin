@@ -40,10 +40,12 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.MixinTransformerError;
+import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
+import org.spongepowered.asm.util.ASMHelper;
 
 
 /**
@@ -57,6 +59,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 public class MixinTargetContext implements IReferenceMapperContext {
     
     private static final String INIT = "<init>";
+    private static final String IMAGINARY_SUPER = "super$";
 
     /**
      * Mixin info
@@ -193,9 +196,21 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * appropriate target type
      * 
      * @param field Field to transform
+     * @return true if the field should be processed further, false to remove it
      */
-    public void transformField(FieldNode field) {
+    public boolean transformField(FieldNode field) {
+        if (MixinTargetContext.IMAGINARY_SUPER.equals(field.name)) {
+            if (field.access != Opcodes.ACC_PRIVATE) {
+                throw new InvalidMixinException("Imaginary super field " + field.name + " must be private and non-final");
+            }
+            if (!field.desc.equals("L" + this.mixin.getClassRef() + ";")) {
+                throw new InvalidMixinException("Imaginary super field " + field.name + " must have the same type as the parent mixin");
+            }
+            return false;
+        }
+
         this.transformDescriptor(field);
+        return true;
     }
 
     /**
@@ -207,6 +222,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param method Method to transform
      */
     public void transformMethod(MethodNode method) {
+        // Any method tagged with @SoftOverride must have an implementation visible from 
+        if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
+            Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
+            if (superMethod == null || !superMethod.isInjected()) {
+                throw new InvalidMixinException("Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
+                        + "valid method was found in superclasses of " + this.targetClass.name);
+            }
+        }
+        
         this.transformDescriptor(method);
         
         String fromClass = this.getClassRef();
@@ -222,10 +246,14 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 if (methodInsn.owner.equals(fromClass)) {
                     methodInsn.owner = this.targetClass.name;
                 } else if (detached && methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                    this.updateStaticBindings(this.targetClass, this, method, methodInsn);
+                    this.updateStaticBindings(method, methodInsn);
                 }
             } else if (insn instanceof FieldInsnNode) {
                 FieldInsnNode fieldInsn = (FieldInsnNode)insn;
+                if (MixinTargetContext.IMAGINARY_SUPER.equals(fieldInsn.name)) {
+                    this.processImaginarySuper(method, fieldInsn);
+                    iter.remove();
+                }
                 this.transformDescriptor(fieldInsn);
                 if (fieldInsn.owner.equals(fromClass)) {
                     fieldInsn.owner = this.targetClass.name;
@@ -237,29 +265,74 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
+     * Handle "imaginary super" invokations, these are invokations in
+     * non-derived mixins for accessing methods known to exist in a supermixin
+     * which is not directly inherited by this mixix. The method can only call
+     * its <b>own</b> super-implmentation and the methd must also be tagged with
+     * {@link SoftOverride} to indicate that the method must exist in a super
+     * class.
+     * 
+     * @param method Method being processed
+     * @param fieldInsn the GETFIELD insn which access the pseudo-field which is
+     *      used as a handle to the superclass
+     */
+    private void processImaginarySuper(MethodNode method, FieldInsnNode fieldInsn) {
+        if (fieldInsn.getOpcode() != Opcodes.GETFIELD) {
+            if (MixinTargetContext.INIT.equals(method.name)) {
+                throw new InvalidMixinException("Illegal imaginary super declaration: field " + fieldInsn.name
+                        + " must not specify an initialiser");
+            }
+            
+            throw new InvalidMixinException("Illegal imaginary super access: found " + ASMHelper.getOpcodeName(fieldInsn.getOpcode())
+                    + " opcode in " + method.name + method.desc);
+        }
+        
+        if ((method.access & Opcodes.ACC_PRIVATE) != 0 || (method.access & Opcodes.ACC_STATIC) != 0) {
+            throw new InvalidMixinException("Illegal imaginary super access: method " + method.name + method.desc
+                    + " is private or static");
+        }
+        
+        if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) == null) {
+            throw new InvalidMixinException("Illegal imaginary super access: method " + method.name + method.desc
+                    + " is not decorated with @SoftOverride");
+        }
+        
+        for (Iterator<AbstractInsnNode> methodIter = method.instructions.iterator(method.instructions.indexOf(fieldInsn)); methodIter.hasNext();) {
+            AbstractInsnNode insn = methodIter.next();
+            if (insn instanceof MethodInsnNode) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (methodNode.owner.equals(this.getClassRef()) && methodNode.name.equals(method.name) && methodNode.desc.equals(method.desc)) {
+                    methodNode.setOpcode(Opcodes.INVOKESPECIAL);
+                    this.updateStaticBindings(method, methodNode);
+                    return;
+                }
+            }
+        }
+        
+        throw new InvalidMixinException("Illegal imaginary super access: could not find INVOKE for " + method.name + method.desc);
+    }
+
+    /**
      * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy
      * which contains the specified method.
      * 
-     * @param targetClass
-     * @param mixin
      * @param method
      * @param insn
      */
-    private void updateStaticBindings(ClassNode targetClass, MixinTargetContext mixin, MethodNode method, MethodInsnNode insn) {
-        if (INIT.equals(method.name) || insn.owner.equals(targetClass.name) || targetClass.name.startsWith("<")) {
+    private void updateStaticBindings(MethodNode method, MethodInsnNode insn) {
+        if (INIT.equals(method.name) || insn.owner.equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
             return;
         }
         
-        ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
-        Method superMethod = targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
+        Method superMethod = this.targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
-                throw new InvalidMixinException("Invalid INVOKESPECIAL in " + mixin + " resolved " + insn.owner + " -> " + superMethod.getOwner()
+                throw new InvalidMixinException("Invalid INVOKESPECIAL in " + this + " resolved " + insn.owner + " -> " + superMethod.getOwner()
                         + " for " + insn.name + insn.desc);
             }
             insn.owner = superMethod.getOwner().getName();
         } else if (ClassInfo.forName(insn.owner).isMixin()) {
-            throw new MixinTransformerError("Error resolving INVOKESPECIAL target for " + insn.owner + "." + insn.name + " in " + mixin);
+            throw new MixinTransformerError("Error resolving INVOKESPECIAL target for " + insn.owner + "." + insn.name + " in " + this);
         }
     }
 
