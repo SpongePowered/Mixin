@@ -143,10 +143,6 @@ class AnnotatedMixins implements Messager {
         this.outSrgFileName = processingEnv.getOptions().get("outSrgFile");
         this.outRefMapFileName = processingEnv.getOptions().get("outRefMapFile"); 
         
-        if (this.reobfSrgFileName == null) {
-            this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, obfuscation processing will not occur");
-        }
-        
         this.validators = ImmutableList.<IMixinValidator>of(
             new ParentValidator(processingEnv),
             new TargetValidator(processingEnv)
@@ -170,6 +166,7 @@ class AnnotatedMixins implements Messager {
             this.initDone = true;
             
             if (this.reobfSrgFileName == null) {
+                this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, obfuscation processing will not occur");
                 return false;
             }
             
