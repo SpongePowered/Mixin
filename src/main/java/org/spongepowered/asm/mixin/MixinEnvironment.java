@@ -180,6 +180,10 @@ public class MixinEnvironment {
         
         return this.side != null ? this.side : Side.UNKNOWN;
     }
+    
+    public String getVersion() {
+        return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+    }
 
     public static MixinEnvironment getCurrentEnvironment() {
         if (MixinEnvironment.env == null) {

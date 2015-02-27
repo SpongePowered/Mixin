@@ -42,6 +42,7 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.util.VersionNumber;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
@@ -76,6 +77,13 @@ class MixinConfig implements Comparable<MixinConfig> {
      * All mixins loaded by this config 
      */
     private final transient List<MixinInfo> mixins = new ArrayList<MixinInfo>();
+    
+    /**
+     * Minimum version of the mixin subsystem required to correctly apply mixins
+     * in this configuration. 
+     */
+    @SerializedName("minVersion")
+    private String version; 
     
     /**
      * Configuration priority
@@ -165,10 +173,23 @@ class MixinConfig implements Comparable<MixinConfig> {
     private MixinConfig() {}
 
     /**
-     * Called immediately after deserialisation 
+     * Called immediately after deserialisation
+     * 
+     * @param name Mixin config name
+     * @return true if the config was successfully initialised and should be
+     *      returned, or false if initialisation failed and the config should
+     *      be discarded
      */
-    private void onLoad(String name) {
+    private boolean onLoad(String name) {
         this.name = name;
+        
+        VersionNumber minVersion = VersionNumber.parse(this.version);
+        VersionNumber curVersion = VersionNumber.parse(MixinEnvironment.getCurrentEnvironment().getVersion());
+        if (minVersion.compareTo(curVersion) > 0) {
+            this.logger.warn("Mixin config {} requires mixin subsystem version {} but {} was found. The mixin config will not be applied.",
+                    this.name, minVersion, curVersion);
+            return false;
+        }
         
         if (this.pluginClassName != null) {
             try {
@@ -200,6 +221,8 @@ class MixinConfig implements Comparable<MixinConfig> {
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
         this.verboseLogging |= Booleans.parseBoolean(System.getProperty("mixin.debug.verbose"), false) | MixinTransformer.DEBUG_ALL;
+        
+        return true;
     }
 
     /**
@@ -403,8 +426,10 @@ class MixinConfig implements Comparable<MixinConfig> {
     static MixinConfig create(String configFile) {
         try {
             MixinConfig config = new Gson().fromJson(new InputStreamReader(Launch.classLoader.getResourceAsStream(configFile)), MixinConfig.class);
-            config.onLoad(configFile);
-            return config;
+            if (config.onLoad(configFile)) {
+                return config;
+            }
+            return null;
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new IllegalArgumentException(String.format("The specified configuration file '%s' was invalid or could not be read", configFile));

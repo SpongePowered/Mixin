@@ -214,7 +214,10 @@ public class MixinTransformer extends TreeTransformer {
         if (configs != null) {
             for (String configFile : configs) {
                 try {
-                    this.configs.add(MixinConfig.create(configFile));
+                    MixinConfig config = MixinConfig.create(configFile);
+                    if (config != null) {
+                        this.configs.add(config);
+                    }
                 } catch (Exception ex) {
                     this.logger.warn(String.format("Failed to load mixin config: %s", configFile), ex);
                 }
@@ -760,7 +763,7 @@ public class MixinTransformer extends TreeTransformer {
                         if (opcode == ivalidOp) {
                             // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
                             // code which will likely break things and fix it if a real test case ever appears
-                            throw new InvalidMixinException("Cannot handle " + ASMHelper.getOpcodeName(opcode) +" opcode (0x"
+                            throw new InvalidMixinException("Cannot handle " + ASMHelper.getOpcodeName(opcode) + " opcode (0x"
                                     + Integer.toHexString(opcode).toUpperCase() + ") in class initialiser");
                         }
                     }
