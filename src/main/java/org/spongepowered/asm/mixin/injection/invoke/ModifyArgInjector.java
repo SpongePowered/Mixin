@@ -76,7 +76,7 @@ public class ModifyArgInjector extends InvokeInjector {
         
         if (this.singleArgMode) {
             if (!this.methodArgs[0].equals(this.returnType)) {
-                throw new InvalidInjectionException("@ModifyArg return type must match the parameter type."
+                throw new InvalidInjectionException(this.info, "@ModifyArg return type must match the parameter type."
                         + " ARG=" + this.methodArgs[0] + " RETURN=" + this.returnType);
             }
         }
@@ -118,7 +118,7 @@ public class ModifyArgInjector extends InvokeInjector {
      */
     private int injectMultiArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
         if (!Arrays.equals(args, this.methodArgs)) {
-            throw new InvalidInjectionException("@ModifyArg method targets a method with an invalid signature "
+            throw new InvalidInjectionException(this.info, "@ModifyArg method targets a method with an invalid signature "
                     + Injector.printArgs(args) + ", expected " + Injector.printArgs(this.methodArgs));
         }
 
@@ -132,7 +132,7 @@ public class ModifyArgInjector extends InvokeInjector {
     protected int findArgIndex(Target target, Type[] args) {
         if (this.index > -1) {
             if (this.index >= args.length || !args[this.index].equals(this.returnType)) {
-                throw new InvalidInjectionException("Specified index " + this.index + " for @ModifyArg is invalid for args "
+                throw new InvalidInjectionException(this.info, "Specified index " + this.index + " for @ModifyArg is invalid for args "
                         + Injector.printArgs(args) + ", expected " + this.returnType);
             }
             return this.index;
@@ -146,7 +146,7 @@ public class ModifyArgInjector extends InvokeInjector {
             }
             
             if (argIndex != -1) {
-                throw new InvalidInjectionException("Found duplicate args with index [" + argIndex + ", " + arg + "] matching type "
+                throw new InvalidInjectionException(this.info, "Found duplicate args with index [" + argIndex + ", " + arg + "] matching type "
                         + this.returnType + " for @ModifyArg target " + target + " in " + this.classNode.name
                         + ". Please specify index of desired arg.");
             }
@@ -155,7 +155,7 @@ public class ModifyArgInjector extends InvokeInjector {
         }
         
         if (argIndex == -1) {
-            throw new InvalidInjectionException("Could not find arg matching type " + this.returnType + " for @ModifyArg target "
+            throw new InvalidInjectionException(this.info, "Could not find arg matching type " + this.returnType + " for @ModifyArg target "
                     + target + " in " + this.classNode.name);
         }
 

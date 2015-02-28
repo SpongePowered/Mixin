@@ -42,7 +42,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
 import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
@@ -295,7 +295,7 @@ public abstract class InjectionPoint {
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(IReferenceMapperContext mixin, At at) {
+    public static InjectionPoint parse(MixinTargetContext mixin, At at) {
         return InjectionPoint.parse(mixin, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
     }
 
@@ -309,7 +309,7 @@ public abstract class InjectionPoint {
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(IReferenceMapperContext mixin, AnnotationNode node) {
+    public static InjectionPoint parse(MixinTargetContext mixin, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
@@ -341,7 +341,7 @@ public abstract class InjectionPoint {
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(IReferenceMapperContext mixin, String at, At.Shift shift, int by,
+    public static InjectionPoint parse(MixinTargetContext mixin, String at, At.Shift shift, int by,
             List<String> args, String target, int ordinal, int opcode) {
         InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
         InjectionPoint point = null;
@@ -367,10 +367,11 @@ public abstract class InjectionPoint {
                 ctor.setAccessible(true);
                 point = ctor.newInstance(data);
             } catch (Exception ex) {
-                throw new InvalidInjectionException("The specified class " + at + " could not be instanced or is not a valid InjectionPoint", ex);
+                throw new InvalidInjectionException(mixin, "The specified class " + at
+                        + " could not be instanced or is not a valid InjectionPoint", ex);
             }
         } else {
-            throw new InvalidInjectionException(at + " is not a valid injection point specifier");
+            throw new InvalidInjectionException(mixin, at + " is not a valid injection point specifier");
         }
 
         if (point != null) {

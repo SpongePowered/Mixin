@@ -29,6 +29,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
+
 /**
  * Used to indicate a Mixin class member which is acting as a placeholder for a
  * method or field in the target class 

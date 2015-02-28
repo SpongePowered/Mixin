@@ -40,6 +40,7 @@ import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.helpers.Booleans;
@@ -56,9 +57,8 @@ import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.util.CheckClassAdapter;
-import org.spongepowered.asm.mixin.InvalidMixinException;
+import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.MixinTransformerError;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -270,7 +270,14 @@ public class MixinTransformer extends TreeTransformer {
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
-                    this.logger.warn(String.format("Class mixin failed: %s %s", th.getClass().getName(), th.getMessage()), th);
+                    MixinConfig config = th.getMixin().getParent();
+                    this.logger.log(config.isRequired() ? Level.FATAL : Level.WARN, String.format("Mixin failed applying %s -> %s: %s %s",
+                            th.getMixin(), transformedName, th.getClass().getName(), th.getMessage()), th);
+
+                    if (config.isRequired()) {
+                        throw new MixinApplyError("Mixin [" + th.getMixin() + "] FAILED for REQUIRED config [" + config + "]", th);
+                    }
+                    
                     th.printStackTrace();
                 }
             }
@@ -408,8 +415,10 @@ public class MixinTransformer extends TreeTransformer {
             this.applyInitialisers(targetClass, mixin);
             this.applyInjections(targetClass, mixin);
             mixin.postApply(transformedName, targetClass);
+        } catch (InvalidMixinException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new InvalidMixinException("Unexpecteded error whilst applying the mixin class", ex);
+            throw new InvalidMixinException(mixin, "Unexpecteded error whilst applying the mixin class", ex);
         }
     }
 
@@ -462,7 +471,7 @@ public class MixinTransformer extends TreeTransformer {
             if (target == null) {
                 // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
                 if (shadow != null) {
-                    throw new InvalidMixinException(String.format("Shadow field %s was not located in the target class", field.name));
+                    throw new InvalidMixinException(mixin, String.format("Shadow field %s was not located in the target class", field.name));
                 }
                 
                 // This is just a local field, so add it
@@ -470,7 +479,7 @@ public class MixinTransformer extends TreeTransformer {
             } else {
                 // Check that the shadow field has a matching descriptor
                 if (!target.desc.equals(field.desc)) {
-                    throw new InvalidMixinException(String.format("The field %s in the target class has a conflicting signature", field.name));
+                    throw new InvalidMixinException(mixin, String.format("The field %s in the target class has a conflicting signature", field.name));
                 }
             }
         }
@@ -485,13 +494,15 @@ public class MixinTransformer extends TreeTransformer {
     private void validateField(MixinTargetContext mixin, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
         if (MixinTransformer.hasFlag(field, Opcodes.ACC_STATIC) && !MixinTransformer.hasFlag(field, Opcodes.ACC_PRIVATE)) {
-            throw new InvalidMixinException(String.format("Mixin classes cannot contain visible static methods or fields, found %s", field.name));
+            throw new InvalidMixinException(mixin, String.format("Mixin classes cannot contain visible static methods or fields, found %s",
+                    field.name));
         }
 
         // Shadow fields can't have prefixes, it's meaningless for them anyway
         String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
         if (field.name.startsWith(prefix)) {
-            throw new InvalidMixinException(String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.", field.name, mixin));
+            throw new InvalidMixinException(mixin, String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.",
+                    field.name, mixin));
         }
     }
 
@@ -514,14 +525,14 @@ public class MixinTransformer extends TreeTransformer {
                 // For shadow (and abstract, which can be used as a shorthand for Shadow) methods, we just check they're present
                 MethodNode target = this.findTargetMethod(targetClass, mixinMethod);
                 if (target == null) {
-                    throw new InvalidMixinException(String.format("Shadow method %s was not located in the target class", mixinMethod.name));
+                    throw new InvalidMixinException(mixin, String.format("Shadow method %s was not located in the target class", mixinMethod.name));
                 }
             } else if (!mixinMethod.name.startsWith("<")) {
                 if (MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                         && !MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                         && !MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
                         && !isOverwrite) {
-                    throw new InvalidMixinException(
+                    throw new InvalidMixinException(mixin, 
                             String.format("Mixin classes cannot contain visible static methods or fields, found %s", mixinMethod.name));
                 }
                 
@@ -565,7 +576,7 @@ public class MixinTransformer extends TreeTransformer {
 
             targetClass.methods.remove(target);
         } else if (isOverwrite) {
-            throw new InvalidMixinException(String.format("Overwrite target %s was not located in the target class", method.name));
+            throw new InvalidMixinException(mixin, String.format("Overwrite target %s was not located in the target class", method.name));
         }
         
         targetClass.methods.add(method);
@@ -639,7 +650,7 @@ public class MixinTransformer extends TreeTransformer {
         }
         
         // Find the initialiser instructions in the candidate ctor
-        InsnList initialiser = this.getInitialiser(ctor);
+        InsnList initialiser = this.getInitialiser(mixin, ctor);
         if (initialiser == null || initialiser.size() == 0) {
             return;
         }
@@ -720,7 +731,7 @@ public class MixinTransformer extends TreeTransformer {
      * @return initialiser bytecode extracted from the supplied constructor, or
      *      null if the constructor range could not be parsed
      */
-    private InsnList getInitialiser(MethodNode ctor) {
+    private InsnList getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
         // Find the range of line numbers which corresponds to the constructor body
         Range init = this.getConstructorRange(ctor);
         if (!init.isValid()) {
@@ -763,7 +774,7 @@ public class MixinTransformer extends TreeTransformer {
                         if (opcode == ivalidOp) {
                             // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
                             // code which will likely break things and fix it if a real test case ever appears
-                            throw new InvalidMixinException("Cannot handle " + ASMHelper.getOpcodeName(opcode) + " opcode (0x"
+                            throw new InvalidMixinException(mixin, "Cannot handle " + ASMHelper.getOpcodeName(opcode) + " opcode (0x"
                                     + Integer.toHexString(opcode).toUpperCase() + ") in class initialiser");
                         }
                     }
@@ -777,7 +788,8 @@ public class MixinTransformer extends TreeTransformer {
         AbstractInsnNode last = initialiser.getLast();
         if (last != null) {
             if (last.getOpcode() != Opcodes.PUTFIELD) {
-                throw new InvalidMixinException("Could not parse initialiser, expected 0xB5, found 0x" + Integer.toHexString(last.getOpcode()));
+                throw new InvalidMixinException(mixin, "Could not parse initialiser, expected 0xB5, found 0x"
+                        + Integer.toHexString(last.getOpcode()));
             }
         }
         

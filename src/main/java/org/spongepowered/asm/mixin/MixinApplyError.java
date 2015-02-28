@@ -26,21 +26,21 @@ package org.spongepowered.asm.mixin;
 
 
 /**
- * Error to throw for things which really shouldn't happen
+ * Error to throw for required mixins when mixing of the mixin fails
  */
-public class MixinTransformerError extends Error {
+public class MixinApplyError extends Error {
 
     private static final long serialVersionUID = 1L;
 
-    public MixinTransformerError(String message) {
+    public MixinApplyError(String message) {
         super(message);
     }
 
-    public MixinTransformerError(Throwable cause) {
+    public MixinApplyError(Throwable cause) {
         super(cause);
     }
 
-    public MixinTransformerError(String message, Throwable cause) {
+    public MixinApplyError(String message, Throwable cause) {
         super(message, cause);
     }
 

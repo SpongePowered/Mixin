@@ -22,21 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin;
+package org.spongepowered.asm.mixin.transformer;
 
-public class InvalidMixinException extends RuntimeException {
+
+/**
+ * Error to throw for things which really shouldn't happen
+ */
+public class MixinTransformerError extends Error {
 
     private static final long serialVersionUID = 1L;
 
-    public InvalidMixinException(String message) {
+    public MixinTransformerError(String message) {
         super(message);
     }
 
-    public InvalidMixinException(Throwable message) {
-        super(message);
+    public MixinTransformerError(Throwable cause) {
+        super(cause);
     }
 
-    public InvalidMixinException(String message, Throwable cause) {
+    public MixinTransformerError(String message, Throwable cause) {
         super(message, cause);
     }
+
 }

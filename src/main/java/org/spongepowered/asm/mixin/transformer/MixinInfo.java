@@ -49,7 +49,6 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
-import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -198,7 +197,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
-            throw new InvalidMixinException(String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
+            throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
         List<ClassInfo> targets = new ArrayList<ClassInfo>();
@@ -230,10 +229,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
                 ClassInfo targetInfo = ClassInfo.forName(targetClassName);
                 if (targetInfo.isInterface()) {
-                    throw new InvalidMixinException("@Mixin target " + targetClassName + " is an interface in " + this);
+                    throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is an interface in " + this);
                 }
                 if (checkPublic && targetInfo.isPublic()) {
-                    throw new InvalidMixinException("@Mixin target " + targetClassName + " is public in " + this + " and must be specified in value");
+                    throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is public in " + this
+                            + " and must be specified in value");
                 }
                 if (!outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
@@ -252,7 +252,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private int readPriority(ClassNode classNode) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
-            throw new InvalidMixinException(String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
+            throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
         Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
@@ -269,7 +269,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             }
             
             if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.NONE)) {
-                throw new InvalidMixinException("Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
+                throw new InvalidMixinException(this, "Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
                         + " was not found in the hierarchy of target class '" + targetClass + "'");
             }
             
@@ -287,7 +287,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private void validateMixin(ClassNode classNode) {
         // isInner (shouldn't) return true for static inner classes
         if (this.classInfo.isInner()) {
-            throw new InvalidMixinException("Inner class mixin must be declared static");
+            throw new InvalidMixinException(this, "Inner class mixin must be declared static");
         }
 
         // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
@@ -300,7 +300,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 this.checkRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
                 AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
                 if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
-                    throw new InvalidMixinException("Found @Overwrite annotation on " + method.name + " in " + this);
+                    throw new InvalidMixinException(this, "Found @Overwrite annotation on " + method.name + " in " + this);
                 }
             }
         }
@@ -308,7 +308,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
     private void checkRemappable(Class<Shadow> annotationClass, String name, AnnotationNode annotation) {
         if (annotation != null && ASMHelper.getAnnotationValue(annotation, "remap", Boolean.TRUE)) {
-            throw new InvalidMixinException("Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name + " in " + this);
+            throw new InvalidMixinException(this, "Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name
+                    + " in " + this);
         }
     }
     
@@ -338,7 +339,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         for (AnnotationNode interfaceNode : interfaces) {
-            InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(interfaceNode);
+            InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(this, interfaceNode);
             this.softImplements.add(interfaceInfo);
             this.interfaces.add(interfaceInfo.getInternalName());
         }
@@ -515,7 +516,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             throw new ClassNotFoundException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {
             this.logger.warn("Failed to load mixin %s, the specified mixin will not be applied", mixinClassName);
-            throw new InvalidMixinException("An error was encountered whilst loading the mixin class", ex);
+            throw new InvalidMixinException(this, "An error was encountered whilst loading the mixin class", ex);
         }
         
         // Inject the mixin class name into the LaunchClassLoader's invalid

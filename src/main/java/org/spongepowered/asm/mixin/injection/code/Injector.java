@@ -53,6 +53,11 @@ public abstract class Injector {
     protected static final String CTOR = "<init>";
 
     /**
+     * Injection info
+     */
+    protected InjectionInfo info;
+
+    /**
      * Class node
      */
     protected final ClassNode classNode;
@@ -74,6 +79,7 @@ public abstract class Injector {
      */
     public Injector(InjectionInfo info) {
         this(info.getClassNode(), info.getMethod());
+        this.info = info;
     }
 
     /**

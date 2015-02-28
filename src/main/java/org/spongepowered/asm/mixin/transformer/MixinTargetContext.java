@@ -38,8 +38,6 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
-import org.spongepowered.asm.mixin.InvalidMixinException;
-import org.spongepowered.asm.mixin.MixinTransformerError;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -184,7 +182,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         
         ClassInfo type = this.targetClassInfo.findCorrespondingType(mixin);
         if (type == null) {
-            throw new InvalidMixinException("Resolution error: unable to find corresponding type for "
+            throw new InvalidMixinException(this, "Resolution error: unable to find corresponding type for "
                     + mixin + " in hierarchy of " + this.targetClassInfo);
         }
         
@@ -201,10 +199,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public boolean transformField(FieldNode field) {
         if (MixinTargetContext.IMAGINARY_SUPER.equals(field.name)) {
             if (field.access != Opcodes.ACC_PRIVATE) {
-                throw new InvalidMixinException("Imaginary super field " + field.name + " must be private and non-final");
+                throw new InvalidMixinException(this, "Imaginary super field " + field.name + " must be private and non-final");
             }
             if (!field.desc.equals("L" + this.mixin.getClassRef() + ";")) {
-                throw new InvalidMixinException("Imaginary super field " + field.name + " must have the same type as the parent mixin");
+                throw new InvalidMixinException(this, "Imaginary super field " + field.name + " must have the same type as the parent mixin");
             }
             return false;
         }
@@ -226,7 +224,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
             Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
-                throw new InvalidMixinException("Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
+                throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.targetClass.name);
             }
         }
@@ -279,21 +277,21 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private void processImaginarySuper(MethodNode method, FieldInsnNode fieldInsn) {
         if (fieldInsn.getOpcode() != Opcodes.GETFIELD) {
             if (MixinTargetContext.INIT.equals(method.name)) {
-                throw new InvalidMixinException("Illegal imaginary super declaration: field " + fieldInsn.name
+                throw new InvalidMixinException(this, "Illegal imaginary super declaration: field " + fieldInsn.name
                         + " must not specify an initialiser");
             }
             
-            throw new InvalidMixinException("Illegal imaginary super access: found " + ASMHelper.getOpcodeName(fieldInsn.getOpcode())
+            throw new InvalidMixinException(this, "Illegal imaginary super access: found " + ASMHelper.getOpcodeName(fieldInsn.getOpcode())
                     + " opcode in " + method.name + method.desc);
         }
         
         if ((method.access & Opcodes.ACC_PRIVATE) != 0 || (method.access & Opcodes.ACC_STATIC) != 0) {
-            throw new InvalidMixinException("Illegal imaginary super access: method " + method.name + method.desc
+            throw new InvalidMixinException(this, "Illegal imaginary super access: method " + method.name + method.desc
                     + " is private or static");
         }
         
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) == null) {
-            throw new InvalidMixinException("Illegal imaginary super access: method " + method.name + method.desc
+            throw new InvalidMixinException(this, "Illegal imaginary super access: method " + method.name + method.desc
                     + " is not decorated with @SoftOverride");
         }
         
@@ -309,7 +307,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
             }
         }
         
-        throw new InvalidMixinException("Illegal imaginary super access: could not find INVOKE for " + method.name + method.desc);
+        throw new InvalidMixinException(this, "Illegal imaginary super access: could not find INVOKE for " + method.name + method.desc);
     }
 
     /**
@@ -327,7 +325,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         Method superMethod = this.targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
-                throw new InvalidMixinException("Invalid INVOKESPECIAL in " + this + " resolved " + insn.owner + " -> " + superMethod.getOwner()
+                throw new InvalidMixinException(this, "Invalid INVOKESPECIAL in " + this + " resolved " + insn.owner + " -> " + superMethod.getOwner()
                         + " for " + insn.name + insn.desc);
             }
             insn.owner = superMethod.getOwner().getName();
@@ -455,6 +453,13 @@ public class MixinTargetContext implements IReferenceMapperContext {
             this.targetMethods.put(targetName, target);
         }
         return target;
+    }
+    
+    /**
+     * Get the mixin info for this mixin
+     */
+    MixinInfo getInfo() {
+        return this.mixin;
     }
 
     /**

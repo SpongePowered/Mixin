@@ -22,39 +22,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
+package org.spongepowered.asm.mixin.transformer;
 
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-
-
-public class InvalidInjectionException extends InvalidMixinException {
+public class InvalidMixinException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
+    
+    private final MixinInfo mixin;
 
-    public InvalidInjectionException(MixinTargetContext mixin, String message) {
-        super(mixin, message);
-    }
-
-    public InvalidInjectionException(InjectionInfo info, String message) {
-        super(info.getContext(), message);
-    }
-
-    public InvalidInjectionException(MixinTargetContext mixin, Throwable cause) {
-        super(mixin, cause);
-    }
-
-    public InvalidInjectionException(InjectionInfo info, Throwable cause) {
-        super(info.getContext(), cause);
-    }
-
-    public InvalidInjectionException(MixinTargetContext mixin, String message, Throwable cause) {
-        super(mixin, message, cause);
-    }
-
-    public InvalidInjectionException(InjectionInfo info, String message, Throwable cause) {
-        super(info.getContext(), message, cause);
+    public InvalidMixinException(MixinInfo mixin, String message) {
+        super(message);
+        this.mixin = mixin;
     }
     
+    public InvalidMixinException(MixinTargetContext mixin, String message) {
+        super(message);
+        this.mixin = mixin.getInfo();
+    }
+
+    public InvalidMixinException(MixinInfo mixin, Throwable message) {
+        super(message);
+        this.mixin = mixin;
+    }
+
+    public InvalidMixinException(MixinTargetContext mixin, Throwable message) {
+        super(message);
+        this.mixin = mixin.getInfo();
+    }
+    
+    public InvalidMixinException(MixinInfo mixin, String message, Throwable cause) {
+        super(message, cause);
+        this.mixin = mixin;
+    }
+    
+    public InvalidMixinException(MixinTargetContext mixin, String message, Throwable cause) {
+        super(message, cause);
+        this.mixin = mixin.getInfo();
+    }
+    
+    public MixinInfo getMixin() {
+        return this.mixin;
+    }
 }

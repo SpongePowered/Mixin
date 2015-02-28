@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.helpers.Booleans;
+import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
@@ -84,6 +85,14 @@ class MixinConfig implements Comparable<MixinConfig> {
      */
     @SerializedName("minVersion")
     private String version; 
+    
+    /**
+     * Determines whether failures in this mixin config are considered terminal
+     * errors. Use this setting to indicate that failing to apply a mixin in
+     * this config is a critical error and should cause the game to shutdown.
+     */
+    @SerializedName("required")
+    private boolean required;
     
     /**
      * Configuration priority
@@ -188,6 +197,11 @@ class MixinConfig implements Comparable<MixinConfig> {
         if (minVersion.compareTo(curVersion) > 0) {
             this.logger.warn("Mixin config {} requires mixin subsystem version {} but {} was found. The mixin config will not be applied.",
                     this.name, minVersion, curVersion);
+            
+            if (this.required) {
+                throw new MixinInitialisationError("Required mixin config " + this.name + " requires mixin subsystem version " + minVersion);
+            }
+            
             return false;
         }
         
@@ -313,6 +327,14 @@ class MixinConfig implements Comparable<MixinConfig> {
             }
         }
     }
+    
+    /**
+     * True if this mixin is <em>required</em> (failure to apply a defined mixin
+     * is an <em>error</em> condition).
+     */
+    public boolean isRequired() {
+        return this.required;
+    }
 
     /**
      * Get the name of the file from which this configuration object was
@@ -400,6 +422,11 @@ class MixinConfig implements Comparable<MixinConfig> {
             this.mixinMapping.put(targetClass, mixins);
         }
         return mixins;
+    }
+    
+    @Override
+    public String toString() {
+        return this.name;
     }
 
     /* (non-Javadoc)
