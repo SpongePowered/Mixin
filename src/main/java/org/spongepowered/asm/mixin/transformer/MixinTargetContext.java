@@ -264,7 +264,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
                     fieldInsn.owner = this.targetClass.name;
                 }
             } else if (insn instanceof TypeInsnNode) {
-                this.transformDescriptor((TypeInsnNode)insn);
+                TypeInsnNode typeInsn = (TypeInsnNode)insn;
+                if (typeInsn.desc.equals(this.getClassRef())) {
+                    typeInsn.desc = this.targetClass.name;
+                }
+                this.transformDescriptor(typeInsn);
             }
         }
     }
