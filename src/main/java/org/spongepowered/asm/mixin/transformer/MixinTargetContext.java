@@ -89,6 +89,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * True if this mixin inherits from a mixin at any point in its hierarchy 
      */
     private final boolean inheritsFromMixin;
+    
+    /**
+     * True if this mixin's superclass is detached from the target superclass 
+     */
+    private final boolean detachedSuper;
 
     /**
      * ctor
@@ -102,7 +107,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.classNode = mixin;
         this.targetClass = target;
         this.targetClassInfo = ClassInfo.forName(target.name);
-        this.inheritsFromMixin = info.getClassInfo().hasMixinInHierarchy();
+        this.inheritsFromMixin = info.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
+        this.detachedSuper = !this.getClassNode().superName.equals(this.targetClass.superName);
     }
     
     /* (non-Javadoc)
@@ -231,9 +237,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
         
         this.transformDescriptor(method);
         
-        String fromClass = this.getClassRef();
-        boolean detached = !this.getClassNode().superName.equals(this.targetClass.superName);
-        
         Iterator<AbstractInsnNode> iter = method.instructions.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
@@ -241,10 +244,14 @@ public class MixinTargetContext implements IReferenceMapperContext {
             if (insn instanceof MethodInsnNode) {
                 MethodInsnNode methodInsn = (MethodInsnNode)insn;
                 this.transformDescriptor(methodInsn);
-                if (methodInsn.owner.equals(fromClass)) {
+                if (methodInsn.owner.equals(this.getClassRef())) {
                     methodInsn.owner = this.targetClass.name;
-                } else if (detached && methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                    this.updateStaticBindings(method, methodInsn);
+                } else if ((this.detachedSuper || this.inheritsFromMixin)) {
+                    if (methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                        this.updateStaticBinding(method, methodInsn);
+                    } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodInsn.owner).isMixin()) {
+                        this.updateDynamicBinding(method, methodInsn);
+                    }
                 }
             } else if (insn instanceof FieldInsnNode) {
                 FieldInsnNode fieldInsn = (FieldInsnNode)insn;
@@ -253,7 +260,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                     iter.remove();
                 }
                 this.transformDescriptor(fieldInsn);
-                if (fieldInsn.owner.equals(fromClass)) {
+                if (fieldInsn.owner.equals(this.getClassRef())) {
                     fieldInsn.owner = this.targetClass.name;
                 }
             } else if (insn instanceof TypeInsnNode) {
@@ -301,7 +308,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 MethodInsnNode methodNode = (MethodInsnNode)insn;
                 if (methodNode.owner.equals(this.getClassRef()) && methodNode.name.equals(method.name) && methodNode.desc.equals(method.desc)) {
                     methodNode.setOpcode(Opcodes.INVOKESPECIAL);
-                    this.updateStaticBindings(method, methodNode);
+                    this.updateStaticBinding(method, methodNode);
                     return;
                 }
             }
@@ -314,26 +321,42 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * Update INVOKESPECIAL opcodes to target the topmost class in the hierarchy
      * which contains the specified method.
      * 
-     * @param method
-     * @param insn
+     * @param method Method containing the instruction
+     * @param insn INVOKE instruction node
      */
-    private void updateStaticBindings(MethodNode method, MethodInsnNode insn) {
+    private void updateStaticBinding(MethodNode method, MethodInsnNode insn) {
+        this.updateBinding(method, insn, Traversal.SUPER);
+    }
+
+    /**
+     * Update INVOKEVIRTUAL opcodes to target the topmost class in the hierarchy
+     * which contains the specified method.
+     * 
+     * @param method Method containing the instruction
+     * @param insn INVOKE instruction node
+     */
+    private void updateDynamicBinding(MethodNode method, MethodInsnNode insn) {
+        this.updateBinding(method, insn, Traversal.ALL);
+    }
+    
+    private void updateBinding(MethodNode method, MethodInsnNode insn, Traversal traversal) {
         if (INIT.equals(method.name) || insn.owner.equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
             return;
         }
         
-        Method superMethod = this.targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, false, Traversal.SUPER);
+        Method superMethod = this.targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, traversal == Traversal.ALL, traversal);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
-                throw new InvalidMixinException(this, "Invalid INVOKESPECIAL in " + this + " resolved " + insn.owner + " -> " + superMethod.getOwner()
-                        + " for " + insn.name + insn.desc);
+                throw new InvalidMixinException(this, "Invalid " + ASMHelper.getOpcodeName(insn) + " in " + this + " resolved " + insn.owner
+                        + " -> " + superMethod.getOwner() + " for " + insn.name + insn.desc);
             }
             insn.owner = superMethod.getOwner().getName();
         } else if (ClassInfo.forName(insn.owner).isMixin()) {
-            throw new MixinTransformerError("Error resolving INVOKESPECIAL target for " + insn.owner + "." + insn.name + " in " + this);
+            throw new MixinTransformerError("Error resolving " + ASMHelper.getOpcodeName(insn) + " target for " + insn.owner + "." + insn.name
+                    + " in " + this);
         }
     }
-
+    
     /**
      * Transforms a field descriptor in the context of this mixin target
      * 

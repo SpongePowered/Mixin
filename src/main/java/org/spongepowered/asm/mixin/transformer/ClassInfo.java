@@ -664,6 +664,31 @@ class ClassInfo extends TreeInfo {
 
         return false;
     }
+    
+    /**
+     * Find out whether this (non-mixin) class has a mixin targetting
+     * <em>any</em> of its superclasses. This method always returns false for
+     * mixin classes.
+     * 
+     * @return true if and only if one or more classes in this class's hierarchy
+     *      are targetted by a mixin
+     */
+    public boolean hasMixinTargetInHierarchy() {
+        if (this.isMixin) {
+            return false;
+        }
+        
+        ClassInfo superClass = this.getSuperClass();
+        
+        while (superClass != null && superClass != ClassInfo.OBJECT) {
+            if (superClass.mixins.size() > 0) {
+                return true;
+            }
+            superClass = superClass.getSuperClass();
+        }
+        
+        return false;
+    }
 
     /**
      * Finds the specified private or protected method in this class's hierarchy
