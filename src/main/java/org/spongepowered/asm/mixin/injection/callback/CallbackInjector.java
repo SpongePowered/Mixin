@@ -85,13 +85,13 @@ public class CallbackInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
-            throw new InvalidInjectionException("'static' modifier of callback method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
         }
 
         if (Injector.CTOR.equals(target.method.name)) {
             for (InjectionPoint injectionPoint : injectionPoints) {
                 if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
-                    throw new InvalidInjectionException("Found injection point type " + injectionPoint.getClass().getSimpleName()
+                    throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
                             + " targetting a ctor in " + this.classNode.name + ". Only RETURN allowed for a ctor target");
                 }
             }
@@ -142,7 +142,8 @@ public class CallbackInjector extends Injector {
         
         // If it doesn't match, then cry
         if (!callbackDescriptor.equals(this.methodNode.desc)) {
-            throw new InvalidInjectionException("Invalid descriptor on callback: expected " + callbackDescriptor + " found " + this.methodNode.desc);
+            throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callbackDescriptor + " found "
+                    + this.methodNode.desc);
         }
 
         // These two variables keep track of the (additional) stack size required for the two actions we're going to be injecting insns to perform,
@@ -195,8 +196,7 @@ public class CallbackInjector extends Injector {
         }
         
         // Call the callback!
-        insns.add(new MethodInsnNode(this.isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
-                this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
+        this.invokeHandler(insns);
 
         if (this.cancellable) {
             // Inject the if (e.isCancelled()) return e.getReturnValue();

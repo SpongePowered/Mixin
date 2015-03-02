@@ -22,21 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin;
+package org.spongepowered.asm.launch;
 
-public class InvalidMixinException extends RuntimeException {
+
+public class MixinInitialisationError extends Error {
 
     private static final long serialVersionUID = 1L;
 
-    public InvalidMixinException(String message) {
+    public MixinInitialisationError() {
+    }
+
+    public MixinInitialisationError(String message) {
         super(message);
     }
 
-    public InvalidMixinException(Throwable message) {
-        super(message);
+    public MixinInitialisationError(Throwable cause) {
+        super(cause);
     }
 
-    public InvalidMixinException(String message, Throwable cause) {
+    public MixinInitialisationError(String message, Throwable cause) {
         super(message, cause);
     }
+
 }

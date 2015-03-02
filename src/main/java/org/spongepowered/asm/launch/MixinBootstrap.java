@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 
 public abstract class MixinBootstrap {
 
-    public static final String VERSION = "0.1";
+    public static final String VERSION = "0.2";
     
     public static final String INIT_KEY = "mixin.initialised";
     public static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
@@ -52,6 +52,12 @@ public abstract class MixinBootstrap {
     private MixinBootstrap() {}
 
     public static void init() {
+        Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+        if (registeredVersion != null && !registeredVersion.equals(MixinBootstrap.VERSION)) {
+            throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
+                    + " was already initialised. Cannot bootstrap version " + MixinBootstrap.VERSION);
+        }
+
         Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
         MixinEnvironment.getCurrentEnvironment();
     }

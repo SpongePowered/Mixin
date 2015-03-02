@@ -27,6 +27,8 @@ package org.spongepowered.tools.obfuscation;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,6 +45,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
@@ -51,7 +55,7 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.validation.IMixinValidator;
+import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
@@ -95,6 +99,11 @@ class AnnotatedMixins implements Messager {
      * Mixins during processing phase
      */
     private final Map<String, AnnotatedMixin> mixins = new HashMap<String, AnnotatedMixin>();
+    
+    /**
+     * Mixins created during this AP pass
+     */
+    private final List<AnnotatedMixin> mixinsForPass = new ArrayList<AnnotatedMixin>();
     
     /**
      * Name of the resource to write generated srgs to
@@ -288,7 +297,10 @@ class AnnotatedMixins implements Messager {
         String name = mixinType.getQualifiedName().toString();
         
         if (!this.mixins.containsKey(name)) {
-            this.mixins.put(name, new AnnotatedMixin(this, mixinType, this.validators));
+            AnnotatedMixin mixin = new AnnotatedMixin(this, mixinType);
+            mixin.runValidators(ValidationPass.EARLY, this.validators);
+            this.mixins.put(name, mixin);
+            this.mixinsForPass.add(mixin);
         }
     }
     
@@ -304,6 +316,25 @@ class AnnotatedMixins implements Messager {
      */
     public AnnotatedMixin getMixin(String mixinType) {
         return this.mixins.get(mixinType);
+    }
+    
+    public Collection<TypeMirror> getMixinsTargeting(TypeMirror targetType) {
+        return this.getMixinsTargeting((TypeElement)((DeclaredType)targetType).asElement());
+    }
+    
+    public Collection<TypeMirror> getMixinsTargeting(TypeElement targetType) {
+        List<TypeMirror> minions = new ArrayList<TypeMirror>();
+        
+        for (AnnotatedMixin mixin : this.mixins.values()) {
+            for (TypeHandle mixinTarget : mixin.getTargets()) {
+                if (targetType.equals(mixinTarget.getElement())) {
+                    minions.add(mixin.getMixin().asType());
+                    break;
+                }
+            }
+        }
+        
+        return minions;
     }
 
     /**
@@ -404,6 +435,16 @@ class AnnotatedMixins implements Messager {
                     mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
                 }
             }
+        }
+    }
+    
+    public void onPassStarted() {
+        this.mixinsForPass.clear();
+    }
+    
+    public void onPassCompleted() {
+        for (AnnotatedMixin mixin : this.mixinsForPass) {
+            mixin.runValidators(ValidationPass.LATE, this.validators);
         }
     }
 

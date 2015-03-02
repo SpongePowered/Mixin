@@ -29,8 +29,11 @@ import java.util.Collection;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
+import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
@@ -45,11 +48,11 @@ public class TargetValidator extends MixinValidator {
      * @param processingEnv Processing environment
      */
     public TargetValidator(ProcessingEnvironment processingEnv) {
-        super(processingEnv);
+        super(processingEnv, ValidationPass.LATE);
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.tools.obfuscation.validation.IMixinValidator
+     * @see org.spongepowered.tools.obfuscation.MixinValidator
      *      #validate(javax.lang.model.element.TypeElement,
      *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
      */
@@ -59,11 +62,51 @@ public class TargetValidator extends MixinValidator {
         
         for (TypeHandle target : targets) {
             TypeMirror targetType = target.getType();
-            if (targetType != null && !this.processingEnv.getTypeUtils().isAssignable(targetType, superClass)) {
+            if (targetType != null && !this.validateSuperClass(targetType, superClass)) {
                 this.error("Superclass " + superClass + " of " + mixin + " was not found in the hierarchy of target class " + targetType, mixin);
             }
         }
         
         return true;
+    }
+
+    private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {
+        if (this.isAssignable(targetType, superClass)) {
+            return true;
+        }
+        
+        return this.validateSuperClassRecursive(targetType, superClass);
+    }
+
+    private boolean validateSuperClassRecursive(TypeMirror targetType, TypeMirror superClass) {
+        if (!(targetType instanceof DeclaredType)) {
+            return false;
+        }
+        
+        TypeElement targetElement = (TypeElement)((DeclaredType)targetType).asElement();
+        TypeMirror targetSuper = targetElement.getSuperclass();
+        if (targetSuper.getKind() == TypeKind.NONE) {
+            return false;
+        }
+        
+        if (this.checkMixinsFor(targetSuper, superClass)) {
+            return true;
+        }
+        
+        return this.validateSuperClassRecursive(targetSuper, superClass);
+    }
+
+    private boolean checkMixinsFor(TypeMirror targetType, TypeMirror superClass) {
+        for (TypeMirror mixinType : this.getMixinsTargeting(targetType)) {
+            if (this.isAssignable(mixinType, superClass)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    protected final boolean isAssignable(TypeMirror targetType, TypeMirror superClass) {
+        return this.processingEnv.getTypeUtils().isAssignable(targetType, superClass);
     }
 }

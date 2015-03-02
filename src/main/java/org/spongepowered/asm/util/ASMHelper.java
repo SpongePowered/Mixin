@@ -36,17 +36,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.IntInsnNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 public class ASMHelper {
@@ -65,7 +55,7 @@ public class ASMHelper {
         MethodNode method = new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name, "()Z", null, null);
         InsnList code = method.instructions;
 
-        code.add(pushIntConstant(retval ? 1 : 0));
+        code.add(ASMHelper.pushIntConstant(retval ? 1 : 0));
         code.add(new InsnNode(Opcodes.IRETURN));
 
         clazz.methods.add(method);
@@ -82,7 +72,7 @@ public class ASMHelper {
         MethodNode method = new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name, "()I", null, null);
         InsnList code = method.instructions;
 
-        code.add(pushIntConstant(retval));
+        code.add(ASMHelper.pushIntConstant(retval));
         code.add(new InsnNode(Opcodes.IRETURN));
 
         clazz.methods.add(method);
@@ -101,7 +91,7 @@ public class ASMHelper {
         MethodNode method =
                 new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name, "()" + rettype.getDescriptor(), null, null);
 
-        populateSelfForwardingMethod(method, forwardname, rettype, Type.getObjectType(clazz.name));
+        ASMHelper.populateSelfForwardingMethod(method, forwardname, rettype, Type.getObjectType(clazz.name));
 
         clazz.methods.add(method);
     }
@@ -121,7 +111,7 @@ public class ASMHelper {
                                            Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name,
                                            "()" + rettype.getDescriptor(), null, null);
 
-        populateSelfForwardingMethod(method, forwardname, rettype, argtype);
+        ASMHelper.populateSelfForwardingMethod(method, forwardname, rettype, argtype);
 
         clazz.methods.add(method);
     }
@@ -140,7 +130,7 @@ public class ASMHelper {
         MethodNode method = new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name,
                                            "()" + rettype.getDescriptor(), null, null);
 
-        populateForwardingToStaticMethod(method, forwardname, rettype, Type.getObjectType(clazz.name), fowardtype);
+        ASMHelper.populateForwardingToStaticMethod(method, forwardname, rettype, Type.getObjectType(clazz.name), fowardtype);
 
         clazz.methods.add(method);
     }
@@ -162,7 +152,7 @@ public class ASMHelper {
                 method =
                 new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name, "()" + rettype.getDescriptor(), null, null);
 
-        populateForwardingToStaticMethod(method, forwardname, rettype, thistype, fowardtype);
+        ASMHelper.populateForwardingToStaticMethod(method, forwardname, rettype, thistype, fowardtype);
 
         clazz.methods.add(method);
     }
@@ -181,7 +171,7 @@ public class ASMHelper {
 
         method.instructions.clear();
 
-        populateSelfForwardingMethod(method, forwardname, methodType.getReturnType(), thistype);
+        ASMHelper.populateSelfForwardingMethod(method, forwardname, methodType.getReturnType(), thistype);
     }
 
     /**
@@ -199,7 +189,7 @@ public class ASMHelper {
                 method =
                 new MethodNode(Opcodes.ASM5, Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, name, "()" + rettype.getDescriptor(), null, null);
 
-        populateForwardingMethod(method, forwardname, rettype, argtype, Type.getObjectType(clazz.name));
+        ASMHelper.populateForwardingMethod(method, forwardname, rettype, argtype, Type.getObjectType(clazz.name));
 
         clazz.methods.add(method);
     }
@@ -217,7 +207,7 @@ public class ASMHelper {
 
         method.instructions.clear();
 
-        populateForwardingMethod(method, forwardname, methodType.getReturnType(), methodType.getArgumentTypes()[0], thistype);
+        ASMHelper.populateForwardingMethod(method, forwardname, methodType.getReturnType(), methodType.getArgumentTypes()[0], thistype);
     }
 
     /**
@@ -323,7 +313,7 @@ public class ASMHelper {
      * @param method the method to add
      */
     public static void addAndReplaceMethod(ClassNode clazz, MethodNode method) {
-        MethodNode m = findMethod(clazz, method.name, method.desc);
+        MethodNode m = ASMHelper.findMethod(clazz, method.name, method.desc);
         if (m != null) {
             clazz.methods.remove(m);
         }
@@ -338,7 +328,7 @@ public class ASMHelper {
     public static void dumpClass(ClassNode classNode) {
         ClassWriter cw = new ClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
         classNode.accept(cw);
-        dumpClass(cw.toByteArray());
+        ASMHelper.dumpClass(cw.toByteArray());
     }
 
     /**
@@ -349,6 +339,93 @@ public class ASMHelper {
     public static void dumpClass(byte[] bytes) {
         ClassReader cr = new ClassReader(bytes);
         CheckClassAdapter.verify(cr, true, new PrintWriter(System.out));
+    }
+
+    /**
+     * Prints a representation of a method's instructions to stderr
+     * 
+     * @param method Method to print
+     */
+    public static void printMethod(MethodNode method) {
+        System.err.printf("%s%s\n", method.name, method.desc);
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            System.err.print("  ");
+            ASMHelper.printNode(iter.next());
+        }
+    }
+
+    /**
+     * Prints a representation of the specified insn node to stderr
+     * 
+     * @param node Node to print
+     */
+    public static void printNode(AbstractInsnNode node) {
+        System.err.printf("%s ", node.getClass().getSimpleName());
+        if (node instanceof LabelNode) {
+            System.err.printf("[%s]", ((LabelNode)node).getLabel());
+        } else if (node instanceof JumpInsnNode) {
+            System.err.printf("[%s]", ((JumpInsnNode)node).label.getLabel());
+        } else if (node instanceof VarInsnNode) {
+            System.err.printf("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
+        } else if (node instanceof MethodInsnNode) {
+            MethodInsnNode mth = (MethodInsnNode)node;
+            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
+        } else if (node instanceof FieldInsnNode) {
+            FieldInsnNode fld = (FieldInsnNode)node;
+            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+        } else if (node instanceof LineNumberNode) {
+            LineNumberNode ln = (LineNumberNode)node;
+            System.err.printf("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
+        } else if (node instanceof LdcInsnNode) {
+            System.err.print(((LdcInsnNode)node).cst);
+        } else if (node instanceof IntInsnNode) {
+            System.err.print(((IntInsnNode)node).operand);
+        } else {
+            System.err.printf("[%s] ", ASMHelper.getOpcodeName(node));
+        }
+        System.err.print("\n");
+    }
+
+    /**
+     * Uses reflection to find an approximate constant name match for the
+     * supplied node's opcode
+     * 
+     * @param node Node to query for opcode
+     * @return Approximate opcode name (approximate because some constants in
+     *      the {@link Opcodes} class have the same value as opcodes
+     */
+    public static String getOpcodeName(AbstractInsnNode node) {
+        return ASMHelper.getOpcodeName(node.getOpcode());
+    }
+
+    /**
+     * Uses reflection to find an approximate constant name match for the
+     * supplied opcode
+     * 
+     * @param opcode Opcode to look up
+     * @return Approximate opcode name (approximate because some constants in
+     *      the {@link Opcodes} class have the same value as opcodes
+     */
+    public static String getOpcodeName(int opcode) {
+        if (opcode > 0) {
+            boolean found = false;
+            
+            try {
+                for (java.lang.reflect.Field f : Opcodes.class.getDeclaredFields()) {
+                    if (!found && f.getName() != "UNINITIALIZED_THIS") {
+                        continue;
+                    }
+                    found = true;
+                    if (f.getType() == Integer.TYPE && f.getInt(null) == opcode) {
+                        return f.getName();
+                    }
+                }
+            } catch (Exception ex) {
+                // derp
+            }
+        }        
+        
+        return String.valueOf(opcode);
     }
 
     /**
@@ -597,7 +674,32 @@ public class ASMHelper {
         T returnValue = ASMHelper.getAnnotationValue(annotation, key);
         return returnValue != null ? returnValue : defaultValue;
     }
-    
+
+    /**
+     * Gets an annotation value or returns the default value of the annotation
+     * if the annotation value is not present
+     * 
+     * @param <T> duck type
+     * @param annotation Annotation node to query
+     * @param key Key to search for
+     * @param annotationClass Annotation class to query reflectively for the
+     *      default value
+     * @return Value of the specified annotation node, default value if not
+     *      specified, or null if no value or default
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
+        T value = ASMHelper.getAnnotationValue(annotation, key);
+        if (value == null) {
+            try {
+                value = (T)annotationClass.getDeclaredMethod(key).getDefaultValue();
+            } catch (NoSuchMethodException ex) {
+                // Don't care
+            }
+        }
+        return value;
+    }
+
     /**
      * Get the value of an annotation node and do pseudo-duck-typing via Java's
      * crappy generics
@@ -612,7 +714,7 @@ public class ASMHelper {
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key) {
         boolean getNextValue = false;
 
-        if (annotation.values == null) {
+        if (annotation == null || annotation.values == null) {
             return null;
         }
 

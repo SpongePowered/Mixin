@@ -158,7 +158,7 @@ public class MixinEnvironment {
     }
 
     public void setActiveTransformer(IClassTransformer transformer) {
-        Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, this);        
+        Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, transformer);        
     }
     
     public MixinEnvironment setSide(Side side) {
@@ -179,6 +179,10 @@ public class MixinEnvironment {
         }
         
         return this.side != null ? this.side : Side.UNKNOWN;
+    }
+    
+    public String getVersion() {
+        return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
     }
 
     public static MixinEnvironment getCurrentEnvironment() {

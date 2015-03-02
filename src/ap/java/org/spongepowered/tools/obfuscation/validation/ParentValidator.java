@@ -32,6 +32,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
@@ -46,11 +47,11 @@ public class ParentValidator extends MixinValidator {
      * @param processingEnv Processing environment
      */
     public ParentValidator(ProcessingEnvironment processingEnv) {
-        super(processingEnv);
+        super(processingEnv, ValidationPass.EARLY);
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.tools.obfuscation.validation.IMixinValidator
+     * @see org.spongepowered.tools.obfuscation.MixinValidator
      *      #validate(javax.lang.model.element.TypeElement,
      *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
      */

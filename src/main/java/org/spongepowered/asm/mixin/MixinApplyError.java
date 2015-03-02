@@ -22,22 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
-public class RedirectInjectionInfo extends InjectionInfo {
+/**
+ * Error to throw for required mixins when mixing of the mixin fails
+ */
+public class MixinApplyError extends Error {
 
-    public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+    private static final long serialVersionUID = 1L;
+
+    public MixinApplyError(String message) {
+        super(message);
     }
-    
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        return new RedirectInjector(this);
+
+    public MixinApplyError(Throwable cause) {
+        super(cause);
     }
+
+    public MixinApplyError(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

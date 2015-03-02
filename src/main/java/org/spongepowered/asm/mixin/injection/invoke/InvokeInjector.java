@@ -74,7 +74,7 @@ public abstract class InvokeInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException("'static' modifier of callback method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
         }
     }
 
@@ -86,7 +86,7 @@ public abstract class InvokeInjector extends Injector {
     @Override
     protected void inject(Target target, AbstractInsnNode node) {
         if (!(node instanceof MethodInsnNode)) {
-            throw new InvalidInjectionException(this.annotationType + " annotation is targetting a non-method insn in " + target
+            throw new InvalidInjectionException(this.info, this.annotationType + " annotation is targetting a non-method insn in " + target
                     + " in " + this.classNode.name);
         }
         
@@ -122,8 +122,7 @@ public abstract class InvokeInjector extends Injector {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
         this.pushArgs(args, insns, argMap, startArg, endArg);
-        insns.add(new MethodInsnNode(this.isStatic ? Opcodes.INVOKESTATIC : Opcodes.INVOKESPECIAL,
-                this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
+        this.invokeHandler(insns);
     }
 
     /**

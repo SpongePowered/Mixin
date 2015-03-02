@@ -51,7 +51,7 @@
         </module>
         <module name="LineLength">
             <property name="max" value="80"/>
-            <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@]|//)"/>
+            <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@\(\)]|//)"/>
         </module>
         <!--  module name="AvoidStarImport"/>-->
         <!-- Check doesn't exist in current release of checkstyle -->

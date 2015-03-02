@@ -24,23 +24,37 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
-import org.spongepowered.asm.mixin.InvalidMixinException;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 
 public class InvalidInjectionException extends InvalidMixinException {
 
     private static final long serialVersionUID = 1L;
 
-    public InvalidInjectionException(String message) {
-        super(message);
+    public InvalidInjectionException(MixinTargetContext mixin, String message) {
+        super(mixin, message);
     }
 
-    public InvalidInjectionException(Throwable cause) {
-        super(cause);
+    public InvalidInjectionException(InjectionInfo info, String message) {
+        super(info.getContext(), message);
     }
 
-    public InvalidInjectionException(String message, Throwable cause) {
-        super(message, cause);
+    public InvalidInjectionException(MixinTargetContext mixin, Throwable cause) {
+        super(mixin, cause);
     }
 
+    public InvalidInjectionException(InjectionInfo info, Throwable cause) {
+        super(info.getContext(), cause);
+    }
+
+    public InvalidInjectionException(MixinTargetContext mixin, String message, Throwable cause) {
+        super(mixin, message, cause);
+    }
+
+    public InvalidInjectionException(InjectionInfo info, String message, Throwable cause) {
+        super(info.getContext(), message, cause);
+    }
+    
 }

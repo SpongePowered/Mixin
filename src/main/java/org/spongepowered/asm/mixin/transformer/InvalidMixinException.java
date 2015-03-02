@@ -22,22 +22,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.transformer;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+public class InvalidMixinException extends RuntimeException {
 
-public class RedirectInjectionInfo extends InjectionInfo {
+    private static final long serialVersionUID = 1L;
+    
+    private final MixinInfo mixin;
 
-    public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+    public InvalidMixinException(MixinInfo mixin, String message) {
+        super(message);
+        this.mixin = mixin;
     }
     
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        return new RedirectInjector(this);
+    public InvalidMixinException(MixinTargetContext mixin, String message) {
+        super(message);
+        this.mixin = mixin.getInfo();
+    }
+
+    public InvalidMixinException(MixinInfo mixin, Throwable message) {
+        super(message);
+        this.mixin = mixin;
+    }
+
+    public InvalidMixinException(MixinTargetContext mixin, Throwable message) {
+        super(message);
+        this.mixin = mixin.getInfo();
+    }
+    
+    public InvalidMixinException(MixinInfo mixin, String message, Throwable cause) {
+        super(message, cause);
+        this.mixin = mixin;
+    }
+    
+    public InvalidMixinException(MixinTargetContext mixin, String message, Throwable cause) {
+        super(message, cause);
+        this.mixin = mixin.getInfo();
+    }
+    
+    public MixinInfo getMixin() {
+        return this.mixin;
     }
 }

@@ -22,22 +22,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.tools.obfuscation;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import java.util.Collection;
 
-public class RedirectInjectionInfo extends InjectionInfo {
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.TypeElement;
 
-    public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+
+/**
+ * A mixin validator module, basically just a way of making the various sanity
+ * checks modular
+ */
+public interface IMixinValidator {
+    
+    public enum ValidationPass {
+        EARLY,
+        LATE
     }
     
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        return new RedirectInjector(this);
-    }
+    /**
+     * Validate all the things, return false to halt processing of further
+     * validators. Raise compiler errors/warnings directly.
+     * @param pass TODO
+     * @param mixin Mixin being validated
+     * @param annotation Mixin annotation
+     * @param targets Mixin targets
+     * 
+     * @return False to halt processing of further validators
+     */
+    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
 }

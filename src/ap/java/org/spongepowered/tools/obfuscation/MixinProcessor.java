@@ -55,6 +55,8 @@ public abstract class MixinProcessor extends AbstractProcessor {
      * Searches and catalogues all annotated mixin classes
      */
     protected void processMixins(RoundEnvironment roundEnv) {
+        this.mixins.onPassStarted();
+        
         for (Element elem1 : roundEnv.getElementsAnnotatedWith(Mixin.class)) {
             if (elem1.getKind() == ElementKind.CLASS) {
                 this.mixins.registerMixin((TypeElement)elem1);
@@ -63,6 +65,10 @@ public abstract class MixinProcessor extends AbstractProcessor {
                         "Found an @Mixin annotation on an element which is not a class: " + elem1.toString());
             }
         }
+    }
+    
+    protected void postProcess(RoundEnvironment roundEnv) {
+        this.mixins.onPassCompleted();
     }
 
 }

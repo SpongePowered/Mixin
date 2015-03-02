@@ -33,14 +33,14 @@ import java.util.List;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.transformer.MixinData;
+import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -65,7 +65,7 @@ public abstract class InjectionInfo {
     /**
      * Mixin data
      */
-    protected final MixinData mixin;
+    protected final MixinTargetContext mixin;
 
 
     /**
@@ -96,7 +96,7 @@ public abstract class InjectionInfo {
      * @param method Injector method
      * @param annotation Annotation to parse
      */
-    protected InjectionInfo(MixinData mixin, MethodNode method, AnnotationNode annotation) {
+    protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         this.annotation = annotation;
         this.method = method;
         this.mixin = mixin;
@@ -118,7 +118,7 @@ public abstract class InjectionInfo {
         
         String method = ASMHelper.<String>getAnnotationValue(this.annotation, "method");
         if (method == null) {
-            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " is missing method name");
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
         }
         
         List<AnnotationNode> ats = null;
@@ -129,20 +129,20 @@ public abstract class InjectionInfo {
             ats = new ArrayList<AnnotationNode>();
             ats.add((AnnotationNode)atValue);
         } else {
-            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " is missing 'at' value(s)");
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
         
         MemberInfo targetMember = MemberInfo.parse(method, this.mixin);
         
         if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
-            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " specifies a target class '"
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
                     + targetMember.owner + "', which is not supported");
         }
         
         this.findMethods(targetMember);
         
         if (this.targets.size() == 0) {
-            throw new InvalidInjectionException(type + " annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
         }
         
         for (AnnotationNode at : ats) {
@@ -176,6 +176,15 @@ public abstract class InjectionInfo {
             Target target = this.mixin.getTargetMethod(this.targets.removeFirst());
             this.injector.injectInto(target, this.injectionPoints);
         }
+    }
+    
+    /**
+     * Get the mixin target context for this injection
+     * 
+     * @return the target context
+     */
+    public MixinTargetContext getContext() {
+        return this.mixin;
     }
     
     /**
@@ -236,12 +245,13 @@ public abstract class InjectionInfo {
     }
     
     @SuppressWarnings("unchecked")
-    public static InjectionInfo parse(MixinData mixin, MethodNode method) {
+    public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
             annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class);
         } catch (IllegalArgumentException ex) {
-            throw new InvalidMixinException("Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": " + ex.getMessage());
+            throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
+                    + ex.getMessage());
         }
         
         if (annotation == null) {

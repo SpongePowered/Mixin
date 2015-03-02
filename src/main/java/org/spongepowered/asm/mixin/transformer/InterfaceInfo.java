@@ -33,7 +33,6 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
-import org.spongepowered.asm.mixin.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -43,6 +42,11 @@ import org.spongepowered.asm.util.ASMHelper;
  */
 public class InterfaceInfo extends TreeInfo {
     
+    /**
+     * Parent mixin 
+     */
+    private final MixinInfo mixin;
+
     /**
      * Prefix for interface methods. Any methods using this prefix must exist in
      * the target interface
@@ -62,14 +66,16 @@ public class InterfaceInfo extends TreeInfo {
     /**
      * Make with the new thing already
      * 
+     * @param mixin Parent mixin
      * @param prefix Method prefix
      * @param iface Interface to load
      */
-    private InterfaceInfo(String prefix, Type iface) {
+    private InterfaceInfo(MixinInfo mixin, String prefix, Type iface) {
         if (prefix == null || prefix.length() < 2 || !prefix.endsWith("$")) {
-            throw new InvalidMixinException(String.format("Prefix %s for iface %s is not valid", prefix, iface.toString()));
+            throw new InvalidMixinException(mixin, String.format("Prefix %s for iface %s is not valid", prefix, iface.toString()));
         }
         
+        this.mixin = mixin;
         this.prefix = prefix;
         this.iface = iface;
     }
@@ -94,7 +100,7 @@ public class InterfaceInfo extends TreeInfo {
             ClassReader classReader = new ClassReader(TreeInfo.loadClass(ifaceName, true));
             classReader.accept(ifaceNode, 0);
         } catch (Exception ex) {
-            throw new InvalidMixinException("An error was encountered parsing the interface " + this.iface.toString());
+            throw new InvalidMixinException(this.mixin, "An error was encountered parsing the interface " + this.iface.toString());
         }
         
         for (MethodNode ifaceMethod : ifaceNode.methods) {
@@ -156,7 +162,7 @@ public class InterfaceInfo extends TreeInfo {
         String realName = method.name.substring(this.prefix.length());
         String signature = realName + method.desc;
         if (!this.methods.contains(signature)) {
-            throw new InvalidMixinException(String.format("%s does not exist in target interface %s", realName, this.iface.toString()));
+            throw new InvalidMixinException(this.mixin, String.format("%s does not exist in target interface %s", realName, this.iface.toString()));
         }
         
         method.name = realName;
@@ -167,17 +173,18 @@ public class InterfaceInfo extends TreeInfo {
      * Convert an {@link Interface} annotation node into an
      * {@link InterfaceInfo}
      * 
+     * @param mixin Parent mixin
      * @param node Annotation node to process
      * @return parsed InterfaceInfo object
      */
-    static InterfaceInfo fromAnnotation(AnnotationNode node) {
+    static InterfaceInfo fromAnnotation(MixinInfo mixin, AnnotationNode node) {
         String prefix = ASMHelper.<String>getAnnotationValue(node, "prefix");
         Type iface = ASMHelper.<Type>getAnnotationValue(node, "iface");
         
         if (prefix == null || iface == null) {
-            throw new InvalidMixinException(String.format("@Interface annotation on is missing a required parameter"));
+            throw new InvalidMixinException(mixin, String.format("@Interface annotation on is missing a required parameter"));
         }
         
-        return new InterfaceInfo(prefix, iface);
+        return new InterfaceInfo(mixin, prefix, iface);
     }
 }

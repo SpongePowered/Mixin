@@ -90,7 +90,7 @@ public class RedirectInjector extends InvokeInjector {
             if (alternateDesc.equals(this.methodNode.desc)) {
                 injectTargetParams = true;
             } else {
-                throw new InvalidInjectionException("@Redirect handler method has an invalid signature "
+                throw new InvalidInjectionException(this.info, "@Redirect handler method has an invalid signature "
                         + ", expected " + desc + " found " + this.methodNode.desc);
             }
         }

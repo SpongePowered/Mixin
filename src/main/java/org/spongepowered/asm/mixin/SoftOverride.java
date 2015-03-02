@@ -22,30 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.validation;
+package org.spongepowered.asm.mixin;
 
-import java.util.Collection;
-
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.tools.obfuscation.TypeHandle;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * Decorator for methods which override a method in a supermixin which the
+ * containing mixin does not directly extend
  */
-public interface IMixinValidator {
-    
-    /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * 
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
-     * @return False to halt processing of further validators
-     */
-    public abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.CLASS)
+public @interface SoftOverride {
+
 }

@@ -29,6 +29,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
+
 /**
  * Used to indicate a Mixin class member which is acting as a placeholder for a
  * method or field in the target class 
@@ -76,6 +78,10 @@ public @interface Shadow {
      * prefix then <em>no renaming will take place</em> likey resulting in a
      * failure state indicated by an {@link InvalidMixinException} at run
      * time.</p>
+     * 
+     * <p>Prefixes on shadow fields are considered an error condition and don't
+     * have any purpose either way, since the scenario described above cannot
+     * actually occur with fields.</p> 
      * 
      * @return the shadow prefix
      */
