@@ -24,7 +24,7 @@ defaultTasks 'licenseFormat', 'check', 'build'
 // Basic project information
 group = 'org.spongepowered'
 archivesBaseName = 'mixin'
-version = '0.1-SNAPSHOT'
+version = '0.2-SNAPSHOT'
 
 // Extended project information
 ext.projectName = 'Mixin'
@@ -160,10 +160,16 @@ shadowJar  {
         include(dependency('net.minecraftforge.srg2source:Srg2Source'))
         include(dependency('net.sf.jopt-simple:jopt-simple'))
     }
-    // classifier = new Date().format('yyyyMMddHHmmss') // for dev 
     classifier = 'processor'
 }
 build.dependsOn(shadowJar)
+
+// Run this task instead of build to generate a timestamped shadow jar (for dev)
+task timestamp(type: Jar, dependsOn: build) {
+    if (gradle.startParameter.taskNames.contains(name)) {
+        shadowJar.classifier = new Date().format('yyyyMMddHHmmss')
+    }
+}
 
 task sourceJar(type: Jar) {
 	from sourceSets.main.java
