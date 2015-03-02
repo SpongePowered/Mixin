@@ -180,6 +180,8 @@ public abstract class InjectionInfo {
     
     /**
      * Get the mixin target context for this injection
+     * 
+     * @return the target context
      */
     public MixinTargetContext getContext() {
         return this.mixin;
