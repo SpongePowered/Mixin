@@ -3,7 +3,7 @@
 **Mixin** is a trait/mixin framework for Java using [ASM](http://asm.ow2.org/)
 and hooking into the runtime class-loading process via Mojang's
 [LegacyLauncher](https://github.com/Mojang/LegacyLauncher) system. The main
-documentation for **Mixin** can be found in the [Wiki](wiki).
+documentation for **Mixin** can be found in the [Wiki](/wiki).
 
 ### Building Mixin
 **Mixin** uses the [Gradle](http://gradle.org/) build automation system. To
