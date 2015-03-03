@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Level;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -505,6 +506,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     public Set<String> getInterfaces() {
         return this.mixin.getInterfaces();
+    }
+
+    /**
+     * Get the logging level for this mixin
+     * 
+     * @return the logging level
+     */
+    public Level getLoggingLevel() {
+        return this.mixin.getLoggingLevel();
     }
 
     /**

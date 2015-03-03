@@ -165,6 +165,7 @@ public class InterfaceInfo extends TreeInfo {
             throw new InvalidMixinException(this.mixin, String.format("%s does not exist in target interface %s", realName, this.iface.toString()));
         }
         
+        ASMHelper.setVisibleAnnotation(method, MixinRenamed.class, "originalName", method.name, "isInterfaceMember", true);
         method.name = realName;
         return true;
     }

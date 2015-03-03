@@ -356,6 +356,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (shadowAnnotation != null) {
                 String prefix = ASMHelper.<String>getAnnotationValue(shadowAnnotation, "prefix", Shadow.class);
                 if (mixinMethod.name.startsWith(prefix)) {
+                    ASMHelper.setVisibleAnnotation(mixinMethod, MixinRenamed.class, "originalName", mixinMethod.name);
                     String newName = mixinMethod.name.substring(prefix.length());
                     method.renameTo(newName);
                     mixinMethod.name = newName;

@@ -57,6 +57,7 @@ import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.util.CheckClassAdapter;
+import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -557,24 +558,18 @@ public class MixinTransformer extends TreeTransformer {
         MethodNode target = this.findTargetMethod(targetClass, method);
         
         if (target != null) {
-            AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
-            if (merged != null) {
-                String sessionId = ASMHelper.<String>getAnnotationValue(merged, "sessionId");
-                
-                if (!this.sessionId.equals(sessionId)) {
-                    throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + targetClass.name);
-                }
-
-                String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
-                int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
-                
-                if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
-                    this.logger.warn("Method overwrite conflict for {}, previously written by {}. Skipping method.", method.name, owner);
+            if (this.alreadyMerged(targetClass, mixin, method, isOverwrite, target)) {
+                return;
+            }
+            
+            AnnotationNode intrinsic = ASMHelper.getInvisibleAnnotation(method, Intrinsic.class);
+            if (intrinsic != null) {
+                if (this.mergeIntrinsic(targetClass, mixin, method, isOverwrite, target, intrinsic)) {
                     return;
                 }
+            } else {
+                targetClass.methods.remove(target);
             }
-
-            targetClass.methods.remove(target);
         } else if (isOverwrite) {
             throw new InvalidMixinException(mixin, String.format("Overwrite target %s was not located in the target class", method.name));
         }
@@ -586,6 +581,107 @@ public class MixinTransformer extends TreeTransformer {
                 "mixin", mixin.getClassName(),
                 "priority", mixin.getPriority(),
                 "sessionId", this.sessionId);
+    }
+
+    /**
+     * Check whether this method was already merged into the target, returns
+     * false if the method was <b>not</b> already merged or if the incoming
+     * method has a higher priority than the already merged method.
+     * 
+     * @param targetClass Target classnode
+     * @param mixin Mixin context
+     * @param method Method being merged
+     * @param isOverwrite True if the incoming method is tagged with Override
+     * @param target target method being checked
+     * @return true if the target was already merged and should be skipped
+     */
+    private boolean alreadyMerged(ClassNode targetClass, MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
+        AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
+        if (merged == null) {
+            return false;
+        }
+    
+        String sessionId = ASMHelper.<String>getAnnotationValue(merged, "sessionId");
+        
+        if (!this.sessionId.equals(sessionId)) {
+            throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + targetClass.name);
+        }
+
+        String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
+        int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
+        
+        if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
+            this.logger.warn("Method overwrite conflict for {}, previously written by {}. Skipping method.", method.name, owner);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Validates and prepares an intrinsic merge, returns true if the intrinsic
+     * check results in a "skip" action, indicating that no further merge action
+     * should be undertaken
+     * 
+     * @param targetClass Target classnode
+     * @param mixin Mixin context
+     * @param method Method being merged
+     * @param isOverwrite True if the incoming method is tagged with Override
+     * @param target target method being checked
+     * @param intrinsic {@link Intrinsic} annotation
+     * @return true if the intrinsic method was skipped (short-circuit further
+     *      merge operations)
+     */
+    private boolean mergeIntrinsic(ClassNode targetClass, MixinTargetContext mixin, MethodNode method,
+            boolean isOverwrite, MethodNode target, AnnotationNode intrinsic) {
+        
+        if (isOverwrite) {
+            throw new InvalidMixinException(mixin, "@Intrinsic is not compatible with @Overwrite, remove one of these annotations on "
+                    + method.name);
+        }
+        
+        if (MixinTransformer.hasFlag(method, Opcodes.ACC_STATIC)) {
+            throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + method.name);
+        }
+        
+        AnnotationNode renamed = ASMHelper.getVisibleAnnotation(method, MixinRenamed.class);
+        if (renamed == null || !ASMHelper.getAnnotationValue(renamed, "isInterfaceMember", false)) {
+            throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on " + method.name);
+        }
+        
+        if (!ASMHelper.getAnnotationValue(intrinsic, "displace", false)) {
+            this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {}", method.name);
+            return true;
+        }
+        
+        this.displaceIntrinsic(targetClass, mixin, method, target);
+        return false;
+    }
+
+    /**
+     * Handles intrinsic displacement
+     * 
+     * @param targetClass Target classnode
+     * @param mixin Mixin context
+     * @param method Method being merged
+     * @param target target method being checked
+     */
+    private void displaceIntrinsic(ClassNode targetClass, MixinTargetContext mixin, MethodNode method, MethodNode target) {
+        // Deliberately include invalid character in the method name so that
+        // we guarantee no hackiness
+        String proxyName = "proxy+" + target.name;
+        
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof MethodInsnNode && insn.getOpcode() != Opcodes.INVOKESTATIC) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (methodNode.owner.equals(targetClass.name) && methodNode.name.equals(target.name) && methodNode.desc.equals(target.desc)) {
+                    methodNode.name = proxyName;
+                }
+            }
+        }
+        
+        target.name = proxyName;
     }
 
     /**
@@ -629,6 +725,7 @@ public class MixinTransformer extends TreeTransformer {
                 }
             }
         }
+        
         if (!found) {
             sourceMethod.name = targetMethodName;
             targetClass.methods.add(sourceMethod);
