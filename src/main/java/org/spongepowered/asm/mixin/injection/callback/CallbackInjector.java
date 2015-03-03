@@ -53,14 +53,124 @@ import org.spongepowered.asm.util.Locals;
 public class CallbackInjector extends Injector {
     
     /**
+     * Struct to replace all the horrible state variables from before 
+     */
+    private class Callback extends InsnList {
+        
+        /**
+         * Target method handle
+         */
+        final Target target;
+        
+        /**
+         * Target node, callback injected <b>before</b> this node 
+         */
+        final AbstractInsnNode node;
+        
+        /**
+         * Inflected local variable types
+         */
+        final Type[] locals;
+        
+        /**
+         * The initial frame size based on the target method's arguments
+         */
+        final int frameSize;
+
+        /**
+         * True if the injector is set to capture locals and we acutally <b>can
+         * </b> capture the locals (have sufficient info etc.)
+         */
+        final boolean canCaptureLocals;
+
+        /**
+         * True if the target insn is a RETURN opcode
+         */
+        final boolean isAtReturn;
+
+        /**
+         * Callback descriptor based on the target method and current context
+         */
+        final String descriptor;
+
+        /**
+         * These two variables keep track of the (additional) stack size
+         * required for the two actions we're going to be injecting insns to
+         * perform, namely calling the CallbackInfo ctor, and then invoking the
+         * callback itself. When we get to the end of this injection we will
+         * then set the MAXS value on the target method to its original value
+         * plus the larger of the two values.
+         */
+        int ctor, invoke;
+
+        /**
+         * Marshall var is the local where we marshall the utility references we
+         * need during invoke of the callback, those being the current return
+         * value for value-return scenarios (we store the topmost stack entry
+         * and then push it into the ctor of the CallbackInfo) and also the
+         * CallbackInfo reference itself (we use the same local var for these
+         * two purposes because they don't exist at the same time).
+         */
+        final int marshallVar;
+
+        Callback(Target target, final AbstractInsnNode node, final Type[] locals) {
+            this.target = target;
+            this.node = node;
+            this.locals = locals;
+            
+            this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
+            this.canCaptureLocals = CallbackInjector.this.captureLocals && locals != null && locals.length > this.frameSize;
+            this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
+            this.descriptor = target.getCallbackDescriptor(this.canCaptureLocals, locals, target.arguments, this.frameSize);
+
+            this.invoke = target.arguments.length + (this.canCaptureLocals ? locals.length - this.frameSize : 0);
+            this.marshallVar = target.method.maxLocals++;
+        }
+        
+        /**
+         * Returns true if the supplied opcode represents a <em>non-void</em>
+         * RETURN opcode
+         * 
+         * @param opcode opcode to check
+         * @return true if value return
+         */
+        private boolean isValueReturnOpcode(int opcode) {
+            return opcode >= Opcodes.IRETURN && opcode < Opcodes.RETURN;
+        }
+
+        /**
+         * Add an instruction to this callback and increment the appropriate
+         * stack sizes
+         * 
+         * @param insn Instruction to append
+         * @param ctorStack true if this insn contributes to the ctor stack
+         * @param invokeStack true if this insn contributes to the invoke stack
+         */
+        void add(AbstractInsnNode insn, boolean ctorStack, boolean invokeStack) {
+            this.add(insn);
+            this.ctor += (ctorStack ? 1 : 0);
+            this.invoke += (invokeStack ? 1 : 0);
+        }
+        
+        /**
+         * Inject our generated code into the method and set the max stack size
+         * for the method based on our calculated values
+         */
+        void inject() {
+            this.target.method.instructions.insertBefore(this.node, this);
+            this.target.method.maxStack = Math.max(this.target.method.maxStack, this.target.maxStack + Math.max(this.invoke, this.ctor));
+        }
+    }
+    
+    /**
      * True if cancellable 
      */
-    private final boolean cancellable;
+    protected final boolean cancellable;
     
     /**
      * True if capturing locals 
      */
-    private final boolean captureLocals;
+    protected final boolean captureLocals;
 
     /**
      * Make a new CallbackInjector with the supplied args
@@ -120,167 +230,151 @@ public class CallbackInjector extends Injector {
             }
         }
 
-        this.inject(target, node, localTypes);
+        this.inject(new Callback(target, node, localTypes));
     }
 
     /**
      * Generate the actual bytecode for the callback
      * 
-     * @param target Target method to inject callback into
-     * @param node Target node within
-     * @param locals Inferred local types at the target location
+     * @param callback callback handle
      */
-    private void inject(Target target, final AbstractInsnNode node, final Type[] locals) {
-        // Calculate the initial frame size based on the target method's arguments
-        int initialFrameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !this.isStatic);
-
-        // Work out whether we have enough info to capture locals in this scenario
-        boolean doCaptureLocals = this.captureLocals && locals != null && locals.length > initialFrameSize;
-        
-        // Determine the descriptor for the callback based on the target method and current context
-        String callbackDescriptor = target.getCallbackDescriptor(doCaptureLocals, locals, target.arguments, initialFrameSize);
-        
-        // If it doesn't match, then cry
-        if (!callbackDescriptor.equals(this.methodNode.desc)) {
-            throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callbackDescriptor + " found "
-                    + this.methodNode.desc);
-        }
-
-        // These two variables keep track of the (additional) stack size required for the two actions we're going to be injecting insns to perform,
-        // namely calling the CallbackInfo ctor, and then invoking the callback itself. When we get to the end of this injection we will then set
-        // the MAXS value on the target method to its original value plus the larger of the two values.
-        int ctorMAXS = 0;
-        int invokeMAXS = target.arguments.length + (doCaptureLocals ? locals.length - initialFrameSize : 0);
-
-        // Marshall var is the local where we marshall the utility references we need during invoke of the callback, those being the current return
-        // value for value-return scenarios (we store the topmost stack entry and then push it into the ctor of the CallbackInfo) and also the
-        // CallbackInfo reference itself (we use the same local var for these two purposes because they don't exist at the same time).
-        int marshallVar = target.method.maxLocals++;
-
-        // Insns we will inject
-        InsnList insns = new InsnList();
-
-        // Assume (for now) that we won't push the return value into the CallbackInfo ctor
-        boolean pushReturnValue = false;
-
-        // If this is a ReturnEventInfo AND we are right before a RETURN opcode (so we can expect the *original* return value to be on the stack,
-        // then we dup the return value into a local var so we can push it later when we invoke the ReturnEventInfo ctor
-        if (node instanceof InsnNode && node.getOpcode() >= Opcodes.IRETURN && node.getOpcode() < Opcodes.RETURN) {
-            pushReturnValue = true;
-            insns.add(new InsnNode(Opcodes.DUP));
-            insns.add(new VarInsnNode(target.returnType.getOpcode(Opcodes.ISTORE), marshallVar));
-        }
-
-        // CHECKSTYLE:OFF
-        // Instance the EventInfo for this event
-        insns.add(new TypeInsnNode(Opcodes.NEW, target.callbackInfoClass)); ctorMAXS++;
-        insns.add(new InsnNode(Opcodes.DUP)); ctorMAXS++; invokeMAXS++;
-        // CHECKSTYLE:ON
-        ctorMAXS += this.invokeCallbackInfoCtor(target, insns, pushReturnValue, marshallVar);
-        insns.add(new VarInsnNode(Opcodes.ASTORE, marshallVar));
-
-        // Push "this" onto the stack if the callback is not static
-        if (!this.isStatic) {
-            insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
-        }
-
-        // Push the target method's parameters onto the stack
-        ASMHelper.loadArgs(target.arguments, insns, this.isStatic ? 0 : 1);
-        
-        // Push the callback info onto the stack
-        insns.add(new VarInsnNode(Opcodes.ALOAD, marshallVar));
-        
-        // (Maybe) push the locals onto the stack
-        if (doCaptureLocals) {
-            Locals.loadLocals(locals, insns, initialFrameSize);
+    private void inject(final Callback callback) {
+        if (!callback.descriptor.equals(this.methodNode.desc)) {
+            throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.descriptor
+                    + " found " + this.methodNode.desc);
         }
         
-        // Call the callback!
-        this.invokeHandler(insns);
-
-        if (this.cancellable) {
-            // Inject the if (e.isCancelled()) return e.getReturnValue();
-            this.injectCancellationCode(target, insns, node, marshallVar);
-        }
-
-        // Inject our generated code into the method
-        target.method.instructions.insertBefore(node, insns);
-        target.method.maxStack = Math.max(target.method.maxStack, Math.max(target.maxStack + ctorMAXS, target.maxStack + invokeMAXS));
+        this.createCallbackInfo(callback);
+        this.invokeCallback(callback);
+        this.injectCancellationCode(callback);
+        
+        callback.inject();
     }
 
     /**
-     * @param target target method
-     * @param insns instruction list to append to
-     * @param pushReturnValue True to push the current value on the stack into
-     *      the CallbackInfo ctor, used when injecting at a RETURN opcode in
-     *      order to capture the current return value
-     * @param marshallVar "working" variable used to marshallt temporary values
-     * @return additional MAXS slots required
+     * @param callback callback handle
      */
-    protected int invokeCallbackInfoCtor(Target target, InsnList insns, boolean pushReturnValue, int marshallVar) {
-        int ctorMAXS = 0;
+    private void createCallbackInfo(final Callback callback) {
+        this.dupReturnValue(callback);
 
-        // CHECKSTYLE:OFF
-        insns.add(new LdcInsnNode(target.method.name)); ctorMAXS++;
-        insns.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0)); ctorMAXS++;
-        // CHECKSTYLE:ON
+        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, false);
+        callback.add(new InsnNode(Opcodes.DUP), true, true);
+        
+        this.invokeCallbackInfoCtor(callback);
+        callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+    }
 
-        if (pushReturnValue) {
-            insns.add(new VarInsnNode(target.returnType.getOpcode(Opcodes.ILOAD), marshallVar));
-            insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(target.returnType), false));
+    /**
+     * If this is a ReturnEventInfo AND we are right before a RETURN opcode (so
+     * we can expect the *original* return value to be on the stack, then we dup
+     * the return value into a local var so we can push it later when we invoke
+     * the ReturnEventInfo ctor
+     * 
+     * @param callback callback handle
+     */
+    private void dupReturnValue(final Callback callback) {
+        if (!callback.isAtReturn) {
+            return;
+        }
+        
+        callback.add(new InsnNode(Opcodes.DUP));
+        callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ISTORE), callback.marshallVar));
+    }
+
+    /**
+     * @param callback callback handle
+     */
+    protected void invokeCallbackInfoCtor(final Callback callback) {
+        callback.add(new LdcInsnNode(callback.target.method.name), true, false);
+        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, false);
+
+        if (callback.isAtReturn) {
+            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar));
+            callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
+                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
         } else {
-            insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+            callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
+                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+        }
+    }
+
+    /**
+     * @param callback callback handle
+     */
+    private void invokeCallback(final Callback callback) {
+        // Push "this" onto the stack if the callback is not static
+        if (!this.isStatic) {
+            callback.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
 
-        return ctorMAXS;
+        // Push the target method's parameters onto the stack
+        ASMHelper.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
+        
+        // Push the callback info onto the stack
+        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
+        
+        // (Maybe) push the locals onto the stack
+        if (callback.canCaptureLocals) {
+            Locals.loadLocals(callback.locals, callback, callback.frameSize);
+        }
+        
+        // Call the callback!
+        this.invokeHandler(callback);
     }
 
     /**
      * if (e.isCancelled()) return e.getReturnValue();
      * 
-     * @param target target method
-     * @param insns instruction list to append to
-     * @param node target node
-     * @param marshallVar "working" variable used to marshallt temporary values
+     * @param callback callback handle
      */
-    protected void injectCancellationCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
-        insns.add(new VarInsnNode(Opcodes.ALOAD, marshallVar));
-        insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, target.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
+    protected void injectCancellationCode(final Callback callback) {
+        if (!this.cancellable) {
+            return;
+        }
+        
+        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
+        callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, callback.target.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
                 CallbackInfo.getIsCancelledMethodSig(), false));
 
         LabelNode notCancelled = new LabelNode();
-        insns.add(new JumpInsnNode(Opcodes.IFEQ, notCancelled));
+        callback.add(new JumpInsnNode(Opcodes.IFEQ, notCancelled));
 
-        // If this is a void method, just injects a RETURN opcode, otherwise we need to get the return value from the EventInfo
-        this.injectReturnCode(target, insns, node, marshallVar);
+        // If this is a void method, just injects a RETURN opcode, otherwise we
+        // need to get the return value from the EventInfo
+        this.injectReturnCode(callback);
 
-        insns.add(notCancelled);
+        callback.add(notCancelled);
     }
 
     /**
      * Inject the appropriate return code for the method type
      * 
-     * @param target target method
-     * @param insns instruction list to append to
-     * @param node target node
-     * @param marshallVar "working" variable used to marshallt temporary values
+     * @param callback callback handle
      */
-    protected void injectReturnCode(Target target, final InsnList insns, final AbstractInsnNode node, int marshallVar) {
-        if (target.returnType.equals(Type.VOID_TYPE)) {
+    protected void injectReturnCode(final Callback callback) {
+        if (callback.target.returnType.equals(Type.VOID_TYPE)) {
             // Void method, so just return void
-            insns.add(new InsnNode(Opcodes.RETURN));
+            callback.add(new InsnNode(Opcodes.RETURN));
         } else {
-            // Non-void method, so work out which accessor to call to get the return value, and return it
-            insns.add(new VarInsnNode(Opcodes.ALOAD, marshallVar));
-            String accessor = CallbackInfoReturnable.getReturnAccessor(target.returnType);
-            String descriptor = CallbackInfoReturnable.getReturnDescriptor(target.returnType);
-            insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, target.callbackInfoClass, accessor, descriptor, false));
-            if (target.returnType.getSort() == Type.OBJECT) {
-                insns.add(new TypeInsnNode(Opcodes.CHECKCAST, target.returnType.getInternalName()));
+            // Non-void method, so work out which accessor to call to get the
+            // return value, and return it
+            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
+            String accessor = CallbackInfoReturnable.getReturnAccessor(callback.target.returnType);
+            String descriptor = CallbackInfoReturnable.getReturnDescriptor(callback.target.returnType);
+            callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, callback.target.callbackInfoClass, accessor, descriptor, false));
+            if (callback.target.returnType.getSort() == Type.OBJECT) {
+                callback.add(new TypeInsnNode(Opcodes.CHECKCAST, callback.target.returnType.getInternalName()));
             }
-            insns.add(new InsnNode(target.returnType.getOpcode(Opcodes.IRETURN)));
+            callback.add(new InsnNode(callback.target.returnType.getOpcode(Opcodes.IRETURN)));
         }
+    }
+    
+    /**
+     * Explicit to avoid creation of synthetic accessor
+     * 
+     * @return true if the target method is static
+     */
+    protected boolean isStatic() {
+        return this.isStatic;
     }
 }
