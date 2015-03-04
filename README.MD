@@ -1,3 +1,5 @@
+### [![Build Status](https://travis-ci.org/SpongePowered/Mixin.svg?branch=master)](https://travis-ci.org/SpongePowered/Mixin)
+
 ![Mixin Logo](docs/logo.png?raw=true)
 
 **Mixin** is a trait/mixin framework for Java using [ASM](http://asm.ow2.org/)
@@ -11,7 +13,8 @@ perform a build simply execute
 
     gradle
 
-from within the project root directory.
+from within the project root directory. *(If you do not have Gradle installed on
+your system you can instead run the supplied Gradle wrapper `gradlew`)*
 
 ### Integration with Eclipse IDE
 
@@ -27,13 +30,15 @@ easily troubleshoot your mixins. To do so:
 2. Open the properties of your eclipse project and navigate to `Java Compiler`
   -> `Annotation Processing` -> `Factory Path`  
 3. Check the `Enable project specific settings` checkbox
-4. Click the `Add External JARs` button and select the generated mixin jar
+4. Click the `Add External JARs` button and select the generated mixin jar with
+ the suffix **-processor** (hint: it should be in `Mixin/build/libs`)
 5. Navigate up one level to `Java Compiler` -> `Annotation Processing`
 6. Check the `Enable project specific settings` checkbox
 7. Check the `Enable annotation processing` checkbox
 8. Click the `New...` button next to the `Processor options` box
  * Set `Key` to **reobfSrgFile**
- * Set `Value` to the fully-qualified path to the `mcp-srg.srg` file
+ * Set `Value` to the fully-qualified path to the `mcp-srg.srg` file (for Sponge
+ this can be found in `Sponge/build/srgs/mcp-srg.srg`)
 9. Click `OK` to apply the changes
 
 ### Version History
