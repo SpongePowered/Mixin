@@ -22,27 +22,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
 
-public class CallbackInjectionInfo extends InjectionInfo {
+/**
+ * Error to throw for critical injection problems
+ */
+public class InjectionError extends Error {
 
-    protected CallbackInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+    private static final long serialVersionUID = 1L;
+
+    public InjectionError() {
     }
 
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
-        LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
-        
-        return new CallbackInjector(this, cancellable, locals);
+    public InjectionError(String message) {
+        super(message);
     }
+
+    public InjectionError(Throwable cause) {
+        super(cause);
+    }
+
+    public InjectionError(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public InjectionError(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
+    }
+
 }

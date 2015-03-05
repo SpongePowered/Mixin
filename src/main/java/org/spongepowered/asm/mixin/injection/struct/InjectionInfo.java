@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -89,6 +90,11 @@ public abstract class InjectionInfo {
      * Bytecode injector
      */
     protected Injector injector;
+    
+    /**
+     * Methods injected by injectors 
+     */
+    private final List<MethodNode> injectedMethods = new ArrayList<MethodNode>(0);
     
     /**
      * ctor
@@ -180,6 +186,15 @@ public abstract class InjectionInfo {
     }
     
     /**
+     * Perform cleanup and post-injection tasks 
+     */
+    public void postInject() {
+        for (MethodNode method : this.injectedMethods) {
+            this.classNode.methods.add(method);
+        }
+    }
+    
+    /**
      * Get the mixin target context for this injection
      * 
      * @return the target context
@@ -224,6 +239,21 @@ public abstract class InjectionInfo {
         return this.targets;
     }
 
+    /**
+     * Inject a method into the target class
+     * 
+     * @param access 
+     * @param name 
+     * @param desc 
+     * 
+     * @return new method
+     */
+    public MethodNode addMethod(int access, String name, String desc) {
+        MethodNode method = new MethodNode(Opcodes.ASM5, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
+        this.injectedMethods.add(method);
+        return method;
+    }
+    
     /**
      * Finds methods in the target class which match searchFor
      * 

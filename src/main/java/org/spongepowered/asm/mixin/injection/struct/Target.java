@@ -118,7 +118,7 @@ public class Target {
      * @return generated descriptor
      */
     public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex) {
-        if (!captureLocals) {
+        if (!captureLocals || locals == null) {
             return this.callbackDescriptor;
         }
 

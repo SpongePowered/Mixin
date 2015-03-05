@@ -425,7 +425,7 @@ public class ASMHelper {
             }
         }        
         
-        return String.valueOf(opcode);
+        return opcode >= 0 ? String.valueOf(opcode) : "";
     }
 
     /**

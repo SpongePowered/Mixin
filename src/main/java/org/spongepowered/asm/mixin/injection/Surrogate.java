@@ -22,27 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class CallbackInjectionInfo extends InjectionInfo {
 
-    protected CallbackInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
-    }
+/**
+ * Annotation used to decorate surrogate injector methods. See
+ * {@link Inject#locals()} for information.
+ */
+@Target({ ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Surrogate {
 
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
-        LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
-        
-        return new CallbackInjector(this, cancellable, locals);
-    }
 }

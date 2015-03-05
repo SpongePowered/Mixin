@@ -916,6 +916,8 @@ public class MixinTransformer extends TreeTransformer {
      * @param mixin
      */
     private void applyInjections(ClassNode targetClass, MixinTargetContext mixin) {
+        List<InjectionInfo> injected = new ArrayList<InjectionInfo>();
+        
         for (MethodNode method : targetClass.methods) {
             InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
             if (injectInfo == null) {
@@ -924,9 +926,14 @@ public class MixinTransformer extends TreeTransformer {
             
             if (injectInfo.isValid()) {
                 injectInfo.inject();
+                injected.add(injectInfo);
             }
             
             method.visibleAnnotations.remove(injectInfo.getAnnotation());
+        }
+        
+        for (InjectionInfo injectInfo : injected) {
+            injectInfo.postInject();
         }
     }
     

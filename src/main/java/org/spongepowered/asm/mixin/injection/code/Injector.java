@@ -148,9 +148,13 @@ public abstract class Injector {
      * @param insns Instruction list to inject into
      */
     protected void invokeHandler(InsnList insns) {
-        boolean isPrivate = (this.methodNode.access & Opcodes.ACC_PRIVATE) != 0;
+        this.invokeMethod(insns, this.methodNode);
+    }
+
+    protected void invokeMethod(InsnList insns, MethodNode methodNode) {
+        boolean isPrivate = (methodNode.access & Opcodes.ACC_PRIVATE) != 0;
         int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
-        insns.add(new MethodInsnNode(invokeOpcode, this.classNode.name, this.methodNode.name, this.methodNode.desc, false));
+        insns.add(new MethodInsnNode(invokeOpcode, this.classNode.name, methodNode.name, methodNode.desc, false));
     }
     
     protected static String printArgs(Type[] args) {

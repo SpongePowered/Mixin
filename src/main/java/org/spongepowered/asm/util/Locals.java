@@ -119,10 +119,17 @@ public class Locals {
      */
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
+        int local = 0, index = 0;
 
         // Initialise implicit "this" reference in non-static methods
         if ((method.access & Opcodes.ACC_STATIC) == 0) {
-            frame[0] = new LocalVariableNode("this", classNode.name, null, null, null, 0);
+            frame[local++] = new LocalVariableNode("this", classNode.name, null, null, null, 0);
+        }
+        
+        // Initialise method arguments
+        for (Type argType : Type.getArgumentTypes(method.desc)) {
+            frame[local] = new LocalVariableNode("arg" + index++, argType.toString(), null, null, null, local);
+            local += argType.getSize();
         }
 
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {

@@ -29,6 +29,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+
 /**
  * Specifies that this mixin method should inject a callback (or
  * callback<b>s</b>) to itself in the target method(s) identified by
@@ -60,9 +63,7 @@ public @interface Inject {
      * Setting an injected callback to <em>cancellable</em> allows the injected
      * callback to inject optional RETURN opcodes into the target method, the
      * return behaviour can then be controlled from within the callback by
-     * interacting with the supplied
-     * {@link org.spongepowered.asm.mixin.injection.callback.CallbackInfo}
-     * object.
+     * interacting with the supplied {@link CallbackInfo} object.
      * 
      * @return true if this injector should inject appropriate RETURN opcodes
      *      which allow it to be cancelled
@@ -70,13 +71,45 @@ public @interface Inject {
     public boolean cancellable() default false;
     
     /**
-     * Set to true to allow local variables to be captured from the target
-     * method as well as method parameters.
+     * Specifies the local variable capture behaviour for this injector.
      * 
-     * @return true if the injector should capture local variables in the frame
-     *      at the injection point
+     * <p>When capturing local variables in scope, the variables are appended to
+     * the callback invocation after the {@link CallbackInfo} argument.</p>
+     * 
+     * <p>Capturing local variables from the target scope requires careful
+     * planning because unlike other aspects of an injection (such as the target
+     * method name and signature), the local variable table is <b>not</b> safe
+     * from modification by other transformers which may be in use in the
+     * production environment. Even other injectors which target the same target
+     * method have the ability to modify the local variable table and thus it is
+     * in no way safe to assume that local variables in scope at development
+     * time will be so in production.</p>
+     * 
+     * <p>To provide some level of flexibility, especially where changes can be
+     * anticipated (for example a well-known mod makes changes which result in a
+     * particular structure for the local variable table) it is possible to
+     * provide <em>overloads</em> for the handler method which will become
+     * surrogate targets for the orphaned injector by annotating them with an
+     * {@link Surrogate} annotation.</p>
+     * 
+     * <p>It is also important to nominate the failure behaviour to follow when
+     * local capture fails and so all {@link LocalCapture} behaviours which
+     * specify a capture action imply a particular behaviour for handling
+     * failure. See the javadoc on the {@link LocalCapture} members for more
+     * details.</p>
+     * 
+     * <p>Determining what local variables are available to you and in what
+     * order can be somewhat tricky, and so a simple mechanism for enumerating
+     * available locals is provided. By setting <code>locals</code> to
+     * {@link LocalCapture#PRINT}, the injector writes the local capture state
+     * to STDERR instead of injecting the callback. Using the output thus
+     * obtained it is then a straightforward matter of altering the callback
+     * method signature to match the signature proposed by the Callback
+     * Injector.</p> 
+     * 
+     * @return the desired local capture behaviour for this injector
      */
-//    public boolean captureLocals() default false;
+    public LocalCapture locals() default LocalCapture.NO_CAPTURE;
 
 
     /**
