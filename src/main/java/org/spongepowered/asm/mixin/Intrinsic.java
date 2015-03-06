@@ -116,7 +116,7 @@ import java.lang.annotation.Target;
  * }</pre></blockquote>
  * 
  */
-@Target({ ElementType.METHOD})
+@Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.CLASS)
 public @interface Intrinsic {
 

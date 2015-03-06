@@ -242,9 +242,9 @@ public abstract class InjectionInfo {
     /**
      * Inject a method into the target class
      * 
-     * @param access 
-     * @param name 
-     * @param desc 
+     * @param access Method access flags, synthetic will be automatically added
+     * @param name Method name
+     * @param desc Method descriptor
      * 
      * @return new method
      */
