@@ -93,7 +93,7 @@ class ClassInfo extends TreeInfo {
         
         private Traversal(Traversal next, boolean traverse) {
             this.next = next != null ? next : this;
-            this.traverse = true;
+            this.traverse = traverse;
         }
         
         public Traversal next() {

@@ -268,7 +268,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 continue;
             }
             
-            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.NONE)) {
+            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.IMMEDIATE)) {
                 throw new InvalidMixinException(this, "Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
                         + " was not found in the hierarchy of target class '" + targetClass + "'");
             }
