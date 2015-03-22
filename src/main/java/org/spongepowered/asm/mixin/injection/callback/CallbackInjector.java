@@ -470,8 +470,10 @@ public class CallbackInjector extends Injector {
         if (callback.canCaptureLocals) {
             Locals.loadLocals(callback.localTypes, callback, callback.frameSize);
         }
-        
+
         // Call the callback!
+        // Set to private to avoid overriding callbacks from mixins to superclasses
+        callbackMethod.access = Opcodes.ACC_PRIVATE;
         this.invokeMethod(callback, callbackMethod);
     }
 
