@@ -486,7 +486,7 @@ class ClassInfo extends TreeInfo {
     /**
      * Class targets
      */
-    protected List<ClassInfo> targets() {
+    protected List<ClassInfo> getTargets() {
         if (this.mixin != null) {
             List<ClassInfo> targets = new ArrayList<ClassInfo>();
             targets.add(this);
@@ -495,6 +495,15 @@ class ClassInfo extends TreeInfo {
         }
         
         return ImmutableList.<ClassInfo>of(this);
+    }
+    
+    /**
+     * Get class/interface methods
+     * 
+     * @return read-only view of class methods
+     */
+    public Set<Method> getMethods() {
+        return Collections.unmodifiableSet(this.methods);
     }
     
     /**
@@ -573,7 +582,7 @@ class ClassInfo extends TreeInfo {
     public ClassInfo findSuperClass(String superClass, Traversal traversal) {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
-            List<ClassInfo> targets = superClassInfo.targets();
+            List<ClassInfo> targets = superClassInfo.getTargets();
             for (ClassInfo superTarget : targets) {
                 if (superClass.equals(superTarget.getName())) {
                     return superClassInfo;
@@ -756,7 +765,7 @@ class ClassInfo extends TreeInfo {
         
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
-            for (ClassInfo superTarget : superClassInfo.targets()) {
+            for (ClassInfo superTarget : superClassInfo.getTargets()) {
                 Method method = superTarget.findMethodInHierarchy(name, desc, true, traversal.next());
                 if (method != null) {
                     return method;

@@ -27,12 +27,10 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.Implements;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.util.ASMHelper;
 
 
@@ -85,7 +83,7 @@ public class InterfaceInfo extends TreeInfo {
      */
     private void initMethods() {
         this.methods = new HashSet<String>();
-        this.readInterface(this.iface.getClassName());
+        this.readInterface(this.iface.getInternalName());
     }
     
     /**
@@ -95,22 +93,14 @@ public class InterfaceInfo extends TreeInfo {
      * @param ifaceName Name of the interface to read
      */
     private void readInterface(String ifaceName) {
-        ClassNode ifaceNode = new ClassNode();
-        try {
-            ClassReader classReader = new ClassReader(TreeInfo.loadClass(ifaceName, true));
-            classReader.accept(ifaceNode, 0);
-        } catch (Exception ex) {
-            throw new InvalidMixinException(this.mixin, "An error was encountered parsing the interface " + this.iface.toString());
+        ClassInfo interfaceInfo = ClassInfo.forName(ifaceName);
+        
+        for (Method ifaceMethod : interfaceInfo.getMethods()) {
+            this.methods.add(ifaceMethod.toString());
         }
         
-        for (MethodNode ifaceMethod : ifaceNode.methods) {
-            String signature = ifaceMethod.name + ifaceMethod.desc;
-            this.methods.add(signature);
-        }
-        
-        for (String superIface : ifaceNode.interfaces) {
-            String sif = superIface.replace('/', '.');
-            this.readInterface(sif);
+        for (String superIface : interfaceInfo.getInterfaces()) {
+            this.readInterface(superIface);
         }
     }
 
