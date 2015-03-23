@@ -143,9 +143,7 @@ abstract class TreeInfo {
         final List<IClassTransformer> transformers = TreeInfo.getTransformers();
 
         for (final IClassTransformer transformer : transformers) {
-            if (!(transformer instanceof MixinTransformer) && !TreeInfo.excludeTransformers.contains(transformer.getClass().getName())) {
-                basicClass = transformer.transform(name, name, basicClass);
-            }
+            basicClass = transformer.transform(name, name, basicClass);
         }
 
         return basicClass;
