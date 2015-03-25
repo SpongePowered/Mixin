@@ -230,7 +230,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
             Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
-            if (superMethod == null || !superMethod.isInjected()) {
+            if (superMethod == null) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.targetClass.name);
             }
