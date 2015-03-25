@@ -343,7 +343,7 @@ class ClassInfo extends TreeInfo {
         this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
         
         for (MethodNode method : classNode.methods) {
-            this.addMethod(method, false);
+            this.addMethod(method, this.isMixin);
         }
 
         String outerName = classNode.outerClass;
