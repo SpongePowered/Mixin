@@ -290,7 +290,10 @@ public class CallbackInjector extends Injector {
         MethodNode callbackMethod = this.methodNode;
 
         if (!callback.getDescriptor().equals(this.methodNode.desc)) {
-            
+            if (this.info.getTargets().size() != 0) {
+                return; // Look for a match in other targets before failing
+            }
+
             if (callback.canCaptureLocals) {
                 // First check whether there is a compatible method in the class
                 // the method must have an identical name and an appropriate
@@ -329,6 +332,7 @@ public class CallbackInjector extends Injector {
         this.injectCancellationCode(callback);
         
         callback.inject();
+        this.info.getTargets().clear();
     }
 
     /**
