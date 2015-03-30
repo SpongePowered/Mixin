@@ -167,11 +167,24 @@ public class MemberInfo {
      * 
      * @param methodData MethodData object to copy values from
      */
-    public MemberInfo(MethodData methodData) {
+    private MemberInfo(MethodData methodData) {
         int slashPos = methodData.name.lastIndexOf('/');
         this.owner = methodData.name.substring(0, slashPos);
         this.name = methodData.name.substring(slashPos + 1);
         this.desc = methodData.sig;
+        this.matchAll = false;
+    }
+    
+    /**
+     * Initialise a remapped MemberInfo using the supplied MethodData object
+     * 
+     * @param methodData MethodData object to copy values from
+     */
+    private MemberInfo(MemberInfo remapped, MethodData methodData, boolean setOwner) {
+        int slashPos = methodData.name.lastIndexOf('/');
+        this.owner = setOwner ? methodData.name.substring(0, slashPos) : remapped.owner;
+        this.name = methodData.name.substring(slashPos + 1);
+        this.desc = remapped.desc;
         this.matchAll = false;
     }
 
@@ -303,6 +316,17 @@ public class MemberInfo {
         return (this.name == null || this.name.equals(name)) 
             && (this.desc == null || (desc != null && desc.equals(this.desc)))
             && (ordinal == 0 || this.matchAll);
+    }
+    
+    /**
+     * Create a remapped version of this member using the supplied method data
+     * 
+     * @param methodData Method data to use
+     * @param setOwner True to set the owner as well as the name
+     * @return New MethodInfo with remapped values
+     */
+    public MemberInfo remapUsing(MethodData methodData, boolean setOwner) {
+        return new MemberInfo(this, methodData, setOwner);
     }
     
     /**

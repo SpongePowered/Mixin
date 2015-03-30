@@ -46,6 +46,7 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
@@ -53,6 +54,7 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
@@ -523,6 +525,32 @@ class AnnotatedMixins implements Messager {
         }
         
         return null;
+    }
+    
+    /**
+     * Get an obfuscation mapping for a method
+     */
+    public MethodData getObfMethod(MemberInfo method) {
+        MethodData obfd = this.getObfMethod(method.asMethodData());
+        if (obfd != null || !method.isFullyQualified()) {
+            return obfd;
+        }
+        
+        // Get a type handle for the declared method owner
+        TypeHandle type = this.getTypeHandle(method.owner);
+        if (type.isImaginary()) {
+            return null;
+        }
+        
+        // See if we can get the superclass from the reference
+        TypeMirror superClass = type.getElement().getSuperclass();
+        if (superClass.getKind() != TypeKind.DECLARED) {
+            return null;
+        }
+        
+        // Well we found it, let's inflect the class name and recurse the search
+        String superClassName = ((TypeElement)((DeclaredType)superClass).asElement()).getQualifiedName().toString();
+        return this.getObfMethod(new MemberInfo(method.name, superClassName.replace('.', '/'), method.desc, method.matchAll));
     }
 
     /**

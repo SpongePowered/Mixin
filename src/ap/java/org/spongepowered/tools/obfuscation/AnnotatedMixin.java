@@ -468,14 +468,14 @@ class AnnotatedMixin {
             }
             remappedReference = MemberInfo.fromSrgField(obfField, targetMember.desc);
         } else {
-            MethodData obfMethod = this.mixins.getObfMethod(targetMember.asMethodData());
+            MethodData obfMethod = this.mixins.getObfMethod(targetMember);
             if (obfMethod == null) {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
                 }
                 return;
             }
-            remappedReference = MemberInfo.fromSrgMethod(obfMethod);
+            remappedReference = targetMember.remapUsing(obfMethod, false);
         }
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, target, remappedReference.toString());
