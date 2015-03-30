@@ -66,6 +66,12 @@ configurations {
     deployerJars // maven stuff
 }
 
+configurations.all {
+    // Force use of Guava 17.0 so that srg2source doesn't evict it
+    resolutionStrategy {
+        force 'com.google.guava:guava:17.0'
+    }
+}
 
 // Include annotation processor sourceSet
 sourceSets {
@@ -77,7 +83,7 @@ sourceSets {
 // Project dependencies
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.7'
-    compile 'com.google.guava:guava:18.0'
+    compile 'com.google.guava:guava:17.0'
     compile 'org.ow2.asm:asm-debug-all:5.0.3'
     compile 'net.minecraft:launchwrapper:1.11'
     compile 'com.google.code.gson:gson:2.2.4'
