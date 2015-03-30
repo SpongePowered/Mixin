@@ -33,10 +33,9 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.util.ASMHelper;
 
-
 /**
  * Information about an interface being runtime-patched onto a mixin target
- * class, see {@link Implements}
+ * class, see {@link org.spongepowered.asm.mixin.Implements Implements}
  */
 public class InterfaceInfo extends TreeInfo {
     
