@@ -174,7 +174,7 @@ public class MixinTransformer extends TreeTransformer {
      * Mixin configuration bundle
      */
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
-    
+
     /**
      * True once initialisation is done. All mixin configs needs to be
      * initialised as late as possible in startup (so that other transformers
@@ -234,7 +234,7 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
-        if (basicClass == null) {
+        if (basicClass == null || transformedName == null) {
             return basicClass;
         }
 
@@ -253,7 +253,11 @@ public class MixinTransformer extends TreeTransformer {
             SortedSet<MixinInfo> mixins = null;
             
             for (MixinConfig config : this.configs) {
-                if (transformedName != null && transformedName.startsWith(config.getMixinPackage())) {
+                if (config.packageMatch(transformedName)) {
+                    if (config.canPassThrough(transformedName)) {
+                        return this.passThrough(name, transformedName, basicClass);
+                    }
+                    
                     throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
                 }
                 
@@ -350,6 +354,39 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
+     * "Pass through" a synthetic inner class. Transforms package-private
+     * members in the class into public so that they are accessible from their
+     * new home in the target class
+     * 
+     * @param name original class name
+     * @param transformedName deobfuscated class name
+     * @param basicClass class bytecode
+     * @return public-ified class bytecode
+     */
+    private byte[] passThrough(String name, String transformedName, byte[] basicClass) {
+        ClassNode passThroughClass = this.readClass(basicClass, true);
+        
+        // Make the class public
+        passThroughClass.access |= Opcodes.ACC_PUBLIC;
+        
+        // Make package-private fields public
+        for (FieldNode field : passThroughClass.fields) {
+            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                field.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
+        
+        // Make package-private methods public
+        for (MethodNode method : passThroughClass.methods) {
+            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                method.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
+        
+        return this.writeClass(transformedName, passThroughClass);
+    }
+
+    /**
      * Apply mixins for specified target class to the class described by the
      * supplied byte array.
      * 
@@ -375,6 +412,10 @@ public class MixinTransformer extends TreeTransformer {
             targetClass.accept(new CheckClassAdapter(new ClassWriter(ClassWriter.COMPUTE_FRAMES)));
         }
         
+        return this.writeClass(transformedName, targetClass);
+    }
+
+    private byte[] writeClass(String transformedName, ClassNode targetClass) {
         // Collapse tree to bytes
         byte[] bytes = this.writeClass(targetClass);
         

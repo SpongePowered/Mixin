@@ -243,6 +243,12 @@ class ClassInfo extends TreeInfo {
     private final String outerName;
     
     /**
+     * True either if this is not an inner class or if it is an inner class but
+     * does not contain a reference to its outer class.
+     */
+    private final boolean isProbablyStatic;
+    
+    /**
      * Interfaces
      */
     private final List<String> interfaces;
@@ -305,6 +311,7 @@ class ClassInfo extends TreeInfo {
         this.name = ClassInfo.JAVA_LANG_OBJECT;
         this.superName = null;
         this.outerName = null;
+        this.isProbablyStatic = true;
         this.methods = ImmutableSet.<Method>of(
             new Method("getClass", "()Ljava/lang/Class;"),
             new Method("hashCode", "()I"),
@@ -346,11 +353,13 @@ class ClassInfo extends TreeInfo {
             this.addMethod(method, this.isMixin);
         }
 
+        boolean isProbablyStatic = true;
         String outerName = classNode.outerClass;
         if (outerName == null) {
             for (FieldNode field : classNode.fields) {
                 if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
-                    if (field.name.startsWith("this$")) { 
+                    if (field.name.startsWith("this$")) {
+                        isProbablyStatic = false;
                         outerName = field.desc;
                         if (outerName.startsWith("L")) {
                             outerName = outerName.substring(1, outerName.length() - 1);
@@ -362,6 +371,7 @@ class ClassInfo extends TreeInfo {
             }
         }
         
+        this.isProbablyStatic = isProbablyStatic;
         this.outerName = outerName;
     }
 
@@ -406,6 +416,20 @@ class ClassInfo extends TreeInfo {
      */
     public boolean isPublic() {
         return (this.access & Opcodes.ACC_PUBLIC) != 0;
+    }
+    
+    /**
+     * Get whether this class has ACC_SYNTHETIC
+     */
+    public boolean isSynthetic() {
+        return (this.access & Opcodes.ACC_SYNTHETIC) != 0;
+    }
+    
+    /**
+     * Get whether this class is probably static (or is not an inner class) 
+     */
+    public boolean isProbablyStatic() {
+        return this.isProbablyStatic;
     }
     
     /**

@@ -80,6 +80,11 @@ class MixinConfig implements Comparable<MixinConfig> {
     private final transient List<MixinInfo> mixins = new ArrayList<MixinInfo>();
     
     /**
+     * Synthetic inner classes for mixins in this set
+     */
+    private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
+
+    /**
      * Minimum version of the mixin subsystem required to correctly apply mixins
      * in this configuration. 
      */
@@ -285,6 +290,9 @@ class MixinConfig implements Comparable<MixinConfig> {
             MixinInfo mixin = iter.next();
             try {
                 mixin.validate();
+                for (String innerClass : mixin.getSyntheticInnerClasses()) {
+                    this.syntheticInnerClasses.add(innerClass.replace('/', '.'));
+                }
             } catch (Exception ex) {
                 this.logger.error(ex.getMessage(), ex);
                 this.removeMixin(mixin);
@@ -392,6 +400,28 @@ class MixinConfig implements Comparable<MixinConfig> {
      */
     public Level getLoggingLevel() {
         return this.verboseLogging ? Level.INFO : Level.DEBUG;
+    }
+
+    /**
+     * Get whether this config's package matches the supplied class name
+     * 
+     * @param className Class name to check
+     * @return True if the specified class name is in this config's mixin
+     *      package
+     */
+    public boolean packageMatch(String className) {
+        return className.startsWith(this.mixinPackage);
+    }
+
+    /**
+     * Get whether this config can allow passthrough for the specified class
+     * 
+     * @param className Class name to check
+     * @return True if the specified class name is in this config's passthrough
+     *      set
+     */
+    public boolean canPassThrough(String className) {
+        return this.syntheticInnerClasses.contains(className);
     }
 
     /**

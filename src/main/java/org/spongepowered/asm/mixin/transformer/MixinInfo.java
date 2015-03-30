@@ -46,6 +46,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InnerClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
@@ -140,6 +141,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
     
     /**
+     * Synthetic inner classes
+     */
+    private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
+    
+    /**
      * Initial ClassNode created for mixin validation, not used for actual
      * application 
      */
@@ -183,6 +189,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.detachedSuper = this.validateTargetClasses(this.validationClassNode);
         this.validateMixin(this.validationClassNode);
         this.readImplementations(this.validationClassNode);
+        this.readInnerClasses(this.validationClassNode);
         this.prepare(this.validationClassNode);
         this.validationClassNode = null;
     }
@@ -286,7 +293,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     private void validateMixin(ClassNode classNode) {
         // isInner (shouldn't) return true for static inner classes
-        if (this.classInfo.isInner()) {
+        if (!this.classInfo.isProbablyStatic()) {
             throw new InvalidMixinException(this, "Inner class mixin must be declared static");
         }
 
@@ -342,6 +349,22 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(this, interfaceNode);
             this.softImplements.add(interfaceInfo);
             this.interfaces.add(interfaceInfo.getInternalName());
+        }
+    }
+
+    /**
+     * Read inner class definitions for the class and locate any synthetic inner
+     * classes so that we can add them to the passthrough set in our parent
+     * config.
+     */
+    private void readInnerClasses(ClassNode classNode) {
+        for (InnerClassNode inner : classNode.innerClasses) {
+            if (inner.outerName.equals(this.classInfo.getName())) {
+                ClassInfo innerClass = ClassInfo.forName(inner.name);
+                if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
+                    this.syntheticInnerClasses.add(inner.name);
+                }
+            }
         }
     }
 
@@ -465,6 +488,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public List<String> getTargetClasses() {
         return this.targetClassNames;
+    }
+    
+    /**
+     * Get the synthetic inner classes for this mixin
+     */
+    public Set<String> getSyntheticInnerClasses() {
+        return Collections.unmodifiableSet(this.syntheticInnerClasses);
     }
     
     /**
