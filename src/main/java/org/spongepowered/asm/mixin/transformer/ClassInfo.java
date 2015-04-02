@@ -1078,7 +1078,18 @@ class ClassInfo extends TreeInfo {
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethod(MethodNode method) {
-        return this.findMethod(method.name, method.desc);
+        return this.findMethod(method.name, method.desc, false);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class
+     * 
+     * @param method Method to search for
+     * @param includePrivate also search private fields
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethod(MethodNode method, boolean includePrivate) {
+        return this.findMethod(method.name, method.desc, includePrivate);
     }
     
     /**
@@ -1088,7 +1099,18 @@ class ClassInfo extends TreeInfo {
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethod(MethodInsnNode method) {
-        return this.findMethod(method.name, method.desc);
+        return this.findMethod(method.name, method.desc, false);
+    }
+    
+    /**
+     * Finds the specified public or protected method in this class
+     * 
+     * @param method Method to search for
+     * @param includePrivate also search private fields
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethod(MethodInsnNode method, boolean includePrivate) {
+        return this.findMethod(method.name, method.desc, includePrivate);
     }
     
     /**
@@ -1096,10 +1118,11 @@ class ClassInfo extends TreeInfo {
      * 
      * @param method Method name to search for
      * @param desc Method signature to search for
+     * @param includePrivate also search private fields
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethod(String name, String desc) {
-        return this.findMember(name, desc, false, Type.METHOD);
+    public Method findMethod(String name, String desc, boolean includePrivate) {
+        return this.findMember(name, desc, includePrivate, Type.METHOD);
     }
     
     /**

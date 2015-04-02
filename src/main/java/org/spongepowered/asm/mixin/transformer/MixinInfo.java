@@ -29,7 +29,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -42,12 +41,10 @@ import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InnerClassNode;
-import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Mixin;
@@ -55,7 +52,6 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Function;
@@ -190,7 +186,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.validateMixin(this.validationClassNode);
         this.readImplementations(this.validationClassNode);
         this.readInnerClasses(this.validationClassNode);
-        this.prepare(this.validationClassNode);
+        new MixinPreProcessor(this, this.validationClassNode).prepare();
         this.validationClassNode = null;
     }
 
@@ -321,15 +317,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
-     * Prepare the mixin, applies any pre-processing transformations
-     */
-    private ClassNode prepare(ClassNode classNode) {
-        this.findRenamedMethods(classNode);
-        this.transformMethods(classNode);
-        return classNode;
-    }
-
-    /**
      * Read and process any {@link Implements} annotations on the mixin
      */
     private void readImplementations(ClassNode classNode) {
@@ -363,50 +350,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 ClassInfo innerClass = ClassInfo.forName(inner.name);
                 if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
                     this.syntheticInnerClasses.add(inner.name);
-                }
-            }
-        }
-    }
-
-    /**
-     * Let's do this
-     */
-    private void findRenamedMethods(ClassNode classNode) {
-        for (MethodNode mixinMethod : classNode.methods) {
-            Method method = this.classInfo.findMethod(mixinMethod);
-            
-            AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
-            if (shadowAnnotation != null) {
-                String prefix = ASMHelper.<String>getAnnotationValue(shadowAnnotation, "prefix", Shadow.class);
-                if (mixinMethod.name.startsWith(prefix)) {
-                    ASMHelper.setVisibleAnnotation(mixinMethod, MixinRenamed.class, "originalName", mixinMethod.name);
-                    String newName = mixinMethod.name.substring(prefix.length());
-                    method.renameTo(newName);
-                    mixinMethod.name = newName;
-                }
-            }
-            
-            for (InterfaceInfo iface : this.softImplements) {
-                if (iface.renameMethod(mixinMethod)) {
-                    method.renameTo(mixinMethod.name);
-                }
-            }
-        }
-    }
-
-    /**
-     * Apply discovered method renames to method invokations in the mixin
-     */
-    private void transformMethods(ClassNode classNode) {
-        for (MethodNode mixinMethod : classNode.methods) {
-            for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
-                AbstractInsnNode insn = iter.next();
-                if (insn instanceof MethodInsnNode) {
-                    MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    Method method = this.classInfo.findMethodInHierarchy(methodNode, true);
-                    if (method != null && method.isRenamed()) {
-                        methodNode.name = method.getName();
-                    }
                 }
             }
         }
@@ -491,6 +434,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
+     * Get the soft implementations for this mixin
+     */
+    List<InterfaceInfo> getSoftImplements() {
+        return Collections.unmodifiableList(this.softImplements);
+    }
+
+    /**
      * Get the synthetic inner classes for this mixin
      */
     public Set<String> getSyntheticInnerClasses() {
@@ -527,9 +477,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param target
      * @return
      */
-    public MixinTargetContext createContextForTarget(ClassNode target) {
-        ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
-        return new MixinTargetContext(this, this.prepare(classNode), target);
+    public MixinTargetContext createContextFor(ClassNode target) {
+        return new MixinPreProcessor(this, this.getClassNode(ClassReader.EXPAND_FRAMES)).createContextFor(target);
     }
 
     /**

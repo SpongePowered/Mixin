@@ -49,6 +49,7 @@ import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 
@@ -115,8 +116,6 @@ class AnnotatedMixin {
             return this.hasPrefix ? this.prefix + name : name;
         }
     }
-    
-    private static final String CTOR = "<init>";
     
     /**
      * Mixin annotation
@@ -408,7 +407,7 @@ class AnnotatedMixin {
             if (this.targetType.isImaginary()) {
                 this.mixins.printMessage(Kind.WARNING, "@Inject target requires method signature because enclosing type information is unavailable",
                         method, inject);
-            } else if (!AnnotatedMixin.CTOR.equals(targetMember.name)) {
+            } else if (!Constants.INIT.equals(targetMember.name)) {
                 this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
             }
             return;
@@ -416,7 +415,7 @@ class AnnotatedMixin {
         
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + targetMember.name, desc));
         if (obfMethod == null) {
-            Kind error = AnnotatedMixin.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
+            Kind error = Constants.INIT.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
             this.mixins.printMessage(error, "No obfuscation mapping for @Inject target " + targetMember.name, method, inject);
             return;
         }
