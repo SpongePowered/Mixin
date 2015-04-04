@@ -359,10 +359,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     private void readInnerClasses(ClassNode classNode) {
         for (InnerClassNode inner : classNode.innerClasses) {
-            if (inner.outerName.equals(this.classInfo.getName())) {
-                ClassInfo innerClass = ClassInfo.forName(inner.name);
-                if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
+            ClassInfo innerClass = ClassInfo.forName(inner.name);
+            if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
+                if ((inner.outerName != null && inner.outerName.equals(this.classInfo.getName())) || inner.name.startsWith(classNode.name + "$")) {
                     this.syntheticInnerClasses.add(inner.name);
+                } else {
+                    throw new InvalidMixinException(this, "Unhandled synthetic inner class found: " + inner.name);
                 }
             }
         }
