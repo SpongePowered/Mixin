@@ -66,6 +66,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * Transformer which applies Mixin classes to their declared target classes
@@ -141,9 +142,6 @@ public class MixinTransformer extends TreeTransformer {
             return String.format("Range[%d-%d,%d,valid=%s)", this.start, this.end, this.marker, this.isValid());
         }
     }
-    
-    private static final String INIT = "<init>";
-    private static final String CLINIT = "<clinit>";
     
     /**
      * List of opcodes which must not appear in a class initialiser, mainly a
@@ -401,7 +399,7 @@ public class MixinTransformer extends TreeTransformer {
         
         for (MixinInfo mixin : mixins) {
             this.logger.log(mixin.getLoggingLevel(), "Mixing {} into {}", mixin.getName(), transformedName);
-            this.applyMixin(transformedName, targetClass, mixin.createContextForTarget(targetClass));
+            this.applyMixin(transformedName, targetClass, mixin.createContextFor(targetClass));
         }
         
         // Extension point
@@ -500,51 +498,12 @@ public class MixinTransformer extends TreeTransformer {
      * @param mixin
      */
     private void applyMixinFields(ClassNode targetClass, MixinTargetContext mixin) {
-        for (Iterator<FieldNode> iter = mixin.getClassNode().fields.iterator(); iter.hasNext();) {
-            FieldNode field = iter.next();
-            AnnotationNode shadow = ASMHelper.getVisibleAnnotation(field, Shadow.class);
-            this.validateField(mixin, field, shadow);
-            if (!mixin.transformField(field)) {
-                iter.remove();
-                continue;
-            }
-            
-            FieldNode target = this.findTargetField(targetClass, field);
+        for (FieldNode field : mixin.getClassNode().fields) {
+            FieldNode target = MixinTransformer.findTargetField(targetClass, field);
             if (target == null) {
-                // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                if (shadow != null) {
-                    throw new InvalidMixinException(mixin, String.format("Shadow field %s was not located in the target class", field.name));
-                }
-                
                 // This is just a local field, so add it
                 targetClass.fields.add(field);
-            } else {
-                // Check that the shadow field has a matching descriptor
-                if (!target.desc.equals(field.desc)) {
-                    throw new InvalidMixinException(mixin, String.format("The field %s in the target class has a conflicting signature", field.name));
-                }
             }
-        }
-    }
-
-    /**
-     * Field sanity checks
-     * @param mixin
-     * @param field
-     * @param shadow
-     */
-    private void validateField(MixinTargetContext mixin, FieldNode field, AnnotationNode shadow) {
-        // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-        if (MixinTransformer.hasFlag(field, Opcodes.ACC_STATIC) && !MixinTransformer.hasFlag(field, Opcodes.ACC_PRIVATE)) {
-            throw new InvalidMixinException(mixin, String.format("Mixin classes cannot contain visible static methods or fields, found %s",
-                    field.name));
-        }
-
-        // Shadow fields can't have prefixes, it's meaningless for them anyway
-        String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
-        if (field.name.startsWith(prefix)) {
-            throw new InvalidMixinException(mixin, String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.",
-                    field.name, mixin));
         }
     }
 
@@ -560,16 +519,12 @@ public class MixinTransformer extends TreeTransformer {
             mixin.transformMethod(mixinMethod);
 
             boolean isShadow = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class) != null;
-            boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
-            boolean isAbstract = MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_ABSTRACT);
             
-            if (isShadow || isAbstract) {
-                // For shadow (and abstract, which can be used as a shorthand for Shadow) methods, we just check they're present
-                MethodNode target = this.findTargetMethod(targetClass, mixinMethod);
-                if (target == null) {
-                    throw new InvalidMixinException(mixin, String.format("Shadow method %s was not located in the target class", mixinMethod.name));
-                }
+            if (isShadow) {
+                continue;
             } else if (!mixinMethod.name.startsWith("<")) {
+                boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
+                
                 if (MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                         && !MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                         && !MixinTransformer.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
@@ -579,7 +534,7 @@ public class MixinTransformer extends TreeTransformer {
                 }
                 
                 this.mergeMethod(targetClass, mixin, mixinMethod, isOverwrite);
-            } else if (MixinTransformer.CLINIT.equals(mixinMethod.name)) {
+            } else if (Constants.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended
                 this.appendInsns(targetClass, mixinMethod.name, mixinMethod);
             } 
@@ -596,7 +551,7 @@ public class MixinTransformer extends TreeTransformer {
      *      {@link Overwrite} annotation
      */
     private void mergeMethod(ClassNode targetClass, MixinTargetContext mixin, MethodNode method, boolean isOverwrite) {
-        MethodNode target = this.findTargetMethod(targetClass, method);
+        MethodNode target = MixinTransformer.findTargetMethod(targetClass, method);
         
         if (target != null) {
             if (this.alreadyMerged(targetClass, mixin, method, isOverwrite, target)) {
@@ -795,7 +750,7 @@ public class MixinTransformer extends TreeTransformer {
         
         // Patch the initialiser into the target class ctors
         for (MethodNode method : targetClass.methods) {
-            if (MixinTransformer.INIT.equals(method.name)) {
+            if (Constants.INIT.equals(method.name)) {
                 method.maxStack = Math.max(method.maxStack, ctor.maxStack);
                 this.injectInitialiser(method, initialiser);
             }
@@ -809,7 +764,7 @@ public class MixinTransformer extends TreeTransformer {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getClassNode().methods) {
-            if (MixinTransformer.INIT.equals(mixinMethod.name)) {
+            if (Constants.INIT.equals(mixinMethod.name)) {
                 boolean hasLineNumbers = false;
                 for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
                     if (iter.next() instanceof LineNumberNode) {
@@ -846,7 +801,7 @@ public class MixinTransformer extends TreeTransformer {
             if (insn instanceof LineNumberNode) {
                 line = ((LineNumberNode)insn).line;
             } else if (insn instanceof MethodInsnNode) {
-                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && MixinTransformer.INIT.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
+                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
                     superIndex = ctor.instructions.indexOf(insn);
                     start = line;
                 }
@@ -943,7 +898,7 @@ public class MixinTransformer extends TreeTransformer {
     private void injectInitialiser(MethodNode ctor, InsnList initialiser) {
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
-            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && MixinTransformer.INIT.equals(((MethodInsnNode)insn).name)) {
+            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name)) {
                 ctor.instructions.insert(insn, initialiser);
             }
         }
@@ -985,7 +940,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param searchFor
      * @return Target method matching searchFor, or null if not found
      */
-    private MethodNode findTargetMethod(ClassNode targetClass, MethodNode searchFor) {
+    private static MethodNode findTargetMethod(ClassNode targetClass, MethodNode searchFor) {
         for (MethodNode target : targetClass.methods) {
             if (target.name.equals(searchFor.name) && target.desc.equals(searchFor.desc)) {
                 return target;
@@ -1002,7 +957,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param searchFor
      * @return Target field matching searchFor, or null if not found
      */
-    private FieldNode findTargetField(ClassNode targetClass, FieldNode searchFor) {
+    private static FieldNode findTargetField(ClassNode targetClass, FieldNode searchFor) {
         for (FieldNode target : targetClass.fields) {
             if (target.name.equals(searchFor.name)) {
                 return target;
@@ -1019,7 +974,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param flag 
      * @return True if the specified flag is set in this method's access flags
      */
-    private static boolean hasFlag(MethodNode method, int flag) {
+    static boolean hasFlag(MethodNode method, int flag) {
         return (method.access & flag) == flag;
     }
     
@@ -1030,7 +985,7 @@ public class MixinTransformer extends TreeTransformer {
      * @param flag 
      * @return True if the specified flag is set in this field's access flags
      */
-    private static boolean hasFlag(FieldNode field, int flag) {
+    static boolean hasFlag(FieldNode field, int flag) {
         return (field.access & flag) == flag;
     }
 }

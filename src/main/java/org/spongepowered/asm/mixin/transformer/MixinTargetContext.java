@@ -45,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Constants;
 
 
 /**
@@ -56,9 +57,6 @@ import org.spongepowered.asm.util.ASMHelper;
  * in the mixin to the appropriate members in the target class hierarchy. 
  */
 public class MixinTargetContext implements IReferenceMapperContext {
-    
-    private static final String INIT = "<init>";
-    private static final String IMAGINARY_SUPER = "super$";
 
     /**
      * Mixin info
@@ -99,16 +97,16 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * ctor
      * 
-     * @param info Mixin information
-     * @param mixin Mixin classnode
+     * @param mixin Mixin information
+     * @param classNode Mixin classnode
      * @param target target class
      */
-    MixinTargetContext(MixinInfo info, ClassNode mixin, ClassNode target) {
-        this.mixin = info;
-        this.classNode = mixin;
+    MixinTargetContext(MixinInfo mixin, ClassNode classNode, ClassNode target) {
+        this.mixin = mixin;
+        this.classNode = classNode;
         this.targetClass = target;
         this.targetClassInfo = ClassInfo.forName(target.name);
-        this.inheritsFromMixin = info.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
+        this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.getClassNode().superName.equals(this.targetClass.superName);
     }
     
@@ -197,28 +195,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Transforms field descriptors which contain mixin types to their
-     * appropriate target type
-     * 
-     * @param field Field to transform
-     * @return true if the field should be processed further, false to remove it
-     */
-    public boolean transformField(FieldNode field) {
-        if (MixinTargetContext.IMAGINARY_SUPER.equals(field.name)) {
-            if (field.access != Opcodes.ACC_PRIVATE) {
-                throw new InvalidMixinException(this, "Imaginary super field " + field.name + " must be private and non-final");
-            }
-            if (!field.desc.equals("L" + this.mixin.getClassRef() + ";")) {
-                throw new InvalidMixinException(this, "Imaginary super field " + field.name + " must have the same type as the parent mixin");
-            }
-            return false;
-        }
-
-        this.transformDescriptor(field);
-        return true;
-    }
-
-    /**
      * Handles "re-parenting" the method supplied, changes all references to the
      * mixin class to refer to the target class (for field accesses and method
      * invokations) and also handles fixing up the targets of INVOKESPECIAL
@@ -256,7 +232,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 }
             } else if (insn instanceof FieldInsnNode) {
                 FieldInsnNode fieldInsn = (FieldInsnNode)insn;
-                if (MixinTargetContext.IMAGINARY_SUPER.equals(fieldInsn.name)) {
+                if (Constants.IMAGINARY_SUPER.equals(fieldInsn.name)) {
                     this.processImaginarySuper(method, fieldInsn);
                     iter.remove();
                 }
@@ -288,7 +264,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private void processImaginarySuper(MethodNode method, FieldInsnNode fieldInsn) {
         if (fieldInsn.getOpcode() != Opcodes.GETFIELD) {
-            if (MixinTargetContext.INIT.equals(method.name)) {
+            if (Constants.INIT.equals(method.name)) {
                 throw new InvalidMixinException(this, "Illegal imaginary super declaration: field " + fieldInsn.name
                         + " must not specify an initialiser");
             }
@@ -345,7 +321,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     private void updateBinding(MethodNode method, MethodInsnNode insn, Traversal traversal) {
-        if (INIT.equals(method.name) || insn.owner.equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
+        if (Constants.INIT.equals(method.name) || insn.owner.equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
             return;
         }
         

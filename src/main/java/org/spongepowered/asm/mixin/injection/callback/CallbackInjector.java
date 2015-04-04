@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -365,7 +366,7 @@ public class CallbackInjector extends Injector {
         insns.add(new TypeInsnNode(Opcodes.NEW, errorClass));
         insns.add(new InsnNode(Opcodes.DUP));
         insns.add(new LdcInsnNode(message));
-        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, "<init>", "(Ljava/lang/String;)V", false));
+        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, Constants.INIT, "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
         return method;
     }
