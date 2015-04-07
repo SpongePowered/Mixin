@@ -446,7 +446,7 @@ class ClassInfo extends TreeInfo {
         this.methods = new HashSet<Method>();
         this.fields = new HashSet<Field>();
         this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
-        this.interfaces = Collections.unmodifiableList(classNode.interfaces);
+        this.interfaces = Collections.<String>unmodifiableList(classNode.interfaces);
         this.access = classNode.access;
         this.isMixin = classNode instanceof MixinClassNode;
         this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
@@ -503,7 +503,7 @@ class ClassInfo extends TreeInfo {
      * Get all mixins which target this class
      */
     public Set<MixinInfo> getMixins() {
-        return Collections.unmodifiableSet(this.mixins);
+        return Collections.<MixinInfo>unmodifiableSet(this.mixins);
     }
     
     /**
@@ -519,7 +519,14 @@ class ClassInfo extends TreeInfo {
     public boolean isPublic() {
         return (this.access & Opcodes.ACC_PUBLIC) != 0;
     }
-    
+
+    /**
+     * Get whether this class has ACC_ABSTRACT
+     */
+    public boolean isAbstract() {
+        return (this.access & Opcodes.ACC_ABSTRACT) != 0;
+    }
+
     /**
      * Get whether this class has ACC_SYNTHETIC
      */
@@ -629,7 +636,51 @@ class ClassInfo extends TreeInfo {
      * @return read-only view of class methods
      */
     public Set<Method> getMethods() {
-        return Collections.unmodifiableSet(this.methods);
+        return Collections.<Method>unmodifiableSet(this.methods);
+    }
+    
+    /**
+     * If this is an interface, returns a set containing all methods in this
+     * interface and all super interfaces. If this is a class, returns a set
+     * containing all methods for all interfaces implemented by this class and
+     * all super interfaces of those interfaces.
+     * 
+     * @return read-only view of class methods
+     */
+    public Set<Method> getInterfaceMethods() {
+        Set<Method> methods = new HashSet<Method>();
+
+        ClassInfo superClass = this.addMethodsRecursive(methods);
+        if (!this.isInterface) {
+            while (superClass != null && superClass != ClassInfo.OBJECT) {
+                superClass = superClass.addMethodsRecursive(methods);
+            }
+        }
+        
+        return Collections.<Method>unmodifiableSet(methods);
+    }
+
+    /**
+     * Recursive function used by {@link #getInterfaceMethods} to add all
+     * interface methods to the supplied set
+     * 
+     * @param methods Method set to add to
+     * @return superclass reference, used to make the code above more fluent
+     */
+    private ClassInfo addMethodsRecursive(Set<Method> methods) {
+        if (this.isInterface) {
+            methods.addAll(this.methods);
+        } else if (!this.isMixin) {
+            for (MixinInfo mixin : this.mixins) {
+                mixin.getClassInfo().addMethodsRecursive(methods);
+            }
+        }
+        
+        for (String iface : this.interfaces) {
+            ClassInfo.forName(iface).addMethodsRecursive(methods);
+        }
+        
+        return this.getSuperClass();
     }
     
     /**
