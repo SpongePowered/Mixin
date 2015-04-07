@@ -38,9 +38,9 @@ import net.minecraft.launchwrapper.Launch;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.VersionNumber;
@@ -239,7 +239,7 @@ class MixinConfig implements Comparable<MixinConfig> {
         }
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
-        this.verboseLogging |= Booleans.parseBoolean(System.getProperty("mixin.debug.verbose"), false) | MixinTransformer.DEBUG_ALL;
+        this.verboseLogging |= MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE);
         
         return true;
     }

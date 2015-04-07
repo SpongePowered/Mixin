@@ -28,6 +28,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -103,6 +104,80 @@ public class MixinEnvironment {
             }
         }
     }
+    
+    public static enum Option {
+        /**
+         * Enable all debugging options
+         */
+        DEBUG_ALL("debug"),
+        
+        /**
+         * Enable post-mixin class export. This causes all classes to be written
+         * to the .mixin.out directory within the runtime directory
+         * <em>after</em> mixins are applied, for debugging purposes. 
+         */
+        DEBUG_EXPORT(Option.DEBUG_ALL, "export"),
+        
+        /**
+         * Run the CheckClassAdapter on all classes after mixins are applied 
+         */
+        DEBUG_VERIFY(Option.DEBUG_ALL, "verify"),
+        
+        /**
+         * Enable verbose mixin logging (elevates all DEBUG level messages to
+         * INFO level) 
+         */
+        DEBUG_VERBOSE(Option.DEBUG_ALL, "verbose"),
+        
+        /**
+         * Enable all checks 
+         */
+        CHECK_ALL("checks"),
+        
+        /**
+         * Checks that all declared interface methods are implemented on a class
+         * after mixin application.
+         */
+        CHECK_IMPLEMENTS(Option.CHECK_ALL, "interfaces");
+        
+        /**
+         * Prefix for mixin options
+         */
+        private static final String PREFIX = "mixin";
+        
+        /**
+         * Parent option to this option, if non-null then this option is enabled
+         * if 
+         */
+        private final Option parent;
+        
+        /**
+         * Java property name
+         */
+        private final String property;
+
+        private Option(String property) {
+            this(null, property);
+        }
+        
+        private Option(Option parent, String property) {
+            this.parent = parent;
+            this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
+        }
+        
+        public Option getParent() {
+            return this.parent;
+        }
+        
+        public String getProperty() {
+            return this.property;
+        }
+        
+        protected boolean getValue() {
+            return Booleans.parseBoolean(System.getProperty(this.property), false)
+                    || (this.parent != null && this.parent.getValue());
+        }
+    }
 
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
@@ -110,6 +185,8 @@ public class MixinEnvironment {
     private static MixinEnvironment env;
     
     private Side side;
+    
+    private final boolean[] options;
     
     private MixinEnvironment() {
         // Sanity check
@@ -121,6 +198,11 @@ public class MixinEnvironment {
         // Also sanity check
         if (this.getClass().getClassLoader() != Launch.class.getClassLoader()) {
             throw new RuntimeException("Attempted to init the mixin environment in the wrong classloader");
+        }
+        
+        this.options = new boolean[Option.values().length];
+        for (Option option : Option.values()) {
+            this.options[option.ordinal()] = option.getValue();
         }
     }
     
@@ -191,5 +273,13 @@ public class MixinEnvironment {
         }
         
         return MixinEnvironment.env;
+    }
+    
+    public boolean getOption(Option option) {
+        return this.options[option.ordinal()];
+    }
+    
+    public void setOption(Option option, boolean value) {
+        this.options[option.ordinal()] = value;
     }
 }

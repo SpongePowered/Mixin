@@ -43,7 +43,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.helpers.Booleans;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -60,6 +59,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -159,10 +159,6 @@ public class MixinTransformer extends TreeTransformer {
         Opcodes.SASTORE
     };
     
-    public static final boolean DEBUG_ALL = Booleans.parseBoolean(System.getProperty("mixin.debug"), false);
-    private static final boolean DEBUG_EXPORT = Booleans.parseBoolean(System.getProperty("mixin.debug.export"), false) | MixinTransformer.DEBUG_ALL;
-    private static final boolean DEBUG_VERIFY = Booleans.parseBoolean(System.getProperty("mixin.debug.verify"), false) | MixinTransformer.DEBUG_ALL;
-
     /**
      * Log all the things
      */
@@ -406,7 +402,7 @@ public class MixinTransformer extends TreeTransformer {
         this.postTransform(transformedName, targetClass, mixins);
         
         // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
-        if (MixinTransformer.DEBUG_VERIFY) {
+        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERIFY)) {
             targetClass.accept(new CheckClassAdapter(new ClassWriter(ClassWriter.COMPUTE_FRAMES)));
         }
         
@@ -418,7 +414,7 @@ public class MixinTransformer extends TreeTransformer {
         byte[] bytes = this.writeClass(targetClass);
         
         // Export transformed class for debugging purposes
-        if (MixinTransformer.DEBUG_EXPORT) {
+        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
             try {
                 FileUtils.writeByteArrayToFile(new File(".mixin.out/" + transformedName.replace('.', '/') + ".class"), bytes);
             } catch (IOException ex) {
