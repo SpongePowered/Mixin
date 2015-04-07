@@ -40,6 +40,11 @@ public class PrettyPrinter {
      * "Horizontal rule" marker
      */
     private static final String HR = "---";
+
+    /**
+     * If specified as the first character on a line, centres the line
+     */
+    private static final char CENTRE = '\252';
     
     /**
      * Box with (adapts to contents)
@@ -51,6 +56,14 @@ public class PrettyPrinter {
      */
     private final List<String> lines = new ArrayList<String>();
     
+    public PrettyPrinter() {
+        this(100);
+    }
+    
+    public PrettyPrinter(int width) {
+        this.width = width;
+    }
+
     /**
      * Adds a blank line to the output
      * 
@@ -85,6 +98,18 @@ public class PrettyPrinter {
         this.lines.add(PrettyPrinter.HR);
         return this;
     }
+    
+    /**
+     * Centre the last line added
+     * 
+     * @return fluent interface
+     */
+    public PrettyPrinter centre() {
+        if (!this.lines.isEmpty()) {
+            this.lines.add(PrettyPrinter.CENTRE + this.lines.remove(this.lines.size() - 1));
+        }
+        return this;
+    }
 
     /**
      * Print this printer to the specified output
@@ -97,6 +122,10 @@ public class PrettyPrinter {
             if (line == PrettyPrinter.HR) {
                 this.printHr(stream);
             } else {
+                if (line.length() > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
+                    String text = line.substring(1);
+                    line = String.format("%" + (((this.width - (text.length())) / 2) + text.length()) + "s", text);
+                }
                 stream.printf("/* %-" + this.width + "s */\n", line);
             }
         }

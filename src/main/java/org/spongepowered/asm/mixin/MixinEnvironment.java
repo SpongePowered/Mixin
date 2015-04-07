@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.util.PrettyPrinter;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -149,12 +150,12 @@ public class MixinEnvironment {
          * Parent option to this option, if non-null then this option is enabled
          * if 
          */
-        private final Option parent;
+        final Option parent;
         
         /**
          * Java property name
          */
-        private final String property;
+        final String property;
 
         private Option(String property) {
             this(null, property);
@@ -203,6 +204,18 @@ public class MixinEnvironment {
         this.options = new boolean[Option.values().length];
         for (Option option : Option.values()) {
             this.options[option.ordinal()] = option.getValue();
+        }
+        
+        if (this.getOption(Option.DEBUG_VERBOSE)) {
+            PrettyPrinter printer = new PrettyPrinter(32);
+            printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
+            printer.add("%24s : %s", "Code source", this.getClass().getProtectionDomain().getCodeSource().getLocation());
+            printer.add("%24s : %s", "Internal Version", version).hr();
+            for (Option option : Option.values()) {
+                printer.add("%24s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+            }
+            printer.hr().add("%24s : %s", "Detected Side", this.getSide());
+            printer.print(System.err);
         }
     }
     
