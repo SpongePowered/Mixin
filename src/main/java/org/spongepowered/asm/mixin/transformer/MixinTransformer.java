@@ -318,13 +318,13 @@ public class MixinTransformer extends TreeTransformer {
         // I am a leaf on the wind
         environment.setActiveTransformer(this);
         
-        this.initConfigs(environment);
-        this.initModules(environment);
+        this.addConfigs(environment);
+        this.addModules(environment);
         
         TreeInfo.setLock(this.lock);
     }
 
-    private void initConfigs(MixinEnvironment environment) {
+    private void addConfigs(MixinEnvironment environment) {
         List<String> configs = environment.getMixinConfigs();
         
         if (configs != null) {
@@ -343,7 +343,7 @@ public class MixinTransformer extends TreeTransformer {
         Collections.sort(this.configs);
     }
 
-    private void initModules(MixinEnvironment environment) {
+    private void addModules(MixinEnvironment environment) {
         // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
         if (environment.getOption(Option.DEBUG_VERIFY)) {
             this.modules.add(new MixinTransformerModuleCheckClass());
