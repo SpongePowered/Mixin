@@ -109,6 +109,10 @@ public class SignaturePrinter {
         this.argTypes = argTypes;
         this.argNames = argNames;
     }
+    
+    public String getReturnType() {
+        return SignaturePrinter.getTypeName(this.returnType, false);
+    }
 
     public void setModifiers(MethodNode method) {
         String returnType = SignaturePrinter.getTypeName(Type.getReturnType(method.desc), false);
@@ -123,8 +127,9 @@ public class SignaturePrinter {
         }
     }
     
-    public void setModifiers(String modifiers) {
-        this.modifiers = modifiers;
+    public SignaturePrinter setModifiers(String modifiers) {
+        this.modifiers = modifiers.replace("${returnType}", this.getReturnType());
+        return this;
     }
     
     @Override

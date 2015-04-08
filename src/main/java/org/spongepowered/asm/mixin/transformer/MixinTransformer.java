@@ -43,7 +43,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -55,7 +54,6 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -168,6 +166,11 @@ public class MixinTransformer extends TreeTransformer {
      * Mixin configuration bundle
      */
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
+    
+    /**
+     * Transformer modules
+     */
+    private final List<IMixinTransformerModule> modules = new ArrayList<IMixinTransformerModule>();
 
     /**
      * True once initialisation is done. All mixin configs needs to be
@@ -195,16 +198,22 @@ public class MixinTransformer extends TreeTransformer {
      * ctor 
      */
     public MixinTransformer() {
-        // Go via blackboard to create FORWARD compatibility if Mixins get pulled into FML 
-        Object globalMixinTransformer = MixinEnvironment.getCurrentEnvironment().getActiveTransformer();
+        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
+        
+        Object globalMixinTransformer = environment.getActiveTransformer();
         if (globalMixinTransformer instanceof IClassTransformer) {
             throw new RuntimeException("Terminating MixinTransformer instance " + this);
         }
         
         // I am a leaf on the wind
-        MixinEnvironment.getCurrentEnvironment().setActiveTransformer(this);
+        environment.setActiveTransformer(this);
         
-        List<String> configs = MixinEnvironment.getCurrentEnvironment().getMixinConfigs();
+        this.initConfigs(environment);
+        this.initModules(environment);
+    }
+
+    private void initConfigs(MixinEnvironment environment) {
+        List<String> configs = environment.getMixinConfigs();
         
         if (configs != null) {
             for (String configFile : configs) {
@@ -220,6 +229,18 @@ public class MixinTransformer extends TreeTransformer {
         }
         
         Collections.sort(this.configs);
+    }
+
+    private void initModules(MixinEnvironment environment) {
+        // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
+        if (environment.getOption(Option.DEBUG_VERIFY)) {
+            this.modules.add(new MixinTransformerModuleCheckClass());
+        }
+        
+        // Run implementation checker if option is enabled
+        if (environment.getOption(Option.CHECK_IMPLEMENTS)) {
+            this.modules.add(new MixinTransformerModuleInterfaceChecker());
+        }
     }
 
     /* (non-Javadoc)
@@ -393,18 +414,14 @@ public class MixinTransformer extends TreeTransformer {
         // Tree for target class
         ClassNode targetClass = this.readClass(basicClass, true);
         
+        this.preTransform(transformedName, targetClass, mixins);
+        
         for (MixinInfo mixin : mixins) {
             this.logger.log(mixin.getLoggingLevel(), "Mixing {} into {}", mixin.getName(), transformedName);
             this.applyMixin(transformedName, targetClass, mixin.createContextFor(targetClass));
         }
         
-        // Extension point
         this.postTransform(transformedName, targetClass, mixins);
-        
-        // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
-        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERIFY)) {
-            targetClass.accept(new CheckClassAdapter(new ClassWriter(ClassWriter.COMPUTE_FRAMES)));
-        }
         
         return this.writeClass(transformedName, targetClass);
     }
@@ -424,14 +441,18 @@ public class MixinTransformer extends TreeTransformer {
         
         return bytes;
     }
-
+    
     /**
+     * Process tasks before transform
+     * 
      * @param transformedName Target class transformed name
      * @param targetClass Target class
      * @param mixins Mixin which were just applied
      */
-    protected void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        // Stub for subclasses
+    private void preTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+        for (IMixinTransformerModule module : this.modules) {
+            module.preTransform(transformedName, targetClass, mixins);
+        }
     }
 
     /**
@@ -455,6 +476,19 @@ public class MixinTransformer extends TreeTransformer {
             throw ex;
         } catch (Exception ex) {
             throw new InvalidMixinException(mixin, "Unexpecteded error whilst applying the mixin class", ex);
+        }
+    }
+
+    /**
+     * Process tasks after transform
+     * 
+     * @param transformedName Target class transformed name
+     * @param targetClass Target class
+     * @param mixins Mixin which were just applied
+     */
+    private void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+        for (IMixinTransformerModule module : this.modules) {
+            module.postTransform(transformedName, targetClass, mixins);
         }
     }
 
