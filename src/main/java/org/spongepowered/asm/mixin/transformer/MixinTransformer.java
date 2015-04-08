@@ -37,7 +37,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
@@ -144,6 +143,116 @@ public class MixinTransformer extends TreeTransformer {
     }
     
     /**
+     * Re-entrance semaphore used to share re-entrance data with the TreeInfo
+     */
+    class ReEntranceState {
+        
+        /**
+         * Max valid depth
+         */
+        private final int maxDepth;
+        
+        /**
+         * Re-entrance depth
+         */
+        private int depth = 0;
+        
+        /**
+         * Semaphore set when check exceeds a depth of 1
+         */
+        private boolean semaphore = false;
+        
+        public ReEntranceState(int maxDepth) {
+            this.maxDepth = maxDepth;
+        }
+        
+        /**
+         * Get max depth
+         */
+        public int getMaxDepth() {
+            return this.maxDepth;
+        }
+        
+        /**
+         * Get current depth
+         */
+        public int getDepth() {
+            return this.depth;
+        }
+        
+        /**
+         * Increase the re-entrance depth counter and set the semaphore if depth
+         * exceeds max depth
+         * 
+         * @return fluent interface
+         */
+        ReEntranceState push() {
+            this.depth++;
+            this.checkAndSet();
+            return this;
+        }
+        
+        /**
+         * Decrease the re-entrance depth
+         * 
+         * @return fluent interface
+         */
+        ReEntranceState pop() {
+            if (this.depth == 0) {
+                throw new IllegalStateException("ReEntranceState pop() with zero depth");
+            }
+            
+            this.depth--;
+            return this;
+        }
+        
+        /**
+         * Run the depth check but do not set the semaphore
+         * 
+         * @return true if depth has exceeded max
+         */
+        boolean check() {
+            return this.depth > this.maxDepth;
+        }
+        
+        /**
+         * Run the depth check and set the semaphore if depth is exceeded
+         * 
+         * @return true if semaphore is set
+         */
+        boolean checkAndSet() {
+            return this.semaphore |= this.check();
+        }
+        
+        /**
+         * Set the semaphore
+         * 
+         * @return fluent interface
+         */
+        ReEntranceState set() {
+            this.semaphore = true;
+            return this;
+        }
+        
+        /**
+         * Get whether the semaphore is set
+         */
+        boolean isSet() {
+            return this.semaphore;
+        }
+        
+        /**
+         * Clear the semaphore
+         * 
+         * @return fluent interface
+         */
+        ReEntranceState clear() {
+            this.semaphore = false;
+            return this;
+        }
+    }
+    
+    /**
      * List of opcodes which must not appear in a class initialiser, mainly a
      * sanity check so that if any of the specified opcodes are found, we can
      * log it as an error condition and then people can bitch at me to fix it.
@@ -184,10 +293,9 @@ public class MixinTransformer extends TreeTransformer {
     private boolean initDone;
     
     /**
-     * Sanity check for this transformer. The transformer should never be
-     * re-entrant by design so we need to detect and warn when it happens. 
+     * Re-entrance detector
      */
-    private int reEntranceCheck = 0;
+    private final ReEntranceState lock = new ReEntranceState(1);
     
     /**
      * Session ID, used as a check when parsing {@link MixinMerged} annotations
@@ -212,6 +320,8 @@ public class MixinTransformer extends TreeTransformer {
         
         this.initConfigs(environment);
         this.initModules(environment);
+        
+        TreeInfo.setLock(this.lock);
     }
 
     private void initConfigs(MixinEnvironment environment) {
@@ -255,15 +365,15 @@ public class MixinTransformer extends TreeTransformer {
             return basicClass;
         }
 
-        this.reEntranceCheck++;
+        boolean locked = this.lock.push().isSet();
         
-        if (this.reEntranceCheck > 1) {
-            this.detectReEntrance();
-        }
-        
-        if (!this.initDone) {
-            this.initConfigs();
+        if (!this.initDone && !locked) {
             this.initDone = true;
+            try {
+                this.initConfigs();
+            } finally {
+                this.lock.pop();
+            }
         }
         
         try {
@@ -289,6 +399,12 @@ public class MixinTransformer extends TreeTransformer {
             }
             
             if (mixins != null) {
+                // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
+                if (locked) {
+                    this.logger.warn("Re-entrance detected, this will cause serious problems.", new RuntimeException());
+                    throw new Error("Re-entrance error.");
+                }
+                
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
@@ -312,7 +428,7 @@ public class MixinTransformer extends TreeTransformer {
         } catch (Exception ex) {
             throw new MixinTransformerError("An unexpected critical error was encountered", ex);
         } finally {
-            this.reEntranceCheck--;
+            this.lock.pop();
         }
     }
 
@@ -351,27 +467,6 @@ public class MixinTransformer extends TreeTransformer {
                 this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
             }
         }
-    }
-
-    /**
-     * If re-entrance is detected, attempt to find the source and log a warning
-     */
-    private void detectReEntrance() {
-        Set<String> transformerClasses = new HashSet<String>();
-        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-            transformerClasses.add(transformer.getClass().getName());
-        }
-        
-        transformerClasses.remove(this.getClass().getName());
-        
-        for (StackTraceElement stackElement : Thread.currentThread().getStackTrace()) {
-            if (transformerClasses.contains(stackElement.getClassName())) {
-                this.logger.warn("Re-entrance detected from transformer " + stackElement.getClassName() + ", this will cause serious problems.");
-                return;
-            }
-        }
-
-        this.logger.warn("Re-entrance detected from unknown source, this will cause serious problems.", new RuntimeException());
     }
 
     /**

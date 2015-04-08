@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -40,6 +41,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -48,6 +50,10 @@ import com.google.common.collect.ImmutableSet;
  */
 abstract class TreeInfo {
     
+    /**
+     * Known re-entrant transformers, other re-entrant transformers will
+     * detected automatically 
+     */
     private static final Set<String> excludeTransformers = ImmutableSet.<String>of(
         "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer",
         "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer",
@@ -55,11 +61,25 @@ abstract class TreeInfo {
         "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
     );
     
+    private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Local transformer chain, this consists of all transformers present at the
+     * init phase with the exclusion of the mixin transformer itself and known
+     * re-entrant transformers. Detected re-entrant transformers will be
+     * subsequently removed.
+     */
     private static List<IClassTransformer> transformers;
     
+    /**
+     * Class name transformer (if present)
+     */
     private static IClassNameTransformer nameTransformer;
-
-    private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Re-entrance lock
+     */
+    private static ReEntranceState lock;
 
     static {
         for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
@@ -67,6 +87,10 @@ abstract class TreeInfo {
                 TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
             }
         }
+    }
+    
+    static void setLock(ReEntranceState lock) {
+        TreeInfo.lock = lock;
     }
 
     static ClassNode getClassNode(String className) throws ClassNotFoundException, IOException {
@@ -145,8 +169,24 @@ abstract class TreeInfo {
     private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass) {
         final List<IClassTransformer> transformers = TreeInfo.getTransformers();
 
-        for (final IClassTransformer transformer : transformers) {
+        for (Iterator<IClassTransformer> iter = transformers.iterator(); iter.hasNext();) {
+            IClassTransformer transformer = iter.next();
+
+            if (TreeInfo.lock != null) {
+                // Clear the re-entrance semaphore
+                TreeInfo.lock.clear();
+            }
+            
             basicClass = transformer.transform(name, transformedName, basicClass);
+
+            if (TreeInfo.lock != null && TreeInfo.lock.isSet()) {
+                // If the re-entrance semaphore was raised during the last transformation then we can assume
+                // that this transformer is re-entrant and remove it from our transformer chain.
+                iter.remove();
+                TreeInfo.lock.clear();
+                TreeInfo.logger.info("A re-entrant transformer '{}' was detected and will no longer process meta class data",
+                        transformer.getClass().getName());
+            }
         }
 
         return basicClass;
