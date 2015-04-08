@@ -36,6 +36,7 @@ import org.apache.commons.io.IOUtils;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
@@ -60,8 +61,10 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     private final File report;
     
     public MixinTransformerModuleInterfaceChecker() {
-        this.csv = new File("mixin_implementation_report.csv");
-        this.report = new File("mixin_implementation_report.txt");
+        File debugOutputFolder = new File(Constants.DEBUG_OUTPUT_PATH);
+        debugOutputFolder.mkdirs();
+        this.csv = new File(debugOutputFolder, "mixin_implementation_report.csv");
+        this.report = new File(debugOutputFolder, "mixin_implementation_report.txt");
         
         try {
             Files.write("Class,Method,Signature,Interface\n", this.csv, Charsets.ISO_8859_1);

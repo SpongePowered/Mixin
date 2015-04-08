@@ -446,7 +446,7 @@ public class MixinTransformer extends TreeTransformer {
 
     private void dumpClass(String fileName, byte[] bytes) {
         try {
-            FileUtils.writeByteArrayToFile(new File(".mixin.out/" + fileName + ".class"), bytes);
+            FileUtils.writeByteArrayToFile(new File(Constants.DEBUG_OUTPUT_PATH + "/" + fileName + ".class"), bytes);
         } catch (IOException ex) {
             // don't care
         }
