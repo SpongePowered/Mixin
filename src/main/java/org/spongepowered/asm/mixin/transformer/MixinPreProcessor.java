@@ -40,6 +40,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
