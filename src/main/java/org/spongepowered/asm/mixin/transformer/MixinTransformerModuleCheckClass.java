@@ -43,7 +43,7 @@ public class MixinTransformerModuleCheckClass implements IMixinTransformerModule
      *      java.util.SortedSet)
      */
     @Override
-    public void preTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
     }
 
     /* (non-Javadoc)
@@ -52,7 +52,7 @@ public class MixinTransformerModuleCheckClass implements IMixinTransformerModule
      *      java.util.SortedSet)
      */
     @Override
-    public void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         targetClass.accept(new CheckClassAdapter(new ClassWriter(ClassWriter.COMPUTE_FRAMES)));
     }
 

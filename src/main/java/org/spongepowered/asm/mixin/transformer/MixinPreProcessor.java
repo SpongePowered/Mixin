@@ -222,7 +222,7 @@ class MixinPreProcessor {
 
     private boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-        if (MixinTransformer.hasFlag(field, Opcodes.ACC_STATIC) && !MixinTransformer.hasFlag(field, Opcodes.ACC_PRIVATE)) {
+        if (MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC) && !MixinApplicator.hasFlag(field, Opcodes.ACC_PRIVATE)) {
             throw new InvalidMixinException(context, String.format("Mixin classes cannot contain visible static methods or fields, found %s",
                     field.name));
         }

@@ -41,7 +41,7 @@ public interface IMixinTransformerModule {
      * @param targetClass Target class tree
      * @param mixins Mixins to be applied
      */
-    public abstract void preTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
+    public abstract void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
 
     /**
      * Called after the mixins are applied
@@ -50,6 +50,6 @@ public interface IMixinTransformerModule {
      * @param targetClass Target class tree
      * @param mixins Mixins which were applied
      */
-    public abstract void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
+    public abstract void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
 
 }

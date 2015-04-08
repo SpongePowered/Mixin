@@ -86,7 +86,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      *      java.util.SortedSet)
      */
     @Override
-    public void preTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
     }
 
     /* (non-Javadoc)
@@ -95,7 +95,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      *      java.util.SortedSet)
      */
     @Override
-    public void postTransform(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
 
         if (targetClassInfo.isAbstract()) {
