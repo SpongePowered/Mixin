@@ -353,7 +353,7 @@ class ClassInfo extends TreeInfo {
     /**
      * Interfaces
      */
-    private final List<String> interfaces;
+    private final Set<String> interfaces;
     
     /**
      * Public and protected methods (instance) methods in this class 
@@ -429,7 +429,7 @@ class ClassInfo extends TreeInfo {
         );
         this.fields = Collections.<Field>emptySet();
         this.isInterface = false;
-        this.interfaces = Collections.<String>emptyList();
+        this.interfaces = Collections.<String>emptySet();
         this.access = Opcodes.ACC_PUBLIC;
         this.isMixin = false;
         this.mixin = null;
@@ -446,10 +446,12 @@ class ClassInfo extends TreeInfo {
         this.methods = new HashSet<Method>();
         this.fields = new HashSet<Field>();
         this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
-        this.interfaces = Collections.<String>unmodifiableList(classNode.interfaces);
+        this.interfaces = new HashSet<String>();
         this.access = classNode.access;
         this.isMixin = classNode instanceof MixinClassNode;
         this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
+
+        this.interfaces.addAll(classNode.interfaces);
         
         for (MethodNode method : classNode.methods) {
             this.addMethod(method, this.isMixin);
@@ -477,6 +479,10 @@ class ClassInfo extends TreeInfo {
         
         this.isProbablyStatic = isProbablyStatic;
         this.outerName = outerName;
+    }
+    
+    void addInterface(String iface) {
+        this.interfaces.add(iface);
     }
 
     void addMethod(MethodNode method) {
@@ -558,8 +564,8 @@ class ClassInfo extends TreeInfo {
     /**
      * Returns the answer to life, the universe and everything
      */
-    public List<String> getInterfaces() {
-        return this.interfaces;
+    public Set<String> getInterfaces() {
+        return Collections.<String>unmodifiableSet(this.interfaces);
     }
     
     @Override

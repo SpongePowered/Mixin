@@ -336,6 +336,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(this, interfaceNode);
             this.softImplements.add(interfaceInfo);
             this.interfaces.add(interfaceInfo.getInternalName());
+            this.classInfo.addInterface(interfaceInfo.getInternalName());
         }
     }
 
