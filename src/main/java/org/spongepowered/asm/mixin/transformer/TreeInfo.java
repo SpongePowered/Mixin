@@ -91,27 +91,29 @@ abstract class TreeInfo {
      * @return Transformed class bytecode for the specified class
      */
     static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
-        className = className.replace('/', '.');
+        String transformedName = className.replace('/', '.');
+        String name = TreeInfo.unmap(transformedName);
         byte[] classBytes = null;
 
-        if ((classBytes = TreeInfo.getClassBytes(className)) == null) {
-            throw new ClassNotFoundException(String.format("The specified class '%s' was not found", className));
+        if ((classBytes = TreeInfo.getClassBytes(name, transformedName)) == null) {
+            throw new ClassNotFoundException(String.format("The specified class '%s' was not found", transformedName));
         }
 
         if (runTransformers) {
-            classBytes = TreeInfo.applyTransformers(className, classBytes);
+            classBytes = TreeInfo.applyTransformers(name, transformedName, classBytes);
         }
 
         return classBytes;
     }
 
     /**
-     * @param className Name of the class to load
+     * @param name Original class name
+     * @param transformedName Name of the class to load
      * @return raw class bytecode
      * @throws IOException
      */
-    private static byte[] getClassBytes(String className) throws IOException {
-        byte[] classBytes = Launch.classLoader.getClassBytes(TreeInfo.unmap(className));
+    private static byte[] getClassBytes(String name, String transformedName) throws IOException {
+        byte[] classBytes = Launch.classLoader.getClassBytes(name);
         if (classBytes != null) {
             return classBytes;
         }
@@ -120,7 +122,7 @@ abstract class TreeInfo {
         
         InputStream classStream = null;
         try {
-            final String resourcePath = className.replace('.', '/').concat(".class");
+            final String resourcePath = transformedName.replace('.', '/').concat(".class");
             classStream = appClassLoader.getResourceAsStream(resourcePath);
             return IOUtils.toByteArray(classStream);
         } catch (Exception ex) {
@@ -135,15 +137,16 @@ abstract class TreeInfo {
      * the transformers ourself
      * 
      * @param name
+     * @param transformedName
      * @param basicClass
      * @return class bytecode after processing by all registered transformers
      *      except the excluded transformers
      */
-    private static byte[] applyTransformers(String name, byte[] basicClass) {
+    private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass) {
         final List<IClassTransformer> transformers = TreeInfo.getTransformers();
 
         for (final IClassTransformer transformer : transformers) {
-            basicClass = transformer.transform(name, name, basicClass);
+            basicClass = transformer.transform(name, transformedName, basicClass);
         }
 
         return basicClass;
