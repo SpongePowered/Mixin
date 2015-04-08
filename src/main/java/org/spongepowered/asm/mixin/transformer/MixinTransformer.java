@@ -292,6 +292,10 @@ public class MixinTransformer extends TreeTransformer {
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
+                    if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DUMP_TARGET_ON_FAILURE)) {
+                        this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
+                    }
+                    
                     MixinConfig config = th.getMixin().getParent();
                     this.logger.log(config.isRequired() ? Level.FATAL : Level.WARN, String.format("Mixin failed applying %s -> %s: %s %s",
                             th.getMixin(), transformedName, th.getClass().getName(), th.getMessage()), th);
@@ -434,16 +438,20 @@ public class MixinTransformer extends TreeTransformer {
         
         // Export transformed class for debugging purposes
         if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
-            try {
-                FileUtils.writeByteArrayToFile(new File(".mixin.out/" + transformedName.replace('.', '/') + ".class"), bytes);
-            } catch (IOException ex) {
-                // don't care
-            }
+            this.dumpClass(transformedName.replace('.', '/'), bytes);
         }
         
         return bytes;
     }
-    
+
+    private void dumpClass(String fileName, byte[] bytes) {
+        try {
+            FileUtils.writeByteArrayToFile(new File(".mixin.out/" + fileName + ".class"), bytes);
+        } catch (IOException ex) {
+            // don't care
+        }
+    }
+
     /**
      * Process tasks before transform
      * 

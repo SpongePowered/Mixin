@@ -131,6 +131,12 @@ public class MixinEnvironment {
         DEBUG_VERBOSE(Option.DEBUG_ALL, "verbose"),
         
         /**
+         * Dumps the bytecode for the target class to disk when mixin
+         * application fails
+         */
+        DUMP_TARGET_ON_FAILURE("dumpTargetOnFailure"),
+        
+        /**
          * Enable all checks 
          */
         CHECK_ALL("checks"),
@@ -209,12 +215,12 @@ public class MixinEnvironment {
         if (this.getOption(Option.DEBUG_VERBOSE)) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-            printer.add("%24s : %s", "Code source", this.getClass().getProtectionDomain().getCodeSource().getLocation());
-            printer.add("%24s : %s", "Internal Version", version).hr();
+            printer.add("%25s : %s", "Code source", this.getClass().getProtectionDomain().getCodeSource().getLocation());
+            printer.add("%25s : %s", "Internal Version", version).hr();
             for (Option option : Option.values()) {
-                printer.add("%24s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+                printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
             }
-            printer.hr().add("%24s : %s", "Detected Side", this.getSide());
+            printer.hr().add("%25s : %s", "Detected Side", this.getSide());
             printer.print(System.err);
         }
     }
