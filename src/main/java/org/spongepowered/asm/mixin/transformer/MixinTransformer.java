@@ -295,14 +295,15 @@ public class MixinTransformer extends TreeTransformer {
         
         try {
             SortedSet<MixinInfo> mixins = null;
+            boolean invalidRef = false;
             
             for (MixinConfig config : this.configs) {
                 if (config.packageMatch(transformedName)) {
                     if (config.canPassThrough(transformedName)) {
                         return this.passThrough(name, transformedName, basicClass);
                     }
-                    
-                    throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
+                    invalidRef = true;
+                    continue;
                 }
                 
                 if (config.hasMixinsFor(transformedName)) {
@@ -313,6 +314,10 @@ public class MixinTransformer extends TreeTransformer {
                     // Get and sort mixins for the class
                     mixins.addAll(config.getMixinsFor(transformedName));
                 }
+            }
+            
+            if (invalidRef) {
+                throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
             }
             
             if (mixins != null) {
