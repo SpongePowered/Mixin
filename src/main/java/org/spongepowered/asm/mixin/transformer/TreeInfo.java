@@ -44,7 +44,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  * Base class for "info" objects which use ASM tree API to do stuff, with things
@@ -55,7 +55,7 @@ abstract class TreeInfo {
      * Known re-entrant transformers, other re-entrant transformers will
      * detected automatically 
      */
-    private static final Set<String> excludeTransformers = ImmutableSet.<String>of(
+    private static final Set<String> excludeTransformers = Sets.<String>newHashSet(
         "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer",
         "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer",
         "net.minecraftforge.fml.common.asm.transformers.TerminalTransformer",
@@ -113,10 +113,7 @@ abstract class TreeInfo {
      * @return Transformed class bytecode for the specified class
      */
     static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
-        if (MixinEnvironment.getCurrentEnvironment() != TreeInfo.currentEnvironment) {
-            TreeInfo.transformers = null;
-            TreeInfo.nameTransformer = null;
-        }
+        TreeInfo.checkEnvironment();
         
         String transformedName = className.replace('/', '.');
         String name = TreeInfo.unmap(transformedName);
@@ -170,7 +167,7 @@ abstract class TreeInfo {
      *      except the excluded transformers
      */
     private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass) {
-        final List<IClassTransformer> transformers = TreeInfo.getTransformers();
+        final List<IClassTransformer> transformers = TreeInfo.transformers;
 
         for (Iterator<IClassTransformer> iter = transformers.iterator(); iter.hasNext();) {
             IClassTransformer transformer = iter.next();
@@ -186,6 +183,10 @@ abstract class TreeInfo {
                 // If the re-entrance semaphore was raised during the last transformation then we can assume
                 // that this transformer is re-entrant and remove it from our transformer chain.
                 iter.remove();
+                
+                // Also add it to the exclusion list so we can exclude it if the environment triggers a rebuild
+                TreeInfo.excludeTransformers.add(transformer.getClass().getName());
+                
                 TreeInfo.lock.clear();
                 TreeInfo.logger.info("A re-entrant transformer '{}' was detected and will no longer process meta class data",
                         transformer.getClass().getName());
@@ -196,61 +197,63 @@ abstract class TreeInfo {
     }
 
     /**
-     * Gets the transformer list to apply to loaded mixin bytecode. Since
-     * generating this list requires inspecting each transformer by name (to
-     * cope with the new wrapper functionality added by FML) we generate the
-     * list just once and cache the result.
-     */
-    private static List<IClassTransformer> getTransformers() {
-        if (TreeInfo.transformers == null) {
-            TreeInfo.logger.debug("Building transformer delegation list:");
-            TreeInfo.transformers = new ArrayList<IClassTransformer>();
-            for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-                String transformerName = transformer.getClass().getName();
-                boolean include = true;
-                for (String excludeClass : TreeInfo.excludeTransformers) {
-                    if (transformerName.contains(excludeClass)) {
-                        include = false;
-                        break;
-                    }
-                }
-                if (include && !transformerName.contains(MixinTransformer.class.getName())) {
-                    TreeInfo.logger.debug("  Adding:    {}", transformerName);
-                    TreeInfo.transformers.add(transformer);
-                } else {
-                    TreeInfo.logger.debug("  Excluding: {}", transformerName);
-                }
-            }
-            TreeInfo.logger.debug("Transformer delegation list created with {} entries", TreeInfo.transformers.size());
-        }
-        
-        return TreeInfo.transformers;
-    }
-
-    private static IClassNameTransformer getNameTransformer() {
-        if (TreeInfo.nameTransformer == null) {
-            for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-                if (transformer instanceof IClassNameTransformer) {
-                    TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
-                }
-            }
-        }
-        
-        return TreeInfo.nameTransformer;
-    }
-
-    /**
      * Map a class name back to its obfuscated counterpart 
      * 
      * @param className
      * @return obfuscated name for the specified deobfuscated reference
      */
     static String unmap(String className) {
-        IClassNameTransformer nameTransformer = TreeInfo.getNameTransformer();
+        IClassNameTransformer nameTransformer = TreeInfo.nameTransformer;
         if (nameTransformer != null) {
             return nameTransformer.unmapClassName(className);
         }
         
         return className;
+    }
+
+    /**
+     * Check whether the current environment has changed
+     */
+    private static void checkEnvironment() {
+        if (MixinEnvironment.getCurrentEnvironment() != TreeInfo.currentEnvironment) {
+            TreeInfo.buildTransformerDelegationList();
+            TreeInfo.currentEnvironment = MixinEnvironment.getCurrentEnvironment();
+        }
+    }
+
+    /**
+     * Builds the transformer list to apply to loaded mixin bytecode. Since
+     * generating this list requires inspecting each transformer by name (to
+     * cope with the new wrapper functionality added by FML) we generate the
+     * list just once and cache the result.
+     */
+    private static void buildTransformerDelegationList() {
+        TreeInfo.logger.debug("Building transformer delegation list:");
+        TreeInfo.transformers = new ArrayList<IClassTransformer>();
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            String transformerName = transformer.getClass().getName();
+            boolean include = true;
+            for (String excludeClass : TreeInfo.excludeTransformers) {
+                if (transformerName.contains(excludeClass)) {
+                    include = false;
+                    break;
+                }
+            }
+            if (include && !transformerName.contains(MixinTransformer.class.getName())) {
+                TreeInfo.logger.debug("  Adding:    {}", transformerName);
+                TreeInfo.transformers.add(transformer);
+            } else {
+                TreeInfo.logger.debug("  Excluding: {}", transformerName);
+            }
+        }
+
+        TreeInfo.logger.debug("Transformer delegation list created with {} entries", TreeInfo.transformers.size());
+        
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            if (transformer instanceof IClassNameTransformer) {
+                TreeInfo.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
+            }
+        }
     }
 }
