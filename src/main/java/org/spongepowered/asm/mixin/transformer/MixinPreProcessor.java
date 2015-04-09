@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.lang.annotation.Annotation;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -37,6 +38,7 @@ import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
@@ -154,31 +156,51 @@ class MixinPreProcessor {
 
     private void attachMethods(MixinTargetContext context) {
         for (MethodNode mixinMethod : this.classNode.methods) {
-            AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
-            if (shadowAnnotation == null) {
+            if (this.processMethod(context, mixinMethod, Shadow.class, true, true)) {
                 continue;
             }
-            
-            Method method = this.mixin.getClassInfo().findMethod(mixinMethod, true);
-            MethodNode target = MixinPreProcessor.findMethod(context.getTargetClass(), mixinMethod, shadowAnnotation);
-            
-            if (target == null) {
-                throw new InvalidMixinException(this.mixin, "Shadow method " + mixinMethod.name + " was not located in the target class");
-            }
-            
-            if (Constants.INIT.equals(target.name)) {
-                throw new InvalidMixinException(this.mixin, "Nice try! Cannot alias a constructor!");
-            }
-            
-            if (!target.name.equals(mixinMethod.name)) {
-                if ((target.access & Opcodes.ACC_PRIVATE) == 0) {
-                    throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
-                }
-                
-                mixinMethod.name = target.name;
-                method.renameTo(target.name);
-            }
+
+            this.processMethod(context, mixinMethod, Overwrite.class, false, false);
         }
+    }
+
+    private boolean processMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
+            boolean mustExist, boolean mustBePrivate) {
+        AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, annotationType);
+        if (annotation == null) {
+            return false;
+        }
+        
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, true);
+        MethodNode target = MixinPreProcessor.findMethod(context.getTargetClass(), mixinMethod, annotation);
+        
+        if (target == null) {
+            if (!mustExist) {
+                return false;
+            }
+            
+            throw new InvalidMixinException(this.mixin, annotationType.getSimpleName() + " method " + mixinMethod.name
+                    + " was not located in the target class");
+        }
+        
+        if (Constants.INIT.equals(target.name)) {
+            throw new InvalidMixinException(this.mixin, "Nice try! Cannot alias a constructor!");
+        }
+        
+        if (!target.name.equals(mixinMethod.name)) {
+            if (mustBePrivate && (target.access & Opcodes.ACC_PRIVATE) == 0) {
+                throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
+            }
+            
+            System.err.printf("=================================================================================\n");
+            System.err.printf("Renaming %s -> %s\n", mixinMethod.name, target.name);
+            System.err.printf("=================================================================================\n");
+            
+            mixinMethod.name = target.name;
+            method.renameTo(target.name);
+        }
+        
+        return true;
     }
 
     private void attachFields(MixinTargetContext context) {
@@ -273,11 +295,11 @@ class MixinPreProcessor {
         }
     }
 
-    private static MethodNode findMethod(ClassNode classNode, MethodNode method, AnnotationNode shadow) {
+    private static MethodNode findMethod(ClassNode classNode, MethodNode method, AnnotationNode annotation) {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(method.name);
-        if (shadow != null) {
-            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(shadow, "aliases");
+        if (annotation != null) {
+            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(annotation, "aliases");
             if (aka != null) {
                 aliases.addAll(aka);
             }
