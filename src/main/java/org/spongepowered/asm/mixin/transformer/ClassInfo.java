@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
@@ -315,6 +317,8 @@ class ClassInfo extends TreeInfo {
         }
     }
     
+    private static final Logger logger = LogManager.getLogger("mixin");
+
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
 
     /**
@@ -1297,6 +1301,7 @@ class ClassInfo extends TreeInfo {
             
             // Put null in the cache if load failed
             ClassInfo.cache.put(className, info);
+            ClassInfo.logger.debug("Added class metadata for {} to metadata cache", className);
         }
         
         return info;
