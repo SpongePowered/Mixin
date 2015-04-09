@@ -72,5 +72,17 @@ easily troubleshoot your mixins. To do so:
       </td>
       <td valign="top">March 2015</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.3</b></td>
+      <td valign="top">
+        <ul>
+          <li>Implemented Environments</li>
+          <li>Intrinsic method support</li>
+          <li>Enabled local variable capture</li>
+          <li>Alias support</li>
+        </ul>
+      </td>
+      <td valign="top">March 2015</td>
+    </tr>
   </tbody>
 </table>
