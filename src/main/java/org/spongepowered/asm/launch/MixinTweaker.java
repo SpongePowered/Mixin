@@ -64,12 +64,6 @@ public class MixinTweaker implements ITweaker {
      * file names.
      */
     private final ITweaker fmlWrapper;
-    
-    /**
-     * If FML init fails the tweaker will look for configs, if it finds any then
-     * it will set this flag to signify that it needs to inject the transformer
-     */
-    private boolean injectTransformer;
 
     /**
      * Hello world
@@ -149,7 +143,6 @@ public class MixinTweaker implements ITweaker {
             
             for (String config : mixinConfigs.split(",")) {
                 if (config.endsWith(".json")) {
-                    this.injectTransformer = true;
                     MixinEnvironment.getCurrentEnvironment().addConfiguration(config);
                 }
             }
@@ -164,8 +157,6 @@ public class MixinTweaker implements ITweaker {
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
         if (this.fmlWrapper != null) {
             this.fmlWrapper.injectIntoClassLoader(Launch.classLoader);
-        } else if (this.injectTransformer) {
-            classLoader.registerTransformer(MixinBootstrap.TRANSFORMER_CLASS);
         }
     }
 

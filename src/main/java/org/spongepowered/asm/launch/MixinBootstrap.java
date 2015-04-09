@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.util.List;
+
 import net.minecraft.launchwrapper.Launch;
 
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -31,14 +33,12 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 
 public abstract class MixinBootstrap {
 
-    public static final String VERSION = "0.2";
-    
+    public static final String VERSION = "0.3";
     public static final String INIT_KEY = "mixin.initialised";
-    public static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
-    private static final String ASM_PACKAGE = "org.objectweb.asm.";
     
-    public static final String TRANSFORMER_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer";
-
+    private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
+    private static final String ASM_PACKAGE = "org.objectweb.asm.";
+    private static final String TRANSFORMER_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer";
     
     static {
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.ASM_PACKAGE);
@@ -60,5 +60,13 @@ public abstract class MixinBootstrap {
 
         Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
         MixinEnvironment.getCurrentEnvironment();
+
+        Launch.classLoader.registerTransformer(MixinBootstrap.TRANSFORMER_CLASS);
+        
+        @SuppressWarnings("unchecked")
+        List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+        if (tweakClasses != null) {
+            tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
+        }
     }
 }

@@ -49,7 +49,6 @@ import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
-import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 
@@ -174,9 +173,14 @@ public class MixinTransformer extends TreeTransformer {
     private final Logger logger = LogManager.getLogger("mixin");
     
     /**
-     * Mixin configuration bundle
+     * All mixin configuration bundles
      */
     private final List<MixinConfig> configs = new ArrayList<MixinConfig>();
+    
+    /**
+     * Uninitialised mixin configuration bundles 
+     */
+    private final List<MixinConfig> pendingConfigs = new ArrayList<MixinConfig>();
     
     /**
      * Transformer modules
@@ -184,13 +188,9 @@ public class MixinTransformer extends TreeTransformer {
     private final List<IMixinTransformerModule> modules = new ArrayList<IMixinTransformerModule>();
 
     /**
-     * True once initialisation is done. All mixin configs needs to be
-     * initialised as late as possible in startup (so that other transformers
-     * have had time to register) but before any game classes are transformed.
-     * To do this we initialise the configs on the first call to
-     * {@link #transform} and this flag keeps track of when we've done this. 
+     * Current environment 
      */
-    private boolean initDone;
+    private MixinEnvironment currentEnvironment;
     
     /**
      * Re-entrance detector
@@ -218,51 +218,7 @@ public class MixinTransformer extends TreeTransformer {
         // I am a leaf on the wind
         environment.setActiveTransformer(this);
         
-        this.addConfigs(environment);
-        this.addModules(environment);
-        
         TreeInfo.setLock(this.lock);
-    }
-
-    /**
-     * Add configurations from the supplied mixin environment to the configs set
-     * 
-     * @param environment Environment to query
-     */
-    private void addConfigs(MixinEnvironment environment) {
-        List<String> configs = environment.getMixinConfigs();
-        
-        if (configs != null) {
-            for (String configFile : configs) {
-                try {
-                    MixinConfig config = MixinConfig.create(configFile);
-                    if (config != null) {
-                        this.configs.add(config);
-                    }
-                } catch (Exception ex) {
-                    this.logger.warn(String.format("Failed to load mixin config: %s", configFile), ex);
-                }
-            }
-        }
-        
-        Collections.sort(this.configs);
-    }
-
-    /**
-     * Set up this transformer using options from the supplied environment
-     * 
-     * @param environment Environment to query
-     */
-    private void addModules(MixinEnvironment environment) {
-        // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
-        if (environment.getOption(Option.DEBUG_VERIFY)) {
-            this.modules.add(new MixinTransformerModuleCheckClass());
-        }
-        
-        // Run implementation checker if option is enabled
-        if (environment.getOption(Option.CHECK_IMPLEMENTS)) {
-            this.modules.add(new MixinTransformerModuleInterfaceChecker());
-        }
     }
 
     /* (non-Javadoc)
@@ -277,10 +233,11 @@ public class MixinTransformer extends TreeTransformer {
 
         boolean locked = this.lock.push().isSet();
         
-        if (!this.initDone && !locked) {
-            this.initDone = true;
+        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
+        
+        if (this.currentEnvironment != environment && !locked) {
             try {
-                this.initConfigs();
+                this.init(environment);
             } catch (Exception ex) {
                 this.lock.pop();
                 throw new RuntimeException(ex);
@@ -319,7 +276,7 @@ public class MixinTransformer extends TreeTransformer {
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
-                    if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DUMP_TARGET_ON_FAILURE)) {
+                    if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
                         MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
                     }
                     
@@ -343,11 +300,59 @@ public class MixinTransformer extends TreeTransformer {
         }
     }
 
+    private void init(MixinEnvironment environment) {
+        this.addConfigs(environment);
+        this.addModules(environment);
+        this.initConfigs();
+        this.currentEnvironment = environment;
+    }
+
+    /**
+     * Add configurations from the supplied mixin environment to the configs set
+     * 
+     * @param environment Environment to query
+     */
+    private void addConfigs(MixinEnvironment environment) {
+        List<String> configs = environment.getMixinConfigs();
+        
+        if (configs != null) {
+            for (String configFile : configs) {
+                try {
+                    MixinConfig config = MixinConfig.create(configFile);
+                    if (config != null) {
+                        this.pendingConfigs.add(config);
+                    }
+                } catch (Exception ex) {
+                    this.logger.warn(String.format("Failed to load mixin config: %s", configFile), ex);
+                }
+            }
+        }
+        
+        Collections.sort(this.pendingConfigs);
+    }
+
+    /**
+     * Set up this transformer using options from the supplied environment
+     * 
+     * @param environment Environment to query
+     */
+    private void addModules(MixinEnvironment environment) {
+        // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
+        if (environment.getOption(Option.DEBUG_VERIFY)) {
+            this.modules.add(new MixinTransformerModuleCheckClass());
+        }
+        
+        // Run implementation checker if option is enabled
+        if (environment.getOption(Option.CHECK_IMPLEMENTS)) {
+            this.modules.add(new MixinTransformerModuleInterfaceChecker());
+        }
+    }
+
     /**
      * Initialise mixin configs
      */
     private void initConfigs() {
-        for (MixinConfig config : this.configs) {
+        for (MixinConfig config : this.pendingConfigs) {
             try {
                 config.initialise();
             } catch (Exception ex) {
@@ -355,14 +360,14 @@ public class MixinTransformer extends TreeTransformer {
             }
         }
         
-        for (MixinConfig config : this.configs) {
+        for (MixinConfig config : this.pendingConfigs) {
             IMixinConfigPlugin plugin = config.getPlugin();
             if (plugin == null) {
                 continue;
             }
             
             Set<String> otherTargets = new HashSet<String>();
-            for (MixinConfig otherConfig : this.configs) {
+            for (MixinConfig otherConfig : this.pendingConfigs) {
                 if (!otherConfig.equals(config)) {
                     otherTargets.addAll(otherConfig.getTargets());
                 }
@@ -371,13 +376,17 @@ public class MixinTransformer extends TreeTransformer {
             plugin.acceptTargets(config.getTargets(), Collections.unmodifiableSet(otherTargets));
         }
 
-        for (MixinConfig config : this.configs) {
+        for (MixinConfig config : this.pendingConfigs) {
             try {
                 config.postInitialise();
             } catch (Exception ex) {
                 this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
             }
         }
+        
+        this.configs.addAll(this.pendingConfigs);
+        Collections.sort(this.configs);
+        this.pendingConfigs.clear();
     }
 
     /**

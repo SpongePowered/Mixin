@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin;
 
+import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,14 +33,44 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.util.PrettyPrinter;
 
+import com.google.common.collect.ImmutableList;
+
 import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 
 /**
  * Env interaction for mixins
  */
 public class MixinEnvironment {
+    
+    public static class Phase {
+        
+        public static final Phase PREINIT = new Phase(0, "PREINIT");
+        
+        public static final Phase DEFAULT = new Phase(1, "DEFAULT");
+        
+        static final List<Phase> phases = ImmutableList.of(
+            Phase.PREINIT,
+            Phase.DEFAULT
+        );
+        
+        final int ordinal;
+        
+        final String name;
+        
+        private Phase(int ordinal, String name) {
+            this.ordinal = ordinal;
+            this.name = name;
+        }
+        
+        @Override
+        public String toString() {
+            return this.name;
+        }
+    }
     
     public static enum Side {
         /**
@@ -185,17 +216,51 @@ public class MixinEnvironment {
                     || (this.parent != null && this.parent.getValue());
         }
     }
+    
+    public static class EnvironmentStateTweaker implements ITweaker {
+
+        @Override
+        public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
+        }
+
+        @Override
+        public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        }
+
+        @Override
+        public String getLaunchTarget() {
+            return "";
+        }
+
+        @Override
+        public String[] getLaunchArguments() {
+            MixinEnvironment.gotoPhase(Phase.DEFAULT);
+            return new String[0];
+        }
+        
+    }
 
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
     
-    private static MixinEnvironment env;
+    private static Phase currentPhase = Phase.PREINIT;
     
-    private Side side;
+    private static MixinEnvironment[] environments = new MixinEnvironment[Phase.phases.size()];
+    
+    private static MixinEnvironment currentEnvironment;
+    
+    private final Phase phase;
+    
+    private final String configsKey;
     
     private final boolean[] options;
     
-    private MixinEnvironment() {
+    private Side side;
+    
+    private MixinEnvironment(Phase phase) {
+        this.phase = phase;
+        this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
+        
         // Sanity check
         Object version = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
         if (version == null || !MixinBootstrap.VERSION.equals(version)) {
@@ -212,7 +277,7 @@ public class MixinEnvironment {
             this.options[option.ordinal()] = option.getValue();
         }
         
-        if (this.getOption(Option.DEBUG_VERBOSE)) {
+        if (this.getOption(Option.DEBUG_VERBOSE) && this.phase == Phase.PREINIT) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
             printer.add("%25s : %s", "Code source", this.getClass().getProtectionDomain().getCodeSource().getLocation());
@@ -232,10 +297,10 @@ public class MixinEnvironment {
      */
     public List<String> getMixinConfigs() {
         @SuppressWarnings("unchecked")
-        List<String> mixinConfigs = (List<String>) Launch.blackboard.get(MixinEnvironment.CONFIGS_KEY);
+        List<String> mixinConfigs = (List<String>) Launch.blackboard.get(this.configsKey);
         if (mixinConfigs == null) {
             mixinConfigs = new ArrayList<String>();
-            Launch.blackboard.put(MixinEnvironment.CONFIGS_KEY, mixinConfigs);
+            Launch.blackboard.put(this.configsKey, mixinConfigs);
         }
         return mixinConfigs;
     }
@@ -286,19 +351,41 @@ public class MixinEnvironment {
         return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
     }
 
-    public static MixinEnvironment getCurrentEnvironment() {
-        if (MixinEnvironment.env == null) {
-            MixinEnvironment.env = new MixinEnvironment();
-        }
-        
-        return MixinEnvironment.env;
-    }
-    
     public boolean getOption(Option option) {
         return this.options[option.ordinal()];
     }
     
     public void setOption(Option option, boolean value) {
         this.options[option.ordinal()] = value;
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("%s[%s]", this.getClass().getSimpleName(), this.phase);
+    }
+    
+    public static MixinEnvironment getEnvironment(Phase phase) {
+        if (MixinEnvironment.environments[phase.ordinal] == null) {
+            MixinEnvironment.environments[phase.ordinal] = new MixinEnvironment(phase);
+        }
+        
+        return MixinEnvironment.environments[phase.ordinal];
+    }
+
+    public static MixinEnvironment getDefaultEnvironment() {
+        return MixinEnvironment.getEnvironment(Phase.DEFAULT);
+    }
+
+    public static MixinEnvironment getCurrentEnvironment() {
+        if (MixinEnvironment.currentEnvironment == null) {
+            MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.currentPhase);
+        }
+        
+        return MixinEnvironment.currentEnvironment;
+    }
+    
+    static void gotoPhase(Phase phase) {
+        MixinEnvironment.currentPhase = phase;
+        MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.currentPhase);
     }
 }

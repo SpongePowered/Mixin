@@ -41,6 +41,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
 
 import com.google.common.collect.ImmutableSet;
@@ -77,18 +78,15 @@ abstract class TreeInfo {
     private static IClassNameTransformer nameTransformer;
     
     /**
+     * Current environment 
+     */
+    private static MixinEnvironment currentEnvironment;
+    
+    /**
      * Re-entrance lock
      */
     private static ReEntranceState lock;
 
-    static {
-        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-            if (transformer instanceof IClassNameTransformer) {
-                TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
-            }
-        }
-    }
-    
     static void setLock(ReEntranceState lock) {
         TreeInfo.lock = lock;
     }
@@ -115,6 +113,11 @@ abstract class TreeInfo {
      * @return Transformed class bytecode for the specified class
      */
     static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
+        if (MixinEnvironment.getCurrentEnvironment() != TreeInfo.currentEnvironment) {
+            TreeInfo.transformers = null;
+            TreeInfo.nameTransformer = null;
+        }
+        
         String transformedName = className.replace('/', '.');
         String name = TreeInfo.unmap(transformedName);
         byte[] classBytes = null;
@@ -224,6 +227,18 @@ abstract class TreeInfo {
         return TreeInfo.transformers;
     }
 
+    private static IClassNameTransformer getNameTransformer() {
+        if (TreeInfo.nameTransformer == null) {
+            for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+                if (transformer instanceof IClassNameTransformer) {
+                    TreeInfo.nameTransformer = (IClassNameTransformer) transformer;
+                }
+            }
+        }
+        
+        return TreeInfo.nameTransformer;
+    }
+
     /**
      * Map a class name back to its obfuscated counterpart 
      * 
@@ -231,8 +246,9 @@ abstract class TreeInfo {
      * @return obfuscated name for the specified deobfuscated reference
      */
     static String unmap(String className) {
-        if (TreeInfo.nameTransformer != null) {
-            return TreeInfo.nameTransformer.unmapClassName(className);
+        IClassNameTransformer nameTransformer = TreeInfo.getNameTransformer();
+        if (nameTransformer != null) {
+            return nameTransformer.unmapClassName(className);
         }
         
         return className;
