@@ -42,23 +42,43 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 
 
 /**
- * Env interaction for mixins
+ * The mixin environment manages global state information for the mixin
+ * subsystem.
  */
 public class MixinEnvironment {
     
+    /**
+     * Environment phase, deliberately not implemented as an enum
+     */
     public static class Phase {
         
+        /**
+         * "Pre initialisation" phase, everything before the tweak system begins
+         * to load the game
+         */
         public static final Phase PREINIT = new Phase(0, "PREINIT");
         
+        /**
+         * "Default" phase, during runtime
+         */
         public static final Phase DEFAULT = new Phase(1, "DEFAULT");
         
+        /**
+         * All phases
+         */
         static final List<Phase> phases = ImmutableList.of(
             Phase.PREINIT,
             Phase.DEFAULT
         );
         
+        /**
+         * Phase ordinal
+         */
         final int ordinal;
         
+        /**
+         * Phase name
+         */
         final String name;
         
         private Phase(int ordinal, String name) {
@@ -72,7 +92,11 @@ public class MixinEnvironment {
         }
     }
     
+    /**
+     * Represents a "side", client or dedicated server
+     */
     public static enum Side {
+        
         /**
          * The environment was unable to determine current side
          */
@@ -137,7 +161,11 @@ public class MixinEnvironment {
         }
     }
     
+    /**
+     * Mixin options
+     */
     public static enum Option {
+        
         /**
          * Enable all debugging options
          */
@@ -217,6 +245,10 @@ public class MixinEnvironment {
         }
     }
     
+    /**
+     * Tweaker used to notify the environment when we transition from preinit to
+     * default
+     */
     public static class EnvironmentStateTweaker implements ITweaker {
 
         @Override
@@ -385,6 +417,10 @@ public class MixinEnvironment {
     }
     
     static void gotoPhase(Phase phase) {
+        if (phase.ordinal > MixinEnvironment.currentPhase.ordinal) {
+            MixinBootstrap.addProxy();
+        }
+        
         MixinEnvironment.currentPhase = phase;
         MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.currentPhase);
     }

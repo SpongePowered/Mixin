@@ -38,7 +38,9 @@ public abstract class MixinBootstrap {
     
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
     private static final String ASM_PACKAGE = "org.objectweb.asm.";
-    private static final String TRANSFORMER_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer";
+    private static final String TRANSFORMER_PROXY_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer$Proxy";
+    
+    private static boolean initialised = false;
     
     static {
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.ASM_PACKAGE);
@@ -50,23 +52,71 @@ public abstract class MixinBootstrap {
     }
 
     private MixinBootstrap() {}
+    
+    public static void addProxy() {
+        Launch.classLoader.registerTransformer(MixinBootstrap.TRANSFORMER_PROXY_CLASS);
+    }
 
     public static void init() {
+        if (!MixinBootstrap.preInit()) {
+            return;
+        }
+
+        MixinBootstrap.register();
+    }
+
+    static boolean preInit() {
         Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
-        if (registeredVersion != null && !registeredVersion.equals(MixinBootstrap.VERSION)) {
-            throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
-                    + " was already initialised. Cannot bootstrap version " + MixinBootstrap.VERSION);
+        if (registeredVersion != null) {
+            if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
+                throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
+                        + " was already initialised. Cannot bootstrap version " + MixinBootstrap.VERSION);
+            }
+            
+            return false;
         }
 
         Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
-        MixinEnvironment.getCurrentEnvironment();
-
-        Launch.classLoader.registerTransformer(MixinBootstrap.TRANSFORMER_CLASS);
         
+        if (!MixinBootstrap.initialised) {
+            MixinBootstrap.initialised = true;
+            MixinEnvironment.getCurrentEnvironment();
+            MixinBootstrap.addProxy();
+
+            if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
+//                MixinEnvironment.gotoPhase(Phase.DEFAULT); TODO
+            }
+        }
+        
+        return true;
+    }
+
+    static void register() {
+        if (!MixinBootstrap.initialised) {
+            throw new IllegalStateException("MixinBootstrap.register() called before MixinBootstrap.preInit()");
+        }
+
         @SuppressWarnings("unchecked")
         List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
         if (tweakClasses != null) {
             tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
         }
+    }
+
+    private static int findInStackTrace(String className, String methodName) {
+        Thread currentThread = Thread.currentThread();
+        
+        if (!"main".equals(currentThread.getName())) {
+            return 0;
+        }
+        
+        StackTraceElement[] stackTrace = currentThread.getStackTrace();
+        for (StackTraceElement s : stackTrace) {
+            if (className.equals(s.getClassName()) && methodName.equals(s.getMethodName())) {
+                return s.getLineNumber();
+            }
+        }
+        
+        return 0;
     }
 }

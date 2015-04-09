@@ -63,13 +63,13 @@ public class MixinTweaker implements ITweaker {
      * jar metadata, this should be a comma-separated list of mixin config JSON
      * file names.
      */
-    private final ITweaker fmlWrapper;
+    private ITweaker fmlWrapper;
 
     /**
      * Hello world
      */
     public MixinTweaker() {
-        MixinBootstrap.init();
+        MixinBootstrap.preInit();
         this.container = this.findJarFile();
         this.fmlWrapper = this.initFMLCoreMod();
     }
@@ -85,6 +85,29 @@ public class MixinTweaker implements ITweaker {
             ex.printStackTrace();
         }
         return uri != null ? new File(uri) : null;
+    }
+
+    /* (non-Javadoc)
+     * @see net.minecraft.launchwrapper.ITweaker#acceptOptions(java.util.List,
+     *      java.io.File, java.io.File, java.lang.String)
+     */
+    @Override
+    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
+        
+        MixinBootstrap.register();
+
+        if (this.fmlWrapper == null) {
+            String mixinConfigs = this.getManifestAttribute("MixinConfigs");
+            if (mixinConfigs == null) {
+                return;
+            }
+            
+            for (String config : mixinConfigs.split(",")) {
+                if (config.endsWith(".json")) {
+                    MixinEnvironment.getCurrentEnvironment().addConfiguration(config);
+                }
+            }
+        }
     }
 
     /**
@@ -126,26 +149,6 @@ public class MixinTweaker implements ITweaker {
             return Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
         } catch (ClassNotFoundException ex) {
             return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
-        }
-    }
-
-    /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#acceptOptions(java.util.List,
-     *      java.io.File, java.io.File, java.lang.String)
-     */
-    @Override
-    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        if (this.fmlWrapper == null) {
-            String mixinConfigs = this.getManifestAttribute("MixinConfigs");
-            if (mixinConfigs == null) {
-                return;
-            }
-            
-            for (String config : mixinConfigs.split(",")) {
-                if (config.endsWith(".json")) {
-                    MixinEnvironment.getCurrentEnvironment().addConfiguration(config);
-                }
-            }
         }
     }
 

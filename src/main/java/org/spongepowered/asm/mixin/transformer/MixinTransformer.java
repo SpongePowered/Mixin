@@ -58,6 +58,50 @@ import org.spongepowered.asm.util.Constants;
 public class MixinTransformer extends TreeTransformer {
     
     /**
+     * Proxy transformer for the mixin transformer. These transformers are used
+     * to allow the mixin transformer to be re-registered in the transformer
+     * chain at a later stage in startup without having to fully re-initialise
+     * the mixin transformer itself. Only the latest proxy to be instantiated
+     * will actually provide callbacks to the underlying mixin transformer.
+     */
+    public static class Proxy implements IClassTransformer {
+        
+        /**
+         * All existing proxies
+         */
+        private static List<Proxy> proxies = new ArrayList<Proxy>();
+        
+        /**
+         * Actual mixin transformer instance
+         */
+        private static MixinTransformer transformer = new MixinTransformer();
+        
+        /**
+         * True if this is the active proxy, newer proxies disable their older
+         * siblings
+         */
+        private boolean isActive = true;
+        
+        public Proxy() {
+            for (Proxy hook : Proxy.proxies) {
+                hook.isActive = false;
+            }
+            
+            Proxy.proxies.add(this);
+            LogManager.getLogger("mixin").debug("Adding new mixin transformer proxy #{}", Proxy.proxies.size());
+        }
+        
+        @Override
+        public byte[] transform(String name, String transformedName, byte[] basicClass) {
+            if (this.isActive) {
+                return Proxy.transformer.transform(name, transformedName, basicClass);
+            }
+            
+            return basicClass;
+        }
+    }
+
+    /**
      * Re-entrance semaphore used to share re-entrance data with the TreeInfo
      */
     class ReEntranceState {
@@ -205,9 +249,14 @@ public class MixinTransformer extends TreeTransformer {
     private final String sessionId = UUID.randomUUID().toString();
     
     /**
+     * Logging level for verbose messages 
+     */
+    private Level verboseLoggingLevel = Level.DEBUG; 
+    
+    /**
      * ctor 
      */
-    public MixinTransformer() {
+    MixinTransformer() {
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
         Object globalMixinTransformer = environment.getActiveTransformer();
@@ -230,7 +279,7 @@ public class MixinTransformer extends TreeTransformer {
         if (basicClass == null || transformedName == null) {
             return basicClass;
         }
-
+        
         boolean locked = this.lock.push().isSet();
         
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
@@ -301,6 +350,9 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     private void init(MixinEnvironment environment) {
+        this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
+        this.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
+        
         this.addConfigs(environment);
         this.addModules(environment);
         this.initConfigs();
@@ -320,6 +372,7 @@ public class MixinTransformer extends TreeTransformer {
                 try {
                     MixinConfig config = MixinConfig.create(configFile);
                     if (config != null) {
+                        this.logger.log(this.verboseLoggingLevel, "Adding mixin config {}", config);
                         this.pendingConfigs.add(config);
                     }
                 } catch (Exception ex) {
@@ -337,6 +390,8 @@ public class MixinTransformer extends TreeTransformer {
      * @param environment Environment to query
      */
     private void addModules(MixinEnvironment environment) {
+        this.modules.clear();
+        
         // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
         if (environment.getOption(Option.DEBUG_VERIFY)) {
             this.modules.add(new MixinTransformerModuleCheckClass());
