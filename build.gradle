@@ -141,6 +141,13 @@ tasks.withType(JavaCompile) {
     options.encoding = 'utf8'
 }
 
+if (JavaVersion.current().isJava8Compatible()) {
+    tasks.withType(Javadoc) {
+        // disable the crazy super-strict doclint tool in Java 8
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+}
+
 jar {
     // Include annotation processor
     from sourceSets.ap.output

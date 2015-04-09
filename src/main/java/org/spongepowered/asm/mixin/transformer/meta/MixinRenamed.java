@@ -33,9 +33,7 @@ import java.lang.annotation.Target;
 /**
  * <p>Internal use only.</p>
  * 
- * <p>Decoration annotation used by
- * {@link org.spongepowered.asm.mixin.transformer.MixinInfo} and
- * {@link org.spongepowered.asm.mixin.transformer.MixinPreProcessor} to mark
+ * <p>Decoration annotation used by MixinInfo and MixinPreProcessor to mark
  * methods in a mixin which have been renamed prior to being merged.</p>
  */
 @Target({ ElementType.METHOD })
