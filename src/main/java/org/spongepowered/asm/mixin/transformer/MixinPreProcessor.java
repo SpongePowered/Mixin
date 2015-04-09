@@ -192,10 +192,6 @@ class MixinPreProcessor {
                 throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
             }
             
-            System.err.printf("=================================================================================\n");
-            System.err.printf("Renaming %s -> %s\n", mixinMethod.name, target.name);
-            System.err.printf("=================================================================================\n");
-            
             mixinMethod.name = target.name;
             method.renameTo(target.name);
         }
