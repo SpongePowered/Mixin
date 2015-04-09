@@ -33,13 +33,15 @@ import java.lang.annotation.Target;
 /**
  * <p>Internal use only.</p>
  * 
- * <p>Decoration annotation used by the {@link MixinInfo} to mark methods
- * in a mixin which have been renamed prior to being merged.</p>
+ * <p>Decoration annotation used by
+ * {@link org.spongepowered.asm.mixin.transformer.meta.MixinInfo} and
+ * {@link org.spongepowered.asm.mixin.transformer.MixinPreProcessor} to mark
+ * methods in a mixin which have been renamed prior to being merged.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MixinRenamed {
-
+    
     public String originalName();
     
     public boolean isInterfaceMember();
