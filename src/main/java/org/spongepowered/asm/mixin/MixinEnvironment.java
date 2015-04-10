@@ -54,6 +54,11 @@ public class MixinEnvironment {
     public static class Phase {
         
         /**
+         * Not initialised phase 
+         */
+        static final Phase NOT_INITIALISED = new Phase(-1, "NOT_INITIALISED");
+        
+        /**
          * "Pre initialisation" phase, everything before the tweak system begins
          * to load the game
          */
@@ -273,21 +278,44 @@ public class MixinEnvironment {
         
     }
 
+    // Blackboard keys
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
     
-    private static Phase currentPhase = Phase.PREINIT;
+    /**
+     * Current (active) environment phase, set to NOT_INITIALISED until the
+     * phases have been populated
+     */
+    private static Phase currentPhase = Phase.NOT_INITIALISED;
     
+    /**
+     * Array of all (real) environments, indexed by ordinal
+     */
     private static MixinEnvironment[] environments = new MixinEnvironment[Phase.phases.size()];
     
+    /**
+     * Currently active environment
+     */
     private static MixinEnvironment currentEnvironment;
     
+    /**
+     * The phase for this environment
+     */
     private final Phase phase;
     
+    /**
+     * The blackboard key for this environment's configs
+     */
     private final String configsKey;
     
+    /**
+     * This environment's options
+     */
     private final boolean[] options;
     
+    /**
+     * Detected side 
+     */
     private Side side;
     
     private MixinEnvironment(Phase phase) {
@@ -324,6 +352,13 @@ public class MixinEnvironment {
     }
     
     /**
+     * Get the phase for this environment
+     */
+    public Phase getPhase() {
+        return this.phase;
+    }
+    
+    /**
      * Get mixin configurations from the blackboard
      * 
      * @return list of registered mixin configs
@@ -352,14 +387,30 @@ public class MixinEnvironment {
         return this;
     }
 
+    /**
+     * Get the active mixin transformer instance (if any)
+     */
     public Object getActiveTransformer() {
         return Launch.blackboard.get(MixinEnvironment.TRANSFORMER_KEY);
     }
 
+    /**
+     * Set the mixin transformer instance
+     * 
+     * @param transformer Mixin Transformer
+     */
     public void setActiveTransformer(IClassTransformer transformer) {
-        Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, transformer);        
+        if (transformer != null) {
+            Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, transformer);        
+        }
     }
     
+    /**
+     * Allows a third party to set the side if the side is currently UNKNOWN
+     * 
+     * @param side Side to set to
+     * @return fluent interface
+     */
     public MixinEnvironment setSide(Side side) {
         if (side != null && this.getSide() == Side.UNKNOWN && side != Side.UNKNOWN) {
             this.side = side;
@@ -367,6 +418,11 @@ public class MixinEnvironment {
         return this;
     }
     
+    /**
+     * Get (and detect if necessary) the current side  
+     * 
+     * @return current side (or UNKNOWN if could not be determined)
+     */
     public Side getSide() {
         if (this.side == null) {
             for (Side side : Side.values()) {
@@ -380,18 +436,36 @@ public class MixinEnvironment {
         return this.side != null ? this.side : Side.UNKNOWN;
     }
     
+    /**
+     * Get the current mixin subsystem version
+     */
     public String getVersion() {
         return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
     }
 
+    /**
+     * Get the specified option from the current environment
+     * 
+     * @param option Option to get
+     * @return Option value
+     */
     public boolean getOption(Option option) {
         return this.options[option.ordinal()];
     }
     
+    /**
+     * Set the specified option for this environment
+     * 
+     * @param option Option to set
+     * @param value New option value
+     */
     public void setOption(Option option, boolean value) {
         this.options[option.ordinal()] = value;
     }
     
+    /**
+     * Invoke a mixin environment audit process
+     */
     public void audit() {
         Object activeTransformer = this.getActiveTransformer();
         if (activeTransformer instanceof MixinTransformer) {
@@ -400,12 +474,48 @@ public class MixinEnvironment {
         }
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
     @Override
     public String toString() {
         return String.format("%s[%s]", this.getClass().getSimpleName(), this.phase);
     }
     
+    /**
+     * Get the current phase, triggers initialisation if necessary
+     */
+    private static Phase getCurrentPhase() {
+        if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
+            MixinEnvironment.init(Phase.PREINIT);
+        }
+        
+        return MixinEnvironment.currentPhase;
+    }
+    
+    /**
+     * Initialise the mixin environment in the specified phase
+     * 
+     * @param phase initial phase
+     */
+    public static void init(Phase phase) {
+        if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
+            MixinEnvironment.currentPhase = phase;
+            MixinEnvironment.getEnvironment(phase);
+        }
+    }
+    
+    /**
+     * Get the mixin environment for the specified phase
+     * 
+     * @param phase phase to fetch environment for
+     * @return the environment
+     */
     public static MixinEnvironment getEnvironment(Phase phase) {
+        if (phase.ordinal < 0) {
+            throw new IllegalArgumentException("Cannot access the UNINITIALISED environment");
+        }
+        
         if (MixinEnvironment.environments[phase.ordinal] == null) {
             MixinEnvironment.environments[phase.ordinal] = new MixinEnvironment(phase);
         }
@@ -413,24 +523,39 @@ public class MixinEnvironment {
         return MixinEnvironment.environments[phase.ordinal];
     }
 
+    /**
+     * Gets the default environment
+     */
     public static MixinEnvironment getDefaultEnvironment() {
         return MixinEnvironment.getEnvironment(Phase.DEFAULT);
     }
 
+    /**
+     * Gets the current environment
+     */
     public static MixinEnvironment getCurrentEnvironment() {
         if (MixinEnvironment.currentEnvironment == null) {
-            MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.currentPhase);
+            MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.getCurrentPhase());
         }
         
         return MixinEnvironment.currentEnvironment;
     }
-    
+
+    /**
+     * Internal callback
+     * 
+     * @param phase
+     */
     static void gotoPhase(Phase phase) {
-        if (phase.ordinal > MixinEnvironment.currentPhase.ordinal) {
+        if (phase == null || phase.ordinal < 0) {
+            throw new IllegalArgumentException("Cannot go to the specified phase, phase is null or invalid");
+        }
+        
+        if (phase.ordinal > getCurrentPhase().ordinal) {
             MixinBootstrap.addProxy();
         }
         
         MixinEnvironment.currentPhase = phase;
-        MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.currentPhase);
+        MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.getCurrentPhase());
     }
 }
