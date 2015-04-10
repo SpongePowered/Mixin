@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,6 +39,7 @@ import net.minecraft.launchwrapper.Launch;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -73,6 +75,11 @@ class MixinConfig implements Comparable<MixinConfig> {
      * Map of mixin target classes to mixin infos
      */
     private final transient Map<String, List<MixinInfo>> mixinMapping = new HashMap<String, List<MixinInfo>>();
+    
+    /**
+     * Targets for this configuration which haven't been mixed yet 
+     */
+    private final transient Set<String> unhandledTargets = new HashSet<String>();
     
     /**
      * All mixins loaded by this config 
@@ -326,7 +333,9 @@ class MixinConfig implements Comparable<MixinConfig> {
                 if (mixin.getTargetClasses().size() > 0) {
                     MixinConfig.globalMixinList.add(mixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
-                        this.mixinsFor(targetClass.replace('/', '.')).add(mixin);
+                        String targetClassName = targetClass.replace('/', '.');
+                        this.mixinsFor(targetClassName).add(mixin);
+                        this.unhandledTargets.add(targetClassName);
                     }
                     this.mixins.add(mixin);
                 }
@@ -335,7 +344,11 @@ class MixinConfig implements Comparable<MixinConfig> {
             }
         }
     }
-    
+
+    void postApply(String transformedName, ClassNode targetClass) {
+        this.unhandledTargets.remove(transformedName);
+    }
+
     /**
      * True if this mixin is <em>required</em> (failure to apply a defined mixin
      * is an <em>error</em> condition).
@@ -363,7 +376,7 @@ class MixinConfig implements Comparable<MixinConfig> {
      * Get the list of mixin classes we will be applying
      */
     public List<String> getClasses() {
-        return this.mixinClasses;
+        return Collections.<String>unmodifiableList(this.mixinClasses);
     }
 
     /**
@@ -392,7 +405,14 @@ class MixinConfig implements Comparable<MixinConfig> {
      * Get targets for this configuration
      */
     public Set<String> getTargets() {
-        return this.mixinMapping.keySet();
+        return Collections.<String>unmodifiableSet(this.mixinMapping.keySet());
+    }
+    
+    /**
+     * Get targets for this configuration
+     */
+    public Set<String> getUnhandledTargets() {
+        return Collections.<String>unmodifiableSet(this.unhandledTargets);
     }
     
     /**

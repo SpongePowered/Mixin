@@ -36,6 +36,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
@@ -268,6 +269,30 @@ public class MixinTransformer extends TreeTransformer {
         environment.setActiveTransformer(this);
         
         TreeInfo.setLock(this.lock);
+    }
+    
+    /**
+     * Force-load all classes targetted by mixins but not yet applied
+     */
+    public void audit() {
+        if (!this.currentEnvironment.getOption(Option.CHECK_IMPLEMENTS)) {
+            return;
+        }
+        
+        Set<String> unhandled = new HashSet<String>();
+        
+        for (MixinConfig config : this.configs) {
+            unhandled.addAll(config.getUnhandledTargets());
+        }
+        
+        for (String nextClass : unhandled) {
+            try {
+                this.logger.info("Force-loading class {}", nextClass);
+                Class.forName(nextClass, true, Launch.classLoader);
+            } catch (ClassNotFoundException ex) {
+                throw new Error("Could not force-load " + nextClass);
+            }
+        }
     }
 
     /* (non-Javadoc)

@@ -542,6 +542,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         if (this.plugin != null) {
             this.plugin.postApply(transformedName, targetClass, this.className, this);
         }
+        
+        this.parent.postApply(transformedName, targetClass);
     }
 
     /* (non-Javadoc)

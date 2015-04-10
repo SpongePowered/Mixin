@@ -31,6 +31,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.util.PrettyPrinter;
 
 import com.google.common.collect.ImmutableList;
@@ -389,6 +390,14 @@ public class MixinEnvironment {
     
     public void setOption(Option option, boolean value) {
         this.options[option.ordinal()] = value;
+    }
+    
+    public void audit() {
+        Object activeTransformer = this.getActiveTransformer();
+        if (activeTransformer instanceof MixinTransformer) {
+            MixinTransformer transformer = (MixinTransformer)activeTransformer;
+            transformer.audit();
+        }
     }
     
     @Override
