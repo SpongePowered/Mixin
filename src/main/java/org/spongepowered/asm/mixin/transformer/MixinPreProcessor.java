@@ -224,7 +224,7 @@ class MixinPreProcessor {
                 }
                 
                 if (!target.name.equals(mixinField.name)) {
-                    if ((target.access & Opcodes.ACC_PRIVATE) == 0) {
+                    if ((target.access & Opcodes.ACC_PRIVATE) == 0 && (target.access & Opcodes.ACC_SYNTHETIC) == 0) {
                         throw new InvalidMixinException(this.mixin, "Non-private field cannot be aliased. Found " + target.name);
                     }
                     
