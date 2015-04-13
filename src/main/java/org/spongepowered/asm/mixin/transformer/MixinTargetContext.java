@@ -64,6 +64,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
+import org.spongepowered.asm.mixin.transformer.meta.SourceMap.File;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -148,6 +149,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private final boolean detachedSuper;
     
     /**
+     * SourceMap stratum 
+     */
+    private final File stratum;
+
+    /**
      * Minimum class version required to apply this mixin, target class will be
      * upgraded if the version is below this value
      */
@@ -166,6 +172,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.classNode = classNode;
         this.targetClass = context;
         this.targetClassInfo = ClassInfo.forName(this.targetClass.getName());
+        this.stratum = context.getSourceMap().addFile(this.classNode, mixin.getName());
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.targetClass.getClassNode().superName);
         this.sessionId = context.getSessionId();
@@ -290,6 +297,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     /**
+     * Get the SourceMap stratum for this mixin
+     * 
+     * @return stratum
+     */
+    public File getStratum() {
+        return this.stratum;
+    }
+    
+    /**
      * Get the minimum required class version for this mixin
      */
     public int getMinRequiredClassVersion() {
@@ -356,6 +372,9 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public void transformMethod(MethodNode method) {
         this.validateMethod(method);
         this.transformDescriptor(method);
+
+        // Offset line numbers per the stratum
+        this.stratum.applyOffset(method);
         
         AbstractInsnNode lastInsn = null;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {

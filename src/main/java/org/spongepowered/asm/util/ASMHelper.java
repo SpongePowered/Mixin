@@ -860,4 +860,25 @@ public class ASMHelper {
         return (field.access & flag) == flag;
     }
 
+    /**
+     * Compute the largest line number found in the specified class
+     * 
+     * @param classNode Class to inspect
+     * @param min minimum value to return
+     * @param pad amount to pad at the end of files
+     * @return computed max
+     */
+    public static int getMaxLineNumber(ClassNode classNode, int min, int pad) {
+        int max = 0;
+        for (MethodNode method : classNode.methods) {
+            for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+                AbstractInsnNode insn = iter.next();
+                if (insn instanceof LineNumberNode) {
+                    max = Math.max(max, ((LineNumberNode)insn).line);
+                }
+            }
+        }
+        return Math.max(min, max + pad);
+    }
+
 }
