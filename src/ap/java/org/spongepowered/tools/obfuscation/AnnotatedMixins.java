@@ -512,7 +512,11 @@ class AnnotatedMixins implements Messager {
         Elements elements = this.processingEnv.getElementUtils();
         TypeElement element = elements.getTypeElement(name);
         if (element != null) {
-            return new TypeHandle(element);
+            try {
+                return new TypeHandle(element);
+            } catch (NullPointerException ex) {
+                // probably bad package
+            }
         }
         
         int lastDotPos = name.lastIndexOf('.');
