@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import org.objectweb.asm.Label;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -512,19 +514,36 @@ public class MixinApplicator {
      *      and the position of the superclass ctor invocation
      */
     private Range getConstructorRange(MethodNode ctor) {
+        boolean lineNumberIsValid = false;
+        AbstractInsnNode endReturn = null;
+        
         int line = 0, start = 0, end = 0, superIndex = -1;
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof LineNumberNode) {
                 line = ((LineNumberNode)insn).line;
+                lineNumberIsValid = true;
             } else if (insn instanceof MethodInsnNode) {
                 if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
                     superIndex = ctor.instructions.indexOf(insn);
                     start = line;
                 }
+            } else if (insn.getOpcode() == Opcodes.PUTFIELD) {
+                lineNumberIsValid = false;
             } else if (insn.getOpcode() == Opcodes.RETURN) {
-                end = line;
+                if (lineNumberIsValid) {
+                    end = line;
+                } else {
+                    end = start;
+                    endReturn = insn;
+                }
             }
+        }
+        
+        if (endReturn != null) {
+            LabelNode label = new LabelNode(new Label());
+            ctor.instructions.insertBefore(endReturn, label);
+            ctor.instructions.insertBefore(endReturn, new LineNumberNode(start, label));
         }
         
         return new Range(start, end, superIndex);
@@ -617,8 +636,11 @@ public class MixinApplicator {
             AbstractInsnNode insn = iter.next();
             if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name)) {
                 ctor.instructions.insert(insn, initialiser);
+                return;
             }
         }
+        
+        this.logger.warn("Failed to locate super-invoke whilst injecting initialiser, initialiser was not mixed in!");
     }
 
     /**
