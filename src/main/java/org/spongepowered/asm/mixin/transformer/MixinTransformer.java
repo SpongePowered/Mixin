@@ -49,6 +49,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
@@ -359,12 +360,14 @@ public class MixinTransformer extends TreeTransformer {
                         MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
                     }
                     
-                    MixinConfig config = th.getMixin().getParent();
+                    MixinInfo mixin = th.getMixin();
+                    Phase phase = mixin.getPhase();
+                    MixinConfig config = mixin.getParent();
                     this.logger.log(config.isRequired() ? Level.FATAL : Level.WARN, String.format("Mixin failed applying %s -> %s: %s %s",
-                            th.getMixin(), transformedName, th.getClass().getName(), th.getMessage()), th);
+                            mixin, transformedName, th.getClass().getName(), th.getMessage()), th);
 
                     if (config.isRequired()) {
-                        throw new MixinApplyError("Mixin [" + th.getMixin() + "] FAILED for REQUIRED config [" + config + "]", th);
+                        throw new MixinApplyError("Mixin [" + mixin + "] from " + phase + " FAILED for REQUIRED config [" + config + "]", th);
                     }
                     
                     th.printStackTrace();

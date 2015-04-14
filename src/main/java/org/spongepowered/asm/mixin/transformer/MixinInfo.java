@@ -48,6 +48,8 @@ import org.objectweb.asm.tree.InnerClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -142,10 +144,15 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
     
     /**
+     * The environment phase in which this mixin was initialised
+     */
+    private final transient Phase phase;
+    
+    /**
      * Initial ClassNode created for mixin validation, not used for actual
      * application 
      */
-    private ClassNode validationClassNode;
+    private transient ClassNode validationClassNode;
     
     /**
      * True if the superclass of the mixin is <b>not</b> the direct superclass
@@ -169,6 +176,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.name = mixinName;
         this.className = parent.getMixinPackage() + mixinName;
         this.plugin = plugin;
+        this.phase = MixinEnvironment.getCurrentEnvironment().getPhase();
         
         // Read the class bytes and transform
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
@@ -231,6 +239,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             targetClassName = targetClassName.replace('/', '.');
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
                 ClassInfo targetInfo = ClassInfo.forName(targetClassName);
+                if (targetInfo == null) {
+                    throw new RuntimeException("@Mixin target " + targetClassName + " was not found " + this);
+                }
                 if (targetInfo.isInterface()) {
                     throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is an interface in " + this);
                 }
@@ -266,7 +277,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         boolean detached = false;
         
         for (ClassInfo targetClass : this.targetClasses) {
-            
             if (classNode.superName.equals(targetClass.getSuperName())) {
                 continue;
             }
@@ -415,6 +425,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     public Level getLoggingLevel() {
         return this.parent.getLoggingLevel();
+    }
+    
+    /**
+     * Get the phase in which this mixin was initialised
+     */
+    public Phase getPhase() {
+        return this.phase;
     }
 
     /**
