@@ -27,15 +27,21 @@ package org.spongepowered.asm.mixin;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.util.PrettyPrinter;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
+import net.minecraft.launchwrapper.IClassNameTransformer;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
@@ -277,11 +283,22 @@ public class MixinEnvironment {
         }
         
     }
+    
+    /**
+     * Known re-entrant transformers, other re-entrant transformers will
+     * detected automatically 
+     */
+    private static final Set<String> excludeTransformers = Sets.<String>newHashSet(
+        "net.minecraftforge.fml.common.asm.transformers.EventSubscriptionTransformer",
+        "cpw.mods.fml.common.asm.transformers.EventSubscriptionTransformer",
+        "net.minecraftforge.fml.common.asm.transformers.TerminalTransformer",
+        "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
+    );
 
     // Blackboard keys
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
-    
+
     /**
      * Current (active) environment phase, set to NOT_INITIALISED until the
      * phases have been populated
@@ -298,6 +315,11 @@ public class MixinEnvironment {
      */
     private static MixinEnvironment currentEnvironment;
     
+    /**
+     * Logger 
+     */
+    private final Logger logger = LogManager.getLogger("mixin");
+
     /**
      * The phase for this environment
      */
@@ -318,6 +340,19 @@ public class MixinEnvironment {
      */
     private Side side;
     
+    /**
+     * Local transformer chain, this consists of all transformers present at the
+     * init phase with the exclusion of the mixin transformer itself and known
+     * re-entrant transformers. Detected re-entrant transformers will be
+     * subsequently removed.
+     */
+    private List<IClassTransformer> transformers;
+    
+    /**
+     * Class name transformer (if present)
+     */
+    private IClassNameTransformer nameTransformer;
+
     private MixinEnvironment(Phase phase) {
         this.phase = phase;
         this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
@@ -473,7 +508,85 @@ public class MixinEnvironment {
             transformer.audit();
         }
     }
-    
+
+    /**
+     * Returns (and generates if necessary) the transformer delegation list for
+     * this environment.
+     */
+    public List<IClassTransformer> getTransformers() {
+        if (this.transformers == null) {
+            this.buildTransformerDelegationList();
+        }
+        
+        return Collections.unmodifiableList(this.transformers);
+    }
+
+    /**
+     * Adds a transformer to the transformer exclusions list
+     * 
+     * @param name
+     */
+    public void addTransformerExclusion(String name) {
+        MixinEnvironment.excludeTransformers.add(name);
+        
+        // Force rebuild of the list
+        this.transformers = null;
+    }
+
+    /**
+     * Map a class name back to its obfuscated counterpart 
+     * 
+     * @param className
+     * @return obfuscated name for the specified deobfuscated reference
+     */
+    public String unmap(String className) {
+        if (this.nameTransformer == null) {
+            this.buildTransformerDelegationList();
+        }
+        
+        if (this.nameTransformer != null) {
+            return this.nameTransformer.unmapClassName(className);
+        }
+        
+        return className;
+    }
+
+    /**
+     * Builds the transformer list to apply to loaded mixin bytecode. Since
+     * generating this list requires inspecting each transformer by name (to
+     * cope with the new wrapper functionality added by FML) we generate the
+     * list just once per environment and cache the result.
+     */
+    private void buildTransformerDelegationList() {
+        this.logger.debug("Rebuilding transformer delegation list:");
+        this.transformers = new ArrayList<IClassTransformer>();
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            String transformerName = transformer.getClass().getName();
+            boolean include = true;
+            for (String excludeClass : MixinEnvironment.excludeTransformers) {
+                if (transformerName.contains(excludeClass)) {
+                    include = false;
+                    break;
+                }
+            }
+            if (include && !transformerName.contains(MixinTransformer.class.getName())) {
+                this.logger.debug("  Adding:    {}", transformerName);
+                this.transformers.add(transformer);
+            } else {
+                this.logger.debug("  Excluding: {}", transformerName);
+            }
+        }
+
+        this.logger.debug("Transformer delegation list created with {} entries", this.transformers.size());
+        
+        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
+            if (transformer instanceof IClassNameTransformer) {
+                this.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                this.nameTransformer = (IClassNameTransformer) transformer;
+            }
+        }
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
