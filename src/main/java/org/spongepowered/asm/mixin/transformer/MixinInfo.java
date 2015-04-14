@@ -182,11 +182,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.mixinBytes = this.loadMixinClass(this.className, runTransformers);
         
         ClassNode classNode = this.getClassNode(0);
-        this.classInfo = ClassInfo.fromClassNode(classNode);
         this.priority = this.readPriority(classNode);
         this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         this.validationClassNode = classNode;
+        this.classInfo = ClassInfo.fromClassNode(classNode);
     }
     
     void validate() {
