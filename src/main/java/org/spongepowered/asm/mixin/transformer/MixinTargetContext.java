@@ -24,8 +24,10 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -77,7 +79,17 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * Target ClassInfo
      */
     private final ClassInfo targetClassInfo;
-    
+
+    /**
+     * Shadow method list
+     */
+    private final List<MethodNode> shadowMethods = new ArrayList<MethodNode>();
+
+    /**
+     * Shadow field list
+     */
+    private final List<FieldNode> shadowFields = new ArrayList<FieldNode>();
+
     /**
      * Information about methods in the target class, used to keep track of
      * transformations we apply
@@ -107,7 +119,21 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.targetClass = target;
         this.targetClassInfo = ClassInfo.forName(target.name);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
-        this.detachedSuper = !this.getClassNode().superName.equals(this.targetClass.superName);
+        this.detachedSuper = !this.classNode.superName.equals(this.targetClass.superName);
+    }
+    
+    /**
+     * @param method
+     */
+    void addShadowMethod(MethodNode method) {
+        this.shadowMethods.add(method);
+    }
+    
+    /**
+     * @param field
+     */
+    void addShadowField(FieldNode field) {
+        this.shadowFields.add(field);
     }
     
     /* (non-Javadoc)
@@ -489,6 +515,42 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public Set<String> getInterfaces() {
         return this.mixin.getInterfaces();
     }
+    
+    /**
+     * Get shadow methods in this mixin
+     * 
+     * @return
+     */
+    public List<MethodNode> getShadowMethods() {
+        return this.shadowMethods;
+    }
+
+    /**
+     * Get methods to mixin
+     * 
+     * @return
+     */
+    public List<MethodNode> getMethods() {
+        return this.classNode.methods;
+    }
+    
+    /**
+     * Get shadow fields in this mixin
+     * 
+     * @return
+     */
+    public List<FieldNode> getShadowFields() {
+        return this.shadowFields;
+    }
+    
+    /**
+     * Get fields to mixin
+     * 
+     * @return
+     */
+    public List<FieldNode> getFields() {
+        return this.classNode.fields;
+    }
 
     /**
      * Get the logging level for this mixin
@@ -508,7 +570,16 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public boolean shouldSetSourceFile() {
         return this.mixin.getParent().shouldSetSourceFile();
     }
-    
+
+    /**
+     * Return the source file name for the mixin
+     * 
+     * @return mixin source file
+     */
+    public String getSourceFile() {
+        return this.classNode.sourceFile;
+    }
+
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IReferenceMapperContext
      *      #getReferenceMapper()

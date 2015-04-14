@@ -46,7 +46,6 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -194,6 +193,7 @@ public class MixinApplicator {
             
             this.applyInterfaces(mixin);
             this.applyAttributes(mixin);
+            this.applyAnnotations(mixin);
             this.applyFields(mixin);
             this.applyMethods(mixin);
             this.applyInitialisers(mixin);
@@ -227,10 +227,20 @@ public class MixinApplicator {
      */
     private void applyAttributes(MixinTargetContext mixin) {
         if (mixin.shouldSetSourceFile()) {
-            this.targetClass.sourceFile = mixin.getClassNode().sourceFile;
+            this.targetClass.sourceFile = mixin.getSourceFile();
         }
     }
 
+    /**
+     * Mixin class-level annotations on the mixin into the target class
+     * 
+     * @param mixin
+     */
+    private void applyAnnotations(MixinTargetContext mixin) {
+        ClassNode sourceClass = mixin.getClassNode();
+        this.mergeAnnotations(sourceClass, this.targetClass);
+    }
+    
     /**
      * Mixin fields from mixin class into the target class. It is vital that
      * this is done before mixinMethods because we need to compute renamed
@@ -240,7 +250,14 @@ public class MixinApplicator {
      * @param mixin
      */
     private void applyFields(MixinTargetContext mixin) {
-        for (FieldNode field : mixin.getClassNode().fields) {
+        for (FieldNode shadow : mixin.getShadowFields()) {
+            FieldNode target = this.findTargetField(shadow);
+            if (target != null) {
+                this.mergeAnnotations(shadow, target);
+            }
+        }
+        
+        for (FieldNode field : mixin.getFields()) {
             FieldNode target = this.findTargetField(field);
             if (target == null) {
                 // This is just a local field, so add it
@@ -255,15 +272,18 @@ public class MixinApplicator {
      * @param mixin
      */
     private void applyMethods(MixinTargetContext mixin) {
-        for (MethodNode mixinMethod : mixin.getClassNode().methods) {
+        for (MethodNode shadow : mixin.getShadowMethods()) {
+            MethodNode target = this.findTargetMethod(shadow);
+            if (target != null) {
+                this.mergeAnnotations(shadow, target);
+            }
+        }
+        
+        for (MethodNode mixinMethod : mixin.getMethods()) {
             // Reparent all mixin methods into the target class
             mixin.transformMethod(mixinMethod);
 
-            boolean isShadow = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class) != null;
-            
-            if (isShadow) {
-                continue;
-            } else if (!mixinMethod.name.startsWith("<")) {
+            if (!mixinMethod.name.startsWith("<")) {
                 boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
                 
                 if (MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
@@ -489,7 +509,7 @@ public class MixinApplicator {
     private MethodNode getConstructor(MixinTargetContext mixin) {
         MethodNode ctor = null;
         
-        for (MethodNode mixinMethod : mixin.getClassNode().methods) {
+        for (MethodNode mixinMethod : mixin.getMethods()) {
             if (Constants.INIT.equals(mixinMethod.name)) {
                 if (MixinApplicator.hasLineNumbers(mixinMethod)) {
                     if (ctor == null) {
@@ -668,6 +688,94 @@ public class MixinApplicator {
         for (InjectionInfo injectInfo : injected) {
             injectInfo.postInject();
         }
+    }
+
+    /**
+     * Merge annotations from the specified source ClassNode to the destination
+     * ClassNode, replaces annotations of the equivalent type on the target with
+     * annotations from the source. If the source node has no annotations then
+     * no action will take place, if the target node has no annotations then a
+     * new annotation list will be created. Annotations from the mixin package
+     * are not merged. 
+     * 
+     * @param from ClassNode to merge annotations from
+     * @param to ClassNode to merge annotations to
+     */
+    private void mergeAnnotations(ClassNode from, ClassNode to) {
+        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
+        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
+    }
+        
+    /**
+     * Merge annotations from the specified source MethodNode to the destination
+     * MethodNode, replaces annotations of the equivalent type on the target
+     * with annotations from the source. If the source node has no annotations
+     * then no action will take place, if the target node has no annotations
+     * then a new annotation list will be created. Annotations from the mixin
+     * package are not merged. 
+     * 
+     * @param from MethodNode to merge annotations from
+     * @param to MethodNode to merge annotations to
+     */
+    private void mergeAnnotations(MethodNode from, MethodNode to) {
+        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
+        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
+    }
+    
+    /**
+     * Merge annotations from the specified source FieldNode to the destination
+     * FieldNode, replaces annotations of the equivalent type on the target with
+     * annotations from the source. If the source node has no annotations then
+     * no action will take place, if the target node has no annotations then a
+     * new annotation list will be created. Annotations from the mixin package
+     * are not merged. 
+     * 
+     * @param from FieldNode to merge annotations from
+     * @param to FieldNode to merge annotations to
+     */
+    private void mergeAnnotations(FieldNode from, FieldNode to) {
+        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
+        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
+    }
+    
+    /**
+     * Merge annotations from the source list to the target list. Returns the
+     * target list or a new list if the target list was null.
+     * 
+     * @param from Annotations to merge
+     * @param to Annotation list to merge into
+     * @param name Name of the item being merged, for debugging purposes
+     * @return The merged list (or a new list if the target list was null)
+     */
+    private List<AnnotationNode> mergeAnnotations(List<AnnotationNode> from, List<AnnotationNode> to, String name) {
+        try {
+            if (from == null) {
+                return to;
+            }
+            
+            if (to == null) {
+                to = new ArrayList<AnnotationNode>();
+            }
+            
+            for (AnnotationNode annotation : from) {
+                if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
+                    continue;
+                }
+                
+                for (Iterator<AnnotationNode> iter = to.iterator(); iter.hasNext();) {
+                    if (iter.next().desc.equals(annotation.desc)) {
+                        iter.remove();
+                        break;
+                    }
+                }
+                
+                to.add(annotation);
+            }
+        } catch (Exception ex) {
+            this.logger.warn("Exception encountered whilst merging annotations for {}", name);
+        }
+        
+        return to;
     }
 
     /**

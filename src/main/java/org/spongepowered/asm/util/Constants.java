@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.util;
 
+import org.spongepowered.asm.mixin.Mixin;
+
 
 /**
  * Miscellaneous shared constants
@@ -34,6 +36,8 @@ public abstract class Constants {
     public static final String CLINIT = "<clinit>";
     public static final String IMAGINARY_SUPER = "super$";
     public static final String DEBUG_OUTPUT_PATH = ".mixin.out";
+    public static final String MIXIN_PACKAGE = Mixin.class.getPackage().getName();
+    public static final String MIXIN_PACKAGE_REF = Constants.MIXIN_PACKAGE.replace('.', '/');
 
     private Constants() {}
 }

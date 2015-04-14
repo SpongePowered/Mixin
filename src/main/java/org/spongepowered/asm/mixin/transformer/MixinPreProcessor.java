@@ -155,8 +155,12 @@ class MixinPreProcessor {
     }
 
     private void attachMethods(MixinTargetContext context) {
-        for (MethodNode mixinMethod : this.classNode.methods) {
+        for (Iterator<MethodNode> iter = this.classNode.methods.iterator(); iter.hasNext();) {
+            MethodNode mixinMethod = iter.next();
+            
             if (this.processMethod(context, mixinMethod, Shadow.class, true, true)) {
+                iter.remove();
+                context.addShadowMethod(mixinMethod);
                 continue;
             }
 
@@ -234,6 +238,10 @@ class MixinPreProcessor {
                 
                 // Shadow fields get stripped from the mixin class
                 iter.remove();
+                
+                if (shadow != null) {
+                    context.addShadowField(mixinField);
+                }
             }
         }
     }
