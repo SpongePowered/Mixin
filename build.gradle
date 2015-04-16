@@ -233,8 +233,8 @@ uploadArchives {
                     }
 
                     issueManagement {
-                        system 'youtrack'
-                        url 'https://issues.spongepowered.org/'
+                        system 'GitHub Issues'
+                        url 'https://github.com/SpongePowered/Mixin/issues'
                     }
 
                     licenses {
