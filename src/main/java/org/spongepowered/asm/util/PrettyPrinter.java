@@ -39,7 +39,7 @@ public class PrettyPrinter {
     /**
      * "Horizontal rule" marker
      */
-    private static final String HR = "---";
+    private static final char HR = '\253';
 
     /**
      * If specified as the first character on a line, centres the line
@@ -95,7 +95,18 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter hr() {
-        this.lines.add(PrettyPrinter.HR);
+        return this.hr('*');
+    }
+    
+    
+    /**
+     * Adds a horizontal rule of the specified char to the output
+     * 
+     * @param ruleChar character to use for the horizontal rule
+     * @return fluent interface
+     */
+    public PrettyPrinter hr(char ruleChar) {
+        this.lines.add("" + PrettyPrinter.HR + ruleChar);
         return this;
     }
     
@@ -117,22 +128,23 @@ public class PrettyPrinter {
      * @param stream stream to print to
      */
     public void print(PrintStream stream) {
-        this.printHr(stream);
+        this.printHr(stream, '*');
         for (String line : this.lines) {
-            if (line == PrettyPrinter.HR) {
-                this.printHr(stream);
+            int len = line.length();
+            if (len > 1 && line.charAt(0) == PrettyPrinter.HR) {
+                this.printHr(stream, line.charAt(1));
             } else {
-                if (line.length() > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
+                if (len > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
                     String text = line.substring(1);
                     line = String.format("%" + (((this.width - (text.length())) / 2) + text.length()) + "s", text);
                 }
                 stream.printf("/* %-" + this.width + "s */\n", line);
             }
         }
-        this.printHr(stream);
+        this.printHr(stream, '*');
     }
 
-    private void printHr(PrintStream stream) {
-        stream.printf("/*%s*/\n", Strings.repeat("*", this.width + 2));
+    private void printHr(PrintStream stream, char... hrChars) {
+        stream.printf("/*%s*/\n", Strings.repeat(new String(hrChars), this.width + 2));
     }
 }

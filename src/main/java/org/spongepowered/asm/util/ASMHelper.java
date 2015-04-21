@@ -364,7 +364,7 @@ public class ASMHelper {
         if (node instanceof LabelNode) {
             System.err.printf("[%s]", ((LabelNode)node).getLabel());
         } else if (node instanceof JumpInsnNode) {
-            System.err.printf("[%s]", ((JumpInsnNode)node).label.getLabel());
+            System.err.printf("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
         } else if (node instanceof VarInsnNode) {
             System.err.printf("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
         } else if (node instanceof MethodInsnNode) {
