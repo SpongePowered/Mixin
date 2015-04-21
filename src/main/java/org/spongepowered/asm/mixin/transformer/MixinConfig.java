@@ -324,14 +324,16 @@ class MixinConfig implements Comparable<MixinConfig> {
         }
         
         for (String mixinClass : mixinClasses) {
-            if (mixinClass == null || MixinConfig.globalMixinList.contains(mixinClass)) {
+            String fqMixinClass = this.mixinPackage + mixinClass;
+            
+            if (mixinClass == null || MixinConfig.globalMixinList.contains(fqMixinClass)) {
                 continue;
             }
             
             try {
                 MixinInfo mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
                 if (mixin.getTargetClasses().size() > 0) {
-                    MixinConfig.globalMixinList.add(mixinClass);
+                    MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
                         String targetClassName = targetClass.replace('/', '.');
                         this.mixinsFor(targetClassName).add(mixin);
