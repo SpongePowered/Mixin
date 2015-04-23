@@ -276,10 +276,6 @@ public class MixinTransformer extends TreeTransformer {
      * Force-load all classes targetted by mixins but not yet applied
      */
     public void audit() {
-        if (!this.currentEnvironment.getOption(Option.CHECK_IMPLEMENTS)) {
-            return;
-        }
-        
         Set<String> unhandled = new HashSet<String>();
         
         for (MixinConfig config : this.configs) {
