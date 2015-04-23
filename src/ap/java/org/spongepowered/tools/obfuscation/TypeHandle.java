@@ -28,12 +28,16 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
 
 
@@ -93,6 +97,14 @@ public class TypeHandle {
         this((TypeElement)type.asElement());
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return this.name.replace('/', '.');
+    }
+    
     /**
      * Returns the fully qualified class name
      */
@@ -142,4 +154,132 @@ public class TypeHandle {
     public boolean isImaginary() {
         return this.element == null;
     }
+
+    public String findDescriptor(MemberInfo memberInfo) {
+        String desc = memberInfo.desc;
+        if (desc == null) {
+            for (Element child : this.getEnclosedElements()) {
+                if (child.getKind() != ElementKind.METHOD) {
+                    continue;
+                }
+                
+                if (child.getSimpleName().toString().equals(memberInfo.name)) {
+                    desc = MirrorUtils.generateSignature((ExecutableElement)child);
+                    break;
+                }
+            }
+        }
+        return desc;
+    }
+
+    /**
+     * Find a member field in this type which matches the name and declared type
+     * of the supplied element
+     * 
+     * @param element Element to match
+     * @return handle to the discovered field if matched or null if no match
+     */
+    public FieldHandle findField(VariableElement element) {
+        return this.findField(element.getSimpleName().toString(), element.asType().toString());
+    }
+    
+    /**
+     * Find a member field in this type which matches the name and declared type
+     * specified
+     * 
+     * @param name Field name to search for
+     * @param type Field descriptor (java-style)
+     * @return handle to the discovered field if matched or null if no match
+     */
+    public FieldHandle findField(String name, String type) {
+        String rawType = type.replaceAll("<[^>]+>", "");
+
+        for (Element element : this.getEnclosedElements()) {
+            if (element.getKind() != ElementKind.FIELD) {
+                continue;
+            }
+            
+            VariableElement field = (VariableElement)element;
+            if (this.compareElement(field, name, type)) {
+                return new FieldHandle(field);
+            } else if (this.compareElement(field, name, rawType)) {
+                return new FieldHandle(field, true);
+            }                
+        }
+        
+        return null;
+    }
+
+    /**
+     * Find a member method in this type which matches the name and declared
+     * type of the supplied element
+     * 
+     * @param element Element to match
+     * @return handle to the discovered method if matched or null if no match
+     */
+    public MethodHandle findMethod(ExecutableElement element) {
+        return this.findMethod(element.getSimpleName().toString(), TypeHandle.getElementSignature(element));
+    }
+
+    /**
+     * Find a member method in this type which matches the name and signature
+     * specified
+     * 
+     * @param name Method name to search for
+     * @param signature Method signature
+     * @return handle to the discovered method if matched or null if no match
+     */
+    public MethodHandle findMethod(String name, String signature) {
+        String rawSignature = signature.replaceAll("<[^>]+>", "");
+
+        for (Element element : this.getEnclosedElements()) {
+            switch (element.getKind()) {
+                case CONSTRUCTOR:
+                case METHOD:
+                    ExecutableElement method = (ExecutableElement)element;
+                    if (this.compareElement(method, name, signature) || this.compareElement(method, name, rawSignature)) {
+                        return new MethodHandle(method);
+                    }
+                    
+                    break;
+//                case STATIC_INIT:  // TODO?
+//                    break;
+                default:
+                    break;
+            }
+            
+        }
+        
+        return null;
+    }
+    
+    private boolean compareElement(Element elem, String name, String type) {
+        try {
+            String elementName = elem.getSimpleName().toString();
+            String elementType = TypeHandle.getElementSignature(elem);
+            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType));
+        } catch (NullPointerException ex) {
+            return false;
+        }
+    }
+    
+    static String getElementSignature(Element element) {
+        if (element instanceof ExecutableElement) {
+            ExecutableElement method = (ExecutableElement)element;
+            StringBuilder desc = new StringBuilder().append("(");
+            boolean extra = false;
+            for (VariableElement arg : method.getParameters()) {
+                if (extra) {
+                    desc.append(',');
+                }
+                desc.append(arg.asType().toString());
+                extra = true;
+            }
+            desc.append(')').append(method.getReturnType().toString());
+            return desc.toString();
+        }
+        
+        return element.asType().toString();
+    }
+
 }

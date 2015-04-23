@@ -28,6 +28,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
 import com.google.common.base.Strings;
 
@@ -63,6 +64,11 @@ public class SignaturePrinter {
      */
     private String modifiers = "private void";
     
+    /**
+     * Fully qualify class names 
+     */
+    private boolean fullyQualified;
+    
     public SignaturePrinter(MethodNode method) {
         this(method.name, Type.VOID_TYPE, Type.getArgumentTypes(method.desc));
         this.setModifiers(method);
@@ -73,6 +79,10 @@ public class SignaturePrinter {
         this.setModifiers(method);
     }
     
+    public SignaturePrinter(MemberInfo member) {
+        this(member.name, member.desc);
+    }
+
     public SignaturePrinter(String name, String desc) {
         this(name, Type.getReturnType(desc), Type.getArgumentTypes(desc));
     }
@@ -111,11 +121,11 @@ public class SignaturePrinter {
     }
     
     public String getReturnType() {
-        return SignaturePrinter.getTypeName(this.returnType, false);
+        return SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified);
     }
 
     public void setModifiers(MethodNode method) {
-        String returnType = SignaturePrinter.getTypeName(Type.getReturnType(method.desc), false);
+        String returnType = SignaturePrinter.getTypeName(Type.getReturnType(method.desc), false, this.fullyQualified);
         if ((method.access & Opcodes.ACC_PUBLIC) != 0) {
             this.setModifiers("public " + returnType);
         } else if ((method.access & Opcodes.ACC_PROTECTED) != 0) {
@@ -132,21 +142,40 @@ public class SignaturePrinter {
         return this;
     }
     
+    public SignaturePrinter setFullyQualified(boolean fullyQualified) {
+        this.fullyQualified = fullyQualified;
+        return this;
+    }
+    
+    public boolean isFullyQualified() {
+        return this.fullyQualified;
+    }
+    
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(this.modifiers).append(" ").append(this.name).append('(');
+        return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(this.name), false).toString();
+    }
+    
+    public String toDescriptor() {
+        StringBuilder args = this.appendArgs(new StringBuilder(), true);
+        return args.append(SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified)).toString();
+    }
+    
+    private StringBuilder appendArgs(StringBuilder sb, boolean typesOnly) {
+        sb.append('(');
         for (int var = 0; var < this.argTypes.length; var++) {
             if (this.argTypes[var] == null) {
                 continue;
             } else if (var > 0) {
-                sb.append(", ");
+                sb.append(',');
+                if (!typesOnly) {
+                    sb.append(' ');
+                }
             }
-            String name = Strings.isNullOrEmpty(this.argNames[var]) ? "unnamed" + var : this.argNames[var];
+            String name = typesOnly ? null : Strings.isNullOrEmpty(this.argNames[var]) ? "unnamed" + var : this.argNames[var];
             this.appendType(sb, this.argTypes[var], name);
         }
-        sb.append(")");
-        return sb.toString();
+        return sb.append(")");
     }
     
     private StringBuilder appendType(StringBuilder sb, Type type, String name) {
@@ -156,17 +185,26 @@ public class SignaturePrinter {
             case Type.OBJECT:
                 return this.appendType(sb, type.getClassName(), name);
             default:
-                return sb.append(SignaturePrinter.getTypeName(type, false)).append(' ').append(name);
+                sb.append(SignaturePrinter.getTypeName(type, false, this.fullyQualified));
+                if (name != null) {
+                    sb.append(' ').append(name);
+                }
+                return sb;
         }
     }
 
     private StringBuilder appendType(StringBuilder sb, String typeName, String name) {
-        typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
+        if (!this.fullyQualified) {
+            typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
+        }
         sb.append(typeName);
         if (typeName.endsWith("CallbackInfoReturnable")) {
-            sb.append('<').append(SignaturePrinter.getTypeName(this.returnType, true)).append('>');
+            sb.append('<').append(SignaturePrinter.getTypeName(this.returnType, true, this.fullyQualified)).append('>');
         }
-        return sb.append(' ').append(name);
+        if (name != null) {
+            sb.append(' ').append(name);
+        }
+        return sb;
     }
 
     /**
@@ -178,6 +216,19 @@ public class SignaturePrinter {
      *         integer primitive or "String" for java.lang.String
      */
     public static String getTypeName(Type type, boolean box) {
+        return SignaturePrinter.getTypeName(type, box, false);
+    }
+
+    /**
+     * Get the source code name for the specified type
+     * 
+     * @param type Type to generate a friendly name for
+     * @param box True to return the equivalent boxing type for primitives
+     * @param fullyQualified fully-qualify class names 
+     * @return String representation of the specified type, eg "int" for an
+     *         integer primitive or "String" for java.lang.String
+     */
+    public static String getTypeName(Type type, boolean box, boolean fullyQualified) {
         switch (type.getSort()) {
             case Type.VOID:    return box ? "Void"      : "void";
             case Type.BOOLEAN: return box ? "Boolean"   : "boolean";
@@ -188,10 +239,12 @@ public class SignaturePrinter {
             case Type.FLOAT:   return box ? "Float"     : "float";
             case Type.LONG:    return box ? "Long"      : "long";
             case Type.DOUBLE:  return box ? "Double"    : "double";
-            case Type.ARRAY:   return SignaturePrinter.getTypeName(type.getElementType(), box) + "[]";
+            case Type.ARRAY:   return SignaturePrinter.getTypeName(type.getElementType(), box, fullyQualified) + "[]";
             case Type.OBJECT:
                 String typeName = type.getClassName();
-                typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
+                if (!fullyQualified) {
+                    typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
+                }
                 return typeName;
             default:
                 return "Object";

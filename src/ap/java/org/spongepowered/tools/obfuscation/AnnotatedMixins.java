@@ -54,6 +54,7 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.tools.MirrorUtils;
@@ -352,9 +353,7 @@ class AnnotatedMixins implements Messager {
             return;
         }
         
-        if (mixinClass.remap()) {
-            mixinClass.registerOverwrite(method);
-        }
+        mixinClass.registerOverwrite(method, MirrorUtils.getAnnotation(method, Overwrite.class));
     }
 
     /**
@@ -371,9 +370,7 @@ class AnnotatedMixins implements Messager {
             return;
         }
         
-        if (this.shouldRemap(mixinClass, shadow)) {
-            mixinClass.registerShadow(field, shadow);
-        }
+        mixinClass.registerShadow(field, shadow, this.shouldRemap(mixinClass, shadow));
     }
 
     /**
@@ -390,9 +387,7 @@ class AnnotatedMixins implements Messager {
             return;
         }
 
-        if (this.shouldRemap(mixinClass, shadow)) {
-            mixinClass.registerShadow(method, shadow);
-        }
+        mixinClass.registerShadow(method, shadow, this.shouldRemap(mixinClass, shadow));
     }
 
     /**
@@ -410,9 +405,9 @@ class AnnotatedMixins implements Messager {
             return;
         }
 
-        if (this.shouldRemap(mixinClass, inject)) {
-            mixinClass.registerInjector(method, inject);
-            
+        boolean remap = this.shouldRemap(mixinClass, inject);
+        mixinClass.registerInjector(method, inject, remap);
+        if (remap) {
             Object ats = MirrorUtils.getAnnotationValue(inject, "at");
             
             if (ats instanceof List) {

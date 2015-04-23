@@ -173,6 +173,7 @@ shadowJar  {
         include(dependency('commons-io:commons-io'))
         include(dependency('net.minecraftforge.srg2source:Srg2Source'))
         include(dependency('net.sf.jopt-simple:jopt-simple'))
+        include(dependency('org.ow2.asm:asm-debug-all'))
     }
     classifier = 'processor'
 }

@@ -30,6 +30,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.util.SignaturePrinter;
 
 
 /**
@@ -216,6 +217,14 @@ public class MemberInfo {
         }
         
         return this.owner + "/" + this.name;
+    }
+    
+    public String toDescriptor() {
+        if (this.desc == null) {
+            return "";
+        }
+        
+        return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
     public MethodData asMethodData() {

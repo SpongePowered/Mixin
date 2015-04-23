@@ -37,7 +37,6 @@ import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -72,6 +71,8 @@ class AnnotatedMixin {
         
         private final String originalName;
         
+        private final List<String> aliases;
+        
         private String obfuscated;
         
         ShadowElementName(Element method, AnnotationMirror shadow) {
@@ -84,6 +85,9 @@ class AnnotatedMixin {
             }
             this.hasPrefix = hasPrefix;
             this.obfuscated = this.baseName = name;
+
+            List<AnnotationValue> aliases = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(shadow, "aliases");
+            this.aliases = MirrorUtils.<String>unfold(aliases);
         }
         
         @Override
@@ -114,6 +118,14 @@ class AnnotatedMixin {
         
         public String prefix(String name) {
             return this.hasPrefix ? this.prefix + name : name;
+        }
+        
+        public boolean hasAliases() {
+            return this.aliases.size() > 0;
+        }
+        
+        public List<String> getAliases() {
+            return this.aliases;
         }
     }
     
@@ -201,9 +213,9 @@ class AnnotatedMixin {
         
         // Public targets, referenced by class
         try {
-            List<AnnotationValue> publiTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "value",
+            List<AnnotationValue> publicTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "value",
                     Collections.<AnnotationValue>emptyList());
-            for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(publiTargets)) {
+            for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(publicTargets)) {
                 TypeHandle type = new TypeHandle((DeclaredType)target);
                 if (this.targets.contains(type)) {
                     continue;
@@ -319,8 +331,10 @@ class AnnotatedMixin {
     /**
      * Register an {@link org.spongepowered.asm.mixin.Overwrite} method
      */
-    public void registerOverwrite(ExecutableElement method) {
-        if (!this.validateSingleTarget("@Overwrite", method)) {
+    public void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
+        this.validateOverwriteTarget(method, overwrite);
+        
+        if (!this.remap || !this.validateSingleTarget("@Overwrite", method)) {
             return;
         }
         
@@ -350,14 +364,49 @@ class AnnotatedMixin {
     }
 
     /**
+     * Checks whether the specified method exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateOverwriteTarget(ExecutableElement method, AnnotationMirror overwrite) {
+        String signature = method.asType().toString();
+
+        List<String> aliases = MirrorUtils.<String>unfold(MirrorUtils.<List<AnnotationValue>>getAnnotationValue(overwrite, "aliases"));
+        
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            // Find method as-is
+            MethodHandle targetMethod = target.findMethod(method);
+            if (targetMethod != null) {
+                continue;
+            }
+            
+            // Check aliases
+            for (String alias : aliases) {
+                if ((targetMethod = target.findMethod(alias, signature)) != null) {
+                    break;
+                }
+            }
+            
+            if (targetMethod == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target for @Overwrite method in " + target, method, overwrite);
+            }
+        }
+    }
+
+    /**
      * Register a {@link org.spongepowered.asm.mixin.Shadow} field
      */
-    public void registerShadow(VariableElement field, AnnotationMirror shadow) {
-        if (!this.validateSingleTarget("@Shadow", field)) {
+    public void registerShadow(VariableElement field, AnnotationMirror shadow, boolean remap) {
+        ShadowElementName name = new ShadowElementName(field, shadow);
+        this.validateShadowTarget(field, shadow, name);
+        
+        if (!remap || !this.validateSingleTarget("@Shadow", field)) {
             return;
         }
         
-        ShadowElementName name = new ShadowElementName(field, shadow);
         String obfField = this.mixins.getObfField(this.targetRef + "/" + name);
         
         if (obfField == null) {
@@ -369,14 +418,47 @@ class AnnotatedMixin {
     }
 
     /**
+     * Checks whether the specified field exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateShadowTarget(VariableElement field, AnnotationMirror shadow, ShadowElementName name) {
+        String fieldType = field.asType().toString();
+
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            // Search for field
+            FieldHandle targetField = target.findField(field);
+            if (targetField != null) {
+                continue;
+            }
+            
+            // Try search by alias
+            for (String alias : name.getAliases()) {
+                if ((targetField = target.findField(alias, fieldType)) != null) {
+                    break;
+                }
+            }
+            
+            if (targetField == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target field for @Shadow field in " + target, field, shadow);
+            }
+        }
+    }
+
+    /**
      * Register a {@link org.spongepowered.asm.mixin.Shadow} method
      */
-    public void registerShadow(ExecutableElement method, AnnotationMirror shadow) {
-        if (!this.validateSingleTarget("@Shadow", method)) {
+    public void registerShadow(ExecutableElement method, AnnotationMirror shadow, boolean remap) {
+        ShadowElementName name = new ShadowElementName(method, shadow);
+        this.validateShadowTarget(method, shadow, name);
+        
+        if (!remap || !this.validateSingleTarget("@Shadow", method)) {
             return;
         }
         
-        ShadowElementName name = new ShadowElementName(method, shadow);
         String mcpSignature = MirrorUtils.generateSignature(method);
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + name, mcpSignature));
         
@@ -389,20 +471,61 @@ class AnnotatedMixin {
     }
 
     /**
+     * Checks whether the specified method exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateShadowTarget(ExecutableElement method, AnnotationMirror shadow, ShadowElementName name) {
+        String signature = TypeHandle.getElementSignature(method);
+
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            // Find method as-is
+            MethodHandle targetMethod = target.findMethod(method);
+            if (targetMethod != null) {
+                continue;
+            }
+            
+            // Find method without prefix
+            targetMethod = target.findMethod(name.toString(), signature);
+            if (targetMethod != null) {
+                continue;
+            }
+            
+            // Check aliases
+            for (String alias : name.getAliases()) {
+                if ((targetMethod = target.findMethod(alias, signature)) != null) {
+                    break;
+                }
+            }
+            
+            if (targetMethod == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target method for @Shadow method in " + target, method, shadow);
+            }
+        }
+    }
+
+    /**
      * Register a {@link org.spongepowered.asm.mixin.injection.Inject} method
      */
-    public void registerInjector(ExecutableElement method, AnnotationMirror inject) {
-        if (!this.validateSingleTarget("@Inject", method)) {
-            return;
-        }
-        
+    public void registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
         String originalReference = MirrorUtils.<String>getAnnotationValue(inject, "method");
         MemberInfo targetMember = MemberInfo.parse(originalReference);
         if (targetMember.name == null) {
             return;
         }
         
-        String desc = this.findDescriptor(this.targetType, targetMember);
+        if (targetMember.desc != null) {
+            this.validateReferencedTarget(method, inject, targetMember);
+        }
+        
+        if (!remap || !this.validateSingleTarget("@Inject", method)) {
+            return;
+        }
+        
+        String desc = this.targetType.findDescriptor(targetMember);
         if (desc == null) {
             if (this.targetType.isImaginary()) {
                 this.mixins.printMessage(Kind.WARNING, "@Inject target requires method signature because enclosing type information is unavailable",
@@ -424,6 +547,25 @@ class AnnotatedMixin {
         MemberInfo remappedReference = new MemberInfo(obfName, this.targetRef, obfMethod.sig, false);
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, originalReference, remappedReference.toString());
+    }
+
+    /**
+     * Checks whether the referenced method exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateReferencedTarget(ExecutableElement method, AnnotationMirror inject, MemberInfo reference) {
+        String signature = reference.toDescriptor();
+        
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            MethodHandle targetMethod = target.findMethod(reference.name, signature);
+            if (targetMethod == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target method for @Inject in " + target, method, inject);
+            }
+        }            
     }
 
     /**
@@ -501,23 +643,6 @@ class AnnotatedMixin {
     private void addMethodMapping(String mcpName, String obfName, String mcpSignature, String obfSignature) {
         String mapping = String.format("MD: %s %s %s %s", this.classRef + "/" + mcpName, mcpSignature, this.classRef + "/" + obfName, obfSignature);
         this.methodMappings.add(mapping);
-    }
-
-    private String findDescriptor(TypeHandle targetType, MemberInfo memberInfo) {
-        String desc = memberInfo.desc;
-        if (desc == null) {
-            for (Element child : targetType.getEnclosedElements()) {
-                if (child.getKind() != ElementKind.METHOD) {
-                    continue;
-                }
-                
-                if (child.getSimpleName().toString().equals(memberInfo.name)) {
-                    desc = MirrorUtils.generateSignature((ExecutableElement)child);
-                    break;
-                }
-            }
-        }
-        return desc;
     }
 
     static Map<String, String> getAtArgs(AnnotationMirror at) {
