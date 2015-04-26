@@ -116,7 +116,7 @@ public abstract class MixinBootstrap {
     /**
      * Phase 1 of mixin initialisation
      */
-    static boolean preInit() {
+    public static boolean preInit() {
         Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
         if (registeredVersion != null) {
             if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
@@ -149,7 +149,7 @@ public abstract class MixinBootstrap {
     /**
      * Phase 2 of mixin initialisation, register the state tweaker
      */
-    static void register() {
+    public static void register() {
         if (!MixinBootstrap.initialised) {
             throw new IllegalStateException("MixinBootstrap.register() called before MixinBootstrap.preInit()");
         }
