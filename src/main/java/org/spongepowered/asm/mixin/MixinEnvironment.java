@@ -540,7 +540,7 @@ public class MixinEnvironment {
      * @return obfuscated name for the specified deobfuscated reference
      */
     public String unmap(String className) {
-        if (this.nameTransformer == null) {
+        if (this.transformers == null) {
             this.buildTransformerDelegationList();
         }
         
