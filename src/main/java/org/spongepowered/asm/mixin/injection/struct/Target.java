@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.struct;
 
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.util.ASMHelper;
@@ -40,6 +41,11 @@ public class Target {
      * Target method
      */
     public final MethodNode method;
+    
+    /**
+     * Method instructions
+     */
+    public final InsnList insns;
     
     /**
      * True if the method is static 
@@ -64,13 +70,13 @@ public class Target {
     /**
      * Method's (original) MAXS 
      */
-    public final int maxStack;
+    private final int maxStack;
     
     /**
      * Method's original max locals 
      */
-    public final int maxLocals;
-
+    private final int maxLocals;
+    
     /**
      * Callback method descriptor based on this target 
      */
@@ -88,6 +94,7 @@ public class Target {
      */
     public Target(MethodNode method) {
         this.method = method;
+        this.insns = method.instructions;
         this.isStatic = ASMHelper.methodIsStatic(method);
         this.arguments = Type.getArgumentTypes(method.desc);
         this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
@@ -97,6 +104,101 @@ public class Target {
         this.maxLocals = method.maxLocals;
         this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
         this.callbackDescriptor = String.format("(%sL%s;)V", method.desc.substring(1, method.desc.indexOf(')')), this.callbackInfoClass);
+    }
+    
+    /**
+     * Get the original max locals of the method
+     */
+    public int getMaxLocals() {
+        return this.maxLocals;
+    }
+    
+    /**
+     * Get the original max stack of the method
+     */
+    public int getMaxStack() {
+        return this.maxStack;
+    }
+    
+    /**
+     * Get the current max locals of the method
+     */
+    public int getCurrentMaxLocals() {
+        return this.method.maxLocals;
+    }
+    
+    /**
+     * Get the current max stack of the method
+     */
+    public int getCurrentMaxStack() {
+        return this.method.maxStack;
+    }
+    
+    /**
+     * Allocate a new local variable for the method
+     */
+    public int allocateLocal() {
+        return this.allocateLocals(1);
+    }
+    
+    /**
+     * Allocate a number of new local variables for this method, returns the
+     * first local variable index of the allocated range
+     * 
+     * @param locals number of locals to allocate
+     * @return the first local variable index of the allocated range
+     */
+    public int allocateLocals(int locals) {
+        int nextLocal = this.method.maxLocals;
+        this.method.maxLocals += locals;
+        return nextLocal;
+    }
+
+    /**
+     * Allocate a number of new stack variables for this method, returns the
+     * first stack index of the allocated range
+     * 
+     * @param locals number of locals to allocate
+     * @return the first local variable index of the allocated range
+     */
+    public void addToLocals(int locals) {
+        this.setMaxLocals(this.maxLocals + locals);
+    }
+
+    public void setMaxLocals(int maxLocals) {
+        if (maxLocals > this.method.maxLocals) {
+            this.method.maxLocals = maxLocals;
+        }
+    }
+
+    public void addToStack(int stack) {
+        this.setMaxStack(this.maxStack + stack);
+    }
+
+    public void setMaxStack(int maxStack) {
+        if (maxStack > this.method.maxStack) {
+            this.method.maxStack = maxStack;
+        }
+    }
+
+    /**
+     * Generate an array containing local indexes for the specified args,
+     * returns an array of identical size to the supplied array with an
+     * allocated local index in each corresponding position
+     * 
+     * @param args Argument types
+     * @param start starting index
+     * @return array containing a corresponding local arg index for each member
+     *      of the supplied args array
+     */
+    public int[] generateArgMap(Type[] args, int start) {
+        int local = this.maxLocals;
+        int[] argMap = new int[args.length];
+        for (int arg = start; arg < args.length; arg++) {
+            argMap[arg] = local;
+            local += args[arg].getSize();
+        }
+        return argMap;
     }
 
     private int[] calcArgIndices(int local) {

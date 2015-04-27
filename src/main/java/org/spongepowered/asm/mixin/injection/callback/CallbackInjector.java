@@ -169,7 +169,7 @@ public class CallbackInjector extends Injector {
             this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize);
 
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
-            this.marshallVar = target.method.maxLocals++;
+            this.marshallVar = target.allocateLocal();
         }
         
         /**
@@ -206,8 +206,8 @@ public class CallbackInjector extends Injector {
          * for the method based on our calculated values
          */
         void inject() {
-            this.target.method.instructions.insertBefore(this.node, this);
-            this.target.method.maxStack = Math.max(this.target.method.maxStack, this.target.maxStack + Math.max(this.invoke, this.ctor));
+            this.target.insns.insertBefore(this.node, this);
+            this.target.addToStack(Math.max(this.invoke, this.ctor));
         }
     }
     
@@ -385,7 +385,7 @@ public class CallbackInjector extends Injector {
         PrettyPrinter printer = new PrettyPrinter();
         printer.add("%20s : %s", "Target Class", this.classNode.name.replace('/', '.'));
         printer.add("%20s : %s", "Target Method", methodSig);
-        printer.add("%20s : %d", "Target Max LOCALS", callback.target.maxLocals);
+        printer.add("%20s : %d", "Target Max LOCALS", callback.target.getMaxLocals());
         printer.add("%20s : %d", "Initial Frame Size", callback.frameSize);
         printer.add("%20s : %s", "Callback Name", this.methodNode.name);
         printer.add("%20s : %s %s", "Instruction", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));

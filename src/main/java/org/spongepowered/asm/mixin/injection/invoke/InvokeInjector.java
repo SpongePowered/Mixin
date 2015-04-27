@@ -126,26 +126,6 @@ public abstract class InvokeInjector extends Injector {
     }
 
     /**
-     * Generate an array containing local indexes for the specified args,
-     * returns an array of identical size to the supplied array with an
-     * allocated local index in each corresponding position
-     * 
-     * @param args Argument types
-     * @param start starting index
-     * @param local starting local index
-     * @return array containing a corresponding local arg index for each member
-     *      of the supplied args array
-     */
-    protected int[] generateArgMap(Type[] args, int start, int local) {
-        int[] argMap = new int[args.length];
-        for (int arg = start; arg < args.length; arg++) {
-            argMap[arg] = local;
-            local += args[arg].getSize();
-        }
-        return argMap;
-    }
-
-    /**
      * Store args on the stack starting at the end and working back to position
      * specified by start, return the generated argMap
      * 
@@ -156,7 +136,7 @@ public abstract class InvokeInjector extends Injector {
      * @return the generated argmap
      */
     protected int[] storeArgs(Target target, Type[] args, InsnList insns, int start) {
-        int[] argMap = this.generateArgMap(args, start, target.method.maxLocals);
+        int[] argMap = target.generateArgMap(args, start);
         this.storeArgs(args, insns, argMap, start, args.length);
         return argMap;
     }

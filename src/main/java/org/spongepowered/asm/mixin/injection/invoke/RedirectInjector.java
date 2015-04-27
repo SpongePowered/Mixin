@@ -104,9 +104,9 @@ public class RedirectInjector extends InvokeInjector {
         }
         this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
         
-        target.method.instructions.insertBefore(node, insns);
-        target.method.instructions.remove(node);
-        target.method.maxLocals = Math.max(target.method.maxLocals, target.maxLocals + extraLocals);
-        target.method.maxStack = Math.max(target.method.maxStack, target.maxStack + 1);
+        target.insns.insertBefore(node, insns);
+        target.insns.remove(node);
+        target.addToLocals(extraLocals);
+        target.addToStack(1);
     }
 }
