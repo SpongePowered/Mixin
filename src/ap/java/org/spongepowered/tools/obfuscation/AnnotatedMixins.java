@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
@@ -54,6 +56,7 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
@@ -145,20 +148,57 @@ class AnnotatedMixins implements Messager {
     private boolean initDone;
     
     /**
+     * Properties file used to specify options when AP options cannot be
+     * configured via the build script (eg. when using AP with MCP)
+     */
+    private Properties properties;
+    
+    /**
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+
+        this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
         
-        this.reobfSrgFileName = processingEnv.getOptions().get("reobfSrgFile");
-        this.outSrgFileName = processingEnv.getOptions().get("outSrgFile");
-        this.outRefMapFileName = processingEnv.getOptions().get("outRefMapFile"); 
+        this.reobfSrgFileName = this.getOption("reobfSrgFile");
+        this.outSrgFileName = this.getOption("outSrgFile");
+        this.outRefMapFileName = this.getOption("outRefMapFile"); 
         
         this.validators = ImmutableList.<IMixinValidator>of(
-            new ParentValidator(processingEnv),
-            new TargetValidator(processingEnv)
+            new ParentValidator(processingEnv, this),
+            new TargetValidator(processingEnv, this)
         );
+    }
+
+    private String getOption(String option) {
+        String value = this.processingEnv.getOptions().get(option);
+        if (value != null) {
+            return value;
+        }
+        
+        return this.getProperties().getProperty(option);
+    }
+    
+    public Properties getProperties() {
+        if (this.properties == null) {
+            this.properties = new Properties();
+            
+            try {
+                Filer filer = this.processingEnv.getFiler();
+                FileObject propertyFile = filer.getResource(StandardLocation.SOURCE_PATH, "", "mixin.properties");
+                if (propertyFile != null) {
+                    InputStream inputStream = propertyFile.openInputStream();
+                    this.properties.load(inputStream);
+                    inputStream.close();
+                }
+            } catch (Exception ex) {
+                // ignore
+            }
+        }
+        
+        return this.properties;
     }
     
     private CompilerEnvironment detectEnvironment(ProcessingEnvironment processingEnv) {
@@ -435,10 +475,17 @@ class AnnotatedMixins implements Messager {
         }
     }
     
+    /**
+     * Called from each AP class to notify the environment that a new pass is
+     * starting 
+     */
     public void onPassStarted() {
         this.mixinsForPass.clear();
     }
     
+    /**
+     * Called from each AP when a pass is completed 
+     */
     public void onPassCompleted() {
         for (AnnotatedMixin mixin : this.mixinsForPass) {
             mixin.runValidators(ValidationPass.LATE, this.validators);

@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.Collection;
 
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -46,6 +47,11 @@ public abstract class MixinValidator implements IMixinValidator {
     protected final ProcessingEnvironment processingEnv;
     
     /**
+     * Messager to use to output errors and warnings
+     */
+    protected final Messager messager;
+    
+    /**
      * Pass to run this validator in 
      */
     protected final ValidationPass pass;
@@ -54,9 +60,12 @@ public abstract class MixinValidator implements IMixinValidator {
      * ctor
      * 
      * @param processingEnv Processing environment
+     * @param messager Messager to use
+     * @param pass Validation pass being performed
      */
-    public MixinValidator(ProcessingEnvironment processingEnv, ValidationPass pass) {
+    public MixinValidator(ProcessingEnvironment processingEnv, Messager messager, ValidationPass pass) {
         this.processingEnv = processingEnv;
+        this.messager = messager;
         this.pass = pass;
     }
     
@@ -84,7 +93,7 @@ public abstract class MixinValidator implements IMixinValidator {
      * @param element Element to attach the note to
      */
     protected final void note(String note, Element element) {
-        this.processingEnv.getMessager().printMessage(Kind.NOTE, note, element);
+        this.messager.printMessage(Kind.NOTE, note, element);
     }
     
     /**
@@ -94,7 +103,7 @@ public abstract class MixinValidator implements IMixinValidator {
      * @param element Element to attach the warning to
      */
     protected final void warning(String warning, Element element) {
-        this.processingEnv.getMessager().printMessage(Kind.WARNING, warning, element);
+        this.messager.printMessage(Kind.WARNING, warning, element);
     }
     
     /**
@@ -104,7 +113,7 @@ public abstract class MixinValidator implements IMixinValidator {
      * @param element Element to attach the error to
      */
     protected final void error(String error, Element element) {
-        this.processingEnv.getMessager().printMessage(Kind.ERROR, error, element);
+        this.messager.printMessage(Kind.ERROR, error, element);
     }
 
     protected final Collection<TypeMirror> getMixinsTargeting(TypeMirror targetType) {

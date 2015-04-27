@@ -106,7 +106,7 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerInjector((TypeElement)parent, (ExecutableElement)elem, inject);
             } else {
-                this.processingEnv.getMessager().printMessage(Kind.WARNING,
+                this.mixins.printMessage(Kind.WARNING,
                         "Found an @" + injectorClass.getSimpleName() + " annotation on an element which is not a method: " + elem.toString());
             }
         }

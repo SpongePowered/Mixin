@@ -27,10 +27,20 @@ package org.spongepowered.tools.obfuscation;
 import javax.lang.model.element.VariableElement;
 
 
+/**
+ * Retrieved from a {@link TypeHandle} when searching for fields
+ */
 class FieldHandle {
     
+    /**
+     * Actual element, can be null
+     */
     private final VariableElement element;
     
+    /**
+     * True if this is a raw type element returned against a query for a
+     * specialised type
+     */
     private final boolean rawType;
 
     public FieldHandle(VariableElement element) {
@@ -42,10 +52,24 @@ class FieldHandle {
         this.rawType = rawType;
     }
     
+    /**
+     * Get whether the element is imaginary (inaccessible via mirror)
+     */
+    public boolean isImaginary() {
+        return this.element == null;
+    }
+    
+    /**
+     * Get the underlying element, may return null if the handle is imaginary
+     */
     public VariableElement getElement() {
         return this.element;
     }
 
+    /**
+     * Returns true if the searched type had a type specifier but the returned
+     * type does not
+     */
     public boolean isRawType() {
         return this.rawType;
     }

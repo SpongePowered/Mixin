@@ -90,7 +90,8 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         for (Element elem : roundEnv.getElementsAnnotatedWith(Shadow.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                throw new IllegalStateException("@Shadow element has unexpected parent with type " + MirrorUtils.getElementType(parent));
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                continue;
             }
             
             AnnotationMirror shadow = MirrorUtils.getAnnotation(elem, Shadow.class);
@@ -100,8 +101,7 @@ public class TargetObfuscationProcessor extends MixinProcessor {
             } else if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerShadow((TypeElement)parent, (ExecutableElement)elem, shadow);
             } else {
-                this.processingEnv.getMessager().printMessage(Kind.WARNING,
-                        "Found an @Shadow annotation on an element which is not a method or field: " + elem.toString());
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method or field",  elem);
             }
         }
     }
@@ -114,14 +114,14 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         for (Element elem : roundEnv.getElementsAnnotatedWith(Overwrite.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                throw new IllegalStateException("@Overwrite element has unexpected parent with type " + MirrorUtils.getElementType(parent));
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                continue;
             }
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerOverwrite((TypeElement)parent, (ExecutableElement)elem);
             } else {
-                this.processingEnv.getMessager().printMessage(Kind.WARNING,
-                        "Found an @Overwrite annotation on an element which is not a method: " + elem.toString());
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
             }
         }
     }

@@ -59,73 +59,149 @@ import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 class AnnotatedMixin {
     
     /**
-     * Convenience class to store information about an
-     * {@link org.spongepowered.asm.mixin.Shadow}ed member's names
+     * A name of an element which may have aliases
      */
-    class ShadowElementName {
-        private final boolean hasPrefix;
+    static class AliasedElementName {
         
-        private final String prefix;
+        /**
+         * The original name including any original prefix (the "actual" name) 
+         */
+        protected final String originalName;
         
-        private final String baseName;
-        
-        private final String originalName;
-        
+        /**
+         * Aliases declared by the annotation (if any), never null 
+         */
         private final List<String> aliases;
         
-        private String obfuscated;
-        
-        ShadowElementName(Element method, AnnotationMirror shadow) {
-            boolean hasPrefix = false;
-            this.prefix = MirrorUtils.<String>getAnnotationValue(shadow, "prefix", "shadow$");
-            String name = this.originalName = method.getSimpleName().toString();
-            if (name.startsWith(this.prefix)) {
-                hasPrefix = true;
-                name = name.substring(this.prefix.length());
-            }
-            this.hasPrefix = hasPrefix;
-            this.obfuscated = this.baseName = name;
-
-            List<AnnotationValue> aliases = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(shadow, "aliases");
+        public AliasedElementName(Element element, AnnotationMirror annotation) {
+            this.originalName = element.getSimpleName().toString();
+            List<AnnotationValue> aliases = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(annotation, "aliases");
             this.aliases = MirrorUtils.<String>unfold(aliases);
         }
         
-        @Override
-        public String toString() {
-            return this.baseName;
-        }
-
-        public ShadowElementName setObfuscatedName(String name) {
-            this.obfuscated = name.substring(name.lastIndexOf('/') + 1);
-            return this;
-        }
-        
-        public String originalName() {
-            return this.originalName;
-        }
-
-        public String prefix() {
-            return this.hasPrefix ? this.prefix : "";
-        }
-        
-        public String name() {
-            return this.prefix(this.baseName);
-        }
-        
-        public String obfuscated() {
-            return this.prefix(this.obfuscated);
-        }
-        
-        public String prefix(String name) {
-            return this.hasPrefix ? this.prefix + name : name;
-        }
-        
+        /**
+         * Get whether this member has any aliases defined
+         */
         public boolean hasAliases() {
             return this.aliases.size() > 0;
         }
         
+        /**
+         * Get this member's aliases
+         */
         public List<String> getAliases() {
             return this.aliases;
+        }
+        
+        /**
+         * Gets the original name of the member (including prefix)
+         */
+        public String elementName() {
+            return this.originalName;
+        }
+
+        public String baseName() {
+            return this.originalName;
+        }
+
+    }
+    
+    /**
+     * Convenience class to store information about an
+     * {@link org.spongepowered.asm.mixin.Shadow}ed member's names
+     */
+    static class ShadowElementName extends AliasedElementName {
+        
+        /**
+         * True if the real element is prefixed
+         */
+        private final boolean hasPrefix;
+        
+        /**
+         * Expected prefix read from the annotation, this is set even if
+         * {@link #hasPrefix} is false
+         */
+        private final String prefix;
+        
+        /**
+         * The base name without the prefix
+         */
+        private final String baseName;
+        
+        /**
+         * Obfuscated name (once determined) 
+         */
+        private String obfuscated;
+        
+        ShadowElementName(Element element, AnnotationMirror shadow) {
+            super(element, shadow);
+            
+            this.prefix = MirrorUtils.<String>getAnnotationValue(shadow, "prefix", "shadow$");
+            
+            boolean hasPrefix = false;
+            String name = this.originalName;
+            if (name.startsWith(this.prefix)) {
+                hasPrefix = true;
+                name = name.substring(this.prefix.length());
+            }
+            
+            this.hasPrefix = hasPrefix;
+            this.obfuscated = this.baseName = name;
+        }
+        
+        /* (non-Javadoc)
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return this.baseName;
+        }
+        
+        @Override
+        public String baseName() {
+            return this.baseName;
+        }
+
+        /**
+         * Sets the obfuscated name for this element
+         * 
+         * @param name New name
+         * @return fluent interface
+         */
+        public ShadowElementName setObfuscatedName(String name) {
+            this.obfuscated = name.substring(name.lastIndexOf('/') + 1);
+            return this;
+        }
+
+        /**
+         * Get the prefix (if set), does not return the expected prefix
+         */
+        public String prefix() {
+            return this.hasPrefix ? this.prefix : "";
+        }
+        
+        /**
+         * Get the base name
+         */
+        public String name() {
+            return this.prefix(this.baseName);
+        }
+        
+        /**
+         * Gets the obfuscated name (including prefix where appropriate
+         */
+        public String obfuscated() {
+            return this.prefix(this.obfuscated);
+        }
+        
+        /**
+         * Apply the prefix (if any) to the specified string
+         * 
+         * @param name String to prefix
+         * @return Prefixed string or original string if no prefix
+         */
+        public String prefix(String name) {
+            return this.hasPrefix ? this.prefix + name : name;
         }
     }
     
@@ -332,7 +408,8 @@ class AnnotatedMixin {
      * Register an {@link org.spongepowered.asm.mixin.Overwrite} method
      */
     public void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
-        this.validateOverwriteTarget(method, overwrite);
+        AliasedElementName name = new AliasedElementName(method, overwrite);
+        this.validateTargetMethod(method, overwrite, name, "@Overwrite");
         
         if (!this.remap || !this.validateSingleTarget("@Overwrite", method)) {
             return;
@@ -364,44 +441,11 @@ class AnnotatedMixin {
     }
 
     /**
-     * Checks whether the specified method exists in all targets and raises
-     * warnings where appropriate
-     */
-    private void validateOverwriteTarget(ExecutableElement method, AnnotationMirror overwrite) {
-        String signature = method.asType().toString();
-
-        List<String> aliases = MirrorUtils.<String>unfold(MirrorUtils.<List<AnnotationValue>>getAnnotationValue(overwrite, "aliases"));
-        
-        for (TypeHandle target : this.targets) {
-            if (target.isImaginary()) {
-                continue;
-            }
-            
-            // Find method as-is
-            MethodHandle targetMethod = target.findMethod(method);
-            if (targetMethod != null) {
-                continue;
-            }
-            
-            // Check aliases
-            for (String alias : aliases) {
-                if ((targetMethod = target.findMethod(alias, signature)) != null) {
-                    break;
-                }
-            }
-            
-            if (targetMethod == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find target for @Overwrite method in " + target, method, overwrite);
-            }
-        }
-    }
-
-    /**
      * Register a {@link org.spongepowered.asm.mixin.Shadow} field
      */
     public void registerShadow(VariableElement field, AnnotationMirror shadow, boolean remap) {
         ShadowElementName name = new ShadowElementName(field, shadow);
-        this.validateShadowTarget(field, shadow, name);
+        this.validateTargetField(field, shadow, name, "@Shadow");
         
         if (!remap || !this.validateSingleTarget("@Shadow", field)) {
             return;
@@ -418,42 +462,11 @@ class AnnotatedMixin {
     }
 
     /**
-     * Checks whether the specified field exists in all targets and raises
-     * warnings where appropriate
-     */
-    private void validateShadowTarget(VariableElement field, AnnotationMirror shadow, ShadowElementName name) {
-        String fieldType = field.asType().toString();
-
-        for (TypeHandle target : this.targets) {
-            if (target.isImaginary()) {
-                continue;
-            }
-            
-            // Search for field
-            FieldHandle targetField = target.findField(field);
-            if (targetField != null) {
-                continue;
-            }
-            
-            // Try search by alias
-            for (String alias : name.getAliases()) {
-                if ((targetField = target.findField(alias, fieldType)) != null) {
-                    break;
-                }
-            }
-            
-            if (targetField == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find target field for @Shadow field in " + target, field, shadow);
-            }
-        }
-    }
-
-    /**
      * Register a {@link org.spongepowered.asm.mixin.Shadow} method
      */
     public void registerShadow(ExecutableElement method, AnnotationMirror shadow, boolean remap) {
         ShadowElementName name = new ShadowElementName(method, shadow);
-        this.validateShadowTarget(method, shadow, name);
+        this.validateTargetMethod(method, shadow, name, "@Shadow");
         
         if (!remap || !this.validateSingleTarget("@Shadow", method)) {
             return;
@@ -471,43 +484,6 @@ class AnnotatedMixin {
     }
 
     /**
-     * Checks whether the specified method exists in all targets and raises
-     * warnings where appropriate
-     */
-    private void validateShadowTarget(ExecutableElement method, AnnotationMirror shadow, ShadowElementName name) {
-        String signature = TypeHandle.getElementSignature(method);
-
-        for (TypeHandle target : this.targets) {
-            if (target.isImaginary()) {
-                continue;
-            }
-            
-            // Find method as-is
-            MethodHandle targetMethod = target.findMethod(method);
-            if (targetMethod != null) {
-                continue;
-            }
-            
-            // Find method without prefix
-            targetMethod = target.findMethod(name.toString(), signature);
-            if (targetMethod != null) {
-                continue;
-            }
-            
-            // Check aliases
-            for (String alias : name.getAliases()) {
-                if ((targetMethod = target.findMethod(alias, signature)) != null) {
-                    break;
-                }
-            }
-            
-            if (targetMethod == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find target method for @Shadow method in " + target, method, shadow);
-            }
-        }
-    }
-
-    /**
      * Register a {@link org.spongepowered.asm.mixin.injection.Inject} method
      */
     public void registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
@@ -518,7 +494,7 @@ class AnnotatedMixin {
         }
         
         if (targetMember.desc != null) {
-            this.validateReferencedTarget(method, inject, targetMember);
+            this.validateReferencedTarget(method, inject, targetMember, "@Inject");
         }
         
         if (!remap || !this.validateSingleTarget("@Inject", method)) {
@@ -547,25 +523,6 @@ class AnnotatedMixin {
         MemberInfo remappedReference = new MemberInfo(obfName, this.targetRef, obfMethod.sig, false);
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, originalReference, remappedReference.toString());
-    }
-
-    /**
-     * Checks whether the referenced method exists in all targets and raises
-     * warnings where appropriate
-     */
-    private void validateReferencedTarget(ExecutableElement method, AnnotationMirror inject, MemberInfo reference) {
-        String signature = reference.toDescriptor();
-        
-        for (TypeHandle target : this.targets) {
-            if (target.isImaginary()) {
-                continue;
-            }
-            
-            MethodHandle targetMethod = target.findMethod(reference.name, signature);
-            if (targetMethod == null) {
-                this.mixins.printMessage(Kind.WARNING, "Cannot find target method for @Inject in " + target, method, inject);
-            }
-        }            
     }
 
     /**
@@ -643,6 +600,96 @@ class AnnotatedMixin {
     private void addMethodMapping(String mcpName, String obfName, String mcpSignature, String obfSignature) {
         String mapping = String.format("MD: %s %s %s %s", this.classRef + "/" + mcpName, mcpSignature, this.classRef + "/" + obfName, obfSignature);
         this.methodMappings.add(mapping);
+    }
+
+    /**
+     * Checks whether the specified method exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateTargetMethod(ExecutableElement method, AnnotationMirror annotation, AliasedElementName name, String type) {
+        String signature = TypeHandle.getElementSignature(method);
+
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            // Find method as-is
+            MethodHandle targetMethod = target.findMethod(method);
+            if (targetMethod != null) {
+                continue;
+            }
+            
+            if (!name.baseName().equals(name.elementName())) {
+                // Find method without prefix
+                targetMethod = target.findMethod(name.baseName(), signature);
+                if (targetMethod != null) {
+                    continue;
+                }
+            }
+            
+            // Check aliases
+            for (String alias : name.getAliases()) {
+                if ((targetMethod = target.findMethod(alias, signature)) != null) {
+                    break;
+                }
+            }
+            
+            if (targetMethod == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation);
+            }
+        }
+    }
+
+    /**
+     * Checks whether the specified field exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateTargetField(VariableElement field, AnnotationMirror shadow, AliasedElementName name, String type) {
+        String fieldType = field.asType().toString();
+
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            // Search for field
+            FieldHandle targetField = target.findField(field);
+            if (targetField != null) {
+                continue;
+            }
+            
+            // Try search by alias
+            List<String> aliases = name.getAliases();
+            for (String alias : aliases) {
+                if ((targetField = target.findField(alias, fieldType)) != null) {
+                    break;
+                }
+            }
+            
+            if (targetField == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, shadow);
+            }
+        }
+    }
+
+    /**
+     * Checks whether the referenced method exists in all targets and raises
+     * warnings where appropriate
+     */
+    private void validateReferencedTarget(ExecutableElement method, AnnotationMirror inject, MemberInfo reference, String type) {
+        String signature = reference.toDescriptor();
+        
+        for (TypeHandle target : this.targets) {
+            if (target.isImaginary()) {
+                continue;
+            }
+            
+            MethodHandle targetMethod = target.findMethod(reference.name, signature);
+            if (targetMethod == null) {
+                this.mixins.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject);
+            }
+        }            
     }
 
     static Map<String, String> getAtArgs(AnnotationMirror at) {

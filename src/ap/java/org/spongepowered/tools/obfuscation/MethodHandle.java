@@ -27,14 +27,30 @@ package org.spongepowered.tools.obfuscation;
 import javax.lang.model.element.ExecutableElement;
 
 
+/**
+ * Retrieved from a {@link TypeHandle} when searching for methods
+ */
 class MethodHandle {
     
+    /**
+     * Actual element, can be null
+     */
     private final ExecutableElement element;
 
     public MethodHandle(ExecutableElement element) {
         this.element = element;
     }
     
+    /**
+     * Get whether the element is imaginary (inaccessible via mirror)
+     */
+    public boolean isImaginary() {
+        return this.element == null;
+    }
+
+    /**
+     * Get the underlying element, may return null if the handle is imaginary
+     */
     public ExecutableElement getElement() {
         return this.element;
     }

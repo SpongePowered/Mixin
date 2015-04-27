@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
+import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
@@ -45,9 +46,10 @@ public class ParentValidator extends MixinValidator {
      * ctor
      * 
      * @param processingEnv Processing environment
+     * @param messager Messager
      */
-    public ParentValidator(ProcessingEnvironment processingEnv) {
-        super(processingEnv, ValidationPass.EARLY);
+    public ParentValidator(ProcessingEnvironment processingEnv, Messager messager) {
+        super(processingEnv, messager, ValidationPass.EARLY);
     }
 
     /* (non-Javadoc)
