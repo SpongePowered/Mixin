@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.util.ASMHelper;
@@ -371,6 +372,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     ClassInfo getClassInfo() {
         return this.classInfo;
     }
+    
+    /**
+     * Get the parent config which declares this mixin
+     */
+    @Override
+    public IMixinConfig getConfig() {
+        return this.parent;
+    }
 
     /**
      * Get the parent config which declares this mixin
@@ -430,6 +439,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Get the phase in which this mixin was initialised
      */
+    @Override
     public Phase getPhase() {
         return this.phase;
     }

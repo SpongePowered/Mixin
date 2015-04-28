@@ -43,6 +43,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.VersionNumber;
@@ -53,7 +54,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Mixin configuration bundle
  */
-class MixinConfig implements Comparable<MixinConfig> {
+class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     
     /**
      * Global order of mixin configs, used to determine ordering between configs
@@ -350,19 +351,19 @@ class MixinConfig implements Comparable<MixinConfig> {
     void postApply(String transformedName, ClassNode targetClass) {
         this.unhandledTargets.remove(transformedName);
     }
-
-    /**
-     * True if this mixin is <em>required</em> (failure to apply a defined mixin
-     * is an <em>error</em> condition).
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#isRequired()
      */
+    @Override
     public boolean isRequired() {
         return this.required;
     }
 
-    /**
-     * Get the name of the file from which this configuration object was
-     * initialised
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#getName()
      */
+    @Override
     public String getName() {
         return this.name;
     }
@@ -370,8 +371,17 @@ class MixinConfig implements Comparable<MixinConfig> {
     /**
      * Get the package containing all mixin classes
      */
+    @Override
     public String getMixinPackage() {
         return this.mixinPackage;
+    }
+    
+    /**
+     * Get the priority
+     */
+    @Override
+    public int getPriority() {
+        return this.priority;
     }
     
     /**
@@ -396,16 +406,18 @@ class MixinConfig implements Comparable<MixinConfig> {
         return this.refMapper;
     }
     
-    /**
-     * Get the companion plugin, if available
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#getPlugin()
      */
+    @Override
     public IMixinConfigPlugin getPlugin() {
         return this.plugin;
     }
 
-    /**
-     * Get targets for this configuration
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#getTargets()
      */
+    @Override
     public Set<String> getTargets() {
         return Collections.<String>unmodifiableSet(this.mixinMapping.keySet());
     }
@@ -494,7 +506,7 @@ class MixinConfig implements Comparable<MixinConfig> {
         }
         return (this.priority - other.priority);
     }
-    
+
     /**
      * Factory method, creates a new mixin configuration bundle from the
      * specified configFile, which must be accessible on the classpath

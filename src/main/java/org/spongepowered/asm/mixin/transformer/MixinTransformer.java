@@ -51,6 +51,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
+import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 
@@ -253,7 +255,12 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Logging level for verbose messages 
      */
-    private Level verboseLoggingLevel = Level.DEBUG; 
+    private Level verboseLoggingLevel = Level.DEBUG;
+
+    /**
+     * Handling an error state, do not process further mixins
+     */
+    private boolean errorState = false; 
     
     /**
      * ctor 
@@ -298,7 +305,7 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
-        if (basicClass == null || transformedName == null) {
+        if (basicClass == null || transformedName == null || this.errorState) {
             return basicClass;
         }
         
@@ -356,17 +363,7 @@ public class MixinTransformer extends TreeTransformer {
                         MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
                     }
                     
-                    MixinInfo mixin = th.getMixin();
-                    Phase phase = mixin.getPhase();
-                    MixinConfig config = mixin.getParent();
-                    this.logger.log(config.isRequired() ? Level.FATAL : Level.WARN, String.format("Mixin failed applying %s -> %s: %s %s",
-                            mixin, transformedName, th.getClass().getName(), th.getMessage()), th);
-
-                    if (config.isRequired()) {
-                        throw new MixinApplyError("Mixin [" + mixin + "] from " + phase + " FAILED for REQUIRED config [" + config + "]", th);
-                    }
-                    
-                    th.printStackTrace();
+                    this.handleMixinErrorState(transformedName, th);
                 }
             }
 
@@ -562,6 +559,50 @@ public class MixinTransformer extends TreeTransformer {
         for (IMixinTransformerModule module : this.modules) {
             module.postApply(transformedName, targetClass, mixins);
         }
+    }
+
+    private void handleMixinErrorState(String targetClassName, InvalidMixinException th) throws MixinApplyError {
+        this.errorState = true;
+        
+        MixinInfo mixin = th.getMixin();
+        MixinConfig config = mixin.getParent();
+        ErrorAction action = config.isRequired() ? ErrorAction.ERROR : ErrorAction.WARN;
+        
+        for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
+            ErrorAction newAction = handler.onError(targetClassName, th, mixin, action);
+            if (newAction != null) {
+                action = newAction;
+            }
+        }
+        
+        this.logger.log(action.logLevel, String.format("Mixin failed applying %s -> %s: %s %s", mixin, targetClassName,
+                th.getClass().getName(), th.getMessage()), th);
+        
+        this.errorState = false;
+
+        if (action == ErrorAction.ERROR) {
+            throw new MixinApplyError(String.format("Mixin [%s] from phase [%s] in config [%s] FAILED", mixin, mixin.getPhase(),
+                    config), th);
+        }
+    }
+
+    private List<IMixinErrorHandler> getErrorHandlers(Phase phase) {
+        List<IMixinErrorHandler> handlers = new ArrayList<IMixinErrorHandler>();
+        
+        for (String handlerClassName : MixinEnvironment.getEnvironment(phase).getErrorHandlerClasses()) {
+            try {
+                this.logger.info("Instancing error handler class {}", handlerClassName);
+                Class<?> handlerClass = Class.forName(handlerClassName, true, Launch.classLoader);
+                IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.newInstance();
+                if (handler != null) {
+                    handlers.add(handler);
+                }
+            } catch (Throwable th) {
+                // skip bad handlers
+            }
+        }
+        
+        return handlers;
     }
 
     private byte[] writeClass(String transformedName, ClassNode targetClass) {

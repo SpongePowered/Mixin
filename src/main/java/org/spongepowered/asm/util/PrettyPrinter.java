@@ -28,6 +28,9 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.base.Strings;
 
 
@@ -90,6 +93,26 @@ public class PrettyPrinter {
     }
     
     /**
+     * @param array
+     * @return
+     */
+    public PrettyPrinter add(Object[] array) {
+        return this.add(array, "%s");
+    }
+    
+    /**
+     * @param array
+     * @return
+     */
+    public PrettyPrinter add(Object[] array, String format) {
+        for (Object element : array) {
+            this.add(format, element);
+        }
+        
+        return this;
+    }
+    
+    /**
      * Adds a horizontal rule to the output
      * 
      * @return fluent interface
@@ -146,5 +169,36 @@ public class PrettyPrinter {
 
     private void printHr(PrintStream stream, char... hrChars) {
         stream.printf("/*%s*/\n", Strings.repeat(new String(hrChars), this.width + 2));
+    }
+    
+    public void log(Logger logger) {
+        this.log(logger, Level.INFO);
+    }
+    
+    /**
+     * Write this printer to the specified logger
+     * 
+     * @param logger logger to log to
+     * @param level log level
+     */
+    public void log(Logger logger, Level level) {
+        this.logHr(logger, level, '*');
+        for (String line : this.lines) {
+            int len = line.length();
+            if (len > 1 && line.charAt(0) == PrettyPrinter.HR) {
+                this.logHr(logger, level, line.charAt(1));
+            } else {
+                if (len > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
+                    String text = line.substring(1);
+                    line = String.format("%" + (((this.width - (text.length())) / 2) + text.length()) + "s", text);
+                }
+                logger.log(level, String.format("/* %-" + this.width + "s */", line));
+            }
+        }
+        this.logHr(logger, level, '*');
+    }
+    
+    private void logHr(Logger logger, Level level, char... hrChars) {
+        logger.log(level, String.format("/*%s*/", Strings.repeat(new String(hrChars), this.width + 2)));
     }
 }

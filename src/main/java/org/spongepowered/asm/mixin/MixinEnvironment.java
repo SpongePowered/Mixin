@@ -28,6 +28,7 @@ import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -336,6 +337,11 @@ public class MixinEnvironment {
     private final boolean[] options;
     
     /**
+     * Error handlers for environment
+     */
+    private final Set<String> errorHandlers = new LinkedHashSet<String>();
+
+    /**
      * Detected side 
      */
     private Side side;
@@ -352,7 +358,7 @@ public class MixinEnvironment {
      * Class name transformer (if present)
      */
     private IClassNameTransformer nameTransformer;
-
+    
     private MixinEnvironment(Phase phase) {
         this.phase = phase;
         this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
@@ -420,6 +426,24 @@ public class MixinEnvironment {
             configs.add(config);
         }
         return this;
+    }
+    
+    /**
+     * Add a new error handler class to this environment
+     * 
+     * @param handlerName Handler class to add
+     * @return fluent interface
+     */
+    public MixinEnvironment registerErrorHandlerClass(String handlerName) {
+        this.errorHandlers.add(handlerName);
+        return this;
+    }
+    
+    /**
+     * Get all registered error handlers for this environment
+     */
+    public Set<String> getErrorHandlerClasses() {
+        return Collections.<String>unmodifiableSet(this.errorHandlers);
     }
 
     /**

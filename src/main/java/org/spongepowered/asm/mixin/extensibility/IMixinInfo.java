@@ -27,8 +27,16 @@ package org.spongepowered.asm.mixin.extensibility;
 import java.util.List;
 
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 
 public interface IMixinInfo {
+    
+    /**
+     * Get the config to which this mixin belongs
+     * 
+     * @return the mixin config
+     */
+    public IMixinConfig getConfig();
     
     /**
      * Get the simple name of the mixin
@@ -42,7 +50,7 @@ public interface IMixinInfo {
      * 
      * @return mixin class name
      */
-   public abstract String getClassName();
+    public abstract String getClassName();
 
    /**
     * Get the ref (internal name) of the mixin class
@@ -87,4 +95,11 @@ public interface IMixinInfo {
      * @return the priority
      */
     public abstract int getPriority();
+
+    /**
+     * Get the mixin phase
+     * 
+     * @return the phase
+     */
+    public abstract Phase getPhase();
 }
