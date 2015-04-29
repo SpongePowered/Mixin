@@ -343,10 +343,11 @@ public class CallbackInjector extends Injector {
      * @return generated message
      */
     private String generateBadLVTMessage(final Callback callback) {
+        int position = callback.target.method.instructions.indexOf(callback.node);
         List<String> expected = CallbackInjector.summariseLocals(this.methodNode.desc, callback.target.arguments.length + 1);
         List<String> found = CallbackInjector.summariseLocals(callback.localTypes, callback.frameSize);
-        String message = String.format("Local variable table in %s::%s has incompatible changes. Expected %s but found %s. Callback %s%s",
-                this.classNode.name.replace('/', '.'), callback.target.method.name, expected, found, this.methodNode.name, this.methodNode.desc);
+        String message = String.format("LVT in %s::%s has incompatible changes at opcode %d. Expected %s but found %s. Callback %s%s",
+                this.classNode.name, callback.target.method.name, position, expected, found, this.methodNode.name, this.methodNode.desc);
         return message;
     }
 

@@ -44,7 +44,7 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicValue;
 import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.SimpleVerifier;
+import org.spongepowered.asm.mixin.transformer.MixinVerifier;
 
 
 /**
@@ -263,7 +263,7 @@ public class Locals {
 
         // Use Analyzer to generate the bytecode frames
         Analyzer<BasicValue> analyzer = new Analyzer<BasicValue>(
-                new SimpleVerifier(Type.getObjectType(classNode.name), objectType, interfaces, false));
+                new MixinVerifier(Type.getObjectType(classNode.name), objectType, interfaces, false));
         try {
             analyzer.analyze(classNode.name, method);
         } catch (AnalyzerException ex) {
