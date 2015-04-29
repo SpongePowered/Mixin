@@ -568,6 +568,10 @@ public class MixinTransformer extends TreeTransformer {
         MixinConfig config = mixin.getParent();
         ErrorAction action = config.isRequired() ? ErrorAction.ERROR : ErrorAction.WARN;
         
+        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+            th.printStackTrace();
+        }
+        
         for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
             ErrorAction newAction = handler.onError(targetClassName, th, mixin, action);
             if (newAction != null) {
