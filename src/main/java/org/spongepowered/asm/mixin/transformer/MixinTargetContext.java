@@ -38,6 +38,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
@@ -241,6 +242,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 this.transformFieldNode(method, iter, (FieldInsnNode)insn);
             } else if (insn instanceof TypeInsnNode) {
                 this.transformTypeNode(method, iter, (TypeInsnNode)insn);
+            } else if (insn instanceof LdcInsnNode) {
+                this.transformConstantNode(method, iter, (LdcInsnNode)insn);
             }
         }
     }
@@ -327,6 +330,23 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         this.transformDescriptor(typeInsn);
+    }
+
+    /**
+     * Transforms class literals in the method being processed.
+     * 
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param ldcInsn Insn to transform
+     */
+    private void transformConstantNode(MethodNode method, Iterator<AbstractInsnNode> iter, LdcInsnNode ldcInsn) {
+        if (ldcInsn.cst instanceof Type) {
+            Type type = (Type)ldcInsn.cst;
+            String desc = this.transformSingleDescriptor(type);
+            if (!type.toString().equals(desc)) {
+                ldcInsn.cst = Type.getType(desc);
+            }
+        }
     }
 
     /**
