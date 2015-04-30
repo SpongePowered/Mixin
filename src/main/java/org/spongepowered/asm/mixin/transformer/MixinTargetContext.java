@@ -229,6 +229,29 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param method Method to transform
      */
     public void transformMethod(MethodNode method) {
+        this.validateMethod(method);
+        this.transformDescriptor(method);
+        
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+
+            if (insn instanceof MethodInsnNode) {
+                this.transformMethodNode(method, iter, (MethodInsnNode)insn);
+            } else if (insn instanceof FieldInsnNode) {
+                this.transformFieldNode(method, iter, (FieldInsnNode)insn);
+            } else if (insn instanceof TypeInsnNode) {
+                this.transformTypeNode(method, iter, (TypeInsnNode)insn);
+            }
+        }
+    }
+
+    /**
+     * Pre-flight checks on a method to be transformed, checks the validity of
+     * {@link SoftOverride} annotations and any other required validation tasks
+     * 
+     * @param method Method node to validate
+     */
+    private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
             Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
@@ -237,49 +260,73 @@ public class MixinTargetContext implements IReferenceMapperContext {
                         + "valid method was found in superclasses of " + this.targetClass.name);
             }
         }
-        
-        this.transformDescriptor(method);
-        
-        Iterator<AbstractInsnNode> iter = method.instructions.iterator();
-        while (iter.hasNext()) {
-            AbstractInsnNode insn = iter.next();
+    }
 
-            if (insn instanceof MethodInsnNode) {
-                MethodInsnNode methodInsn = (MethodInsnNode)insn;
-                this.transformDescriptor(methodInsn);
-                if (methodInsn.owner.equals(this.getClassRef())) {
-                    methodInsn.owner = this.targetClass.name;
-                } else if ((this.detachedSuper || this.inheritsFromMixin)) {
-                    if (methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                        this.updateStaticBinding(method, methodInsn);
-                    } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodInsn.owner).isMixin()) {
-                        this.updateDynamicBinding(method, methodInsn);
-                    }
-                }
-            } else if (insn instanceof FieldInsnNode) {
-                FieldInsnNode fieldInsn = (FieldInsnNode)insn;
-                if (Constants.IMAGINARY_SUPER.equals(fieldInsn.name)) {
-                    this.processImaginarySuper(method, fieldInsn);
-                    iter.remove();
-                }
-                this.transformDescriptor(fieldInsn);
-                if (fieldInsn.owner.equals(this.getClassRef())) {
-                    fieldInsn.owner = this.targetClass.name;
-                } else {
-                    ClassInfo fieldOwner = ClassInfo.forName(fieldInsn.owner);
-                    if (fieldOwner.isMixin()) {
-                        ClassInfo actualOwner = this.targetClassInfo.findCorrespondingType(fieldOwner);
-                        fieldInsn.owner = actualOwner != null ? actualOwner.getName() : this.targetClass.name;
-                    }
-                }
-            } else if (insn instanceof TypeInsnNode) {
-                TypeInsnNode typeInsn = (TypeInsnNode)insn;
-                if (typeInsn.desc.equals(this.getClassRef())) {
-                    typeInsn.desc = this.targetClass.name;
-                }
-                this.transformDescriptor(typeInsn);
+    /**
+     * Transforms method invocations in the method. Updates static and dynamic
+     * bindings.
+     * 
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param methodInsn Insn to transform
+     */
+    private void transformMethodNode(MethodNode method, Iterator<AbstractInsnNode> iter, MethodInsnNode methodInsn) {
+        this.transformDescriptor(methodInsn);
+        
+        if (methodInsn.owner.equals(this.getClassRef())) {
+            methodInsn.owner = this.targetClass.name;
+        } else if ((this.detachedSuper || this.inheritsFromMixin)) {
+            if (methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                this.updateStaticBinding(method, methodInsn);
+            } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodInsn.owner).isMixin()) {
+                this.updateDynamicBinding(method, methodInsn);
             }
         }
+    }
+
+    /**
+     * Transforms field accesses in the method. Handles imaginary super accesses
+     * and converts them to real super-invocations and rewrites field accesses
+     * which refer to mixin or supermixin classes to their relevant targets.
+     * 
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param fieldInsn Insn to transform
+     */
+    private void transformFieldNode(MethodNode method, Iterator<AbstractInsnNode> iter, FieldInsnNode fieldInsn) {
+        if (Constants.IMAGINARY_SUPER.equals(fieldInsn.name)) {
+            this.processImaginarySuper(method, fieldInsn);
+            iter.remove();
+        }
+        
+        this.transformDescriptor(fieldInsn);
+        
+        if (fieldInsn.owner.equals(this.getClassRef())) {
+            fieldInsn.owner = this.targetClass.name;
+        } else {
+            ClassInfo fieldOwner = ClassInfo.forName(fieldInsn.owner);
+            if (fieldOwner.isMixin()) {
+                ClassInfo actualOwner = this.targetClassInfo.findCorrespondingType(fieldOwner);
+                fieldInsn.owner = actualOwner != null ? actualOwner.getName() : this.targetClass.name;
+            }
+        }
+    }
+
+    /**
+     * Transforms type operations (eg. cast, instanceof) in the method being
+     * processed. Changes references to mixin classes to that of the appropriate
+     * class for this context.
+     * 
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param typeInsn Insn to transform
+     */
+    private void transformTypeNode(MethodNode method, Iterator<AbstractInsnNode> iter, TypeInsnNode typeInsn) {
+        if (typeInsn.desc.equals(this.getClassRef())) {
+            typeInsn.desc = this.targetClass.name;
+        }
+        
+        this.transformDescriptor(typeInsn);
     }
 
     /**
