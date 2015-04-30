@@ -394,6 +394,8 @@ public class MixinEnvironment {
     
     /**
      * Get the phase for this environment
+     * 
+     * @return the phase
      */
     public Phase getPhase() {
         return this.phase;
@@ -441,6 +443,8 @@ public class MixinEnvironment {
     
     /**
      * Get all registered error handlers for this environment
+     * 
+     * @return set of error handler class names
      */
     public Set<String> getErrorHandlerClasses() {
         return Collections.<String>unmodifiableSet(this.errorHandlers);
@@ -448,6 +452,8 @@ public class MixinEnvironment {
 
     /**
      * Get the active mixin transformer instance (if any)
+     * 
+     * @return active mixin transformer instance
      */
     public Object getActiveTransformer() {
         return Launch.blackboard.get(MixinEnvironment.TRANSFORMER_KEY);
@@ -497,6 +503,8 @@ public class MixinEnvironment {
     
     /**
      * Get the current mixin subsystem version
+     * 
+     * @return current version
      */
     public String getVersion() {
         return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
@@ -536,6 +544,8 @@ public class MixinEnvironment {
     /**
      * Returns (and generates if necessary) the transformer delegation list for
      * this environment.
+     * 
+     * @return current transformer delegation list (read-only)
      */
     public List<IClassTransformer> getTransformers() {
         if (this.transformers == null) {
@@ -548,7 +558,7 @@ public class MixinEnvironment {
     /**
      * Adds a transformer to the transformer exclusions list
      * 
-     * @param name
+     * @param name Class transformer exclusion to add
      */
     public void addTransformerExclusion(String name) {
         MixinEnvironment.excludeTransformers.add(name);
@@ -560,7 +570,7 @@ public class MixinEnvironment {
     /**
      * Map a class name back to its obfuscated counterpart 
      * 
-     * @param className
+     * @param className class name to unmap
      * @return obfuscated name for the specified deobfuscated reference
      */
     public String unmap(String className) {
@@ -662,6 +672,8 @@ public class MixinEnvironment {
 
     /**
      * Gets the default environment
+     * 
+     * @return the {@link Phase#DEFAULT DEFAULT} environment
      */
     public static MixinEnvironment getDefaultEnvironment() {
         return MixinEnvironment.getEnvironment(Phase.DEFAULT);
@@ -669,6 +681,8 @@ public class MixinEnvironment {
 
     /**
      * Gets the current environment
+     * 
+     * @return the currently active environment
      */
     public static MixinEnvironment getCurrentEnvironment() {
         if (MixinEnvironment.currentEnvironment == null) {

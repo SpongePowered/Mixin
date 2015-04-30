@@ -26,37 +26,52 @@ package org.spongepowered.asm.mixin.extensibility;
 
 import java.util.Set;
 
+/**
+ * Interface for loaded mixin configurations
+ */
 public interface IMixinConfig {
 
     /**
      * Get the name of the file from which this configuration object was
      * initialised
+     * 
+     * @return the config filename (resource name)
      */
     public abstract String getName();
 
     /**
      * Get the package containing all mixin classes
+     * 
+     * @return the base package name for this config
      */
     public abstract String getMixinPackage();
 
     /**
      * Get the priority
+     * 
+     * @return the priority
      */
     public abstract int getPriority();
 
     /**
      * Get the companion plugin, if available
+     * 
+     * @return the companion plugin instance or null if no plugin
      */
     public abstract IMixinConfigPlugin getPlugin();
 
     /**
      * True if this mixin is <em>required</em> (failure to apply a defined mixin
      * is an <em>error</em> condition).
+     * 
+     * @return true if this config is marked as required
      */
     public abstract boolean isRequired();
 
     /**
      * Get targets for this configuration
+     * 
+     * @return target classes of mixins in this config
      */
     public abstract Set<String> getTargets();
 

@@ -60,8 +60,10 @@ abstract class TreeInfo {
     }
 
     /**
-     * @param classBytes
-     * @param flags
+     * Gets an ASM Tree for the supplied class bytecode
+     * 
+     * @param classBytes Class bytecode
+     * @param flags ClassReader flags
      * @return ASM Tree view of the specified class 
      */
     protected static ClassNode getClassNode(byte[] classBytes, int flags) {
@@ -72,9 +74,14 @@ abstract class TreeInfo {
     }
     
     /**
-     * @param className
-     * @param runTransformers
+     * Loads class bytecode from the classpath
+     * 
+     * @param className Name of the class to load
+     * @param runTransformers True to run the loaded bytecode through the
+     *      delegate transformer chain
      * @return Transformed class bytecode for the specified class
+     * @throws ClassNotFoundException if the specified class could not be loaded
+     * @throws IOException if an error occurs whilst reading the specified class
      */
     protected static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
         String transformedName = className.replace('/', '.');

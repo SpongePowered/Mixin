@@ -108,6 +108,8 @@ public class Target {
     
     /**
      * Get the original max locals of the method
+     * 
+     * @return the original max locals value
      */
     public int getMaxLocals() {
         return this.maxLocals;
@@ -115,6 +117,8 @@ public class Target {
     
     /**
      * Get the original max stack of the method
+     * 
+     * @return the original max stack value
      */
     public int getMaxStack() {
         return this.maxStack;
@@ -122,6 +126,8 @@ public class Target {
     
     /**
      * Get the current max locals of the method
+     * 
+     * @return the current max local value
      */
     public int getCurrentMaxLocals() {
         return this.method.maxLocals;
@@ -129,6 +135,8 @@ public class Target {
     
     /**
      * Get the current max stack of the method
+     * 
+     * @return the current max stack value
      */
     public int getCurrentMaxStack() {
         return this.method.maxStack;
@@ -136,6 +144,8 @@ public class Target {
     
     /**
      * Allocate a new local variable for the method
+     * 
+     * @return the allocated local index
      */
     public int allocateLocal() {
         return this.allocateLocals(1);
@@ -159,7 +169,6 @@ public class Target {
      * first stack index of the allocated range
      * 
      * @param locals number of locals to allocate
-     * @return the first local variable index of the allocated range
      */
     public void addToLocals(int locals) {
         this.setMaxLocals(this.maxLocals + locals);

@@ -586,7 +586,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Get shadow methods in this mixin
      * 
-     * @return
+     * @return shadow methods in the mixin
      */
     public List<MethodNode> getShadowMethods() {
         return this.shadowMethods;
@@ -595,7 +595,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Get methods to mixin
      * 
-     * @return
+     * @return non-shadow methods in the mixin
      */
     public List<MethodNode> getMethods() {
         return this.classNode.methods;
@@ -604,7 +604,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Get shadow fields in this mixin
      * 
-     * @return
+     * @return shadow fields in the mixin
      */
     public List<FieldNode> getShadowFields() {
         return this.shadowFields;
@@ -613,7 +613,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Get fields to mixin
      * 
-     * @return
+     * @return non-shadow fields in the mixin
      */
     public List<FieldNode> getFields() {
         return this.classNode.fields;

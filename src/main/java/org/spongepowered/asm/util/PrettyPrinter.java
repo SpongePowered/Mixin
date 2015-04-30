@@ -93,16 +93,21 @@ public class PrettyPrinter {
     }
     
     /**
-     * @param array
-     * @return
+     * Add elements of the array to the output, one per line
+     * 
+     * @param array Array of objects to print 
+     * @return fluent interface
      */
     public PrettyPrinter add(Object[] array) {
         return this.add(array, "%s");
     }
     
     /**
-     * @param array
-     * @return
+     * Add elements of the array to the output, one per line
+     * 
+     * @param array Array of objects to print
+     * @param format Format for each row
+     * @return fluent interface
      */
     public PrettyPrinter add(Object[] array, String format) {
         for (Object element : array) {
