@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.util;
 
-import static org.objectweb.asm.ClassWriter.*;
+import static org.spongepowered.asm.lib.ClassWriter.*;
 
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
@@ -32,12 +32,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
-import org.objectweb.asm.util.CheckClassAdapter;
+import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
 public class ASMHelper {
 

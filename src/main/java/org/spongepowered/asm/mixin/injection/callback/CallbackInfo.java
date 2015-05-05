@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-import org.objectweb.asm.Type;
+import org.spongepowered.asm.lib.Type;
 
 /**
  * CallbackInfo instances are passed to callbacks in order to provide
