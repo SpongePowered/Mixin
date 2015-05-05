@@ -60,10 +60,19 @@ repositories {
         name = 'minecraft'
         url = 'https://libraries.minecraft.net/'
     }
+    flatDir {
+        name = 'renamed-packages'
+        dirs = files("build/renamed-packages/")
+    }
 }
 
 configurations {
     deployerJars // maven stuff
+    asm // renamer input
+    jarjar // renamer task
+    
+    // Exclude non-repackaged ASM so that we don't use it by mistake
+    compile.exclude module: 'asm-debug-all'
 }
 
 configurations.all {
@@ -80,11 +89,54 @@ sourceSets {
     }
 }
 
+// Dependencies for renamed ASM
+dependencies {
+    asm 'org.ow2.asm:asm-debug-all:5.0.3'
+    asm 'org.ow2.asm:asm-debug-all:5.0.3:sources'
+    jarjar 'com.googlecode.jarjar:jarjar:1.1'
+    compile 'com.googlecode.jarjar:jarjar:1.1'
+}
+
+// Task to read ASM library and rename packages
+task renamedASM {
+    outputs.file files(configurations.asm.files.collect { file ->
+        new File(project.repositories['renamed-packages'].dirs[0], "mixin-" + file.name).path
+    })
+    ext.jars = files((outputs.files.findAll{!it.name.contains("sources")}).collect{lib -> file(lib)})
+    doLast {
+        ant {
+            taskdef (
+                name: "jarjar",
+                classname: "com.tonicsystems.jarjar.JarJarTask",
+                classpath: configurations.jarjar.asPath,
+            )
+            outputs.files.eachWithIndex { elem, index ->
+                logger.info "Generating renamed jar {}", elem.name
+                def inJar = configurations.asm.files[index]
+                if (elem.name.contains("sources")) {
+                    def tmpDir = new File(temporaryDir, elem.name + ".tmp")
+                    unzip (src: inJar, dest: tmpDir)
+                    replace (dir: tmpDir, token: "org.objectweb.asm", value: "org.spongepowered.asm.lib")
+                    inJar = new File(temporaryDir, elem.name)
+                    jar (destFile: inJar) { fileset(dir: tmpDir) }
+                    delete tmpDir
+                }
+                jarjar (jarfile: elem.path) {
+                    zipfileset (src: inJar)
+                    rule (
+                        pattern: "org.objectweb.asm.**",
+                        result: "org.spongepowered.asm.lib.@1"
+                    )
+                }
+            }
+        }
+    }
+}
+
 // Project dependencies
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.7'
     compile 'com.google.guava:guava:17.0'
-    compile 'org.ow2.asm:asm-debug-all:5.0.3'
     compile 'net.minecraft:launchwrapper:1.11'
     compile 'com.google.code.gson:gson:2.2.4'
     compile 'commons-io:commons-io:2.4'
@@ -99,6 +151,10 @@ dependencies {
     // for annotation processor
     compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
     apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
+
+    // remapped ASM
+    compile tasks.renamedASM.outputs.files
+    apCompile tasks.renamedASM.outputs.files
 }
 
 // Filter, process, and include resources
@@ -153,6 +209,13 @@ jar {
     // Include annotation processor
     from sourceSets.ap.output
     
+    // Renamed ASM
+    zipTree(tasks.renamedASM.outputs.files[0])
+    
+    exclude 'org/objectweb/**'
+    exclude 'org/spongepowered/asm/lib/commons/**'
+    exclude 'org/spongepowered/asm/lib/xml/**'
+    
     // JAR manifest configuration
     manifest.mainAttributes(
         "Built-By": System.properties['user.name'],
@@ -173,7 +236,6 @@ shadowJar  {
         include(dependency('commons-io:commons-io'))
         include(dependency('net.minecraftforge.srg2source:Srg2Source'))
         include(dependency('net.sf.jopt-simple:jopt-simple'))
-        include(dependency('org.ow2.asm:asm-debug-all'))
     }
     classifier = 'processor'
 }
