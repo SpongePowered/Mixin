@@ -97,12 +97,16 @@ dependencies {
     compile 'com.googlecode.jarjar:jarjar:1.1'
 }
 
+// Filter non-source jars from specified task's outputs
+FileCollection executables(TaskOutputs outputs) {
+    files((outputs.files.findAll{!it.name.contains("sources")}).collect{lib -> file(lib)})
+}
+
 // Task to read ASM library and rename packages
 task renamedASM {
     outputs.file files(configurations.asm.files.collect { file ->
         new File(project.repositories['renamed-packages'].dirs[0], "mixin-" + file.name).path
     })
-    ext.jars = files((outputs.files.findAll{!it.name.contains("sources")}).collect{lib -> file(lib)})
     doLast {
         ant {
             taskdef (
@@ -153,8 +157,8 @@ dependencies {
     apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // remapped ASM
-    compile tasks.renamedASM.outputs.files
-    apCompile tasks.renamedASM.outputs.files
+    compile executables(tasks.renamedASM.outputs)
+    apCompile executables(tasks.renamedASM.outputs)
 }
 
 // Filter, process, and include resources
