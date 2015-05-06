@@ -47,6 +47,12 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class MixinTweaker implements ITweaker {
     
+    private static final String MFATT_MIXINCONFIGS = "MixinConfigs";
+    private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
+    private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
+    private static final String MFATT_COREMODCONTAINSMOD = "FMLCorePluginContainsFMLMod";
+    private static final String MFATT_MAINCLASS = "Main-Class";
+
     /**
      * File containing this tweaker
      */
@@ -97,14 +103,14 @@ public class MixinTweaker implements ITweaker {
         MixinBootstrap.register();
 
         if (this.fmlWrapper == null) {
-            String mixinConfigs = this.getManifestAttribute("MixinConfigs");
+            String mixinConfigs = this.getManifestAttribute(MixinTweaker.MFATT_MIXINCONFIGS);
             if (mixinConfigs == null) {
                 return;
             }
             
             for (String config : mixinConfigs.split(",")) {
                 if (config.endsWith(".json")) {
-                    MixinEnvironment.getCurrentEnvironment().addConfiguration(config);
+                    MixinEnvironment.getDefaultEnvironment().addConfiguration(config);
                 }
             }
         }
@@ -116,26 +122,45 @@ public class MixinTweaker implements ITweaker {
     @SuppressWarnings("unchecked")
     private ITweaker initFMLCoreMod() {
         try {
-            String coreModName = this.getManifestAttribute("FMLCorePlugin");
+            String coreModName = this.getManifestAttribute(MixinTweaker.MFATT_FMLCOREPLUGIN);
             if (coreModName == null) {
                 return null;
             }
+            
+            String jarName = this.container.getName();
             Class<?> coreModManager = this.getCoreModManagerClass();
             Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
             mdLoadCoreMod.setAccessible(true);
             ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
-            if (wrapper != null && "true".equalsIgnoreCase(this.getManifestAttribute("ForceLoadAsMod"))) {
+            if (wrapper == null) {
+                return null;
+            }
+            
+            if ("true".equalsIgnoreCase(this.getManifestAttribute(MixinTweaker.MFATT_FORCELOADASMOD))) {
                 try {
                     Method mdGetLoadedCoremods = coreModManager.getDeclaredMethod("getLoadedCoremods");
                     List<String> loadedCoremods = (List<String>)mdGetLoadedCoremods.invoke(null);
-                    loadedCoremods.remove(this.container.getName());
+                    loadedCoremods.remove(jarName);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
+                
+                if (this.getManifestAttribute(MixinTweaker.MFATT_COREMODCONTAINSMOD) != null) {    
+                    try {
+                        Method mdGetReparsedCoremods = coreModManager.getDeclaredMethod("getReparseableCoremods");
+                        List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
+                        if (!reparsedCoremods.contains(jarName)) {
+                            reparsedCoremods.add(jarName);
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
+            
             return wrapper;
         } catch (Exception ex) {
-//            ex.printStackTrace();
+            // ex.printStackTrace();
         }
         return null;
     }
@@ -168,7 +193,8 @@ public class MixinTweaker implements ITweaker {
      */
     @Override
     public String getLaunchTarget() {
-        return "net.minecraft.client.main.Main";
+        String mainClass = this.getManifestAttribute(MixinTweaker.MFATT_MAINCLASS);
+        return mainClass != null ? mainClass : "net.minecraft.client.main.Main";
     }
 
     /* (non-Javadoc)
