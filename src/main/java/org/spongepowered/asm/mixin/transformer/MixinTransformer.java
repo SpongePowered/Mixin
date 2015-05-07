@@ -369,6 +369,10 @@ public class MixinTransformer extends TreeTransformer {
 
             return basicClass;
         } catch (Exception ex) {
+            if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
+                MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
+            }
+
             throw new MixinTransformerError("An unexpected critical error was encountered", ex);
         } finally {
             this.lock.pop();
