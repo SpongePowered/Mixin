@@ -44,6 +44,8 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicValue;
 import org.objectweb.asm.tree.analysis.Frame;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
 import org.spongepowered.asm.mixin.transformer.MixinVerifier;
 
 
@@ -120,6 +122,8 @@ public class Locals {
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
         System.err.printf("----------------------------------------------------\n");
         
+        List<FrameData> frames = ClassInfo.forName(classNode.name).findMethod(method).getFrames();
+
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
         int local = 0, index = 0;
 
@@ -135,13 +139,16 @@ public class Locals {
         }
         
         int initialFrameSize = local;
-        int opcode = 0;
+        int opcode = 0, frameIndex = 0, numLocals = 0;
 
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext(); opcode++) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof FrameNode) {
-                FrameNode frameNode = (FrameNode) insn;
-                System.err.printf("FRAME: Type=%s Size=%d\n", frameNode.type, frameNode.local.size());
+                FrameNode frameNode = (FrameNode)insn;
+                FrameData frameData = frames.get(frameIndex++);
+                
+                numLocals = frameData.type == Opcodes.F_FULL ? Math.max(numLocals, frameNode.local.size()) : frameNode.local.size();
+                System.err.printf("FRAME: Type=%s Size=%d FD=%s TOTAL=%d\n", frameNode.type, frameNode.local.size(), frameData, numLocals);
 
                 // localPos tracks the location in the frame node's locals list, which doesn't leave space for TOP entries
                 for (int localPos = 0, framePos = 0; framePos < frame.length; framePos++, localPos++) {
@@ -176,7 +183,7 @@ public class Locals {
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
-                        if (framePos >= initialFrameSize && frameNode.local.size() > 0) {
+                        if (framePos >= initialFrameSize && framePos >= numLocals && numLocals > 0) {
                             frame[framePos] = null;
                         }
                         Locals.print(method.name, opcode, "NULL " + framePos, frame);
@@ -206,6 +213,22 @@ public class Locals {
                 desc = "?";
             } else {
                 desc = desc.substring(desc.lastIndexOf('/') + 1).replace(';', ' ').trim();
+                desc = desc.replace("ServerConfigurationManager", "SCM");
+                desc = desc.replace("NetworkManager", "NM");
+                desc = desc.replace("EntityPlayerMP", "EPMP");
+                desc = desc.replace("GameProfile", "GP");
+                desc = desc.replace("PlayerProfileCache", "PPC");
+                desc = desc.replace("NBTTagCompound", "NBTTC");
+                desc = desc.replace("WorldServer", "WS");
+                desc = desc.replace("WorldInfo", "WI");
+                desc = desc.replace("BlockPos", "BP");
+                desc = desc.replace("NetHandlerPlayServer", "NHPS");
+                desc = desc.replace("ChatComponentTranslation", "CCT");
+                desc = desc.replace("Iterator", "IT");
+                desc = desc.replace("PotionEffect", "PE");
+                desc = desc.replace("World", "W");
+                desc = desc.replace("EntityPlayer", "EP");
+                desc = desc.replace("Entity", "E");
             }
             System.err.printf("%s ", desc);
         }
