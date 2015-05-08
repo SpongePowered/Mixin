@@ -122,20 +122,10 @@ public class MixinTweaker implements ITweaker {
     @SuppressWarnings("unchecked")
     private ITweaker initFMLCoreMod() {
         try {
-            String coreModName = this.getManifestAttribute(MixinTweaker.MFATT_FMLCOREPLUGIN);
-            if (coreModName == null) {
-                return null;
-            }
-            
+
             String jarName = this.container.getName();
             Class<?> coreModManager = this.getCoreModManagerClass();
-            Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
-            mdLoadCoreMod.setAccessible(true);
-            ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
-            if (wrapper == null) {
-                return null;
-            }
-            
+
             if ("true".equalsIgnoreCase(this.getManifestAttribute(MixinTweaker.MFATT_FORCELOADASMOD))) {
                 try {
                     Method mdGetLoadedCoremods = coreModManager.getDeclaredMethod("getLoadedCoremods");
@@ -157,7 +147,19 @@ public class MixinTweaker implements ITweaker {
                     }
                 }
             }
-            
+
+            String coreModName = this.getManifestAttribute(MixinTweaker.MFATT_FMLCOREPLUGIN);
+            if (coreModName == null) {
+                return null;
+            }
+
+            Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
+            mdLoadCoreMod.setAccessible(true);
+            ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
+            if (wrapper == null) {
+                return null;
+            }
+
             return wrapper;
         } catch (Exception ex) {
             // ex.printStackTrace();
