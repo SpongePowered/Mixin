@@ -1360,7 +1360,7 @@ public class ClassInfo extends TreeInfo {
             
             // Put null in the cache if load failed
             ClassInfo.cache.put(className, info);
-            ClassInfo.logger.debug("Added class metadata for {} to metadata cache", className);
+            ClassInfo.logger.trace("Added class metadata for {} to metadata cache", className);
         }
         
         return info;
