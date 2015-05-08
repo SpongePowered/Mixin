@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,9 +36,11 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.FrameNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
@@ -51,7 +54,7 @@ import com.google.common.collect.ImmutableSet;
  * information needed to support more complex mixin behaviour such as detached
  * superclass and mixin inheritance.  
  */
-class ClassInfo extends TreeInfo {
+public class ClassInfo extends TreeInfo {
     
     /**
      * <p>To all intents and purposes, the "real" class hierarchy and the mixin
@@ -68,7 +71,7 @@ class ClassInfo extends TreeInfo {
      * immediate match falls through to {@link #NONE} on the next step, which
      * prevents further traversals from occurring in the lookup.</p>
      */
-    static enum Traversal {
+    public static enum Traversal {
         
         /**
          * No traversals are allowed.
@@ -106,6 +109,40 @@ class ClassInfo extends TreeInfo {
         
         public boolean canTraverse() {
             return this.traverse;
+        }
+    }
+    
+    /**
+     * Information about frames in a method
+     */
+    public static class FrameData {
+        
+        private static final String[] FRAMETYPES = { "NEW", "FULL", "APPEND", "CHOP", "SAME", "SAME1" };
+        
+        public final int index;
+        
+        public final int type;
+        
+        public final int locals;
+
+        FrameData(int index, int type, int locals) {
+            this.index = index;
+            this.type = type;
+            this.locals = locals;
+        }
+        
+        FrameData(int index, FrameNode frameNode) {
+            this.index = index;
+            this.type = frameNode.type;
+            this.locals = frameNode.local != null ? frameNode.local.size() : 0;
+        }
+        
+        /* (non-Javadoc)
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return String.format("FrameData[index=%d, type=%s, locals=%d]", this.index, FrameData.FRAMETYPES[this.type + 1], this.locals);
         }
     }
     
@@ -236,10 +273,13 @@ class ClassInfo extends TreeInfo {
     /**
      * A method
      */
-    class Method extends Member {
+    public class Method extends Member {
+        
+        private final List<FrameData> frames;
 
         public Method(Member member) {
             super(member);
+            this.frames = member instanceof Method ? ((Method)member).frames : null;
         }
 
         public Method(MethodNode method) {
@@ -248,20 +288,39 @@ class ClassInfo extends TreeInfo {
         
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
+            this.frames = this.gatherFrames(method);
         }
         
         public Method(String name, String desc) {
             super(Type.METHOD, name, desc, Opcodes.ACC_PUBLIC, false);
+            this.frames = null;
         }
 
         public Method(String name, String desc, int access) {
             super(Type.METHOD, name, desc, access, false);
+            this.frames = null;
         }
 
         public Method(String name, String desc, int access, boolean injected) {
             super(Type.METHOD, name, desc, access, injected);
+            this.frames = null;
         }
         
+        private List<FrameData> gatherFrames(MethodNode method) {
+            List<FrameData> frames = new ArrayList<FrameData>();
+            for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+                AbstractInsnNode insn = iter.next();
+                if (insn instanceof FrameNode) {
+                    frames.add(new FrameData(method.instructions.indexOf(insn), (FrameNode)insn));
+                }
+            }
+            return frames;
+        }
+        
+        public List<FrameData> getFrames() {
+            return this.frames;
+        }
+
         @Override
         public ClassInfo getOwner() {
             return ClassInfo.this;
@@ -629,7 +688,7 @@ class ClassInfo extends TreeInfo {
     /**
      * Class targets
      */
-    protected List<ClassInfo> getTargets() {
+    List<ClassInfo> getTargets() {
         if (this.mixin != null) {
             List<ClassInfo> targets = new ArrayList<ClassInfo>();
             targets.add(this);
@@ -1269,7 +1328,7 @@ class ClassInfo extends TreeInfo {
      * @param classNode
      * @return
      */
-    public static ClassInfo fromClassNode(ClassNode classNode) {
+    static ClassInfo fromClassNode(ClassNode classNode) {
         ClassInfo info = ClassInfo.cache.get(classNode.name);
         if (info == null) {
             info = new ClassInfo(classNode);

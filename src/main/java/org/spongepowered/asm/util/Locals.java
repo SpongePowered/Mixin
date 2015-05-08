@@ -44,6 +44,8 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicValue;
 import org.objectweb.asm.tree.analysis.Frame;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
 import org.spongepowered.asm.mixin.transformer.MixinVerifier;
 
 
@@ -118,6 +120,8 @@ public class Locals {
      *      specified location
      */
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
+        List<FrameData> frames = ClassInfo.forName(classNode.name).findMethod(method).getFrames();
+
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
         int local = 0, index = 0;
 
@@ -131,11 +135,18 @@ public class Locals {
             frame[local] = new LocalVariableNode("arg" + index++, argType.toString(), null, null, null, local);
             local += argType.getSize();
         }
+        
+        int initialFrameSize = local;
+        int frameIndex = -1, locals = 0;
 
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof FrameNode) {
-                FrameNode frameNode = (FrameNode) insn;
+                frameIndex++;
+                FrameNode frameNode = (FrameNode)insn;
+                FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
+                
+                locals = frameData != null && frameData.type == Opcodes.F_FULL ? Math.max(locals, frameNode.local.size()) : frameNode.local.size();
 
                 // localPos tracks the location in the frame node's locals list, which doesn't leave space for TOP entries
                 for (int localPos = 0, framePos = 0; framePos < frame.length; framePos++, localPos++) {
@@ -145,10 +156,12 @@ public class Locals {
                     if (localType instanceof String) { // String refers to a reference type
                         frame[framePos] = Locals.getLocalVariableAt(classNode, method, node, framePos);
                     } else if (localType instanceof Integer) { // Integer refers to a primitive type or other marker
-                        boolean isMarkerType = localType == Opcodes.UNINITIALIZED_THIS || localType == Opcodes.TOP || localType == Opcodes.NULL;
+                        boolean isMarkerType = localType == Opcodes.UNINITIALIZED_THIS || localType == Opcodes.NULL;
                         boolean is32bitValue = localType == Opcodes.INTEGER || localType == Opcodes.FLOAT;
                         boolean is64bitValue = localType == Opcodes.DOUBLE || localType == Opcodes.LONG;
-                        if (isMarkerType) {
+                        if (localType == Opcodes.TOP) {
+                            // Do nothing, explicit TOP entries are pretty much always bogus, and real ones are handled below
+                        } else if (isMarkerType) {
                             frame[framePos] = null;
                         } else if (is32bitValue || is64bitValue) {
                             frame[framePos] = Locals.getLocalVariableAt(classNode, method, node, framePos);
@@ -162,7 +175,9 @@ public class Locals {
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
-                        frame[framePos] = null;
+                        if (framePos >= initialFrameSize && framePos >= locals && locals > 0) {
+                            frame[framePos] = null;
+                        }
                     } else {
                         throw new RuntimeException("Invalid value " + localType + " in locals array at position " + localPos
                                 + " in " + classNode.name + "." + method.name + method.desc);
@@ -282,7 +297,8 @@ public class Locals {
         LocalVariableNode[] localNodes = new LocalVariableNode[method.maxLocals]; // LocalVariableNodes for current frame
         BasicValue[] locals = new BasicValue[method.maxLocals]; // locals in previous frame, used to work out what changes between frames
         LabelNode[] labels = new LabelNode[methodSize]; // Labels to add to the method, for the markers
-
+        String[] lastKnownType = new String[method.maxLocals];
+        
         // Traverse the frames and work out when locals begin and end
         for (int i = 0; i < methodSize; i++) {
             Frame<BasicValue> f = frames[i];
@@ -316,8 +332,11 @@ public class Locals {
                         localNodes[j] = null;
                     }
 
-                    String desc = (local.getType() != null) ? local.getType().getDescriptor() : null;
+                    String desc = (local.getType() != null) ? local.getType().getDescriptor() : lastKnownType[j];
                     localNodes[j] = new LocalVariableNode("var" + j, desc, null, label, null, j);
+                    if (desc != null) {
+                        lastKnownType[j] = desc;
+                    }
                 }
 
                 locals[j] = local;
