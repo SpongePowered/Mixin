@@ -470,7 +470,7 @@ public class CallbackInjector extends Injector {
         ASMHelper.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
         
         // Push the callback info onto the stack
-        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
+        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
         
         // (Maybe) push the locals onto the stack
         if (callback.canCaptureLocals) {
