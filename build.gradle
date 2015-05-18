@@ -24,7 +24,7 @@ defaultTasks 'licenseFormat', 'check', 'build'
 // Basic project information
 group = 'org.spongepowered'
 archivesBaseName = 'mixin'
-version = '0.3.4-SNAPSHOT'
+version = buildVersion + (buildType == 'RELEASE' ? '' : "-$buildType")
 
 // Extended project information
 ext.projectName = 'Mixin'
