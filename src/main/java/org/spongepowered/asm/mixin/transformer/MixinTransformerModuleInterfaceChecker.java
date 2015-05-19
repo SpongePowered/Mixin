@@ -33,7 +33,7 @@ import java.util.Date;
 import java.util.SortedSet;
 
 import org.apache.commons.io.IOUtils;
-import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.Constants;

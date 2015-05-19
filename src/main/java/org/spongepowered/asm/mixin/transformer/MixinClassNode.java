@@ -24,8 +24,8 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.tree.ClassNode;
 
 /**
  * ClassNode for a MixinInfo

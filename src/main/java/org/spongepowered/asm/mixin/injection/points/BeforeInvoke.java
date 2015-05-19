@@ -29,9 +29,9 @@ import java.util.ListIterator;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;

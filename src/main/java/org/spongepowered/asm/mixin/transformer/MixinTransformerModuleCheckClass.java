@@ -26,9 +26,9 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.SortedSet;
 
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.util.CheckClassAdapter;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
 
 /**

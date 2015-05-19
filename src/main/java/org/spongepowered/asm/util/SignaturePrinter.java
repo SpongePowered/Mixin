@@ -24,10 +24,10 @@
  */
 package org.spongepowered.asm.util;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.LocalVariableNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.LocalVariableNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
 import com.google.common.base.Strings;

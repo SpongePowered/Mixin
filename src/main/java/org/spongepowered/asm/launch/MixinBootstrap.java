@@ -60,7 +60,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.3.4";
+    public static final String VERSION = "0.4";
     
     /**
      * Blackboard key where the subsystem version will be stored to indicate
@@ -71,7 +71,7 @@ public abstract class MixinBootstrap {
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
-    private static final String ASM_PACKAGE = "org.objectweb.asm.";
+    private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
     private static final String TRANSFORMER_PROXY_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer$Proxy";
     
     /**

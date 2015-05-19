@@ -34,8 +34,8 @@ import net.minecraft.launchwrapper.Launch;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
 

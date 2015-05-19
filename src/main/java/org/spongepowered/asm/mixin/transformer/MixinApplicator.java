@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import org.objectweb.asm.Label;
+import org.spongepowered.asm.lib.Label;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,17 +33,17 @@ import java.util.SortedSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LineNumberNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.FieldNode;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.LabelNode;
+import org.spongepowered.asm.lib.tree.LineNumberNode;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;

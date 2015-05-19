@@ -26,7 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.SortedSet;
 
-import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
 
 
 /**

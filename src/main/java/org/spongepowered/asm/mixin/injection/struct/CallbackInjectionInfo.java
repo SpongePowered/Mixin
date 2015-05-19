@@ -24,8 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.code.Injector;

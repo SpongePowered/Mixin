@@ -30,10 +30,10 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;

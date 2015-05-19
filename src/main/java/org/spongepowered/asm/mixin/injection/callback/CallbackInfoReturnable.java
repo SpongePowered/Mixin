@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-import org.objectweb.asm.Type;
+import org.spongepowered.asm.lib.Type;
 
 /**
  * For callbacks with a non-void return type, a CallbackInfoReturnable is passed

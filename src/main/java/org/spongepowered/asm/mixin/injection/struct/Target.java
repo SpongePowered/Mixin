@@ -24,9 +24,9 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.util.ASMHelper;
 

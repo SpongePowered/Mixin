@@ -27,9 +27,9 @@ package org.spongepowered.asm.mixin.injection.invoke;
 import java.util.Arrays;
 import java.util.List;
 
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.code.Injector;
