@@ -175,7 +175,7 @@ class MixinPreProcessor {
             return false;
         }
         
-        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, true);
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_PRIVATE);
         MethodNode target = MixinPreProcessor.findMethod(context.getTargetClass(), mixinMethod, annotation);
         
         if (target == null) {
@@ -286,13 +286,13 @@ class MixinPreProcessor {
                 AbstractInsnNode insn = iter.next();
                 if (insn instanceof MethodInsnNode) {
                     MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    Method method = this.mixin.getClassInfo().findMethodInHierarchy(methodNode, true, true);
+                    Method method = this.mixin.getClassInfo().findMethodInHierarchy(methodNode, true, ClassInfo.INCLUDE_PRIVATE);
                     if (method != null && method.isRenamed()) {
                         methodNode.name = method.getName();
                     }
                 } else if (insn instanceof FieldInsnNode) {
                     FieldInsnNode fieldNode = (FieldInsnNode)insn;
-                    Field field = this.mixin.getClassInfo().findField(fieldNode, true);
+                    Field field = this.mixin.getClassInfo().findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);
                     if (field != null && field.isRenamed()) {
                         fieldNode.name = field.getName();
                     }

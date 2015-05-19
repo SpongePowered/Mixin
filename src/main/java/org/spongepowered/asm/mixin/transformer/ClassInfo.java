@@ -56,6 +56,9 @@ import com.google.common.collect.ImmutableSet;
  */
 public class ClassInfo extends TreeInfo {
     
+    public static final int INCLUDE_PRIVATE = 0x0002;
+    public static final int INCLUDE_STATIC = 0x0008;
+    
     /**
      * <p>To all intents and purposes, the "real" class hierarchy and the mixin
      * class hierarchy exist in parallel, this means that for some hierarchy
@@ -228,6 +231,15 @@ public class ClassInfo extends TreeInfo {
 
         public boolean isPrivate() {
             return (this.modifiers & Opcodes.ACC_PRIVATE) != 0;
+        }
+
+        public boolean isStatic() {
+            return (this.modifiers & Opcodes.ACC_STATIC) != 0;
+        }
+        
+        public boolean matchesFlags(int flags) {
+            return (((~this.modifiers | (flags & ClassInfo.INCLUDE_PRIVATE)) & ClassInfo.INCLUDE_PRIVATE) != 0
+                 && ((~this.modifiers | (flags & ClassInfo.INCLUDE_STATIC)) & ClassInfo.INCLUDE_STATIC) != 0);
         }
 
         // Abstract because this has to be static in order to contain the enum
@@ -553,7 +565,7 @@ public class ClassInfo extends TreeInfo {
     }
 
     private void addMethod(MethodNode method, boolean injected) {
-        if (!method.name.startsWith("<") && (method.access & Opcodes.ACC_STATIC) == 0) {
+        if (!method.name.startsWith("<")) {
             this.methods.add(new Method(method, injected));
         }
     }
@@ -963,11 +975,11 @@ public class ClassInfo extends TreeInfo {
      * @param method Method to search for
      * @param includeThisClass True to return this class if the method exists
      *      here, or false to search only superclasses
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodNode method, boolean includeThisClass, boolean includePrivate) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, includePrivate);
+    public Method findMethodInHierarchy(MethodNode method, boolean includeThisClass, int flags) {
+        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, flags);
     }
     
     /**
@@ -988,11 +1000,11 @@ public class ClassInfo extends TreeInfo {
      * @param method Method to search for
      * @param includeThisClass True to return this class if the method exists
      *      here, or false to search only superclasses
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodInsnNode method, boolean includeThisClass, boolean includePrivate) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, includePrivate);
+    public Method findMethodInHierarchy(MethodInsnNode method, boolean includeThisClass, int flags) {
+        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, flags);
     }
     
     /**
@@ -1019,7 +1031,7 @@ public class ClassInfo extends TreeInfo {
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal) {
-        return this.findMethodInHierarchy(name, desc, includeThisClass, traversal, false);
+        return this.findMethodInHierarchy(name, desc, includeThisClass, traversal, 0);
     }
     
     /**
@@ -1030,11 +1042,11 @@ public class ClassInfo extends TreeInfo {
      * @param includeThisClass True to return this class if the method exists
      *      here, or false to search only superclasses
      * @param traversal Traversal type to allow during this lookup
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, boolean includePrivate) {
-        return this.findInHierarchy(name, desc, includeThisClass, traversal, includePrivate, Type.METHOD);
+    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags) {
+        return this.findInHierarchy(name, desc, includeThisClass, traversal, flags, Type.METHOD);
     }
     
     /**
@@ -1055,11 +1067,11 @@ public class ClassInfo extends TreeInfo {
      * @param field Field to search for
      * @param includeThisClass True to return this class if the field exists
      *      here, or false to search only superclasses
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldNode field, boolean includeThisClass, boolean includePrivate) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, includePrivate);
+    public Field findFieldInHierarchy(FieldNode field, boolean includeThisClass, int flags) {
+        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, flags);
     }
     
     /**
@@ -1080,11 +1092,11 @@ public class ClassInfo extends TreeInfo {
      * @param field Field to search for
      * @param includeThisClass True to return this class if the field exists
      *      here, or false to search only superclasses
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldInsnNode field, boolean includeThisClass, boolean includePrivate) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, includePrivate);
+    public Field findFieldInHierarchy(FieldInsnNode field, boolean includeThisClass, int flags) {
+        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, flags);
     }
     
     /**
@@ -1111,7 +1123,7 @@ public class ClassInfo extends TreeInfo {
      * @return the field object or null if the field could not be resolved
      */
     public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal) {
-        return this.findFieldInHierarchy(name, desc, includeThisClass, traversal, false);
+        return this.findFieldInHierarchy(name, desc, includeThisClass, traversal, 0);
     }
     
     /**
@@ -1122,11 +1134,11 @@ public class ClassInfo extends TreeInfo {
      * @param includeThisClass True to return this class if the field exists
      *      here, or false to search only superclasses
      * @param traversal Traversal type to allow during this lookup
-     * @param includePrivate Include private members in the search
+     * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, boolean includePrivate) {
-        return this.findInHierarchy(name, desc, includeThisClass, traversal, includePrivate, Type.FIELD);
+    public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags) {
+        return this.findInHierarchy(name, desc, includeThisClass, traversal, flags, Type.FIELD);
     }
     
     /**
@@ -1138,20 +1150,20 @@ public class ClassInfo extends TreeInfo {
      * @param includeThisClass True to return this class if the field exists
      *      here, or false to search only superclasses
      * @param traversal Traversal type to allow during this lookup
-     * @param priv Include private members in the search
+     * @param flags Inclusion flags
      * @param type Type of member to search for (field or method)
      * @return the discovered member or null if the member could not be resolved
      */
-    private <M extends Member> M findInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, boolean priv, Type type) {
+    private <M extends Member> M findInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags, Type type) {
         if (includeThisClass) {
-            M member = this.findMember(name, desc, priv, type);
+            M member = this.findMember(name, desc, flags, type);
             if (member != null) {
                 return member;
             }
             
             if (traversal.canTraverse()) {
                 for (MixinInfo mixin : this.mixins) {
-                    M mixinMember = mixin.getClassInfo().findMember(name, desc, priv, type);
+                    M mixinMember = mixin.getClassInfo().findMember(name, desc, flags, type);
                     if (mixinMember != null) {
                         return this.cloneMember(mixinMember);
                     }
@@ -1162,8 +1174,7 @@ public class ClassInfo extends TreeInfo {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
             for (ClassInfo superTarget : superClassInfo.getTargets()) {
-                // Do not search for private members in superclasses, pass priv as false
-                M member = superTarget.findInHierarchy(name, desc, true, traversal.next(), false, type);
+                M member = superTarget.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
                     return member;
                 }
@@ -1198,18 +1209,18 @@ public class ClassInfo extends TreeInfo {
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethod(MethodNode method) {
-        return this.findMethod(method.name, method.desc, false);
+        return this.findMethod(method.name, method.desc, method.access);
     }
     
     /**
      * Finds the specified public or protected method in this class
      * 
      * @param method Method to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethod(MethodNode method, boolean includePrivate) {
-        return this.findMethod(method.name, method.desc, includePrivate);
+    public Method findMethod(MethodNode method, int flags) {
+        return this.findMethod(method.name, method.desc, flags);
     }
     
     /**
@@ -1219,18 +1230,18 @@ public class ClassInfo extends TreeInfo {
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethod(MethodInsnNode method) {
-        return this.findMethod(method.name, method.desc, false);
+        return this.findMethod(method.name, method.desc, 0);
     }
     
     /**
      * Finds the specified public or protected method in this class
      * 
      * @param method Method to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethod(MethodInsnNode method, boolean includePrivate) {
-        return this.findMethod(method.name, method.desc, includePrivate);
+    public Method findMethod(MethodInsnNode method, int flags) {
+        return this.findMethod(method.name, method.desc, flags);
     }
     
     /**
@@ -1238,11 +1249,11 @@ public class ClassInfo extends TreeInfo {
      * 
      * @param name Method name to search for
      * @param desc Method signature to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethod(String name, String desc, boolean includePrivate) {
-        return this.findMember(name, desc, includePrivate, Type.METHOD);
+    public Method findMethod(String name, String desc, int flags) {
+        return this.findMember(name, desc, flags, Type.METHOD);
     }
     
     /**
@@ -1252,18 +1263,18 @@ public class ClassInfo extends TreeInfo {
      * @return the field object or null if the field could not be resolved
      */
     public Field findField(FieldNode field) {
-        return this.findField(field.name, field.desc, (field.access & Opcodes.ACC_PRIVATE) != 0);
+        return this.findField(field.name, field.desc, field.access);
     }
     
     /**
      * Finds the specified public or protected method in this class
      * 
      * @param field Field to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findField(FieldInsnNode field, boolean includePrivate) {
-        return this.findField(field.name, field.desc, includePrivate);
+    public Field findField(FieldInsnNode field, int flags) {
+        return this.findField(field.name, field.desc, flags);
     }
     
     /**
@@ -1271,11 +1282,11 @@ public class ClassInfo extends TreeInfo {
      * 
      * @param name Field name to search for
      * @param desc Field signature to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findField(String name, String desc, boolean includePrivate) {
-        return this.findMember(name, desc, includePrivate, Type.FIELD);
+    public Field findField(String name, String desc, int flags) {
+        return this.findMember(name, desc, flags, Type.FIELD);
     }
 
     /**
@@ -1283,16 +1294,16 @@ public class ClassInfo extends TreeInfo {
      * 
      * @param name Field name to search for
      * @param desc Field signature to search for
-     * @param includePrivate also search private fields
+     * @param flags search flags
      * @param memberType Type of member list to search
      * @return the field object or null if the field could not be resolved
      */
-    private <M extends Member> M findMember(String name, String desc, boolean includePrivate, Type memberType) {
+    private <M extends Member> M findMember(String name, String desc, int flags, Type memberType) {
         @SuppressWarnings("unchecked")
         Set<M> members = (Set<M>)(memberType == Type.METHOD ? this.methods : this.fields);
         
         for (M member : members) {
-            if (member.equals(name, desc) && (includePrivate || !member.isPrivate())) {
+            if (member.equals(name, desc) && member.matchesFlags(flags)) {
                 return member;
             }
         }
