@@ -97,14 +97,9 @@ dependencies {
     compile 'com.googlecode.jarjar:jarjar:1.1'
 }
 
-// Filter non-source jars from specified task's outputs
-FileCollection executables(TaskOutputs outputs) {
-    files((outputs.files.findAll{!it.name.contains("sources")}).collect{lib -> file(lib)})
-}
-
 // Task to read ASM library and rename packages
 task renamedASM {
-    outputs.file files(configurations.asm.files.collect { file ->
+    outputs.file files(configurations.asm.files.findAll{!it.name.contains("sources")}.collect { file ->
         new File(project.repositories['renamed-packages'].dirs[0], "mixin-" + file.name).path
     })
     doLast {
@@ -116,17 +111,8 @@ task renamedASM {
             )
             outputs.files.eachWithIndex { elem, index ->
                 logger.info "Generating renamed jar {}", elem.name
-                def inJar = configurations.asm.files[index]
-                if (elem.name.contains("sources")) {
-                    def tmpDir = new File(temporaryDir, elem.name + ".tmp")
-                    unzip (src: inJar, dest: tmpDir)
-                    replace (dir: tmpDir, token: "org.objectweb.asm", value: "org.spongepowered.asm.lib")
-                    inJar = new File(temporaryDir, elem.name)
-                    jar (destFile: inJar) { fileset(dir: tmpDir) }
-                    delete tmpDir
-                }
                 jarjar (jarfile: elem.path) {
-                    zipfileset (src: inJar)
+                    zipfileset (src: configurations.asm.files[index])
                     rule (
                         pattern: "org.objectweb.asm.**",
                         result: "org.spongepowered.asm.lib.@1"
@@ -157,8 +143,8 @@ dependencies {
     apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // remapped ASM
-    compile executables(tasks.renamedASM.outputs)
-    apCompile executables(tasks.renamedASM.outputs)
+    compile tasks.renamedASM.outputs.files
+    apCompile tasks.renamedASM.outputs.files
 }
 
 // Filter, process, and include resources
