@@ -1236,7 +1236,7 @@ public class ClassInfo extends TreeInfo {
     /**
      * Finds the specified public or protected method in this class
      * 
-     * @param method Method name to search for
+     * @param name Method name to search for
      * @param desc Method signature to search for
      * @param includePrivate also search private fields
      * @return the method object or null if the method could not be resolved
