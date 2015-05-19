@@ -1365,4 +1365,21 @@ public class ClassInfo extends TreeInfo {
         
         return info;
     }
+
+    /**
+     * Return a ClassInfo for the specified class type, fetches the ClassInfo
+     * from the cache where possible and generates the class meta if not.
+     * 
+     * @param type Type to look up
+     * @return ClassInfo for the supplied type or null if the supplied type
+     *      cannot be found or is a primitive type
+     */
+    public static ClassInfo forType(org.spongepowered.asm.lib.Type type) {
+        if (type.getSort() == org.spongepowered.asm.lib.Type.ARRAY) {
+            return ClassInfo.forType(type.getElementType());
+        } else if (type.getSort() < org.spongepowered.asm.lib.Type.ARRAY) {
+            return null;
+        }
+        return ClassInfo.forName(type.getClassName().replace('.', '/'));
+    }
 }

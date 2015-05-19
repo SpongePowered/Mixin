@@ -49,61 +49,54 @@ public class MixinVerifier extends SimpleVerifier {
     }
 
     @Override
-    protected boolean isInterface(final Type t) {
-        if (this.currentClass != null && t.equals(this.currentClass)) {
+    protected boolean isInterface(final Type type) {
+        if (this.currentClass != null && type.equals(this.currentClass)) {
             return this.isInterface;
         }
-        return this.getClassInfo(t).isInterface();
+        return ClassInfo.forType(type).isInterface();
     }
 
     @Override
-    protected Type getSuperClass(final Type t) {
-        if (this.currentClass != null && t.equals(this.currentClass)) {
+    protected Type getSuperClass(final Type type) {
+        if (this.currentClass != null && type.equals(this.currentClass)) {
             return this.currentSuperClass;
         }
-        ClassInfo c = this.getClassInfo(t).getSuperClass();
+        ClassInfo c = ClassInfo.forType(type).getSuperClass();
         return c == null ? null : Type.getType("L" + c.getName() + ";");
     }
 
     @Override
-    protected boolean isAssignableFrom(final Type t, final Type u) {
-        if (t.equals(u)) {
+    protected boolean isAssignableFrom(final Type type, final Type other) {
+        if (type.equals(other)) {
             return true;
         }
-        if (this.currentClass != null && t.equals(this.currentClass)) {
-            if (this.getSuperClass(u) == null) {
+        if (this.currentClass != null && type.equals(this.currentClass)) {
+            if (this.getSuperClass(other) == null) {
                 return false;
             }
             if (this.isInterface) {
-                return u.getSort() == Type.OBJECT || u.getSort() == Type.ARRAY;
+                return other.getSort() == Type.OBJECT || other.getSort() == Type.ARRAY;
             }
-            return this.isAssignableFrom(t, this.getSuperClass(u));
+            return this.isAssignableFrom(type, this.getSuperClass(other));
         }
-        if (this.currentClass != null && u.equals(this.currentClass)) {
-            if (this.isAssignableFrom(t, this.currentSuperClass)) {
+        if (this.currentClass != null && other.equals(this.currentClass)) {
+            if (this.isAssignableFrom(type, this.currentSuperClass)) {
                 return true;
             }
             if (this.currentClassInterfaces != null) {
                 for (int i = 0; i < this.currentClassInterfaces.size(); ++i) {
                     Type v = this.currentClassInterfaces.get(i);
-                    if (this.isAssignableFrom(t, v)) {
+                    if (this.isAssignableFrom(type, v)) {
                         return true;
                     }
                 }
             }
             return false;
         }
-        ClassInfo tc = this.getClassInfo(t);
-        if (tc.isInterface()) {
-            tc = ClassInfo.forName("java/lang/Object");
+        ClassInfo typeInfo = ClassInfo.forType(type);
+        if (typeInfo.isInterface()) {
+            typeInfo = ClassInfo.forName("java/lang/Object");
         }
-        return this.getClassInfo(u).hasSuperClass(tc);
-    }
-
-    protected ClassInfo getClassInfo(final Type t) {
-        if (t.getSort() == Type.ARRAY) {
-            return ClassInfo.forName(t.getDescriptor().replace('/', '.'));
-        }
-        return ClassInfo.forName(t.getClassName().replace('.', '/'));
+        return ClassInfo.forType(other).hasSuperClass(typeInfo);
     }
 }
