@@ -200,7 +200,7 @@ jar {
     from sourceSets.ap.output
     
     // Renamed ASM
-    zipTree(tasks.renamedASM.outputs.files[0])
+    from zipTree(tasks.renamedASM.outputs.files[0])
     
     exclude 'org/objectweb/**'
     exclude 'org/spongepowered/asm/lib/commons/**'
