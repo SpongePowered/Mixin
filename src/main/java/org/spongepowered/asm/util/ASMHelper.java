@@ -607,6 +607,49 @@ public class ASMHelper {
     }
 
     /**
+     * Get a runtime-visible parameter annotation of the specified class from
+     * the supplied method node
+     *
+     * @param method Source method
+     * @param annotationClass Type of annotation to search for
+     * @param paramIndex Index of the parameter to fetch annotation for
+     * @return the annotation, or null if not present
+     */
+    public static AnnotationNode getVisibleParameterAnnotation(MethodNode method, Class<? extends Annotation> annotationClass, int paramIndex) {
+        return ASMHelper.getParameterAnnotation(method.visibleParameterAnnotations, Type.getDescriptor(annotationClass), paramIndex);
+    }
+
+    /**
+     * Get an invisible parameter annotation of the specified class from the
+     * supplied method node
+     *
+     * @param method Source method
+     * @param annotationClass Type of annotation to search for
+     * @param paramIndex Index of the parameter to fetch annotation for
+     * @return the annotation, or null if not present
+     */
+    public static AnnotationNode getInvisibleParameterAnnotation(MethodNode method, Class<? extends Annotation> annotationClass, int paramIndex) {
+        return ASMHelper.getParameterAnnotation(method.invisibleParameterAnnotations, Type.getDescriptor(annotationClass), paramIndex);
+    }
+
+    /**
+     * Get a parameter annotation of the specified class from the supplied
+     * method node
+     *
+     * @param parameterAnnotations Annotations for the parameter
+     * @param annotationType Type of annotation to search for
+     * @param paramIndex Index of the parameter to fetch annotation for
+     * @return the annotation, or null if not present
+     */
+    public static AnnotationNode getParameterAnnotation(List<AnnotationNode>[] parameterAnnotations, String annotationType, int paramIndex) {
+        if (parameterAnnotations == null || paramIndex < 0 || paramIndex >= parameterAnnotations.length) {
+            return null;
+        }
+        
+        return ASMHelper.getAnnotation(parameterAnnotations[paramIndex], annotationType);
+    }
+
+    /**
      * Search for and return an annotation node matching the specified type
      * within the supplied
      * collection of annotation nodes

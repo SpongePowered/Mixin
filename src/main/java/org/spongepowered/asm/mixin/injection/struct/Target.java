@@ -227,7 +227,7 @@ public class Target {
      * @return generated descriptor
      */
     public String getCallbackDescriptor(final Type[] locals, Type[] argumentTypes) {
-        return this.getCallbackDescriptor(false, locals, argumentTypes, 0, Integer.MAX_VALUE);
+        return this.getCallbackDescriptor(false, locals, argumentTypes, 0, Short.MAX_VALUE);
     }
 
     /**

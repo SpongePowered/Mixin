@@ -31,17 +31,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.JumpInsnNode;
-import org.spongepowered.asm.lib.tree.LabelNode;
-import org.spongepowered.asm.lib.tree.LdcInsnNode;
-import org.spongepowered.asm.lib.tree.LocalVariableNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.TypeInsnNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionError;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
@@ -65,6 +56,11 @@ public class CallbackInjector extends Injector {
      * Struct to replace all the horrible state variables from before 
      */
     private class Callback extends InsnList {
+        
+        /**
+         * Handler method
+         */
+        private final MethodNode handler;
         
         /**
          * Target method handle
@@ -145,7 +141,8 @@ public class CallbackInjector extends Injector {
          */
         final int marshallVar;
 
-        Callback(Target target, final AbstractInsnNode node, final LocalVariableNode[] locals, boolean captureLocals) {
+        Callback(MethodNode handler, Target target, final AbstractInsnNode node, final LocalVariableNode[] locals, boolean captureLocals) {
+            this.handler = handler;
             this.target = target;
             this.node = node;
             this.locals = locals;
@@ -170,7 +167,7 @@ public class CallbackInjector extends Injector {
             }
             
             // Calc number of args for the handler method, additional 1 is to ignore the CallbackInfo arg
-            this.extraArgs = Math.max(0, ASMHelper.getFirstNonArgLocalIndex(CallbackInjector.this.getMethod()) - (this.frameSize + 1));
+            this.extraArgs = Math.max(0, ASMHelper.getFirstNonArgLocalIndex(this.handler) - (this.frameSize + 1));
             this.argNames = argNames != null ? argNames.toArray(new String[argNames.size()]) : null;
             this.canCaptureLocals = captureLocals && locals != null && locals.length > this.frameSize;
             this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
@@ -195,6 +192,10 @@ public class CallbackInjector extends Injector {
         String getDescriptor() {
             return this.canCaptureLocals ? this.descl : this.desc;
         }
+        
+        String getDescriptorWithAllLocals() {
+            return this.target.getCallbackDescriptor(true, this.localTypes, this.target.arguments, this.frameSize, Short.MAX_VALUE);
+        }
 
         /**
          * Add an instruction to this callback and increment the appropriate
@@ -217,6 +218,46 @@ public class CallbackInjector extends Injector {
         void inject() {
             this.target.insns.insertBefore(this.node, this);
             this.target.addToStack(Math.max(this.invoke, this.ctor));
+        }
+
+        boolean checkDescriptor(String desc) {
+            if (this.getDescriptor().equals(desc)) {
+                return true; // Descriptor matches exactly, this is good
+            }
+            
+            if (this.extraArgs > 0) {
+                Type[] inTypes = Type.getArgumentTypes(desc);
+                Type[] myTypes = Type.getArgumentTypes(this.descl);
+                
+                if (inTypes.length != myTypes.length) {
+                    return false;
+                }
+                
+                for (int arg = this.frameSize + 1; arg < myTypes.length; arg++) {
+                    Type type = inTypes[arg];
+                    if (type.equals(myTypes[arg])) {
+                        continue; // Type matches
+                    }
+                    
+                    if (type.getSort() >= Type.ARRAY) {
+                        return false; // Reference types must match exactly
+                    }
+
+                    AnnotationNode coerce = ASMHelper.getInvisibleParameterAnnotation(this.handler, Coerce.class, arg);
+                    if (coerce == null) {
+                        return false; // No @Coerce specified, types must match
+                    }
+
+                    boolean canCoerce = CallbackInjector.canCoerce(inTypes[arg], myTypes[arg]);
+                    if (!canCoerce) {
+                        return false; // Can't coerce source type to local type, give up
+                    }
+                }
+                
+                return true;
+            }
+            
+            return false;
         }
     }
     
@@ -280,7 +321,7 @@ public class CallbackInjector extends Injector {
             locals = Locals.getLocalsAt(this.classNode, target.method, node);
         }
 
-        this.inject(new Callback(target, node, locals, this.localCapture.isCaptureLocals()));
+        this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
     }
 
     /**
@@ -299,7 +340,7 @@ public class CallbackInjector extends Injector {
         // is invalid and we have to generate an error handler stub method
         MethodNode callbackMethod = this.methodNode;
 
-        if (!callback.getDescriptor().equals(this.methodNode.desc)) {
+        if (!callback.checkDescriptor(this.methodNode.desc)) {
             if (this.info.getTargets().size() != 0) {
                 return; // Look for a match in other targets before failing
             }
@@ -337,7 +378,7 @@ public class CallbackInjector extends Injector {
                         "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;",
                         "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;");
 
-                if (callback.getDescriptor().equals(returnableSig)) {
+                if (callback.checkDescriptor(returnableSig)) {
                     // Switching out CallbackInfo for CallbackInfoReturnable
                     // worked, so notify the user that they done derped
                     throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: CallbackInfoReturnable is required!");  
@@ -398,7 +439,7 @@ public class CallbackInjector extends Injector {
      * @param callback callback handle
      */
     private void printLocals(final Callback callback) {
-        Type[] args = Type.getArgumentTypes(callback.descl);
+        Type[] args = Type.getArgumentTypes(callback.getDescriptorWithAllLocals());
         SignaturePrinter methodSig = new SignaturePrinter(callback.target.method, callback.argNames);
         SignaturePrinter handlerSig = new SignaturePrinter(this.methodNode.name, callback.target.returnType, args, callback.argNames);
         handlerSig.setModifiers(this.methodNode);
@@ -412,7 +453,7 @@ public class CallbackInjector extends Injector {
         printer.add("%20s : %s %s", "Instruction", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
-            printer.add("  LOCAL                  TYPE  NAME");
+            printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");
             for (int l = 0; l < callback.locals.length; l++) {
                 String marker = l == callback.frameSize ? ">" : " ";
                 if (callback.locals[l] != null) {
@@ -556,15 +597,6 @@ public class CallbackInjector extends Injector {
     protected boolean isStatic() {
         return this.isStatic;
     }
-    
-    /**
-     * Explicit to avoid creation of synthetic accessor
-     * 
-     * @return the callback method
-     */
-    protected MethodNode getMethod() {
-        return this.methodNode;
-    }
 
     private static List<String> summariseLocals(String desc, int pos) {
         return CallbackInjector.summariseLocals(Type.getArgumentTypes(desc), pos);
@@ -581,4 +613,21 @@ public class CallbackInjector extends Injector {
         }
         return list;
     }
+    
+    public static boolean canCoerce(Type from, Type to) {
+        return CallbackInjector.canCoerce(from.getDescriptor(), to.getDescriptor());
+    }
+    
+    public static boolean canCoerce(String from, String to) {
+        if (from.length() > 1 || to.length() > 1) {
+            return false;
+        }
+        
+        return CallbackInjector.canCoerce(from.charAt(0), to.charAt(0));
+    }
+
+    public static boolean canCoerce(char from, char to) {
+        return to == 'I' && "IBSCZ".indexOf(from) > -1;
+    }
+
 }
