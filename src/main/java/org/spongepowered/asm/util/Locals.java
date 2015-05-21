@@ -37,6 +37,7 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FrameNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.LabelNode;
+import org.spongepowered.asm.lib.tree.LineNumberNode;
 import org.spongepowered.asm.lib.tree.LocalVariableNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
@@ -69,8 +70,9 @@ public class Locals {
      * @param insns Instruction List to inject into
      * @param pos Start position
      */
-    public static void loadLocals(Type[] locals, InsnList insns, int pos) {
-        for (; pos < locals.length; pos++) {
+    public static void loadLocals(Type[] locals, InsnList insns, int pos, int limit) {
+        limit += pos;
+        for (; pos < locals.length && pos < limit; pos++) {
             if (locals[pos] != null) {
                 insns.add(new VarInsnNode(locals[pos].getOpcode(Opcodes.ILOAD), pos));
             }
@@ -120,6 +122,10 @@ public class Locals {
      *      specified location
      */
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
+        for (int i = 0; i < 3 && (node instanceof LabelNode || node instanceof LineNumberNode); i++) {
+            node = Locals.nextNode(method.instructions, node);
+        }
+            
         List<FrameData> frames = ClassInfo.forName(classNode.name).findMethod(method).getFrames();
 
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
@@ -377,4 +383,21 @@ public class Locals {
 
         return localVariables;
     }
+    
+    /**
+     * Get the insn immediately following the specified insn, or return the same
+     * insn if the insn is the last insn in the list
+     * 
+     * @param insns Insn list to fetch from
+     * @param insn Insn node
+     * @return Next insn or the same insn if last in the list
+     */
+    private static AbstractInsnNode nextNode(InsnList insns, AbstractInsnNode insn) {
+        int index = insns.indexOf(insn) + 1;
+        if (index > 0 && index < insns.size()) {
+            return insns.get(index);
+        }
+        return insn;
+    }
+    
 }

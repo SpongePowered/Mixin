@@ -92,6 +92,12 @@ public class CallbackInjector extends Injector {
         final int frameSize;
 
         /**
+         * Number of extra arguments above the initial frame size, expected to
+         * be locals
+         */
+        final int extraArgs;
+
+        /**
          * True if the injector is set to capture locals and we acutally <b>can
          * </b> capture the locals (have sufficient info etc.)
          */
@@ -147,8 +153,6 @@ public class CallbackInjector extends Injector {
             this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
             List<String> argNames = null;
             
-            ASMHelper.printNode(this.node);
-            
             if (locals != null) {
                 int baseArgIndex = CallbackInjector.this.isStatic() ? 0 : 1;
                 argNames = new ArrayList<String>();
@@ -164,12 +168,14 @@ public class CallbackInjector extends Injector {
                     }
                 }
             }
-
+            
+            // Calc number of args for the handler method, additional 1 is to ignore the CallbackInfo arg
+            this.extraArgs = Math.max(0, ASMHelper.getFirstNonArgLocalIndex(CallbackInjector.this.getMethod()) - (this.frameSize + 1));
             this.argNames = argNames != null ? argNames.toArray(new String[argNames.size()]) : null;
             this.canCaptureLocals = captureLocals && locals != null && locals.length > this.frameSize;
             this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
-            this.desc = target.getCallbackDescriptor(false, this.localTypes, target.arguments, this.frameSize);
-            this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize);
+            this.desc = target.getCallbackDescriptor(this.localTypes, target.arguments);
+            this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize, this.extraArgs);
 
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
             this.marshallVar = target.allocateLocal();
@@ -488,7 +494,7 @@ public class CallbackInjector extends Injector {
         
         // (Maybe) push the locals onto the stack
         if (callback.canCaptureLocals) {
-            Locals.loadLocals(callback.localTypes, callback, callback.frameSize);
+            Locals.loadLocals(callback.localTypes, callback, callback.frameSize, callback.extraArgs);
         }
         
         // Call the callback!
@@ -549,6 +555,15 @@ public class CallbackInjector extends Injector {
      */
     protected boolean isStatic() {
         return this.isStatic;
+    }
+    
+    /**
+     * Explicit to avoid creation of synthetic accessor
+     * 
+     * @return the callback method
+     */
+    protected MethodNode getMethod() {
+        return this.methodNode;
     }
 
     private static List<String> summariseLocals(String desc, int pos) {

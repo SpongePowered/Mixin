@@ -218,6 +218,17 @@ public class Target {
         }
         return argIndices;
     }
+    
+    /**
+     * Get the callback descriptor
+     * 
+     * @param locals Local variable types
+     * @param argumentTypes Argument types
+     * @return generated descriptor
+     */
+    public String getCallbackDescriptor(final Type[] locals, Type[] argumentTypes) {
+        return this.getCallbackDescriptor(false, locals, argumentTypes, 0, Integer.MAX_VALUE);
+    }
 
     /**
      * Get the callback descriptor
@@ -226,15 +237,16 @@ public class Target {
      * @param locals Local variable types
      * @param argumentTypes Argument types
      * @param startIndex local index to start at
+     * @param extra extra locals to include
      * @return generated descriptor
      */
-    public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex) {
+    public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex, int extra) {
         if (!captureLocals || locals == null) {
             return this.callbackDescriptor;
         }
 
         String descriptor = this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')'));
-        for (int l = startIndex; l < locals.length; l++) {
+        for (int l = startIndex; l < locals.length && l < (startIndex + extra); l++) {
             if (locals[l] != null) {
                 descriptor += locals[l].getDescriptor();
             }
