@@ -34,6 +34,7 @@ import java.util.List;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.mixin.injection.points.AfterInvoke;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeInvoke;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
@@ -90,6 +91,22 @@ public abstract class InjectionPoint {
     @Override
     public String toString() {
         return "InjectionPoint(" + this.getClass().getSimpleName() + ")";
+    }
+    
+    /**
+     * Get the insn immediately following the specified insn, or return the same
+     * insn if the insn is the last insn in the list
+     * 
+     * @param insns Insn list to fetch from
+     * @param insn Insn node
+     * @return Next insn or the same insn if last in the list
+     */
+    protected static AbstractInsnNode nextNode(InsnList insns, AbstractInsnNode insn) {
+        int index = insns.indexOf(insn) + 1;
+        if (index > 0 && index < insns.size()) {
+            return insns.get(index);
+        }
+        return insn;
     }
 
     /**
@@ -360,6 +377,8 @@ public abstract class InjectionPoint {
             point = new JumpInsnPoint(data);
         } else if (MethodHead.CODE.equals(at)) {
             point = new MethodHead(data);
+        } else if (AfterInvoke.CODE.equals(at)) {
+            point = new AfterInvoke(data);
         } else if (at.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
             try {
                 @SuppressWarnings("unchecked") Class<? extends InjectionPoint> cls = (Class<? extends InjectionPoint>) Class.forName(at);

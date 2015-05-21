@@ -62,6 +62,8 @@ public @interface At {
      * {@link org.spongepowered.asm.mixin.injection.points.MethodHead HEAD},
      * {@link org.spongepowered.asm.mixin.injection.points.BeforeReturn RETURN},
      * {@link org.spongepowered.asm.mixin.injection.points.BeforeInvoke INVOKE},
+     * {@link org.spongepowered.asm.mixin.injection.points.AfterInvoke
+     * INVOKE_ASSIGN},
      * {@link org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess
      * FIELD},
      * {@link org.spongepowered.asm.mixin.injection.points.BeforeNew NEW},
@@ -104,10 +106,10 @@ public @interface At {
     public String[] args() default { };
     
     /**
-     * Target member used by INVOKE, INVOKE_STRING and FIELD. This <b>must be
-     * specified as a fully-qualified member path</b> including the class name
-     * and signature. Failing to fully-qualify the target member will result in
-     * an error at obfuscation time.
+     * Target member used by INVOKE, INVOKE_STRING, INVOKE_ASSIGN and FIELD.
+     * This <b>must be specified as a fully-qualified member path</b> including
+     * the class name and signature. Failing to fully-qualify the target member
+     * will result in an error at obfuscation time.
      * 
      * @return target reference for supported InjectionPoint types
      */

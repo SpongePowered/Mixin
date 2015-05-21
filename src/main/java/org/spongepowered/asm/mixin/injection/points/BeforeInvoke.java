@@ -137,8 +137,7 @@ public class BeforeInvoke extends InjectionPoint {
                             this.logger.info("{} > > > found a matching insn at ordinal {}", this.className, ordinal);
                         }
                         
-                        nodes.add(insn);
-                        found = true;
+                        found |= this.addInsn(insns, nodes, insn);
 
                         if (this.ordinal == ordinal) {
                             break;
@@ -153,6 +152,11 @@ public class BeforeInvoke extends InjectionPoint {
         }
 
         return found;
+    }
+
+    protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
+        nodes.add(insn);
+        return true;
     }
 
     protected boolean matchesInsn(AbstractInsnNode insn) {
