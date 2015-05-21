@@ -360,7 +360,7 @@ public class ASMHelper {
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
-        System.err.printf("%s ", node.getClass().getSimpleName());
+        System.err.printf("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
         if (node instanceof LabelNode) {
             System.err.printf("[%s]", ((LabelNode)node).getLabel());
         } else if (node instanceof JumpInsnNode) {

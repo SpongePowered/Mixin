@@ -145,9 +145,12 @@ public class CallbackInjector extends Injector {
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
             this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
-            List<String> argNames = null; 
+            List<String> argNames = null;
+            
+            ASMHelper.printNode(this.node);
             
             if (locals != null) {
+                int baseArgIndex = CallbackInjector.this.isStatic() ? 0 : 1;
                 argNames = new ArrayList<String>();
                 for (int l = 0; l <= locals.length; l++) {
                     if (l == this.frameSize) {
@@ -155,7 +158,7 @@ public class CallbackInjector extends Injector {
                     }
                     if (l < locals.length && locals[l] != null) {
                         this.localTypes[l] = Type.getType(locals[l].desc);
-                        if (l > 0) {
+                        if (l >= baseArgIndex) {
                             argNames.add(locals[l].name);
                         }
                     }
@@ -323,6 +326,17 @@ public class CallbackInjector extends Injector {
                     }
                 }
             } else {
+                // Check whether user is just using the wrong CallbackInfo type
+                String returnableSig = this.methodNode.desc.replace(
+                        "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;",
+                        "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;");
+
+                if (callback.getDescriptor().equals(returnableSig)) {
+                    // Switching out CallbackInfo for CallbackInfoReturnable
+                    // worked, so notify the user that they done derped
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: CallbackInfoReturnable is required!");  
+                }
+                
                 throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.getDescriptor()
                         + " but found " + this.methodNode.desc);
             }

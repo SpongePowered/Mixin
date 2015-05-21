@@ -118,6 +118,10 @@ public class SignaturePrinter {
         this.returnType = returnType;
         this.argTypes = argTypes;
         this.argNames = argNames;
+        if (this.argTypes.length > this.argNames.length) {
+            throw new IllegalArgumentException(String.format("Types array length must not exceed names array length! (names=%d, types=%d)",
+                    this.argNames.length, this.argTypes.length));
+        }
     }
     
     public String getReturnType() {
@@ -172,8 +176,13 @@ public class SignaturePrinter {
                     sb.append(' ');
                 }
             }
-            String name = typesOnly ? null : Strings.isNullOrEmpty(this.argNames[var]) ? "unnamed" + var : this.argNames[var];
-            this.appendType(sb, this.argTypes[var], name);
+            try {
+                String name = typesOnly ? null : Strings.isNullOrEmpty(this.argNames[var]) ? "unnamed" + var : this.argNames[var];
+                this.appendType(sb, this.argTypes[var], name);
+            } catch (Exception ex) {
+                System.err.printf("\n\n>>> argTypes=%d, argNames=%d\n\n", this.argTypes.length, this.argNames.length);
+                throw new RuntimeException(ex);
+            }
         }
         return sb.append(")");
     }

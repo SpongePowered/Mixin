@@ -190,6 +190,13 @@ public class Locals {
                 break;
             }
         }
+        
+        // Null out any "unknown" locals
+        for (int l = 0; l < frame.length; l++) {
+            if (frame[l] != null && frame[l].desc == null) {
+                frame[l] = null;
+            }
+        }
 
         return frame;
     }
@@ -317,8 +324,12 @@ public class Locals {
                 }
 
                 if (label == null) {
-                    label = new LabelNode();
-                    labels[i] = label;
+                    AbstractInsnNode existingLabel = method.instructions.get(i);
+                    if (existingLabel instanceof LabelNode) {
+                        label = (LabelNode) existingLabel;
+                    } else {
+                        labels[i] = label = new LabelNode();
+                    }
                 }
 
                 if (local == null && locals[j] != null) {
