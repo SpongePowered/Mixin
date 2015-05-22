@@ -192,6 +192,21 @@ public class MixinEnvironment {
         DEBUG_EXPORT(Option.DEBUG_ALL, "export"),
         
         /**
+         * Export filter, if omitted allows all transformed classes to be
+         * exported. If specified, acts as a filter for class names to export
+         * and only matching classes will be exported. This is useful when using
+         * Fernflower as exporting can be otherwise very slow. The following
+         * wildcards are allowed:
+         * 
+         * <dl>
+         *   <dt>*</dt><dd>Matches one or more characters except dot (.)</dd>
+         *   <dt>**</dt><dd>Matches any number of characters</dd>
+         *   <dt>?</dt><dd>Matches exactly one character</dd>
+         * </dl>
+         */
+        DEBUG_EXPORT_FILTER(Option.DEBUG_EXPORT, "filter"),
+        
+        /**
          * Run the CheckClassAdapter on all classes after mixins are applied 
          */
         DEBUG_VERIFY(Option.DEBUG_ALL, "verify"),
@@ -244,17 +259,21 @@ public class MixinEnvironment {
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
         }
         
-        public Option getParent() {
+        Option getParent() {
             return this.parent;
         }
         
-        public String getProperty() {
+        String getProperty() {
             return this.property;
         }
         
-        protected boolean getValue() {
+        boolean getBooleanValue() {
             return Booleans.parseBoolean(System.getProperty(this.property), false)
-                    || (this.parent != null && this.parent.getValue());
+                    || (this.parent != null && this.parent.getBooleanValue());
+        }
+        
+        String getStringValue() {
+            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property) : null;
         }
     }
     
@@ -376,19 +395,31 @@ public class MixinEnvironment {
         
         this.options = new boolean[Option.values().length];
         for (Option option : Option.values()) {
-            this.options[option.ordinal()] = option.getValue();
+            this.options[option.ordinal()] = option.getBooleanValue();
         }
+        
+        Side side = this.getSide();
+        String codeSource = this.getCodeSource();
+        this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={}, Env={}", version, codeSource, side);
         
         if (this.getOption(Option.DEBUG_VERBOSE) && this.phase == Phase.PREINIT) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-            printer.add("%25s : %s", "Code source", this.getClass().getProtectionDomain().getCodeSource().getLocation());
+            printer.add("%25s : %s", "Code source", codeSource);
             printer.add("%25s : %s", "Internal Version", version).hr();
             for (Option option : Option.values()) {
                 printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
             }
-            printer.hr().add("%25s : %s", "Detected Side", this.getSide());
+            printer.hr().add("%25s : %s", "Detected Side", side);
             printer.print(System.err);
+        }
+    }
+
+    private String getCodeSource() {
+        try {
+            return this.getClass().getProtectionDomain().getCodeSource().getLocation().toString();
+        } catch (Throwable th) {
+            return "Unknown";
         }
     }
     
@@ -528,6 +559,16 @@ public class MixinEnvironment {
      */
     public void setOption(Option option, boolean value) {
         this.options[option.ordinal()] = value;
+    }
+
+    /**
+     * Get the specified option from the current environment
+     * 
+     * @param option Option to get
+     * @return Option value
+     */
+    public String getOptionValue(Option option) {
+        return option.getStringValue();
     }
     
     /**

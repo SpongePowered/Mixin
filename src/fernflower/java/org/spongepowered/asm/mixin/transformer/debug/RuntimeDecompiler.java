@@ -61,7 +61,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
             try {
                 FileUtils.deleteDirectory(this.outputPath);
             } catch (IOException ex) {
-                this.logger.warn("Error cleaning output directory", ex);
+                this.logger.warn("Error cleaning output directory: {}", ex.getMessage());
             }
         }
     }
@@ -118,7 +118,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     @Override
     public void writeMessage(String message, Throwable t) {
-        this.logger.info(message, t);
+        this.logger.info("%s %s: %s", message, t.getClass().getSimpleName(), t.getMessage());
     }
 
     @Override

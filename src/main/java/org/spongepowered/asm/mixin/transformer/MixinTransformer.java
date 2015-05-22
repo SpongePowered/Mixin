@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -266,8 +267,16 @@ public class MixinTransformer extends TreeTransformer {
      */
     private boolean errorState = false; 
     
-    private final IDecompiler decompiler;
+    /**
+     * Directory to export classes to when debug.export is enabled
+     */
+    private final File classExportDir = new File(MixinTransformer.DEBUG_OUTPUT, "class");
     
+    /**
+     * Runtime decompiler for exported classes 
+     */
+    private final IDecompiler decompiler;
+
     /**
      * ctor 
      */
@@ -285,12 +294,19 @@ public class MixinTransformer extends TreeTransformer {
         TreeInfo.setLock(this.lock);
         
         this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
+        
+        try {
+            FileUtils.deleteDirectory(this.classExportDir);
+        } catch (IOException ex) {
+            this.logger.warn("Error cleaning class output directory: {}", ex.getMessage());
+        }
     }
     
     private IDecompiler initDecompiler(File outputPath) {
         if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
             return null;
         }
+
         try {
             this.logger.info("Attempting to load Fernflower decompiler");
             @SuppressWarnings("unchecked")
@@ -386,7 +402,7 @@ public class MixinTransformer extends TreeTransformer {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
                     if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
-                        MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
+                        this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
                     }
                     
                     this.handleMixinErrorState(transformedName, th);
@@ -396,7 +412,7 @@ public class MixinTransformer extends TreeTransformer {
             return basicClass;
         } catch (Exception ex) {
             if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
-                MixinTransformer.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
+                this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
             }
 
             throw new MixinTransformerError("An unexpected critical error was encountered", ex);
@@ -639,23 +655,36 @@ public class MixinTransformer extends TreeTransformer {
         return handlers;
     }
 
+    private String prepareFilter(String filter) {
+        filter = "^\\Q" + filter.replace("**", "\201").replace("*", "\202").replace("?", "\203") + "\\E$";
+        return filter.replace("\201", "\\E.*\\Q").replace("\202", "\\E[^\\.]+\\Q").replace("\203", "\\E.\\Q").replace("\\Q\\E", "");
+    }
+
+    private boolean applyFilter(String filter, String subject) {
+        return Pattern.compile(this.prepareFilter(filter), Pattern.CASE_INSENSITIVE).matcher(subject).matches();
+    }
+
     private byte[] writeClass(String transformedName, ClassNode targetClass) {
         // Collapse tree to bytes
         byte[] bytes = this.writeClass(targetClass);
         
         // Export transformed class for debugging purposes
-        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
-            File outputFile = MixinTransformer.dumpClass(transformedName.replace('.', '/'), bytes);
-            if (this.decompiler != null) {
-                this.decompiler.decompile(outputFile);
+        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
+        if (environment.getOption(Option.DEBUG_EXPORT)) {
+            String filter = environment.getOptionValue(Option.DEBUG_EXPORT_FILTER);
+            if (filter == null || this.applyFilter(filter, transformedName)) {
+                File outputFile = this.dumpClass(transformedName.replace('.', '/'), bytes);
+                if (this.decompiler != null) {
+                    this.decompiler.decompile(outputFile);
+                }
             }
         }
         
         return bytes;
     }
 
-    private static File dumpClass(String fileName, byte[] bytes) {
-        File outputFile = new File(MixinTransformer.DEBUG_OUTPUT, "class/" + fileName + ".class");
+    private File dumpClass(String fileName, byte[] bytes) {
+        File outputFile = new File(this.classExportDir, fileName + ".class");
         try {
             FileUtils.writeByteArrayToFile(outputFile, bytes);
         } catch (IOException ex) {
