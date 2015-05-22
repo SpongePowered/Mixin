@@ -30,9 +30,6 @@ version = buildVersion + (buildType == 'RELEASE' ? '' : "-$buildType")
 ext.projectName = 'Mixin'
 ext.inceptionYear = '2014'
 ext.packaging = 'jar'
-ext.url = 'http://spongepowered.org'
-ext.description = 'Mixin'
-ext.organization = 'SpongePowered'
 
 // Define variables
 ext.buildNumber = project.hasProperty("buildNumber") ? buildNumber : '0'
@@ -169,13 +166,12 @@ processResources {
 
 // License header formatting
 license {
-    ext.name = project.name
-    ext.organization = project.organization
-    ext.url = project.url
-    ext.year = project.inceptionYear
-    exclude "**/*.info"
-    exclude "**/*.Processor"
-    exclude "assets/**"
+    ext {
+        name = project.name
+        organization = project.organization
+        url = project.url
+    }
+    include '**/*.java'
     header file("HEADER.txt")
     sourceSets = project.sourceSets
     ignoreFailures false
