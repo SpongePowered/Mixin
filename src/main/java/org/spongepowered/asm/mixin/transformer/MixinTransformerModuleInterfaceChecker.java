@@ -36,7 +36,6 @@ import org.apache.commons.io.IOUtils;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
-import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
@@ -61,7 +60,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     private final File report;
     
     public MixinTransformerModuleInterfaceChecker() {
-        File debugOutputFolder = new File(Constants.DEBUG_OUTPUT_PATH);
+        File debugOutputFolder = new File(MixinTransformer.DEBUG_OUTPUT, "audit");
         debugOutputFolder.mkdirs();
         this.csv = new File(debugOutputFolder, "mixin_implementation_report.csv");
         this.report = new File(debugOutputFolder, "mixin_implementation_report.txt");

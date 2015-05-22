@@ -64,6 +64,11 @@ repositories {
         name = 'renamed-packages'
         dirs = files("build/renamed-packages/")
     }
+    maven {
+        // For fernflower
+        name = 'sponge'
+        url = 'http://repo.spongepowered.org/maven'
+    }
 }
 
 configurations {
@@ -85,6 +90,9 @@ configurations.all {
 // Include annotation processor sourceSet
 sourceSets {
     ap {
+        compileClasspath += main.output
+    }
+    fernflower {
         compileClasspath += main.output
     }
 }
@@ -145,6 +153,12 @@ dependencies {
     // remapped ASM
     compile tasks.renamedASM.outputs.files
     apCompile tasks.renamedASM.outputs.files
+
+    // fernflower bridge
+    fernflowerCompile 'commons-io:commons-io:2.4'
+    fernflowerCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
+    fernflowerCompile 'com.google.guava:guava:17.0'
+    fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 }
 
 // Filter, process, and include resources
@@ -199,6 +213,9 @@ jar {
     // Include annotation processor
     from sourceSets.ap.output
     
+    // Include fernflower bridge
+    from sourceSets.fernflower.output
+    
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0])
     
@@ -243,6 +260,8 @@ task sourceJar(type: Jar) {
 	from sourceSets.main.resources
 	from sourceSets.ap.java
 	from sourceSets.ap.resources
+	from sourceSets.fernflower.java
+	from sourceSets.fernflower.resources
 	classifier = "sources"
 }
 

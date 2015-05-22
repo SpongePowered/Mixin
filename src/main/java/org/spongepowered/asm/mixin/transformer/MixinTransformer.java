@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -53,6 +54,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
+import org.spongepowered.asm.mixin.transformer.debug.IDecompiler;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 
@@ -215,6 +217,8 @@ public class MixinTransformer extends TreeTransformer {
         }
     }
     
+    static final File DEBUG_OUTPUT = new File(Constants.DEBUG_OUTPUT_PATH);
+    
     /**
      * Log all the things
      */
@@ -262,6 +266,8 @@ public class MixinTransformer extends TreeTransformer {
      */
     private boolean errorState = false; 
     
+    private final IDecompiler decompiler;
+    
     /**
      * ctor 
      */
@@ -277,8 +283,28 @@ public class MixinTransformer extends TreeTransformer {
         environment.setActiveTransformer(this);
         
         TreeInfo.setLock(this.lock);
+        
+        this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
     }
     
+    private IDecompiler initDecompiler(File outputPath) {
+        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
+            return null;
+        }
+        try {
+            this.logger.info("Attempting to load Fernflower decompiler");
+            @SuppressWarnings("unchecked")
+            Class<? extends IDecompiler> clazz =
+                (Class<? extends IDecompiler>)Class.forName("org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler");
+            Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
+            return ctor.newInstance(outputPath);
+        } catch (Throwable th) {
+            this.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
+                    th.getClass().getSimpleName(), th.getMessage());
+        }
+        return null;
+    }
+
     /**
      * Force-load all classes targetted by mixins but not yet applied
      */
@@ -619,17 +645,22 @@ public class MixinTransformer extends TreeTransformer {
         
         // Export transformed class for debugging purposes
         if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
-            MixinTransformer.dumpClass(transformedName.replace('.', '/'), bytes);
+            File outputFile = MixinTransformer.dumpClass(transformedName.replace('.', '/'), bytes);
+            if (this.decompiler != null) {
+                this.decompiler.decompile(outputFile);
+            }
         }
         
         return bytes;
     }
 
-    private static void dumpClass(String fileName, byte[] bytes) {
+    private static File dumpClass(String fileName, byte[] bytes) {
+        File outputFile = new File(MixinTransformer.DEBUG_OUTPUT, "class/" + fileName + ".class");
         try {
-            FileUtils.writeByteArrayToFile(new File(Constants.DEBUG_OUTPUT_PATH + "/" + fileName + ".class"), bytes);
+            FileUtils.writeByteArrayToFile(outputFile, bytes);
         } catch (IOException ex) {
             // don't care
         }
+        return outputFile;
     }
 }
