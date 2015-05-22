@@ -111,7 +111,16 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Configuration priority
      */
     @SerializedName("priority")
-    private final int priority = 1000;
+    private int priority = IMixinConfig.DEFAULT_PRIORITY;
+    
+    /**
+     * Default mixin priority. By default, mixins get a priority of 
+     * {@link IMixinConfig#DEFAULT_PRIORITY DEFAULT_PRIORITY} unless a different
+     * value is specified in the annotation. This setting allows the base 
+     * priority for all mixins in this config to be set to an alternate value.
+     */
+    @SerializedName("mixinPriority")
+    private int mixinPriority = IMixinConfig.DEFAULT_PRIORITY;
 
     /**
      * Package containing all mixins. This package will be monitored by the
@@ -383,7 +392,15 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public int getPriority() {
         return this.priority;
     }
-    
+
+    /**
+     * Get the default priority for mixins in this config. Values specified in
+     * the mixin annotation still override this value
+     */
+    public int getDefaultMixinPriority() {
+        return this.mixinPriority;
+    }
+
     /**
      * Get the list of mixin classes we will be applying
      */

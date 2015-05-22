@@ -32,6 +32,11 @@ import java.util.Set;
 public interface IMixinConfig {
 
     /**
+     * Default priority for mixin configs and mixins
+     */
+    public static final int DEFAULT_PRIORITY = 1000;
+
+    /**
      * Get the name of the file from which this configuration object was
      * initialised
      * 

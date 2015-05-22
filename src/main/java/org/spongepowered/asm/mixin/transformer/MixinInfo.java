@@ -271,7 +271,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
-        return priority == null ? 1000 : priority.intValue();
+        return priority == null ? this.parent.getDefaultMixinPriority() : priority.intValue();
     }
 
     private boolean validateTargetClasses(ClassNode classNode) {
