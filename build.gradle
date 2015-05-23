@@ -156,6 +156,7 @@ dependencies {
     fernflowerCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     fernflowerCompile 'com.google.guava:guava:17.0'
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
+    compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 }
 
 // Filter, process, and include resources
