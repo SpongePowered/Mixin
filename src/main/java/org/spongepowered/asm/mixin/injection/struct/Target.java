@@ -220,6 +220,15 @@ public class Target {
     }
     
     /**
+     * Get "simple" callback descriptor (descriptor with only CallbackInfo)
+     * 
+     * @return generated descriptor
+     */
+    public String getSimpleCallbackDescriptor() {
+        return String.format("(L%s;)V", this.callbackInfoClass);
+    }
+    
+    /**
      * Get the callback descriptor
      * 
      * @param locals Local variable types

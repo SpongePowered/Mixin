@@ -140,6 +140,13 @@ public class CallbackInjector extends Injector {
          * two purposes because they don't exist at the same time).
          */
         final int marshallVar;
+        
+        /**
+         * True if this callback expects the target method arguments to be
+         * passed in. Set to false if {@link #checkDescriptor} determines that
+         * the "simple" descriptor matches. 
+         */
+        private boolean captureArgs = true;
 
         Callback(MethodNode handler, Target target, final AbstractInsnNode node, final LocalVariableNode[] locals, boolean captureLocals) {
             this.handler = handler;
@@ -225,6 +232,11 @@ public class CallbackInjector extends Injector {
                 return true; // Descriptor matches exactly, this is good
             }
             
+            if (this.target.getSimpleCallbackDescriptor().equals(desc) && !this.canCaptureLocals) {
+                this.captureArgs = false;
+                return true;
+            }
+            
             if (this.extraArgs > 0) {
                 Type[] inTypes = Type.getArgumentTypes(desc);
                 Type[] myTypes = Type.getArgumentTypes(this.descl);
@@ -258,6 +270,10 @@ public class CallbackInjector extends Injector {
             }
             
             return false;
+        }
+        
+        boolean captureArgs() {
+            return this.captureArgs;
         }
     }
     
@@ -528,7 +544,9 @@ public class CallbackInjector extends Injector {
         }
 
         // Push the target method's parameters onto the stack
-        ASMHelper.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
+        if (callback.captureArgs()) {
+            ASMHelper.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
+        }
         
         // Push the callback info onto the stack
         callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
