@@ -49,6 +49,10 @@ import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.ConstraintParser;
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
+import org.spongepowered.asm.util.ConstraintViolationException;
+import org.spongepowered.asm.util.InvalidConstraintException;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 
@@ -410,6 +414,7 @@ class AnnotatedMixin {
     public void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
         AliasedElementName name = new AliasedElementName(method, overwrite);
         this.validateTargetMethod(method, overwrite, name, "@Overwrite");
+        this.checkConstraints(method, overwrite);
         
         if (!this.remap || !this.validateSingleTarget("@Overwrite", method)) {
             return;
@@ -600,6 +605,26 @@ class AnnotatedMixin {
     private void addMethodMapping(String mcpName, String obfName, String mcpSignature, String obfSignature) {
         String mapping = String.format("MD: %s %s %s %s", this.classRef + "/" + mcpName, mcpSignature, this.classRef + "/" + obfName, obfSignature);
         this.methodMappings.add(mapping);
+    }
+    
+    /**
+     * Check constraints for the specified annotation based on token values in
+     * the current environment
+     * 
+     * @param method Annotated method
+     * @param annotation Annotation to check constraints
+     */
+    private void checkConstraints(ExecutableElement method, AnnotationMirror annotation) {
+        try {
+            Constraint constraint = ConstraintParser.parse(MirrorUtils.<String>getAnnotationValue(annotation, "constraints"));
+            try {
+                constraint.check(this.mixins);
+            } catch (ConstraintViolationException ex) {
+                this.mixins.printMessage(Kind.ERROR, ex.getMessage(), method, annotation);
+            }
+        } catch (InvalidConstraintException ex) {
+            this.mixins.printMessage(Kind.WARNING, ex.getMessage(), method, annotation);
+        }
     }
 
     /**

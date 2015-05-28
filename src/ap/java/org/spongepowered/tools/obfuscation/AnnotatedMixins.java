@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -60,6 +62,7 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
@@ -75,7 +78,7 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the srgs
  */
-class AnnotatedMixins implements Messager {
+class AnnotatedMixins implements Messager, ITokenProvider {
     
     static enum CompilerEnvironment {
         /**
@@ -137,6 +140,11 @@ class AnnotatedMixins implements Messager {
     private final List<IMixinValidator> validators;
     
     /**
+     * Resolved tokens for constraint validation 
+     */
+    private final Map<String, Integer> tokenCache = new HashMap<String, Integer>();
+    
+    /**
      * SRG container for mcp->srg mappings
      */
     private SrgContainer srgs;
@@ -170,6 +178,40 @@ class AnnotatedMixins implements Messager {
             new ParentValidator(processingEnv, this),
             new TargetValidator(processingEnv, this)
         );
+        
+        this.initTokenCache(this.getOption("tokens"));
+    }
+
+    private void initTokenCache(String tokens) {
+        if (tokens != null) {
+            Pattern tokenPattern = Pattern.compile("^([A-Z0-9\\-_\\.]+)=([0-9]+)$");
+            
+            String[] tokenValues = tokens.replaceAll("\\s", "").toUpperCase().split("[;,]");
+            for (String tokenValue : tokenValues) {
+                Matcher tokenMatcher = tokenPattern.matcher(tokenValue);
+                if (tokenMatcher.matches()) {
+                    this.tokenCache.put(tokenMatcher.group(1), Integer.parseInt(tokenMatcher.group(2)));
+                }
+            }
+        }
+    }
+
+    @Override
+    public Integer getToken(String token) {
+        if (this.tokenCache.containsKey(token)) {
+            return this.tokenCache.get(token);
+        }
+        
+        String option = this.getOption(token);
+        Integer value = null;
+        try {
+            value = Integer.valueOf(Integer.parseInt(option));
+        } catch (Exception ex) {
+            // npe or number format exception
+        }
+        
+        this.tokenCache.put(token, value);
+        return value;
     }
 
     private String getOption(String option) {
