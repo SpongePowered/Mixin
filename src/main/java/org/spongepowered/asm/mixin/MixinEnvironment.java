@@ -41,6 +41,7 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.PrettyPrinter;
 
 import com.google.common.collect.ImmutableList;
@@ -57,7 +58,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * The mixin environment manages global state information for the mixin
  * subsystem.
  */
-public class MixinEnvironment {
+public class MixinEnvironment implements ITokenProvider {
     
     /**
      * Environment phase, deliberately not implemented as an enum
@@ -588,6 +589,7 @@ public class MixinEnvironment {
      * @return token value or null if the token is not present in the
      *      environment
      */
+    @Override
     public Integer getToken(String token) {
         token = token.toUpperCase();
         

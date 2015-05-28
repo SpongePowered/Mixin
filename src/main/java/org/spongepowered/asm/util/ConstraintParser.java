@@ -28,7 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.mixin.MixinEnvironment;
 
 
 /**
@@ -220,7 +219,7 @@ public final class ConstraintParser {
             return this.max;
         }
         
-        public void check(MixinEnvironment environment) throws ConstraintViolationException {
+        public void check(ITokenProvider environment) throws ConstraintViolationException {
             if (this != Constraint.NONE) {
                 Integer value = environment.getToken(this.token);
                 if (value == null) {
