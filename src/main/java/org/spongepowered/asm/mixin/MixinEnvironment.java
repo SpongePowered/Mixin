@@ -336,6 +336,11 @@ public class MixinEnvironment {
     private static MixinEnvironment currentEnvironment;
     
     /**
+     * Show debug header info on first environment construction
+     */
+    private static boolean showHeader = true;
+    
+    /**
      * Logger 
      */
     private final Logger logger = LogManager.getLogger("mixin");
@@ -398,20 +403,24 @@ public class MixinEnvironment {
             this.options[option.ordinal()] = option.getBooleanValue();
         }
         
-        Side side = this.getSide();
-        String codeSource = this.getCodeSource();
-        this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={}, Env={}", version, codeSource, side);
-        
-        if (this.getOption(Option.DEBUG_VERBOSE) && this.phase == Phase.PREINIT) {
-            PrettyPrinter printer = new PrettyPrinter(32);
-            printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-            printer.add("%25s : %s", "Code source", codeSource);
-            printer.add("%25s : %s", "Internal Version", version).hr();
-            for (Option option : Option.values()) {
-                printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+        if (MixinEnvironment.showHeader) {
+            showHeader = false;
+            
+            Side side = this.getSide();
+            String codeSource = this.getCodeSource();
+            this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
+            
+            if (this.getOption(Option.DEBUG_VERBOSE)) {
+                PrettyPrinter printer = new PrettyPrinter(32);
+                printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
+                printer.add("%25s : %s", "Code source", codeSource);
+                printer.add("%25s : %s", "Internal Version", version).hr();
+                for (Option option : Option.values()) {
+                    printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+                }
+                printer.hr().add("%25s : %s", "Detected Side", side);
+                printer.print(System.err);
             }
-            printer.hr().add("%25s : %s", "Detected Side", side);
-            printer.print(System.err);
         }
     }
 
