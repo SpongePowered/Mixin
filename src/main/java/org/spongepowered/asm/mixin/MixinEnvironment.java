@@ -28,14 +28,18 @@ import java.io.File;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.util.PrettyPrinter;
 
@@ -305,6 +309,47 @@ public class MixinEnvironment {
     }
     
     /**
+     * Wrapper for providing a natural sorting order for providers
+     */
+    static class TokenProviderWrapper implements Comparable<TokenProviderWrapper> {
+        
+        private static int nextOrder = 0;
+        
+        private final int priority, order;
+        
+        private final IEnvironmentTokenProvider provider;
+
+        private final MixinEnvironment environment;
+        
+        public TokenProviderWrapper(IEnvironmentTokenProvider provider, MixinEnvironment environment) {
+            this.provider = provider;
+            this.environment = environment;
+            this.order = TokenProviderWrapper.nextOrder++;
+            this.priority = provider.getPriority();
+        }
+
+        @Override
+        public int compareTo(TokenProviderWrapper other) {
+            if (other == null) {
+                return 0;
+            }
+            if (other.priority == this.priority) {
+                return other.order - this.order;
+            }
+            return (other.priority - this.priority);
+        }
+        
+        public IEnvironmentTokenProvider getProvider() {
+            return this.provider;
+        }
+        
+        Integer getToken(String token) {
+            return this.provider.getToken(token, this.environment);
+        }
+
+    }
+    
+    /**
      * Known re-entrant transformers, other re-entrant transformers will
      * detected automatically 
      */
@@ -318,22 +363,22 @@ public class MixinEnvironment {
     // Blackboard keys
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
+    
+    /**
+     * Array of all (real) environments, indexed by ordinal
+     */
+    private static final MixinEnvironment[] environments = new MixinEnvironment[Phase.phases.size()];
+    
+    /**
+     * Currently active environment
+     */
+    private static MixinEnvironment currentEnvironment;
 
     /**
      * Current (active) environment phase, set to NOT_INITIALISED until the
      * phases have been populated
      */
     private static Phase currentPhase = Phase.NOT_INITIALISED;
-    
-    /**
-     * Array of all (real) environments, indexed by ordinal
-     */
-    private static MixinEnvironment[] environments = new MixinEnvironment[Phase.phases.size()];
-    
-    /**
-     * Currently active environment
-     */
-    private static MixinEnvironment currentEnvironment;
     
     /**
      * Show debug header info on first environment construction
@@ -364,6 +409,21 @@ public class MixinEnvironment {
      * Error handlers for environment
      */
     private final Set<String> errorHandlers = new LinkedHashSet<String>();
+    
+    /**
+     * List of token provider classes
+     */
+    private final Set<String> tokenProviderClasses = new HashSet<String>();
+    
+    /**
+     * List of token providers in this environment 
+     */
+    private final List<TokenProviderWrapper> tokenProviders = new ArrayList<TokenProviderWrapper>();
+    
+    /**
+     * Internal tokens defined by this environment
+     */
+    private final Map<String, Integer> internalTokens = new HashMap<String, Integer>();
 
     /**
      * Detected side 
@@ -404,7 +464,7 @@ public class MixinEnvironment {
         }
         
         if (MixinEnvironment.showHeader) {
-            showHeader = false;
+            MixinEnvironment.showHeader = false;
             
             Side side = this.getSide();
             String codeSource = this.getCodeSource();
@@ -479,6 +539,66 @@ public class MixinEnvironment {
     public MixinEnvironment registerErrorHandlerClass(String handlerName) {
         this.errorHandlers.add(handlerName);
         return this;
+    }
+    
+    /**
+     * Add a new token provider class to this environment
+     * 
+     * @param providerName Class name of the token provider to add
+     * @return fluent interface
+     */
+    public MixinEnvironment registerTokenProviderClass(String providerName) {
+        if (!this.tokenProviderClasses.contains(providerName)) {
+            try {
+                @SuppressWarnings("unchecked")
+                Class<? extends IEnvironmentTokenProvider> providerClass =
+                    (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, Launch.classLoader);
+                IEnvironmentTokenProvider provider = providerClass.newInstance();
+                this.registerTokenProvider(provider);
+            } catch (Throwable th) {
+                this.logger.error("Error instantiating " + providerName, th);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Add a new token provider to this environment
+     * 
+     * @param provider Token provider to add
+     * @return fluent interface
+     */
+    public MixinEnvironment registerTokenProvider(IEnvironmentTokenProvider provider) {
+        if (provider != null && !this.tokenProviderClasses.contains(provider.getClass().getName())) {
+            String providerName = provider.getClass().getName();
+            TokenProviderWrapper wrapper = new TokenProviderWrapper(provider, this);
+            this.logger.info("Adding new token provider {} to {}", providerName, this);
+            this.tokenProviders.add(wrapper);
+            this.tokenProviderClasses.add(providerName);
+            Collections.sort(this.tokenProviders);
+        }
+        
+        return this;
+    }
+    
+    /**
+     * Get a token value from this environment
+     * 
+     * @param token Token to fetch
+     * @return token value or null if the token is not present in the
+     *      environment
+     */
+    public Integer getToken(String token) {
+        token = token.toUpperCase();
+        
+        for (TokenProviderWrapper provider : this.tokenProviders) {
+            Integer value = provider.getToken(token);
+            if (value != null) {
+                return value;
+            }
+        }
+        
+        return this.internalTokens.get(token);
     }
     
     /**

@@ -71,6 +71,7 @@ public abstract class MixinBootstrap {
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
+    private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
     private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
     private static final String TRANSFORMER_PROXY_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer$Proxy";
     
@@ -88,6 +89,7 @@ public abstract class MixinBootstrap {
         // The important ones
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.ASM_PACKAGE);
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.MIXIN_PACKAGE);
+        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.MIXIN_UTIL_PACKAGE);
         
         // Only needed in dev, in production this would be handled by the tweaker
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.LAUNCH_PACKAGE);

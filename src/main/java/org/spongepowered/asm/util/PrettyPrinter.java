@@ -27,6 +27,8 @@ package org.spongepowered.asm.util;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
@@ -55,6 +57,11 @@ public class PrettyPrinter {
     private int width = 100;
     
     /**
+     *  Wrap width used when an explicit wrap width is not specified
+     */
+    private int wrapWidth = 80;
+    
+    /**
      * Content lines
      */
     private final List<String> lines = new ArrayList<String>();
@@ -65,6 +72,15 @@ public class PrettyPrinter {
     
     public PrettyPrinter(int width) {
         this.width = width;
+    }
+    
+    public PrettyPrinter wrapTo(int wrapWidth) {
+        this.wrapWidth = wrapWidth;
+        return this;
+    }
+    
+    public int wrapTo() {
+        return this.wrapWidth;
     }
 
     /**
@@ -115,6 +131,58 @@ public class PrettyPrinter {
         }
         
         return this;
+    }
+
+    public PrettyPrinter addWrapped(String format, Object... args) {
+        return this.addWrapped(this.wrapWidth, format, args);
+    }
+
+    /**
+     * Adds a formatted line to the output, and attempts to wrap the line
+     * content to the specified width
+     *
+     * @param width wrap width to use for this content
+     * @param format format string
+     * @param args arguments
+     * 
+     * @return fluent interface
+     */
+    public PrettyPrinter addWrapped(int width, String format, Object... args) {
+        String indent = "";
+        String line = String.format(format, args).replace("\t", "    ");
+        Matcher indentMatcher = Pattern.compile("^(\\s+)(.*)$").matcher(line);
+        if (indentMatcher.matches()) {
+            indent = indentMatcher.group(1);
+        }
+        
+        try {
+            for (String wrappedLine : this.getWrapped(width, line, indent)) {
+                this.lines.add(wrappedLine);
+            }
+        } catch (Exception ex) {
+            this.add(line);
+        }
+        return this;
+    }
+
+    private List<String> getWrapped(int width, String line, String indent) {
+        List<String> lines = new ArrayList<String>();
+        
+        while (line.length() > width) {
+            int wrapPoint = line.lastIndexOf(' ', width);
+            if (wrapPoint < 10) {
+                wrapPoint = width;
+            }
+            String head = line.substring(0, wrapPoint);
+            lines.add(head);
+            line = indent + line.substring(wrapPoint + 1);
+        }
+        
+        if (line.length() > 0) {
+            lines.add(line);
+        }
+        
+        return lines;
     }
     
     /**

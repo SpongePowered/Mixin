@@ -29,6 +29,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
+
 /**
  * <p>Annotation used to indicate a mixin class member which must overwrite an
  * obfuscated method in the target class.</p>
@@ -53,6 +55,14 @@ import java.lang.annotation.Target;
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Overwrite {
+    
+    /**
+     * Returns constraints which must be validated for this overwrite to
+     * succeed. See {@link Constraint} for details of constraint formats.
+     * 
+     * @return Constraints for this annotation
+     */
+    public String constraints() default "";
     
     /**
      * Supplies possible aliases for this method. This should <b>only</b>

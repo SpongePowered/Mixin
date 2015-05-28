@@ -45,12 +45,17 @@ import org.spongepowered.asm.lib.tree.LineNumberNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Intrinsic;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.ConstraintParser;
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
+import org.spongepowered.asm.util.ConstraintViolationException;
+import org.spongepowered.asm.util.InvalidConstraintException;
 
 
 /**
@@ -284,7 +289,11 @@ public class MixinApplicator {
             mixin.transformMethod(mixinMethod);
 
             if (!mixinMethod.name.startsWith("<")) {
-                boolean isOverwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null;
+                AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class);
+                boolean isOverwrite = overwrite != null;
+                if (isOverwrite) {
+                    this.checkConstraints(mixin, overwrite);
+                }
                 
                 if (MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                         && !MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
@@ -687,6 +696,26 @@ public class MixinApplicator {
         
         for (InjectionInfo injectInfo : injected) {
             injectInfo.postInject();
+        }
+    }
+
+    /**
+     * Check constraints for the specified annotation based on token values in
+     * the current environment
+     * 
+     * @param mixin Mixin being applied
+     * @param annotation Annotation node to check constraints
+     */
+    private void checkConstraints(MixinTargetContext mixin, AnnotationNode annotation) {
+        try {
+            Constraint constraint = ConstraintParser.parse(annotation);
+            try {
+                constraint.check(MixinEnvironment.getCurrentEnvironment());
+            } catch (ConstraintViolationException ex) {
+                throw new InvalidMixinException(mixin, ex.getMessage(), ex);
+            }
+        } catch (InvalidConstraintException ex) {
+            throw new InvalidMixinException(mixin, ex.getMessage());
         }
     }
 
