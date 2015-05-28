@@ -118,7 +118,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     @Override
     public void writeMessage(String message, Throwable t) {
-        this.logger.info("%s %s: %s", message, t.getClass().getSimpleName(), t.getMessage());
+        this.logger.warn("{} {}: {}", message, t.getClass().getSimpleName(), t.getMessage());
     }
 
     @Override
