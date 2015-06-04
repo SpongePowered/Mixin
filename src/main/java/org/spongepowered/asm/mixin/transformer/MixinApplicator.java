@@ -24,22 +24,24 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import org.spongepowered.asm.lib.Label;
-
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.lib.Label;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.JumpInsnNode;
 import org.spongepowered.asm.lib.tree.LabelNode;
 import org.spongepowered.asm.lib.tree.LineNumberNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
@@ -182,7 +184,7 @@ public class MixinApplicator {
      */
     void apply(SortedSet<MixinInfo> mixins) {
         for (MixinInfo mixin : mixins) {
-            this.logger.log(mixin.getLoggingLevel(), "Mixing {} into {}", mixin.getName(), this.targetName);
+            this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
             this.applyMixin(mixin.createContextFor(this.targetClass));
         }
     }
@@ -495,7 +497,7 @@ public class MixinApplicator {
         }
         
         // Find the initialiser instructions in the candidate ctor
-        InsnList initialiser = this.getInitialiser(mixin, ctor);
+        Deque<AbstractInsnNode> initialiser = this.getInitialiser(mixin, ctor);
         if (initialiser == null || initialiser.size() == 0) {
             return;
         }
@@ -504,7 +506,7 @@ public class MixinApplicator {
         for (MethodNode method : this.targetClass.methods) {
             if (Constants.INIT.equals(method.name)) {
                 method.maxStack = Math.max(method.maxStack, ctor.maxStack);
-                this.injectInitialiser(method, initialiser);
+                this.injectInitialiser(mixin, method, initialiser);
             }
         }
     }
@@ -589,7 +591,7 @@ public class MixinApplicator {
      * @return initialiser bytecode extracted from the supplied constructor, or
      *      null if the constructor range could not be parsed
      */
-    private InsnList getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
+    private Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
         // Find the range of line numbers which corresponds to the constructor body
         Range init = this.getConstructorRange(ctor);
         if (!init.isValid()) {
@@ -598,7 +600,7 @@ public class MixinApplicator {
         
         // Now we know where the constructor is, look for insns which lie OUTSIDE the method body
         int line = 0;
-        InsnList initialiser = new InsnList();
+        Deque<AbstractInsnNode> initialiser = new ArrayDeque<AbstractInsnNode>();
         boolean gatherNodes = false;
         int trimAtOpcode = -1;
         LabelNode optionalInsn = null;
@@ -643,7 +645,7 @@ public class MixinApplicator {
         }
         
         // Check that the last insn is a PUTFIELD, if it's not then 
-        AbstractInsnNode last = initialiser.getLast();
+        AbstractInsnNode last = initialiser.peekLast();
         if (last != null) {
             if (last.getOpcode() != Opcodes.PUTFIELD) {
                 throw new InvalidMixinException(mixin, "Could not parse initialiser, expected 0xB5, found 0x"
@@ -660,11 +662,23 @@ public class MixinApplicator {
      * @param ctor
      * @param initialiser
      */
-    private void injectInitialiser(MethodNode ctor, InsnList initialiser) {
+    private void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
+        Map<LabelNode, LabelNode> labels = ASMHelper.cloneLabels(ctor.instructions);
+        
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name)) {
-                ctor.instructions.insert(insn, initialiser);
+                for (AbstractInsnNode node : initialiser) {
+                    if (node instanceof LabelNode) {
+                        continue;
+                    }
+                    if (node instanceof JumpInsnNode) {
+                        throw new InvalidMixinException(mixin, "Unsupported opcode in initialiser");
+                    }
+                    AbstractInsnNode iThinkWereACloneNow = node.clone(labels);
+                    ctor.instructions.insert(insn, iThinkWereACloneNow);
+                    insn = iThinkWereACloneNow;
+                }
                 return;
             }
         }

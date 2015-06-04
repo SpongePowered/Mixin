@@ -29,8 +29,10 @@ import static org.spongepowered.asm.lib.ClassWriter.*;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.ClassWriter;
@@ -882,5 +884,18 @@ public class ASMHelper {
                 return;
             }
         }
+    }
+    
+    public static Map<LabelNode, LabelNode> cloneLabels(InsnList source) {
+        Map<LabelNode, LabelNode> labels = new HashMap<LabelNode, LabelNode>();
+        
+        for (Iterator<AbstractInsnNode> iter = source.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof LabelNode) {
+                labels.put((LabelNode)insn, new LabelNode(((LabelNode)insn).getLabel()));
+            }
+        }
+        
+        return labels;
     }
 }

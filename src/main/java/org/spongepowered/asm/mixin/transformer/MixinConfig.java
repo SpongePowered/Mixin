@@ -156,7 +156,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private boolean setSourceFile = false;
     
     /**
-     * True to set the sourceFile property when applying mixins
+     * The path to the reference map resource to use for this configuration
      */
     @SerializedName("refmap")
     private String refMapperConfig;
