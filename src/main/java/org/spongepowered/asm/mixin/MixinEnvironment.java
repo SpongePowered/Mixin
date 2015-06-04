@@ -237,7 +237,12 @@ public class MixinEnvironment implements ITokenProvider {
          * Checks that all declared interface methods are implemented on a class
          * after mixin application.
          */
-        CHECK_IMPLEMENTS(Option.CHECK_ALL, "interfaces");
+        CHECK_IMPLEMENTS(Option.CHECK_ALL, "interfaces"),
+        
+        /**
+         * Ignore all constraints on mixin annotations, output warnings instead
+         */
+        IGNORE_CONSTRAINTS("ignoreConstraints");
         
         /**
          * Prefix for mixin options

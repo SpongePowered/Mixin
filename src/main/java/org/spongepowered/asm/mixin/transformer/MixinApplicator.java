@@ -49,6 +49,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -723,10 +724,15 @@ public class MixinApplicator {
     private void checkConstraints(MixinTargetContext mixin, AnnotationNode annotation) {
         try {
             Constraint constraint = ConstraintParser.parse(annotation);
+            MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
             try {
-                constraint.check(MixinEnvironment.getCurrentEnvironment());
+                constraint.check(environment);
             } catch (ConstraintViolationException ex) {
-                throw new InvalidMixinException(mixin, ex.getMessage(), ex);
+                if (environment.getOption(Option.IGNORE_CONSTRAINTS)) {
+                    this.logger.warn("Constraint violation: {}", ex.getMessage());
+                } else {
+                    throw new InvalidMixinException(mixin, ex.getMessage(), ex);
+                }
             }
         } catch (InvalidConstraintException ex) {
             throw new InvalidMixinException(mixin, ex.getMessage());
