@@ -34,6 +34,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
+import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
@@ -48,9 +49,10 @@ public class TargetValidator extends MixinValidator {
      * 
      * @param processingEnv Processing environment
      * @param messager Messager
+     * @param options Option provider
      */
-    public TargetValidator(ProcessingEnvironment processingEnv, Messager messager) {
-        super(processingEnv, messager, ValidationPass.LATE);
+    public TargetValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options) {
+        super(processingEnv, messager, options, ValidationPass.LATE);
     }
 
     /* (non-Javadoc)
@@ -60,6 +62,10 @@ public class TargetValidator extends MixinValidator {
      */
     @Override
     public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+        if ("true".equalsIgnoreCase(this.options.getOption("disableTargetValidator"))) {
+            return true;
+        }
+        
         TypeMirror superClass = mixin.getSuperclass();
         
         for (TypeHandle target : targets) {

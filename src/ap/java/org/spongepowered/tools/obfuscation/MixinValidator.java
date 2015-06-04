@@ -52,6 +52,11 @@ public abstract class MixinValidator implements IMixinValidator {
     protected final Messager messager;
     
     /**
+     * Option provider 
+     */
+    protected final IOptionProvider options;
+    
+    /**
      * Pass to run this validator in 
      */
     protected final ValidationPass pass;
@@ -61,11 +66,13 @@ public abstract class MixinValidator implements IMixinValidator {
      * 
      * @param processingEnv Processing environment
      * @param messager Messager to use
+     * @param options Option provider
      * @param pass Validation pass being performed
      */
-    public MixinValidator(ProcessingEnvironment processingEnv, Messager messager, ValidationPass pass) {
+    public MixinValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options, ValidationPass pass) {
         this.processingEnv = processingEnv;
         this.messager = messager;
+        this.options = options;
         this.pass = pass;
     }
     

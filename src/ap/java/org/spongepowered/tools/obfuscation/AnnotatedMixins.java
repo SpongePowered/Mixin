@@ -78,7 +78,7 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the srgs
  */
-class AnnotatedMixins implements Messager, ITokenProvider {
+class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     
     static enum CompilerEnvironment {
         /**
@@ -175,8 +175,8 @@ class AnnotatedMixins implements Messager, ITokenProvider {
         this.outRefMapFileName = this.getOption("outRefMapFile"); 
         
         this.validators = ImmutableList.<IMixinValidator>of(
-            new ParentValidator(processingEnv, this),
-            new TargetValidator(processingEnv, this)
+            new ParentValidator(processingEnv, this, this),
+            new TargetValidator(processingEnv, this, this)
         );
         
         this.initTokenCache(this.getOption("tokens"));
@@ -214,7 +214,8 @@ class AnnotatedMixins implements Messager, ITokenProvider {
         return value;
     }
 
-    private String getOption(String option) {
+    @Override
+    public String getOption(String option) {
         String value = this.processingEnv.getOptions().get(option);
         if (value != null) {
             return value;

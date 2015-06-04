@@ -33,6 +33,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
@@ -47,9 +48,10 @@ public class ParentValidator extends MixinValidator {
      * 
      * @param processingEnv Processing environment
      * @param messager Messager
+     * @param options Option provider
      */
-    public ParentValidator(ProcessingEnvironment processingEnv, Messager messager) {
-        super(processingEnv, messager, ValidationPass.EARLY);
+    public ParentValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options) {
+        super(processingEnv, messager, options, ValidationPass.EARLY);
     }
 
     /* (non-Javadoc)
