@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Set;
 import java.util.SortedSet;
 
 import org.apache.commons.io.IOUtils;
@@ -104,11 +105,19 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         printer.add("Class: %s", className).hr();
         printer.add("%-32s %-47s  %s", "Return Type", "Missing Method", "From Interface").hr();
 
-        for (Method method : targetClassInfo.getInterfaceMethods()) {
+        Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods();
+        Set<Method> superclassInterfaceMethods = targetClassInfo.getSuperClass().getInterfaceMethods();
+        
+        for (Method method : interfaceMethods) {
             Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
 
             if (found != null) {
                 continue;
+            }
+            
+            // Don't blame the subclass for not implementing methods that the superclass should have implemented.
+            if (superclassInterfaceMethods.contains(method)) {
+            	continue;
             }
             
             if (missingMethodCount > 0) {
