@@ -97,10 +97,6 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
 
-        if (targetClassInfo.isAbstract()) {
-            return;
-        }
-
         String className = targetClassInfo.getName().replace('/', '.');
         int missingMethodCount = 0;
         PrettyPrinter printer = new PrettyPrinter();
@@ -114,7 +110,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             if (found != null) {
                 continue;
             }
-
+            
             if (missingMethodCount > 0) {
                 printer.add();
             }
