@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.SortedSet;
 
 import org.apache.commons.io.IOUtils;
@@ -40,6 +42,8 @@ import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.io.Files;
 
 
@@ -58,6 +62,12 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      * Text Report file
      */
     private final File report;
+    
+    /**
+     * Methods from interfaces that are already in the class before mixins are
+     * applied.
+     */
+    private final Multimap<ClassInfo, Method> interfaceMethods = HashMultimap.create();
     
     public MixinTransformerModuleInterfaceChecker() {
         File debugOutputFolder = new File(MixinTransformer.DEBUG_OUTPUT, "audit");
@@ -86,6 +96,10 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      */
     @Override
     public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+        ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
+        for (Method m : targetClassInfo.getInterfaceMethods()) {
+            this.interfaceMethods.put(targetClassInfo, m);
+        }
     }
 
     /* (non-Javadoc)
@@ -97,10 +111,6 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
 
-        if (targetClassInfo.isAbstract()) {
-            return;
-        }
-
         String className = targetClassInfo.getName().replace('/', '.');
         int missingMethodCount = 0;
         PrettyPrinter printer = new PrettyPrinter();
@@ -108,13 +118,22 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         printer.add("Class: %s", className).hr();
         printer.add("%-32s %-47s  %s", "Return Type", "Missing Method", "From Interface").hr();
 
-        for (Method method : targetClassInfo.getInterfaceMethods()) {
+        Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods();
+        Set<Method> implementedMethods = new HashSet<Method>(targetClassInfo.getSuperClass().getInterfaceMethods());
+        implementedMethods.addAll(this.interfaceMethods.removeAll(targetClassInfo));
+        
+        for (Method method : interfaceMethods) {
             Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
 
             if (found != null) {
                 continue;
             }
-
+            
+            // Don't blame the subclass for not implementing methods that it does not need to implement.
+            if (implementedMethods.contains(method)) {
+                continue;
+            }
+            
             if (missingMethodCount > 0) {
                 printer.add();
             }
