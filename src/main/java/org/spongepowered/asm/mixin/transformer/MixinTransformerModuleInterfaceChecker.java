@@ -41,6 +41,8 @@ import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.io.Files;
 
 
@@ -59,6 +61,12 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      * Text Report file
      */
     private final File report;
+    
+    /**
+     * Methods from interfaces that are already in the class before mixins are
+     * applied.
+     */
+    private final Multimap<ClassInfo, Method> interfaceMethods = HashMultimap.create();
     
     public MixinTransformerModuleInterfaceChecker() {
         File debugOutputFolder = new File(MixinTransformer.DEBUG_OUTPUT, "audit");
@@ -87,6 +95,10 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      */
     @Override
     public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+        ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
+        for (Method m : targetClassInfo.getInterfaceMethods()) {
+            this.interfaceMethods.put(targetClassInfo, m);
+        }
     }
 
     /* (non-Javadoc)
@@ -106,7 +118,8 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         printer.add("%-32s %-47s  %s", "Return Type", "Missing Method", "From Interface").hr();
 
         Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods();
-        Set<Method> superclassInterfaceMethods = targetClassInfo.getSuperClass().getInterfaceMethods();
+        Set<Method> implementedMethods = targetClassInfo.getSuperClass().getInterfaceMethods();
+        implementedMethods.addAll(this.interfaceMethods.removeAll(targetClassInfo));
         
         for (Method method : interfaceMethods) {
             Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
@@ -115,8 +128,8 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
                 continue;
             }
             
-            // Don't blame the subclass for not implementing methods that the superclass should have implemented.
-            if (superclassInterfaceMethods.contains(method)) {
+            // Don't blame the subclass for not implementing methods that it does not need to implement.
+            if (implementedMethods.contains(method)) {
                 continue;
             }
             
