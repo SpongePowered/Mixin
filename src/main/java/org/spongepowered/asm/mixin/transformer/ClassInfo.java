@@ -506,7 +506,7 @@ public class ClassInfo extends TreeInfo {
         this.superName = null;
         this.outerName = null;
         this.isProbablyStatic = true;
-        this.methods = ImmutableSet.<Method> of(new Method("getClass",
+        this.methods = ImmutableSet.<Method>of(new Method("getClass",
                 "()Ljava/lang/Class;"), new Method("hashCode", "()I"),
                 new Method("equals", "(Ljava/lang/Object;)Z"), new Method(
                         "clone", "()Ljava/lang/Object;"), new Method(
@@ -514,9 +514,9 @@ public class ClassInfo extends TreeInfo {
                         "notify", "()V"), new Method("notifyAll", "()V"),
                 new Method("wait", "(J)V"), new Method("wait", "(JI)V"),
                 new Method("wait", "()V"), new Method("finalize", "()V"));
-        this.fields = Collections.<Field> emptySet();
+        this.fields = Collections.<Field>emptySet();
         this.isInterface = false;
-        this.interfaces = Collections.<String> emptySet();
+        this.interfaces = Collections.<String>emptySet();
         this.access = Opcodes.ACC_PUBLIC;
         this.isMixin = false;
         this.mixin = null;
@@ -602,7 +602,7 @@ public class ClassInfo extends TreeInfo {
      * Get all mixins which target this class
      */
     public Set<MixinInfo> getMixins() {
-        return Collections.<MixinInfo> unmodifiableSet(this.mixins);
+        return Collections.<MixinInfo>unmodifiableSet(this.mixins);
     }
 
     /**
@@ -658,7 +658,7 @@ public class ClassInfo extends TreeInfo {
      * Returns the answer to life, the universe and everything
      */
     public Set<String> getInterfaces() {
-        return Collections.<String> unmodifiableSet(this.interfaces);
+        return Collections.<String>unmodifiableSet(this.interfaces);
     }
 
     @Override
@@ -726,7 +726,7 @@ public class ClassInfo extends TreeInfo {
             return targets;
         }
 
-        return ImmutableList.<ClassInfo> of(this);
+        return ImmutableList.<ClassInfo>of(this);
     }
 
     /**
@@ -735,7 +735,7 @@ public class ClassInfo extends TreeInfo {
      * @return read-only view of class methods
      */
     public Set<Method> getMethods() {
-        return Collections.<Method> unmodifiableSet(this.methods);
+        return Collections.<Method>unmodifiableSet(this.methods);
     }
 
     /**
@@ -763,7 +763,7 @@ public class ClassInfo extends TreeInfo {
             }
         }
 
-        return Collections.<Method> unmodifiableSet(methods);
+        return Collections.<Method>unmodifiableSet(methods);
     }
 
     /**
