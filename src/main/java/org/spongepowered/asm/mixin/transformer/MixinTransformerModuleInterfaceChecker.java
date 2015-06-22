@@ -117,7 +117,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             
             // Don't blame the subclass for not implementing methods that the superclass should have implemented.
             if (superclassInterfaceMethods.contains(method)) {
-            	continue;
+                continue;
             }
             
             if (missingMethodCount > 0) {
