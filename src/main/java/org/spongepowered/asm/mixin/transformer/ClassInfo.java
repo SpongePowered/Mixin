@@ -761,7 +761,7 @@ public class ClassInfo extends TreeInfo {
      */
     private ClassInfo addMethodsRecursive(Set<Method> methods) {
         if (this.isInterface) {
-        	for (Method method : this.methods) {
+            for (Method method : this.methods) {
                 // Default methods take priority. They are removed later.
                 if (!method.isAbstract()) {
                     // Remove the old method so the new one is added.
