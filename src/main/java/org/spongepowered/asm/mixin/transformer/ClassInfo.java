@@ -52,13 +52,13 @@ import com.google.common.collect.ImmutableSet;
 /**
  * Information about a class, used as a way of keeping track of class hierarchy
  * information needed to support more complex mixin behaviour such as detached
- * superclass and mixin inheritance.
+ * superclass and mixin inheritance.  
  */
 public class ClassInfo extends TreeInfo {
-
+    
     public static final int INCLUDE_PRIVATE = 0x0002;
     public static final int INCLUDE_STATIC = 0x0008;
-
+    
     /**
      * <p>To all intents and purposes, the "real" class hierarchy and the mixin
      * class hierarchy exist in parallel, this means that for some hierarchy
@@ -75,57 +75,57 @@ public class ClassInfo extends TreeInfo {
      * prevents further traversals from occurring in the lookup.</p>
      */
     public static enum Traversal {
-
+        
         /**
          * No traversals are allowed.
          */
         NONE(null, false),
-
+        
         /**
          * Traversal is allowed at all stages.
          */
         ALL(null, true),
-
+        
         /**
          * Traversal is allowed at the bottom of the hierarchy but no further.
          */
         IMMEDIATE(Traversal.NONE, true),
-
+        
         /**
          * Traversal is allowed only on superclasses and not at the bottom of
          * the hierarchy.
          */
         SUPER(Traversal.ALL, false);
-
+        
         private final Traversal next;
-
+        
         private final boolean traverse;
-
+        
         private Traversal(Traversal next, boolean traverse) {
             this.next = next != null ? next : this;
             this.traverse = traverse;
         }
-
+        
         public Traversal next() {
             return this.next;
         }
-
+        
         public boolean canTraverse() {
             return this.traverse;
         }
     }
-
+    
     /**
      * Information about frames in a method
      */
     public static class FrameData {
-
+        
         private static final String[] FRAMETYPES = { "NEW", "FULL", "APPEND", "CHOP", "SAME", "SAME1" };
-
+        
         public final int index;
-
+        
         public final int type;
-
+        
         public final int locals;
 
         FrameData(int index, int type, int locals) {
@@ -133,13 +133,13 @@ public class ClassInfo extends TreeInfo {
             this.type = type;
             this.locals = locals;
         }
-
+        
         FrameData(int index, FrameNode frameNode) {
             this.index = index;
             this.type = frameNode.type;
             this.locals = frameNode.local != null ? frameNode.local.size() : 0;
         }
-
+        
         /* (non-Javadoc)
          * @see java.lang.Object#toString()
          */
@@ -148,54 +148,54 @@ public class ClassInfo extends TreeInfo {
             return String.format("FrameData[index=%d, type=%s, locals=%d]", this.index, FrameData.FRAMETYPES[this.type + 1], this.locals);
         }
     }
-
+    
     /**
      * Information about a member in this class
      */
     abstract static class Member {
-
+        
         static enum Type {
             METHOD,
             FIELD
         }
-
+        
         /**
-         * Member type
+         * Member type 
          */
         private final Type type;
-
+        
         /**
-         * The original name of the member
+         * The original name of the member 
          */
         private final String memberName;
-
+        
         /**
          * The member's signature
          */
         private final String memberDesc;
-
+        
         /**
          * True if this member was injected by a mixin, false if it was
          * originally part of the class
          */
         private final boolean isInjected;
-
+        
         /**
          * Access modifiers
          */
         private final int modifiers;
-
+        
         /**
          * Current name of the member, may be different from {@link #memberName}
          * if the member has been renamed
          */
         private String currentName;
-
+        
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
             this.currentName = member.currentName;
         }
-
+        
         protected Member(Type type, String name, String desc, int access) {
             this(type, name, desc, access, false);
         }
@@ -208,23 +208,23 @@ public class ClassInfo extends TreeInfo {
             this.currentName = name;
             this.modifiers = access;
         }
-
+        
         public String getOriginalName() {
             return this.memberName;
         }
-
+        
         public String getName() {
             return this.currentName;
         }
-
+        
         public String getDesc() {
             return this.memberDesc;
         }
-
+        
         public boolean isInjected() {
             return this.isInjected;
         }
-
+        
         public boolean isRenamed() {
             return this.currentName != this.memberName;
         }
@@ -236,15 +236,15 @@ public class ClassInfo extends TreeInfo {
         public boolean isStatic() {
             return (this.modifiers & Opcodes.ACC_STATIC) != 0;
         }
-
+        
         public boolean matchesFlags(int flags) {
             return (((~this.modifiers | (flags & ClassInfo.INCLUDE_PRIVATE)) & ClassInfo.INCLUDE_PRIVATE) != 0
-                    && ((~this.modifiers | (flags & ClassInfo.INCLUDE_STATIC)) & ClassInfo.INCLUDE_STATIC) != 0);
+                 && ((~this.modifiers | (flags & ClassInfo.INCLUDE_STATIC)) & ClassInfo.INCLUDE_STATIC) != 0);
         }
 
         // Abstract because this has to be static in order to contain the enum
         public abstract ClassInfo getOwner();
-
+        
         public int getAccess() {
             return this.modifiers;
         }
@@ -252,45 +252,45 @@ public class ClassInfo extends TreeInfo {
         public void renameTo(String name) {
             this.currentName = name;
         }
-
+        
         public boolean equals(String name, String desc) {
             return (this.memberName.equals(name)
                     || this.currentName.equals(name))
                     && this.memberDesc.equals(desc);
         }
-
+        
         @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof Member)) {
                 return false;
             }
-
-            Member other = (Member) obj;
+            
+            Member other = (Member)obj;
             return (other.memberName.equals(this.memberName) 
                     || other.currentName.equals(this.currentName))
                     && other.memberDesc.equals(this.memberDesc);
         }
-
+        
         @Override
         public int hashCode() {
             return this.toString().hashCode();
         }
-
+        
         @Override
         public String toString() {
             return this.memberName + this.memberDesc;
         }
-
+        
         public boolean isAbstract() {
             return (this.modifiers & Opcodes.ACC_ABSTRACT) != 0;
         }
     }
-
+    
     /**
      * A method
      */
     public class Method extends Member {
-
+        
         private final List<FrameData> frames;
 
         public Method(Member member) {
@@ -301,12 +301,12 @@ public class ClassInfo extends TreeInfo {
         public Method(MethodNode method) {
             this(method, false);
         }
-
+        
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
             this.frames = this.gatherFrames(method);
         }
-
+        
         public Method(String name, String desc) {
             super(Type.METHOD, name, desc, Opcodes.ACC_PUBLIC, false);
             this.frames = null;
@@ -321,7 +321,7 @@ public class ClassInfo extends TreeInfo {
             super(Type.METHOD, name, desc, access, injected);
             this.frames = null;
         }
-
+        
         private List<FrameData> gatherFrames(MethodNode method) {
             List<FrameData> frames = new ArrayList<FrameData>();
             for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
@@ -332,7 +332,7 @@ public class ClassInfo extends TreeInfo {
             }
             return frames;
         }
-
+        
         public List<FrameData> getFrames() {
             return this.frames;
         }
@@ -340,58 +340,58 @@ public class ClassInfo extends TreeInfo {
         @Override
         public ClassInfo getOwner() {
             return ClassInfo.this;
-        }
+        } 
 
         @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof Method)) {
                 return false;
             }
-
+            
             return super.equals(obj);
         }
     }
-
+    
     /**
      * A field
      */
     class Field extends Member {
-
+        
         public Field(Member member) {
             super(member);
         }
-
+        
         public Field(FieldNode field) {
             this(field, false);
         }
-
+        
         public Field(FieldNode field, boolean injected) {
             super(Type.FIELD, field.name, field.desc, field.access, injected);
         }
-
+        
         public Field(String name, String desc, int access) {
             super(Type.FIELD, name, desc, access, false);
         }
-
+        
         public Field(String name, String desc, int access, boolean injected) {
             super(Type.FIELD, name, desc, access, injected);
         }
-
+        
         @Override
         public ClassInfo getOwner() {
             return ClassInfo.this;
-        }
-
+        } 
+        
         @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof Field)) {
                 return false;
             }
-
+            
             return super.equals(obj);
         }
     }
-
+    
     private static final Logger logger = LogManager.getLogger("mixin");
 
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
@@ -401,90 +401,90 @@ public class ClassInfo extends TreeInfo {
      * information we generate
      */
     private static final Map<String, ClassInfo> cache = new HashMap<String, ClassInfo>();
-
+    
     private static final ClassInfo OBJECT = new ClassInfo();
-
+    
     static {
         ClassInfo.cache.put(ClassInfo.JAVA_LANG_OBJECT, ClassInfo.OBJECT);
     }
-
+    
     /**
      * Class name (binary name)
      */
     private final String name;
-
+    
     /**
      * Class superclass name (binary name)
      */
     private final String superName;
-
+    
     /**
      * Outer class name
      */
     private final String outerName;
-
+    
     /**
      * True either if this is not an inner class or if it is an inner class but
      * does not contain a reference to its outer class.
      */
     private final boolean isProbablyStatic;
-
+    
     /**
      * Interfaces
      */
     private final Set<String> interfaces;
-
+    
     /**
-     * Public and protected methods (instance) methods in this class
+     * Public and protected methods (instance) methods in this class 
      */
     private final Set<Method> methods;
-
+    
     /**
      * Public and protected fields in this class
      */
     private final Set<Field> fields;
-
+    
     /**
      * Mixins which target this class
      */
     private final Set<MixinInfo> mixins = new HashSet<MixinInfo>();
-
+    
     /**
      * Map of mixin types to corresponding supertypes, to avoid repeated 
      * lookups 
      */
     private final Map<ClassInfo, ClassInfo> correspondingTypes = new HashMap<ClassInfo, ClassInfo>();
-
+    
     /**
-     * Mixin info if this class is a mixin itself
+     * Mixin info if this class is a mixin itself 
      */
     private final MixinInfo mixin;
-
+    
     /**
-     * True if this is a mixin rather than a class
+     * True if this is a mixin rather than a class 
      */
     private final boolean isMixin;
-
+    
     /**
-     * True if this is an interface
+     * True if this is an interface 
      */
     private final boolean isInterface;
-
+    
     /**
      * Access flags
      */
     private final int access;
-
+    
     /**
-     * Superclass reference, not initialised until required
+     * Superclass reference, not initialised until required 
      */
     private ClassInfo superClass;
-
+    
     /**
-     * Outer class reference, not initialised until required
+     * Outer class reference, not initialised until required 
      */
     private ClassInfo outerClass;
-
+    
     /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
      */
@@ -494,18 +494,18 @@ public class ClassInfo extends TreeInfo {
         this.outerName = null;
         this.isProbablyStatic = true;
         this.methods = ImmutableSet.<Method>of(
-                new Method("getClass", "()Ljava/lang/Class;"),
-                new Method("hashCode", "()I"),
-                new Method("equals", "(Ljava/lang/Object;)Z"),
-                new Method("clone", "()Ljava/lang/Object;"),
-                new Method("toString", "()Ljava/lang/String;"),
-                new Method("notify", "()V"),
-                new Method("notifyAll", "()V"),
-                new Method("wait", "(J)V"),
-                new Method("wait", "(JI)V"),
-                new Method("wait", "()V"),
-                new Method("finalize", "()V")
-            );
+            new Method("getClass", "()Ljava/lang/Class;"),
+            new Method("hashCode", "()I"),
+            new Method("equals", "(Ljava/lang/Object;)Z"),
+            new Method("clone", "()Ljava/lang/Object;"),
+            new Method("toString", "()Ljava/lang/String;"),
+            new Method("notify", "()V"),
+            new Method("notifyAll", "()V"),
+            new Method("wait", "(J)V"),
+            new Method("wait", "(JI)V"),
+            new Method("wait", "()V"),
+            new Method("finalize", "()V")
+        );
         this.fields = Collections.<Field>emptySet();
         this.isInterface = false;
         this.interfaces = Collections.<String>emptySet();
@@ -513,10 +513,10 @@ public class ClassInfo extends TreeInfo {
         this.isMixin = false;
         this.mixin = null;
     }
-
+    
     /**
      * Initialise a ClassInfo from the supplied {@link ClassNode}
-     *
+     * 
      * @param classNode Class node to inspect
      */
     private ClassInfo(ClassNode classNode) {
@@ -531,7 +531,7 @@ public class ClassInfo extends TreeInfo {
         this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
 
         this.interfaces.addAll(classNode.interfaces);
-
+        
         for (MethodNode method : classNode.methods) {
             this.addMethod(method, this.isMixin);
         }
@@ -548,18 +548,18 @@ public class ClassInfo extends TreeInfo {
                             outerName = outerName.substring(1, outerName.length() - 1);
                         }
                     }
-                }
-
+                } 
+                
                 if ((field.access & Opcodes.ACC_STATIC) == 0) {
                     this.fields.add(new Field(field, this.isMixin));
                 }
             }
         }
-
+        
         this.isProbablyStatic = isProbablyStatic;
         this.outerName = outerName;
     }
-
+    
     void addInterface(String iface) {
         this.interfaces.add(iface);
     }
@@ -573,7 +573,7 @@ public class ClassInfo extends TreeInfo {
             this.methods.add(new Method(method, injected));
         }
     }
-
+    
     /**
      * Add a mixin which targets this class
      */
@@ -583,21 +583,21 @@ public class ClassInfo extends TreeInfo {
         }
         this.mixins.add(mixin);
     }
-
+    
     /**
      * Get all mixins which target this class
      */
     public Set<MixinInfo> getMixins() {
         return Collections.<MixinInfo>unmodifiableSet(this.mixins);
     }
-
+    
     /**
      * Get whether this class is a mixin
      */
     public boolean isMixin() {
         return this.isMixin;
     }
-
+    
     /**
      * Get whether this class has ACC_PUBLIC
      */
@@ -618,58 +618,58 @@ public class ClassInfo extends TreeInfo {
     public boolean isSynthetic() {
         return (this.access & Opcodes.ACC_SYNTHETIC) != 0;
     }
-
+    
     /**
-     * Get whether this class is probably static (or is not an inner class)
+     * Get whether this class is probably static (or is not an inner class) 
      */
     public boolean isProbablyStatic() {
         return this.isProbablyStatic;
     }
-
+    
     /**
      * Get whether this class is an inner class
      */
     public boolean isInner() {
         return this.outerName != null;
     }
-
+    
     /**
      * Get whether this is an interface or not
      */
     public boolean isInterface() {
         return this.isInterface;
     }
-
+    
     /**
      * Returns the answer to life, the universe and everything
      */
     public Set<String> getInterfaces() {
         return Collections.<String>unmodifiableSet(this.interfaces);
     }
-
+    
     @Override
     public String toString() {
         return this.name;
     }
-
+    
     public int getAccess() {
         return this.access;
     }
-
+    
     /**
      * Get the class name (binary name)
      */
     public String getName() {
         return this.name;
     }
-
+    
     /**
      * Get the superclass name (binary name)
      */
     public String getSuperName() {
         return this.superName;
     }
-
+    
     /**
      * Get the superclass info, can return null if the superclass cannot be
      * resolved
@@ -678,17 +678,17 @@ public class ClassInfo extends TreeInfo {
         if (this.superClass == null && this.superName != null) {
             this.superClass = ClassInfo.forName(this.superName);
         }
-
+        
         return this.superClass;
     }
-
+    
     /**
      * Get the name of the outer class, or null if this is not an inner class
      */
     public String getOuterName() {
         return this.outerName;
     }
-
+    
     /**
      * Get the outer class info, can return null if the outer class cannot be
      * resolved or if this is not an inner class
@@ -697,10 +697,10 @@ public class ClassInfo extends TreeInfo {
         if (this.outerClass == null && this.outerName != null) {
             this.outerClass = ClassInfo.forName(this.outerName);
         }
-
+        
         return this.outerClass;
     }
-
+    
     /**
      * Class targets
      */
@@ -711,25 +711,25 @@ public class ClassInfo extends TreeInfo {
             targets.addAll(this.mixin.getTargets());
             return targets;
         }
-
+        
         return ImmutableList.<ClassInfo>of(this);
     }
-
+    
     /**
      * Get class/interface methods
-     *
+     * 
      * @return read-only view of class methods
      */
     public Set<Method> getMethods() {
         return Collections.<Method>unmodifiableSet(this.methods);
     }
-
+    
     /**
      * If this is an interface, returns a set containing all methods in this
      * interface and all super interfaces. If this is a class, returns a set
      * containing all methods for all interfaces implemented by this class and
      * all super interfaces of those interfaces.
-     *
+     * 
      * @return read-only view of class methods
      */
     public Set<Method> getInterfaceMethods() {
@@ -741,27 +741,27 @@ public class ClassInfo extends TreeInfo {
                 superClass = superClass.addMethodsRecursive(methods);
             }
         }
-
+        
         // Remove default methods.
         for (Iterator<Method> it = methods.iterator(); it.hasNext();) {
             if (!it.next().isAbstract()) {
                 it.remove();
             }
         }
-
+        
         return Collections.<Method>unmodifiableSet(methods);
     }
 
     /**
      * Recursive function used by {@link #getInterfaceMethods} to add all
      * interface methods to the supplied set
-     *
+     * 
      * @param methods Method set to add to
      * @return superclass reference, used to make the code above more fluent
      */
     private ClassInfo addMethodsRecursive(Set<Method> methods) {
         if (this.isInterface) {
-            for (Method method : this.methods) {
+        	for (Method method : this.methods) {
                 // Default methods take priority. They are removed later.
                 if (!method.isAbstract()) {
                     // Remove the old method so the new one is added.
@@ -774,17 +774,17 @@ public class ClassInfo extends TreeInfo {
                 mixin.getClassInfo().addMethodsRecursive(methods);
             }
         }
-
+        
         for (String iface : this.interfaces) {
             ClassInfo.forName(iface).addMethodsRecursive(methods);
         }
-
+        
         return this.getSuperClass();
     }
-
+    
     /**
      * Test whether this class has the specified superclass in its hierarchy
-     *
+     * 
      * @param superClass Name of the superclass to search for in the hierarchy
      * @return true if the specified class appears in the class's hierarchy
      * anywhere
