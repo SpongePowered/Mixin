@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -118,7 +119,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         printer.add("%-32s %-47s  %s", "Return Type", "Missing Method", "From Interface").hr();
 
         Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods();
-        Set<Method> implementedMethods = targetClassInfo.getSuperClass().getInterfaceMethods();
+        Set<Method> implementedMethods = new HashSet<Method>(targetClassInfo.getSuperClass().getInterfaceMethods());
         implementedMethods.addAll(this.interfaceMethods.removeAll(targetClassInfo));
         
         for (Method method : interfaceMethods) {
