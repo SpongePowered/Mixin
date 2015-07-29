@@ -280,6 +280,10 @@ public class ClassInfo extends TreeInfo {
         public String toString() {
             return this.memberName + this.memberDesc;
         }
+        
+        public boolean isAbstract() {
+            return (this.modifiers & Opcodes.ACC_ABSTRACT) != 0;
+        }
     }
     
     /**
@@ -738,6 +742,13 @@ public class ClassInfo extends TreeInfo {
             }
         }
         
+        // Remove default methods.
+        for (Iterator<Method> it = methods.iterator(); it.hasNext();) {
+            if (!it.next().isAbstract()) {
+                it.remove();
+            }
+        }
+        
         return Collections.<Method>unmodifiableSet(methods);
     }
 
@@ -750,7 +761,14 @@ public class ClassInfo extends TreeInfo {
      */
     private ClassInfo addMethodsRecursive(Set<Method> methods) {
         if (this.isInterface) {
-            methods.addAll(this.methods);
+            for (Method method : this.methods) {
+                // Default methods take priority. They are removed later.
+                if (!method.isAbstract()) {
+                    // Remove the old method so the new one is added.
+                    methods.remove(method);
+                }
+                methods.add(method);
+            }
         } else if (!this.isMixin) {
             for (MixinInfo mixin : this.mixins) {
                 mixin.getClassInfo().addMethodsRecursive(methods);
