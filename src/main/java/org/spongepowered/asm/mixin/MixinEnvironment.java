@@ -108,6 +108,15 @@ public class MixinEnvironment implements ITokenProvider {
         public String toString() {
             return this.name;
         }
+
+        public static Phase forName(String name) {
+            for (Phase phase : Phase.phases) {
+                if (phase.name.equals(name)) {
+                    return phase;
+                }
+            }
+            return null;
+        }
     }
     
     /**
@@ -149,7 +158,18 @@ public class MixinEnvironment implements ITokenProvider {
         
         protected abstract boolean detect();
 
+        @SuppressWarnings("unchecked")
         protected final String getSideName() {
+            // Using this method first prevents us from accidentally loading FML classes
+            // too early when using the tweaker in dev
+            for (ITweaker tweaker : (List<ITweaker>)Launch.blackboard.get("Tweaks")) {
+                if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
+                    return "SERVER";
+                } else if (tweaker.getClass().getName().endsWith(".common.launcher.FMLTweaker")) {
+                    return "CLIENT";
+                }
+            }
+            
             String name = this.getSideName("net.minecraftforge.fml.relauncher.FMLLaunchHandler", "side");
             if (name != null) {
                 return name;

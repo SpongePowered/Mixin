@@ -25,19 +25,21 @@
 package org.spongepowered.asm.launch;
 
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-
-import org.spongepowered.asm.mixin.MixinEnvironment;
+import java.util.Map;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 
 
 /**
@@ -47,50 +49,55 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class MixinTweaker implements ITweaker {
     
-    private static final String MFATT_MIXINCONFIGS = "MixinConfigs";
-    private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
-    private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
-    private static final String MFATT_COREMODCONTAINSMOD = "FMLCorePluginContainsFMLMod";
-    private static final String MFATT_MAINCLASS = "Main-Class";
-
-    /**
-     * File containing this tweaker
-     */
-    private final File container;
+    private static final String MFATT_TWEAKER = "TweakClass";
+    private static final String DEFAULT_MAIN_CLASS = "net.minecraft.client.main.Main";
     
     /**
-     * If running under FML, we will attempt to inject any coremod specified in
-     * the metadata, FML's CoremodManager returns an ITweaker instance which is
-     * the "handle" to the injected mod, we will need to proxy calls through to
-     * the wrapper. If initialisation fails (for example if we are not running
-     * under FML or if an FMLCorePlugin key is not specified in the metadata)
-     * then this handle will be NULL and the tweaker will attempt to start the
-     * Mixin subsystem automatically by looking for a MixinConfigs key in the
-     * jar metadata, this should be a comma-separated list of mixin config JSON
-     * file names.
+     * Make with the logging already
      */
-    private ITweaker fmlWrapper;
-
+    private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Tweak containers
+     */
+    private final Map<URI, MixinTweakContainer> containers = new LinkedHashMap<URI, MixinTweakContainer>();
+    
+    /**
+     * Tracks whether {@link #acceptOptions} was called yet, if true, causes new
+     * launch agents to be <tt>prepare</tt>d immediately 
+     */
+    private boolean prepared = false;
+    
     /**
      * Hello world
      */
     public MixinTweaker() {
         MixinBootstrap.preInit();
-        this.container = this.findJarFile();
-        this.fmlWrapper = this.initFMLCoreMod();
-    }
-
-    /**
-     * Find and return the file containing this class
-     */
-    private File findJarFile() {
+        
+        // Add agents for the tweak container 
         URI uri = null;
         try {
             uri = this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
+            if (uri != null) {
+                this.addContainer(uri);
+            }
         } catch (URISyntaxException ex) {
             ex.printStackTrace();
         }
-        return uri != null ? new File(uri) : null;
+    }
+    
+    public final void addContainer(URI uri) {
+        if (this.containers.containsKey(uri)) {
+            return;
+        }
+        
+        MixinTweaker.logger.debug("Adding mixin launch agents for container {}", uri);
+        MixinTweakContainer container = new MixinTweakContainer(uri);
+        this.containers.put(uri, container);
+        
+        if (this.prepared) {
+            container.prepare();
+        }
     }
 
     /* (non-Javadoc)
@@ -98,84 +105,27 @@ public class MixinTweaker implements ITweaker {
      *      java.io.File, java.io.File, java.lang.String)
      */
     @Override
-    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        
+    public final void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
         MixinBootstrap.register();
-
-        if (this.fmlWrapper == null) {
-            String mixinConfigs = this.getManifestAttribute(MixinTweaker.MFATT_MIXINCONFIGS);
-            if (mixinConfigs == null) {
-                return;
-            }
-            
-            for (String config : mixinConfigs.split(",")) {
-                if (config.endsWith(".json")) {
-                    MixinEnvironment.getDefaultEnvironment().addConfiguration(config);
-                }
-            }
+        this.prepared = true;
+        for (MixinTweakContainer container : this.containers.values()) {
+            container.prepare();
         }
+        this.parseArgs(args);
     }
 
     /**
-     * Attempts to initialise the FML coremod (if specified in the jar metadata)
+     * Read and parse command-line arguments
+     * 
+     * @param args command-line arguments
      */
-    @SuppressWarnings("unchecked")
-    private ITweaker initFMLCoreMod() {
-        try {
-
-            String jarName = this.container.getName();
-            Class<?> coreModManager = this.getCoreModManagerClass();
-
-            if ("true".equalsIgnoreCase(this.getManifestAttribute(MixinTweaker.MFATT_FORCELOADASMOD))) {
-                try {
-                    Method mdGetLoadedCoremods = coreModManager.getDeclaredMethod("getLoadedCoremods");
-                    List<String> loadedCoremods = (List<String>)mdGetLoadedCoremods.invoke(null);
-                    loadedCoremods.remove(jarName);
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-                
-                if (this.getManifestAttribute(MixinTweaker.MFATT_COREMODCONTAINSMOD) != null) {    
-                    try {
-                        Method mdGetReparsedCoremods = coreModManager.getDeclaredMethod("getReparseableCoremods");
-                        List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
-                        if (!reparsedCoremods.contains(jarName)) {
-                            reparsedCoremods.add(jarName);
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
+    private void parseArgs(List<String> args) {
+        boolean captureNext = false;
+        for (String arg : args) {
+            if (captureNext) {
+                MixinTweaker.addConfig(arg);
             }
-
-            String coreModName = this.getManifestAttribute(MixinTweaker.MFATT_FMLCOREPLUGIN);
-            if (coreModName == null) {
-                return null;
-            }
-
-            Method mdLoadCoreMod = coreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
-            mdLoadCoreMod.setAccessible(true);
-            ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
-            if (wrapper == null) {
-                return null;
-            }
-
-            return wrapper;
-        } catch (Exception ex) {
-            // ex.printStackTrace();
-        }
-        return null;
-    }
-
-    /**
-     * Attempt to get the FML CoreModManager, tries the post-1.8 namespace first
-     * and falls back to 1.7.10 if class lookup fails
-     */
-    private Class<?> getCoreModManagerClass() throws ClassNotFoundException {
-        try {
-            return Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
-        } catch (ClassNotFoundException ex) {
-            return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
+            captureNext = "--mixin".equals(arg);
         }
     }
 
@@ -184,9 +134,42 @@ public class MixinTweaker implements ITweaker {
      *      net.minecraft.launchwrapper.LaunchClassLoader)
      */
     @Override
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (this.fmlWrapper != null) {
-            this.fmlWrapper.injectIntoClassLoader(Launch.classLoader);
+    public final void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        this.scanClasspath();
+        MixinTweaker.logger.debug("injectIntoClassLoader running with {} agents", this.containers.size());
+        for (MixinTweakContainer container : this.containers.values()) {
+            try {
+                container.injectIntoClassLoader(classLoader);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Scan the classpath for mixin containers (containers which declare the
+     * mixin tweaker in their manifest) and add agents for them
+     */
+    private void scanClasspath() {
+        for (URL url : Launch.classLoader.getSources()) {
+            try {
+                URI uri = url.toURI();
+                if (this.containers.containsKey(uri)) {
+                    continue;
+                }
+                MixinTweaker.logger.debug("Scanning {} for mixin tweaker", uri);
+                if (!"file".equals(uri.getScheme()) || !new File(uri).exists()) {
+                    continue;
+                }
+                MainAttributes attributes = MainAttributes.of(uri);
+                String tweaker = attributes.get(MixinTweaker.MFATT_TWEAKER);
+                if (MixinTweaker.class.getName().equals(tweaker)) {
+                    MixinTweaker.logger.debug("{} contains a mixin tweaker, adding agents", uri);
+                    this.addContainer(uri);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            } 
         }
     }
 
@@ -195,8 +178,14 @@ public class MixinTweaker implements ITweaker {
      */
     @Override
     public String getLaunchTarget() {
-        String mainClass = this.getManifestAttribute(MixinTweaker.MFATT_MAINCLASS);
-        return mainClass != null ? mainClass : "net.minecraft.client.main.Main";
+        for (MixinTweakContainer container : this.containers.values()) {
+            String mainClass = container.getLaunchTarget();
+            if (mainClass != null) {
+                return mainClass;
+            }
+        }
+        
+        return MixinTweaker.DEFAULT_MAIN_CLASS;
     }
 
     /* (non-Javadoc)
@@ -207,26 +196,51 @@ public class MixinTweaker implements ITweaker {
         return new String[]{};
     }
 
-    private String getManifestAttribute(String key) {
-        if (this.container == null) {
-            return null;
-        }
-        JarFile jarFile = null;
-        try {
-            jarFile = new JarFile(this.container);
-            Attributes manifestAttributes = jarFile.getManifest().getMainAttributes();
-            return manifestAttributes.getValue(key);
-        } catch (IOException ex) {
-            // be quiet checkstyle
-        } finally {
-            if (jarFile != null) {
-                try {
-                    jarFile.close();
-                } catch (IOException ex) {
-                    // this could be an issue later on :(
-                }
+    /**
+     * Add a config from a jar manifest source or the command line. Supports
+     * config declarations in the form <tt>filename.json</tt> or alternatively
+     * <tt>filename.json&#064;PHASE</tt> where <tt>PHASE</tt> is a
+     * case-sensitive string token representing an environment phase.
+     * 
+     * @param config config resource name, does not require a leading /
+     */
+    static void addConfig(String config) {
+        if (config.endsWith(".json")) {
+            MixinTweaker.logger.debug("Registering mixin config: {}", config);
+            MixinEnvironment.getDefaultEnvironment().addConfiguration(config);
+        } else if (config.contains(".json@")) {
+            int pos = config.indexOf(".json@");
+            String phaseName = config.substring(pos + 6);
+            config = config.substring(0, pos + 5);
+            Phase phase = Phase.forName(phaseName);
+            if (phase != null) {
+                MixinTweaker.logger.debug("Registering mixin config: {}", config);
+                MixinEnvironment.getEnvironment(phase).addConfiguration(config);
             }
         }
-        return null;
     }
+    
+    /**
+     * Add a token provider class from a jar manifest source. Supports either
+     * bare class names in the form <tt>blah.package.ClassName</tt> or
+     * alternatively <tt>blah.package.ClassName&#064;PHASE</tt> where
+     * <tt>PHASE</tt> is a case-sensitive string token representing an
+     * environment phase name.
+     * 
+     * @param provider provider class name, optionally suffixed with &#064;PHASE
+     */
+    static void addTokenProvider(String provider) {
+        if (provider.contains("@")) {
+            String[] parts = provider.split("@", 2);
+            Phase phase = Phase.forName(parts[1]);
+            if (phase != null) {
+                MixinTweaker.logger.debug("Registering token provider class: {}", parts[0]);
+                MixinEnvironment.getEnvironment(phase).registerTokenProviderClass(parts[0]);
+            }
+            return;
+        }
+
+        MixinEnvironment.getDefaultEnvironment().registerTokenProviderClass(provider);
+    }
+    
 }
