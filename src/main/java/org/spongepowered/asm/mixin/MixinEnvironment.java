@@ -99,6 +99,11 @@ public class MixinEnvironment implements ITokenProvider {
          */
         final String name;
         
+        /**
+         * Environment for this phase 
+         */
+        private MixinEnvironment environment;
+        
         private Phase(int ordinal, String name) {
             this.ordinal = ordinal;
             this.name = name;
@@ -116,6 +121,18 @@ public class MixinEnvironment implements ITokenProvider {
                 }
             }
             return null;
+        }
+
+        MixinEnvironment getEnvironment() {
+            if (this.ordinal < 0) {
+                throw new IllegalArgumentException("Cannot access the NOT_INITIALISED environment");
+            }
+            
+            if (this.environment == null) {
+                this.environment = new MixinEnvironment(this);
+            }
+
+            return this.environment;
         }
     }
     
@@ -391,11 +408,6 @@ public class MixinEnvironment implements ITokenProvider {
     private static final String TRANSFORMER_KEY = "mixin.transformer";
     
     /**
-     * Array of all (real) environments, indexed by ordinal
-     */
-    private static final MixinEnvironment[] environments = new MixinEnvironment[Phase.phases.size()];
-    
-    /**
      * Currently active environment
      */
     private static MixinEnvironment currentEnvironment;
@@ -469,7 +481,7 @@ public class MixinEnvironment implements ITokenProvider {
      */
     private IClassNameTransformer nameTransformer;
     
-    private MixinEnvironment(Phase phase) {
+    MixinEnvironment(Phase phase) {
         this.phase = phase;
         this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
         
@@ -491,22 +503,25 @@ public class MixinEnvironment implements ITokenProvider {
         
         if (MixinEnvironment.showHeader) {
             MixinEnvironment.showHeader = false;
-            
-            Side side = this.getSide();
-            String codeSource = this.getCodeSource();
-            this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
-            
-            if (this.getOption(Option.DEBUG_VERBOSE)) {
-                PrettyPrinter printer = new PrettyPrinter(32);
-                printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-                printer.add("%25s : %s", "Code source", codeSource);
-                printer.add("%25s : %s", "Internal Version", version).hr();
-                for (Option option : Option.values()) {
-                    printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
-                }
-                printer.hr().add("%25s : %s", "Detected Side", side);
-                printer.print(System.err);
+            this.printHeader(version);
+        }
+    }
+
+    private void printHeader(Object version) {
+        Side side = this.getSide();
+        String codeSource = this.getCodeSource();
+        this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
+        
+        if (this.getOption(Option.DEBUG_VERBOSE)) {
+            PrettyPrinter printer = new PrettyPrinter(32);
+            printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
+            printer.add("%25s : %s", "Code source", codeSource);
+            printer.add("%25s : %s", "Internal Version", version).hr();
+            for (Option option : Option.values()) {
+                printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
             }
+            printer.hr().add("%25s : %s", "Detected Side", side);
+            printer.print(System.err);
         }
     }
 
@@ -856,15 +871,10 @@ public class MixinEnvironment implements ITokenProvider {
      * @return the environment
      */
     public static MixinEnvironment getEnvironment(Phase phase) {
-        if (phase.ordinal < 0) {
-            throw new IllegalArgumentException("Cannot access the UNINITIALISED environment");
+        if (phase == null) {
+            return Phase.DEFAULT.getEnvironment();
         }
-        
-        if (MixinEnvironment.environments[phase.ordinal] == null) {
-            MixinEnvironment.environments[phase.ordinal] = new MixinEnvironment(phase);
-        }
-        
-        return MixinEnvironment.environments[phase.ordinal];
+        return phase.getEnvironment();
     }
 
     /**
