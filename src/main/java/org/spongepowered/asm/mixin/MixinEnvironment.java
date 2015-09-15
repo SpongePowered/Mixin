@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin;
 
 import java.io.File;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,9 +36,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
@@ -77,15 +83,21 @@ public class MixinEnvironment implements ITokenProvider {
         public static final Phase PREINIT = new Phase(0, "PREINIT");
         
         /**
+         * "Initialisation" phase, after FML's deobf transformer has loaded
+         */
+        public static final Phase INIT = new Phase(1, "INIT");
+        
+        /**
          * "Default" phase, during runtime
          */
-        public static final Phase DEFAULT = new Phase(1, "DEFAULT");
+        public static final Phase DEFAULT = new Phase(2, "DEFAULT");
         
         /**
          * All phases
          */
         static final List<Phase> phases = ImmutableList.of(
             Phase.PREINIT,
+            Phase.INIT,
             Phase.DEFAULT
         );
         
@@ -390,6 +402,33 @@ public class MixinEnvironment implements ITokenProvider {
             return this.provider.getToken(token, this.environment);
         }
 
+    }
+    
+    static class MixinLogger {
+
+        static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
+
+        public MixinLogger() {
+            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
+            log.addAppender(appender);
+        }
+
+        static class MixinAppender extends AbstractAppender {
+
+            protected MixinAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
+                super(name, filter, layout);
+                // TODO Auto-generated constructor stub
+            }
+
+            @Override
+            public void append(LogEvent event) {
+                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormat())) {
+                    // transition to INIT
+                    MixinEnvironment.gotoPhase(Phase.INIT);
+                }
+            }
+            
+        }
     }
     
     /**
@@ -861,6 +900,7 @@ public class MixinEnvironment implements ITokenProvider {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
             MixinEnvironment.currentPhase = phase;
             MixinEnvironment.getEnvironment(phase);
+            new MixinLogger();
         }
     }
     
@@ -911,6 +951,12 @@ public class MixinEnvironment implements ITokenProvider {
         
         if (phase.ordinal > getCurrentPhase().ordinal) {
             MixinBootstrap.addProxy();
+        }
+        
+        if (phase == Phase.DEFAULT) {
+            // remove appender
+            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
+            log.removeAppender(MixinLogger.appender);
         }
         
         MixinEnvironment.currentPhase = phase;
