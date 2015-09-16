@@ -24,40 +24,39 @@
  */
 package org.spongepowered.asm.mixin;
 
-import java.io.File;
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import net.minecraft.launchwrapper.IClassNameTransformer;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.filter.AbstractFilter;
+import org.apache.logging.log4j.core.helpers.Booleans;
+import org.apache.logging.log4j.message.Message;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.PrettyPrinter;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-
-import net.minecraft.launchwrapper.IClassNameTransformer;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -406,28 +405,61 @@ public class MixinEnvironment implements ITokenProvider {
     
     static class MixinLogger {
 
-        static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
+        static MixinFilter filter = new MixinFilter();
 
         public MixinLogger() {
+            // Prep ugly hack for INIT phase
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            log.addAppender(appender);
+            log.addFilter(filter);
+            // Set the level to DEBUG for FML logger. We don't need to check for obfuscation as it would be debug anyways in DEV
+            log.setLevel(Level.DEBUG);
         }
 
-        static class MixinAppender extends AbstractAppender {
+        // Commence ugly hack for INIT phase
+        static class MixinFilter extends AbstractFilter {
 
-            protected MixinAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
-                super(name, filter, layout);
-                // TODO Auto-generated constructor stub
+            @Override
+            public Result filter(final org.apache.logging.log4j.core.Logger logger, final Level level, final Marker marker, final String msg,
+                    final Object... params) {
+                if (MixinEnvironment.getCurrentPhase().equals(Phase.PREINIT) && "Validating minecraft".equals(msg)) {
+                    MixinEnvironment.gotoPhase(Phase.INIT);
+                }
+                // Log entries can be filtered before the blackboard has this value. We'll just look it up.
+                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
             }
 
             @Override
-            public void append(LogEvent event) {
-                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormat())) {
-                    // transition to INIT
+            public Result filter(final org.apache.logging.log4j.core.Logger logger, final Level level, final Marker marker, final Object msg,
+                    final Throwable t) {
+                if (MixinEnvironment.getCurrentPhase().equals(Phase.PREINIT) && "Validating minecraft".equals(msg)) {
                     MixinEnvironment.gotoPhase(Phase.INIT);
                 }
+                // Log entries can be filtered before the blackboard has this value. We'll just look it up.
+                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
             }
-            
+
+            @Override
+            public Result filter(final org.apache.logging.log4j.core.Logger logger, final Level level, final Marker marker, final Message msg,
+                    final Throwable t) {
+                if (MixinEnvironment.getCurrentPhase().equals(Phase.PREINIT) && "Validating minecraft".equals(msg.getFormattedMessage())) {
+                    MixinEnvironment.gotoPhase(Phase.INIT);
+                }
+                // Log entries can be filtered before the blackboard has this value. We'll just look it up.
+                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+            }
+
+            @Override
+            public Result filter(final LogEvent event) {
+                if (MixinEnvironment.getCurrentPhase().equals(Phase.PREINIT) && "Validating minecraft".equals(event.getMessage().getFormattedMessage())) {
+                    MixinEnvironment.gotoPhase(Phase.INIT);
+                }
+                // Log entries can be filtered before the blackboard has this value. We'll just look it up.
+                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+            }
         }
     }
     
@@ -954,9 +986,19 @@ public class MixinEnvironment implements ITokenProvider {
         }
         
         if (phase == Phase.DEFAULT) {
-            // remove appender
+            // Remove filter
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            log.removeAppender(MixinLogger.appender);
+            for (Iterator<Filter> iter = log.getFilters(); iter.hasNext();) {
+                final Filter filter = iter.next();
+                if (filter instanceof MixinLogger.MixinFilter) {
+                    // If FML isn't in obfuscated environment, we need to hotswap the log level back
+                    if (!(Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment")) {
+                        log.setLevel(Level.INFO);
+                    }
+                    iter.remove();
+                    break;
+                }
+            }
         }
         
         MixinEnvironment.currentPhase = phase;

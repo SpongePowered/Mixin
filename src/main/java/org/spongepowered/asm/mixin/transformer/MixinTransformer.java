@@ -354,7 +354,7 @@ public class MixinTransformer extends TreeTransformer {
         boolean locked = this.lock.push().isSet();
         
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
-        
+
         if (this.currentEnvironment != environment && !locked) {
             try {
                 this.init(environment);
@@ -363,7 +363,7 @@ public class MixinTransformer extends TreeTransformer {
                 throw new RuntimeException(ex);
             }
         }
-        
+
         try {
             SortedSet<MixinInfo> mixins = null;
             boolean invalidRef = false;
