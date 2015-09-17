@@ -411,8 +411,11 @@ public class MixinEnvironment implements ITokenProvider {
             // Prep ugly hack for INIT phase
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
             log.addFilter(filter);
-            // Set the level to DEBUG for FML logger. We don't need to check for obfuscation as it would be debug anyways in DEV
-            log.setLevel(Level.DEBUG);
+            final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+            if (isFMLDeobfuscated != null && !isFMLDeobfuscated) {
+                // Set the level to DEBUG for FML logger. We don't need to check for obfuscation as it would be debug anyways in DEV
+                log.setLevel(Level.DEBUG);
+            }
         }
 
         // Commence ugly hack for INIT phase
@@ -425,8 +428,8 @@ public class MixinEnvironment implements ITokenProvider {
                     MixinEnvironment.gotoPhase(Phase.INIT);
                 }
                 // Log entries can be filtered before the blackboard has this value. We'll just look it up.
-                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
-                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+                final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  isFMLDeobfuscated != null && isFMLDeobfuscated ? Result.NEUTRAL : Result.DENY;
             }
 
             @Override
@@ -436,8 +439,8 @@ public class MixinEnvironment implements ITokenProvider {
                     MixinEnvironment.gotoPhase(Phase.INIT);
                 }
                 // Log entries can be filtered before the blackboard has this value. We'll just look it up.
-                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
-                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+                final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  isFMLDeobfuscated != null && isFMLDeobfuscated ? Result.NEUTRAL : Result.DENY;
             }
 
             @Override
@@ -447,8 +450,8 @@ public class MixinEnvironment implements ITokenProvider {
                     MixinEnvironment.gotoPhase(Phase.INIT);
                 }
                 // Log entries can be filtered before the blackboard has this value. We'll just look it up.
-                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
-                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+                final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  isFMLDeobfuscated != null && isFMLDeobfuscated ? Result.NEUTRAL : Result.DENY;
             }
 
             @Override
@@ -457,8 +460,8 @@ public class MixinEnvironment implements ITokenProvider {
                     MixinEnvironment.gotoPhase(Phase.INIT);
                 }
                 // Log entries can be filtered before the blackboard has this value. We'll just look it up.
-                Boolean filter = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
-                return  filter != null && filter ? Result.NEUTRAL : Result.DENY;
+                final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
+                return  isFMLDeobfuscated != null && isFMLDeobfuscated ? Result.NEUTRAL : Result.DENY;
             }
         }
     }
@@ -991,8 +994,9 @@ public class MixinEnvironment implements ITokenProvider {
             for (Iterator<Filter> iter = log.getFilters(); iter.hasNext();) {
                 final Filter filter = iter.next();
                 if (filter instanceof MixinLogger.MixinFilter) {
+                    final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
                     // If FML isn't in obfuscated environment, we need to hotswap the log level back
-                    if (!(Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment")) {
+                    if (isFMLDeobfuscated != null && !isFMLDeobfuscated) {
                         log.setLevel(Level.INFO);
                     }
                     iter.remove();
