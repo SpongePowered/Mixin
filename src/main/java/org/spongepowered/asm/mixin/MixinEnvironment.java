@@ -411,11 +411,7 @@ public class MixinEnvironment implements ITokenProvider {
             // Prep ugly hack for INIT phase
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
             log.addFilter(filter);
-            final Boolean isFMLDeobfuscated = (Boolean) Launch.blackboard.get("fml.deobfuscatedEnvironment");
-            if (isFMLDeobfuscated != null && !isFMLDeobfuscated) {
-                // Set the level to DEBUG for FML logger. We don't need to check for obfuscation as it would be debug anyways in DEV
-                log.setLevel(Level.DEBUG);
-            }
+            log.setLevel(Level.DEBUG);
         }
 
         // Commence ugly hack for INIT phase
