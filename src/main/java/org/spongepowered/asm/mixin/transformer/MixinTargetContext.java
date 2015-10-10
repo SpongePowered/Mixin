@@ -358,7 +358,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param dynInsn Insn to transform
      */
     private void transformInvokeDynamicNode(MethodNode method, Iterator<AbstractInsnNode> iter, InvokeDynamicInsnNode dynInsn) {
-        System.out.println(targetClass.version);
+        // set class version to java 8
         targetClass.version = 52;
         dynInsn.desc = this.transformMethodDescriptor(dynInsn.desc);
         dynInsn.bsm = this.transformHandle(method, iter, dynInsn.bsm);
