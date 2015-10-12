@@ -719,7 +719,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Called imm imediately after the mixin is applied to targetClass
+     * Called imediately after the mixin is applied to targetClass
      * 
      * @param transformedName Target class's transformed name
      * @param targetClass Target class
