@@ -392,7 +392,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param handle Handle to transform
      */
     private Handle transformHandle(MethodNode method, Iterator<AbstractInsnNode> iter, Handle handle) {
-        this.targetClass.version = Constants.JAVA8_CLASSFILE_VERSION;
         MemberRef.HandleRef memberRef = new MemberRef.HandleRef(handle);
         if (memberRef.isField()) {
             this.transformFieldRef(method, iter, memberRef);

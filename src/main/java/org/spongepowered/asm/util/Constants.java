@@ -32,7 +32,6 @@ import org.spongepowered.asm.mixin.Mixin;
  */
 public abstract class Constants {
 
-    public static final int JAVA8_CLASSFILE_VERSION = 52;
     public static final String INIT = "<init>";
     public static final String CLINIT = "<clinit>";
     public static final String IMAGINARY_SUPER = "super$";
