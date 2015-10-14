@@ -39,7 +39,6 @@ import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
@@ -231,9 +230,9 @@ public class MixinTargetContext implements IReferenceMapperContext {
             AbstractInsnNode insn = iter.next();
 
             if (insn instanceof MethodInsnNode) {
-                this.transformMethodRef(method, iter, new MemberRef.StaticMethodRef((MethodInsnNode)insn));
+                this.transformMethodRef(method, iter, new MemberRef.Method((MethodInsnNode)insn));
             } else if (insn instanceof FieldInsnNode) {
-                this.transformFieldRef(method, iter, new MemberRef.StaticFieldRef((FieldInsnNode)insn));
+                this.transformFieldRef(method, iter, new MemberRef.Field((FieldInsnNode)insn));
             } else if (insn instanceof TypeInsnNode) {
                 this.transformTypeNode(method, iter, (TypeInsnNode)insn);
             } else if (insn instanceof LdcInsnNode) {
@@ -253,7 +252,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
-            Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
+            ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.targetClass.name);
@@ -295,8 +294,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private void transformFieldRef(MethodNode method, Iterator<AbstractInsnNode> iter, MemberRef fieldRef) {
         if (Constants.IMAGINARY_SUPER.equals(fieldRef.getName())) {
-            if (fieldRef instanceof MemberRef.StaticFieldRef) {
-                this.processImaginarySuper(method, ((MemberRef.StaticFieldRef) fieldRef).insn);
+            if (fieldRef instanceof MemberRef.Field) {
+                this.processImaginarySuper(method, ((MemberRef.Field) fieldRef).insn);
                 iter.remove();
             } else {
                 throw new InvalidMixinException(this.mixin, "Cannot call imaginary super from method handle.");
@@ -392,7 +391,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param handle Handle to transform
      */
     private Handle transformHandle(MethodNode method, Iterator<AbstractInsnNode> iter, Handle handle) {
-        MemberRef.HandleRef memberRef = new MemberRef.HandleRef(handle);
+        MemberRef.Handle memberRef = new MemberRef.Handle(handle);
         if (memberRef.isField()) {
             this.transformFieldRef(method, iter, memberRef);
         } else {
@@ -440,7 +439,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 MethodInsnNode methodNode = (MethodInsnNode)insn;
                 if (methodNode.owner.equals(this.getClassRef()) && methodNode.name.equals(method.name) && methodNode.desc.equals(method.desc)) {
                     methodNode.setOpcode(Opcodes.INVOKESPECIAL);
-                    this.updateStaticBinding(method, new MemberRef.StaticMethodRef(methodNode));
+                    this.updateStaticBinding(method, new MemberRef.Method(methodNode));
                     return;
                 }
             }
@@ -476,8 +475,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
             return;
         }
         
-        Method superMethod = this.targetClassInfo.findMethodInHierarchy(methodRef.getName(), methodRef.getDesc(), traversal == Traversal.ALL,
-                traversal);
+        ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(methodRef.getName(), methodRef.getDesc(),
+                traversal == Traversal.ALL, traversal);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
                 throw new InvalidMixinException(this, "Invalid " + methodRef + " in " + this + " resolved " + superMethod.getOwner()
@@ -719,7 +718,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Called imediately after the mixin is applied to targetClass
+     * Called immediately after the mixin is applied to targetClass
      * 
      * @param transformedName Target class's transformed name
      * @param targetClass Target class

@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import org.spongepowered.asm.lib.Handle;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
@@ -42,7 +41,7 @@ public abstract class MemberRef {
     /**
      * A static reference to a method backed by an invoke instruction
      */
-    public static final class StaticMethodRef extends MemberRef {
+    public static final class Method extends MemberRef {
 
         /**
          * Method invocation instruction
@@ -54,7 +53,7 @@ public abstract class MemberRef {
          *
          * @param insn Method instruction of this member reference
          */
-        public StaticMethodRef(MethodInsnNode insn) {
+        public Method(MethodInsnNode insn) {
             this.insn = insn;
         }
 
@@ -97,7 +96,7 @@ public abstract class MemberRef {
     /**
      * A static reference to a field backed by field get/put instruction
      */
-    public static final class StaticFieldRef extends MemberRef {
+    public static final class Field extends MemberRef {
 
         /**
          * Field accessor instruction
@@ -109,7 +108,7 @@ public abstract class MemberRef {
          *
          * @param insn Field instruction this member reference
          */
-        public StaticFieldRef(FieldInsnNode insn) {
+        public Field(FieldInsnNode insn) {
             this.insn = insn;
         }
 
@@ -152,9 +151,9 @@ public abstract class MemberRef {
     /**
      * A reference to a field or method backed by a method handle
      */
-    public static final class HandleRef extends MemberRef {
+    public static final class Handle extends MemberRef {
 
-        private Handle handle;
+        private org.spongepowered.asm.lib.Handle handle;
 
         /**
          * Creates a member reference initially referring to the member referred
@@ -163,7 +162,7 @@ public abstract class MemberRef {
          *
          * @param handle Initial method handle.
          */
-        public HandleRef(Handle handle) {
+        public Handle(org.spongepowered.asm.lib.Handle handle) {
             this.handle = handle;
         }
 
@@ -172,7 +171,7 @@ public abstract class MemberRef {
          *
          * @return Method handle representing this object
          */
-        public Handle getMethodHandle() {
+        public org.spongepowered.asm.lib.Handle getMethodHandle() {
             return this.handle;
         }
 
@@ -227,7 +226,7 @@ public abstract class MemberRef {
 
         @Override
         public void setOwner(String owner) {
-            this.handle = new Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc());
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc());
         }
 
         @Override
@@ -242,7 +241,7 @@ public abstract class MemberRef {
 
         @Override
         public void setDesc(String desc) {
-            this.handle = new Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc);
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc);
         }
     }
 
