@@ -52,35 +52,35 @@ import com.google.common.io.Files;
  * implemented and generates reports to the console and to files on disk
  */
 public class MixinTransformerModuleInterfaceChecker implements IMixinTransformerModule {
-    
+
     /**
      * CSV Report file
      */
     private final File csv;
-    
+
     /**
      * Text Report file
      */
     private final File report;
-    
+
     /**
      * Methods from interfaces that are already in the class before mixins are
      * applied.
      */
     private final Multimap<ClassInfo, Method> interfaceMethods = HashMultimap.create();
-    
+
     public MixinTransformerModuleInterfaceChecker() {
         File debugOutputFolder = new File(MixinTransformer.DEBUG_OUTPUT, "audit");
         debugOutputFolder.mkdirs();
         this.csv = new File(debugOutputFolder, "mixin_implementation_report.csv");
         this.report = new File(debugOutputFolder, "mixin_implementation_report.txt");
-        
+
         try {
             Files.write("Class,Method,Signature,Interface\n", this.csv, Charsets.ISO_8859_1);
         } catch (IOException ex) {
             // well this sucks
         }
-        
+
         try {
             String dateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
             Files.write("Mixin Implementation Report generated on " + dateTime + "\n", this.report, Charsets.ISO_8859_1);
@@ -97,7 +97,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     @Override
     public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
         ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
-        for (Method m : targetClassInfo.getInterfaceMethods()) {
+        for (Method m : targetClassInfo.getInterfaceMethods(false)) {
             this.interfaceMethods.put(targetClassInfo, m);
         }
     }
@@ -114,26 +114,26 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         String className = targetClassInfo.getName().replace('/', '.');
         int missingMethodCount = 0;
         PrettyPrinter printer = new PrettyPrinter();
-        
+
         printer.add("Class: %s", className).hr();
         printer.add("%-32s %-47s  %s", "Return Type", "Missing Method", "From Interface").hr();
 
-        Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods();
-        Set<Method> implementedMethods = new HashSet<Method>(targetClassInfo.getSuperClass().getInterfaceMethods());
+        Set<Method> interfaceMethods = targetClassInfo.getInterfaceMethods(true);
+        Set<Method> implementedMethods = new HashSet<Method>(targetClassInfo.getSuperClass().getInterfaceMethods(true));
         implementedMethods.addAll(this.interfaceMethods.removeAll(targetClassInfo));
-        
+
         for (Method method : interfaceMethods) {
             Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
 
             if (found != null) {
                 continue;
             }
-            
+
             // Don't blame the subclass for not implementing methods that it does not need to implement.
             if (implementedMethods.contains(method)) {
                 continue;
             }
-            
+
             if (missingMethodCount > 0) {
                 printer.add();
             }
@@ -143,7 +143,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             missingMethodCount++;
             printer.add("%-32s%s", signaturePrinter.getReturnType(), signaturePrinter);
             printer.add("%-80s  %s", "", iface);
-            
+
             this.appendToCSVReport(className, method, iface);
         }
 
@@ -164,7 +164,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
 
     private void appendToTextReport(PrettyPrinter printer) {
         FileOutputStream fos = null;
-        
+
         try {
             fos = new FileOutputStream(this.report, true);
             PrintStream stream = new PrintStream(fos);
