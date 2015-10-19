@@ -46,6 +46,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import org.spongepowered.asm.util.VersionNumber;
 
 import com.google.gson.Gson;
@@ -274,20 +275,20 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em> methods.
      * </p>
      */
-    void initialise() {
+    void initialise(IHotSwap hotSwapper) {
         if (this.initialised) {
             return;
         }
         this.initialised = true;
         
-        this.initialiseMixins(this.mixinClasses, false);
+        this.initialiseMixins(this.mixinClasses, false, hotSwapper);
         
         switch (MixinEnvironment.getCurrentEnvironment().getSide()) {
             case CLIENT:
-                this.initialiseMixins(this.mixinClassesClient, false);
+                this.initialiseMixins(this.mixinClassesClient, false, hotSwapper);
                 break;
             case SERVER:
-                this.initialiseMixins(this.mixinClassesServer, false);
+                this.initialiseMixins(this.mixinClassesServer, false, hotSwapper);
                 break;
             case UNKNOWN:
                 //$FALL-THROUGH$
@@ -297,10 +298,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
     
-    void postInitialise() {
+    void postInitialise(IHotSwap hotSwapper) {
         if (this.plugin != null) {
             List<String> pluginMixins = this.plugin.getMixins();
-            this.initialiseMixins(pluginMixins, true);
+            this.initialiseMixins(pluginMixins, true, hotSwapper);
         }
         
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
@@ -328,7 +329,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
 
-    private void initialiseMixins(List<String> mixinClasses, boolean suppressPlugin) {
+    private void initialiseMixins(List<String> mixinClasses, boolean suppressPlugin, IHotSwap hotSwapper) {
         if (mixinClasses == null) {
             return;
         }
@@ -349,6 +350,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                         this.mixinsFor(targetClassName).add(mixin);
                         this.unhandledTargets.add(targetClassName);
                     }
+                    hotSwapper.registerMixinClass(mixin.getClassName(), mixin.getClassBytes());
                     this.mixins.add(mixin);
                 }
             } catch (Exception ex) {
@@ -503,6 +505,25 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.mixinMapping.put(targetClass, mixins);
         }
         return mixins;
+    }
+
+    public List<String> reloadMixin(String mixinClass, byte[] bytes) {
+        for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
+            MixinInfo mixin = iter.next();
+            if (mixin.getClassName().equals(mixinClass)) {
+                mixin.reloadMixin(bytes);
+                try {
+                    mixin.validate();
+                } catch (Exception e) {
+                    this.logger.error(e.getMessage(), e);
+                    this.removeMixin(mixin);
+                    iter.remove();
+                    return Collections.<String>emptyList();
+                }
+                return mixin.getTargetClasses();
+            }
+        }
+        return null;
     }
     
     @Override

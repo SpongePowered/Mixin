@@ -122,7 +122,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Mixin bytes (read once, generate tree on demand)
      */
-    private final transient byte[] mixinBytes;
+    private transient byte[] mixinBytes;
 
     /**
      * Configuration plugin
@@ -537,6 +537,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
 
         return mixinBytes;
+    }
+
+    void reloadMixin(byte[] mixinBytes) {
+        this.mixinBytes = mixinBytes;
+        this.validationClassNode = getClassNode(0);
     }
 
     /* (non-Javadoc)
