@@ -39,6 +39,9 @@ class MixinClassLoader extends ClassLoader {
     void addMixinClass(String name, byte[] bytes){
         logger.debug("add class "+name+" to class loader");
         try {
+            Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
+            bytecodes.put(clazz, bytes);
+        }catch(Throwable e){
             logger.catching(e);
         }
     }
