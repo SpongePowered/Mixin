@@ -33,7 +33,6 @@ import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
-import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,24 +49,37 @@ public class MixinAgent implements IHotSwap{
 
         @Override
         public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+            MixinAgent.logger.info("Redefining class "+className);
             if(classBeingRedefined == null)
                 return null;
-            MixinAgent.logger.info("Redefining class "+className);
             byte[] mixinBytecode = MixinAgent.classLoader.getOriginalBytecode(classBeingRedefined);
             if(mixinBytecode != null){
                 MixinAgent.logger.info("Redefining mixin "+className);
-                List<String> targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
+                List<String> targets;
+                try {
+                    targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
+                } catch (Throwable th) {
+                    // catch everything as otherwise it is ignored
+                    MixinAgent.logger.error("Error while finding targets for mixin "+className, th);
+                    return mixinBytecode;
+                }
                 for (String target:targets) {
                     MixinAgent.logger.debug("Re-transforming target class "+target);
                     try {
-                        instrumentation.retransformClasses(Launch.classLoader.findClass(target));
-                    } catch (Exception e) {
-                        MixinAgent.logger.error("Error while re-transforming target class "+target);
+                        instrumentation.retransformClasses(Launch.classLoader.findClass(target.replace('/', '.')));
+                    } catch (Throwable th) {
+                        MixinAgent.logger.error("Error while re-transforming target class "+target, th);
                     }
                 }
                 return mixinBytecode;
             }
-            return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
+            try {
+                MixinAgent.logger.info("Redefining class "+className);
+                return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
+            } catch (Throwable th) {
+                MixinAgent.logger.error("Error while re-transforming class "+className, th);
+                return null;
+            }
         }
     }
 
@@ -120,6 +132,9 @@ public class MixinAgent implements IHotSwap{
      */
     public static void init(Instrumentation instrumentation) {
         MixinAgent.instrumentation = instrumentation;
+        if(!MixinAgent.instrumentation.isRetransformClassesSupported()) {
+            MixinAgent.logger.error("The instrumentation doesn't support re-transformations");
+        }
         for (MixinAgent agent:agents) {
             agent.initTransformer();
         }

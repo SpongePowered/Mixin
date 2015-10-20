@@ -525,7 +525,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 return mixin.getTargetClasses();
             }
         }
-        return null;
+        return Collections.<String>emptyList();
     }
     
     @Override
