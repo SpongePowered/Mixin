@@ -350,7 +350,9 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                         this.mixinsFor(targetClassName).add(mixin);
                         this.unhandledTargets.add(targetClassName);
                     }
-                    hotSwapper.registerMixinClass(mixin.getClassName(), mixin.getClassBytes());
+                    if (hotSwapper != null) {
+                        hotSwapper.registerMixinClass(mixin.getClassName(), mixin.getClassBytes());
+                    }
                     this.mixins.add(mixin);
                 }
             } catch (Exception ex) {

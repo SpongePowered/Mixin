@@ -25,6 +25,8 @@
 package org.spongepowered.tools.agent;
 
 import net.minecraft.launchwrapper.Launch;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 
@@ -50,17 +52,18 @@ public class MixinAgent implements IHotSwap{
         public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
             if(classBeingRedefined == null)
                 return null;
+            MixinAgent.logger.info("Redefining class "+className);
             byte[] mixinBytecode = MixinAgent.classLoader.getOriginalBytecode(classBeingRedefined);
             if(mixinBytecode != null){
+                MixinAgent.logger.info("Redefining mixin "+className);
                 List<String> targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
-                try {
-                    for (String target:targets) {
+                for (String target:targets) {
+                    MixinAgent.logger.debug("Re-transforming target class "+target);
+                    try {
                         instrumentation.retransformClasses(Launch.classLoader.findClass(target));
+                    } catch (Exception e) {
+                        MixinAgent.logger.error("Error while re-transforming target class "+target);
                     }
-                } catch (UnmodifiableClassException e) {
-                    e.printStackTrace();
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
                 }
                 return mixinBytecode;
             }
@@ -72,6 +75,8 @@ public class MixinAgent implements IHotSwap{
      * Class loader used to load mixin classes
      */
     private static final MixinClassLoader classLoader = new MixinClassLoader();
+
+    private static final Logger logger = LogManager.getLogger("mixin.agent");
 
     /**
      * Instance used to register the transformer
@@ -100,12 +105,12 @@ public class MixinAgent implements IHotSwap{
     }
 
     private void initTransformer() {
-        MixinAgent.instrumentation.addTransformer(new Transformer());
+        MixinAgent.instrumentation.addTransformer(new Transformer(), true);
     }
 
     @Override
     public void registerMixinClass(String name, byte[] bytecode) {
-        MixinAgent.classLoader.addMixinClass(name, bytecode);
+        MixinAgent.classLoader.addMixinClass(name);
     }
 
     /**

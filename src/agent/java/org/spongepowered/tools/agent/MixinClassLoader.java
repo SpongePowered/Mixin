@@ -26,7 +26,15 @@ package org.spongepowered.tools.agent;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.MethodVisitor;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,10 +44,14 @@ class MixinClassLoader extends ClassLoader {
 
     private Map<Class<?>, byte[]> bytecodes = new HashMap<Class<?>, byte[]>();
 
-    void addMixinClass(String name, byte[] bytes){
-        logger.debug("add class "+name+" to class loader");
+    void addMixinClass(String name){
+        logger.debug("Mixin class "+name+" added to class loader");
         try {
+            byte[] bytes = materialize(name);
             Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
+            // apparently the class needs to be instantiated at least once
+            // to be including in list returned by allClasses() method in jdi api
+            clazz.newInstance();
             bytecodes.put(clazz, bytes);
         }catch(Throwable e){
             logger.catching(e);
@@ -48,5 +60,22 @@ class MixinClassLoader extends ClassLoader {
 
     byte[] getOriginalBytecode(Class<?> clazz){
         return this.bytecodes.get(clazz);
+    }
+
+    private byte[] materialize(String name) {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, Type.getInternalName(Object.class), null);
+
+        // create init method
+        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+        mv.visitCode();
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>", "()V", false);
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(1, 1);
+        mv.visitEnd();
+
+        cw.visitEnd();
+        return cw.toByteArray();
     }
 }
