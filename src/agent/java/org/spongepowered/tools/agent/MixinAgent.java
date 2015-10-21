@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 
+import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -38,46 +39,60 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A java agent that re-transforms a mixin's target class if the mixin has been
- * redefined. This agent enables hot-swapping of mixins.
- *
- * This class is a singleton because it needs to conofrm to the IHotSwap interface.
+ * An agent that re-transforms a mixin's target classes if the mixin has been
+ * redefined. Basically this agent enables hot-swapping of mixins.
  */
-public class MixinAgent implements IHotSwap{
+public class MixinAgent implements IHotSwap {
 
-    private class Transformer implements ClassFileTransformer{
+    /**
+     * Class file transformer that re-transforms mixin's target classes if the
+     * mixin has been redefined.
+     */
+    private class Transformer implements ClassFileTransformer {
 
         @Override
-        public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-            MixinAgent.logger.info("Redefining class "+className);
-            if(classBeingRedefined == null)
+        public byte[] transform(ClassLoader loader,
+                                String className,
+                                Class<?> classBeingRedefined,
+                                ProtectionDomain protectionDomain,
+                                byte[] classfileBuffer) throws IllegalClassFormatException {
+            if (classBeingRedefined == null) {
                 return null;
-            byte[] mixinBytecode = MixinAgent.classLoader.getOriginalBytecode(classBeingRedefined);
-            if(mixinBytecode != null){
-                MixinAgent.logger.info("Redefining mixin "+className);
+            }
+            byte[] mixinBytecode = MixinAgent.classLoader.getFakeMixinBytecode(classBeingRedefined);
+            if (mixinBytecode != null) {
+                MixinAgent.logger.info("Redefining mixin " + className);
                 List<String> targets;
                 try {
                     targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
                 } catch (Throwable th) {
                     // catch everything as otherwise it is ignored
-                    MixinAgent.logger.error("Error while finding targets for mixin "+className, th);
+                    MixinAgent.logger.error("Error while finding targets for mixin " + className, th);
                     return mixinBytecode;
                 }
-                for (String target:targets) {
-                    MixinAgent.logger.debug("Re-transforming target class "+target);
+                for (String target : targets) {
+                    String targetName = target.replace('/', '.');
+                    MixinAgent.logger.debug("Re-transforming target class " + target);
                     try {
-                        instrumentation.retransformClasses(Launch.classLoader.findClass(target.replace('/', '.')));
+                        Class<?> targetClass = Launch.classLoader.findClass(targetName);
+                        byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
+                        if (targetBytecode == null) {
+                            MixinAgent.logger.error("Target class " + targetName + " hasn't registered its bytecode");
+                            continue;
+                        }
+                        targetBytecode = MixinAgent.this.classTransformer.transform(null, targetName, targetBytecode);
+                        instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                     } catch (Throwable th) {
-                        MixinAgent.logger.error("Error while re-transforming target class "+target, th);
+                        MixinAgent.logger.error("Error while re-transforming target class " + target, th);
                     }
                 }
                 return mixinBytecode;
             }
             try {
-                MixinAgent.logger.info("Redefining class "+className);
+                MixinAgent.logger.info("Redefining class " + className);
                 return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
             } catch (Throwable th) {
-                MixinAgent.logger.error("Error while re-transforming class "+className, th);
+                MixinAgent.logger.error("Error while re-transforming class " + className, th);
                 return null;
             }
         }
@@ -100,11 +115,14 @@ public class MixinAgent implements IHotSwap{
      */
     private static List<MixinAgent> agents = new ArrayList<MixinAgent>();
 
+    /**
+     * MixinTransformer instance to use to transform the mixin's target classes
+     */
     private final MixinTransformer classTransformer;
 
     /**
      * Constructs an agent from a class transformer in which it will use to
-     * transform the class.
+     * transform mixin's target class.
      *
      * @param classTransformer Class transformer that will transform a mixin's
      *                         target class
@@ -112,8 +130,9 @@ public class MixinAgent implements IHotSwap{
     public MixinAgent(MixinTransformer classTransformer) {
         this.classTransformer = classTransformer;
         MixinAgent.agents.add(this);
-        if (MixinAgent.instrumentation != null)
-            initTransformer();
+        if (MixinAgent.instrumentation != null) {
+            this.initTransformer();
+        }
     }
 
     private void initTransformer() {
@@ -121,19 +140,25 @@ public class MixinAgent implements IHotSwap{
     }
 
     @Override
-    public void registerMixinClass(String name, byte[] bytecode) {
+    public void registerMixinClass(String name) {
         MixinAgent.classLoader.addMixinClass(name);
     }
 
+    @Override
+    public void registerTargetClass(String name, byte[] bytecode) {
+        MixinAgent.classLoader.addTargetClass(name, bytecode);
+    }
+
     /**
-     * Initialize the agents
+     * Sets the instrumentation instance so that the mixin agents can redefine
+     * mixins.
      *
-     * @param instrumentation Instance to use to transform the mixins
+     * @param instrumentation Instance to use to redefine the mixins
      */
     public static void init(Instrumentation instrumentation) {
         MixinAgent.instrumentation = instrumentation;
-        if(!MixinAgent.instrumentation.isRetransformClassesSupported()) {
-            MixinAgent.logger.error("The instrumentation doesn't support re-transformations");
+        if (!MixinAgent.instrumentation.isRedefineClassesSupported()) {
+            MixinAgent.logger.error("The instrumentation doesn't support re-definition of classes");
         }
         for (MixinAgent agent:agents) {
             agent.initTransformer();
@@ -141,7 +166,7 @@ public class MixinAgent implements IHotSwap{
     }
 
     /**
-     * Initialize the agent
+     * Initialize the java agent
      *
      * This will be called automatically if the jar is in a -javaagent java
      * command line argument
@@ -149,18 +174,18 @@ public class MixinAgent implements IHotSwap{
      * @param arg Ignored
      * @param instrumentation Instance to use to transform the mixins
      */
-    public static void premain(String arg, Instrumentation instrumentation){
+    public static void premain(String arg, Instrumentation instrumentation) {
         init(instrumentation);
     }
 
     /**
-     * Initialize the agent
+     * Initialize the java agent
      *
-     * This will be called automatically if the agent is loaded after jvm
+     * This will be called automatically if the java agent is loaded after jvm
      * startup
      *
      * @param arg Ignored
-     * @param instrumentation Instance to use to transform the mixins
+     * @param instrumentation Instance to use to re-define the mixins
      */
     public static void agentmain(String arg, Instrumentation instrumentation) {
         init(instrumentation);

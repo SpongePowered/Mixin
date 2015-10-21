@@ -35,8 +35,17 @@ public interface IHotSwap {
      * This is needed as the mixin needs to be loaded to be redefined.
      *
      * @param name Fully qualified name of the mixin class
-     * @param bytecode Bytecode of the mixin
      */
-    public abstract void registerMixinClass(String name, byte[] bytecode);
+    public abstract void registerMixinClass(String name);
 
+    /**
+     * Registers a class targeted by at least one mixin.
+     *
+     * This is used to rollback the target class to a state before the mixin's
+     * where applied.
+     *
+     * @param name Name of the class
+     * @param bytecode Bytecode of the class before mixin's have been applied
+     */
+    public abstract void registerTargetClass(String name, byte[] bytecode);
 }

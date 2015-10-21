@@ -539,9 +539,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         return mixinBytes;
     }
 
+    /**
+     * Updates this mixin with new bytecode
+     *
+     * @param mixinBytes New bytecode
+     */
     void reloadMixin(byte[] mixinBytes) {
         this.mixinBytes = mixinBytes;
-        this.validationClassNode = getClassNode(0);
+        this.validationClassNode = this.getClassNode(0);
     }
 
     /* (non-Javadoc)

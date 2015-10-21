@@ -351,7 +351,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                         this.unhandledTargets.add(targetClassName);
                     }
                     if (hotSwapper != null) {
-                        hotSwapper.registerMixinClass(mixin.getClassName(), mixin.getClassBytes());
+                        hotSwapper.registerMixinClass(mixin.getClassName());
                     }
                     this.mixins.add(mixin);
                 }
@@ -509,6 +509,13 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return mixins;
     }
 
+    /**
+     * Updates a mixin with new bytecode
+     *
+     * @param mixinClass Name of the mixin class
+     * @param bytes New bytecode
+     * @return List of classes that need to be updated
+     */
     public List<String> reloadMixin(String mixinClass, byte[] bytes) {
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
             MixinInfo mixin = iter.next();

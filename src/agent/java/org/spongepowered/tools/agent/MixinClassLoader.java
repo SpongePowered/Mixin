@@ -31,38 +31,84 @@ import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Class loader that is used to load fake mixin classes so that they can be
+ * re-defined.
+ */
 class MixinClassLoader extends ClassLoader {
 
     private static final Logger logger = LogManager.getLogger("mixin.agent");
 
-    private Map<Class<?>, byte[]> bytecodes = new HashMap<Class<?>, byte[]>();
+    /**
+     * Mapping of mixin mixin classes to their fake classes
+     */
+    private Map<Class<?>, byte[]> mixins = new HashMap<Class<?>, byte[]>();
 
-    void addMixinClass(String name){
-        logger.debug("Mixin class "+name+" added to class loader");
+    /**
+     * Mapping that keep track of bytecode for classes that are targeted by
+     * mixins
+     */
+    private Map<String, byte[]> targets = new HashMap<String, byte[]>();
+
+    /**
+     * Add a fake mixin class
+     *
+     * @param name Name of the fake class
+     */
+    void addMixinClass(String name) {
+        logger.debug("Mixin class " + name + " added to class loader");
         try {
             byte[] bytes = materialize(name);
             Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
             // apparently the class needs to be instantiated at least once
             // to be including in list returned by allClasses() method in jdi api
             clazz.newInstance();
-            bytecodes.put(clazz, bytes);
-        }catch(Throwable e){
+            this.mixins.put(clazz, bytes);
+        } catch (Throwable e) {
             logger.catching(e);
         }
     }
 
-    byte[] getOriginalBytecode(Class<?> clazz){
-        return this.bytecodes.get(clazz);
+    /**
+     * Registers the bytecode for a class targeted by a mixin
+     *
+     * @param name Name of the target clas
+     * @param bytecode Bytecode of the target class
+     */
+    void addTargetClass(String name, byte[] bytecode) {
+        this.targets.put(name, bytecode);
     }
 
-    private byte[] materialize(String name) {
+    /**
+     * Gets the bytecode for a fake mixin class
+     *
+     * @param clazz Mixin class
+     * @return Bytecode of the fake mixin class
+     */
+    byte[] getFakeMixinBytecode(Class<?> clazz) {
+        return this.mixins.get(clazz);
+    }
+
+    /**
+     * Gets the original bytecode for a target class
+     *
+     * @param name Name of the target class
+     * @return Original bytecode
+     */
+    byte[] getOriginalTargetBytecode(String name) {
+        return this.targets.get(name);
+    }
+
+    /**
+     * Generates the simplest possible class that is instantiable
+     *
+     * @param name Name of the generated class
+     * @return Bytecode of the generated class
+     */
+    private static byte[] materialize(String name) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, Type.getInternalName(Object.class), null);
 

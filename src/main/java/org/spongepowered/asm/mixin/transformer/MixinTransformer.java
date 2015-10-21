@@ -425,7 +425,11 @@ public class MixinTransformer extends TreeTransformer {
                     this.logger.warn("Re-entrance detected, this will cause serious problems.", new RuntimeException());
                     throw new MixinApplyError("Re-entrance error.");
                 }
-                
+
+                if (this.hotSwapper != null) {
+                    this.hotSwapper.registerTargetClass(transformedName, basicClass);
+                }
+
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
@@ -449,9 +453,17 @@ public class MixinTransformer extends TreeTransformer {
         }
     }
 
+    /**
+     * Update a mixin class with new bytecode.
+     *
+     * @param mixinClass Name of the mixin
+     * @param bytes New bytecode
+     * @return List of classes that need to be updated
+     */
     public List<String> reload(String mixinClass, byte[] bytes) {
-        if (this.lock.getDepth() > 0)
+        if (this.lock.getDepth() > 0) {
             throw new MixinApplyError("Cannot reload mixin if re-entrant lock entered");
+        }
         List<String> targets = new ArrayList<String>();
         for (MixinConfig config:this.configs) {
             targets.addAll(config.reloadMixin(mixinClass, bytes));
