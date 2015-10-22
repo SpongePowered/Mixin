@@ -50,8 +50,6 @@ import com.google.common.base.Joiner;
  */
 public abstract class Injector {
     
-    protected static final String CTOR = "<init>";
-
     /**
      * Injection info
      */

@@ -314,7 +314,7 @@ public class CallbackInjector extends Injector {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
         }
 
-        if (Injector.CTOR.equals(target.method.name)) {
+        if (Constants.INIT.equals(target.method.name)) {
             for (InjectionPoint injectionPoint : injectionPoints) {
                 if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
                     throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
@@ -527,10 +527,10 @@ public class CallbackInjector extends Injector {
         if (callback.isAtReturn) {
             callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar));
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
+                    callback.target.callbackInfoClass, Constants.INIT, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
         } else {
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+                    callback.target.callbackInfoClass, Constants.INIT, CallbackInfo.getConstructorDescriptor(), false));
         }
     }
 
