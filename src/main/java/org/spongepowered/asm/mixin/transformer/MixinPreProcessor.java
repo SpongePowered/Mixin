@@ -130,6 +130,7 @@ class MixinPreProcessor {
     MixinTargetContext createContextFor(ClassNode target) {
         this.prepare();
         MixinTargetContext context = new MixinTargetContext(this.mixin, this.classNode, target);
+        target.version = Math.max(this.classNode.version, target.version);
         this.attach(context);
         return context;
     }

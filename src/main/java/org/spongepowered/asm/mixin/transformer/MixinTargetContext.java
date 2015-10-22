@@ -32,20 +32,13 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.Level;
+import org.spongepowered.asm.lib.Handle;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.LdcInsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.TypeInsnNode;
+import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
@@ -237,13 +230,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
             AbstractInsnNode insn = iter.next();
 
             if (insn instanceof MethodInsnNode) {
-                this.transformMethodNode(method, iter, (MethodInsnNode)insn);
+                this.transformMethodRef(method, iter, new MemberRef.Method((MethodInsnNode)insn));
             } else if (insn instanceof FieldInsnNode) {
-                this.transformFieldNode(method, iter, (FieldInsnNode)insn);
+                this.transformFieldRef(method, iter, new MemberRef.Field((FieldInsnNode)insn));
             } else if (insn instanceof TypeInsnNode) {
                 this.transformTypeNode(method, iter, (TypeInsnNode)insn);
             } else if (insn instanceof LdcInsnNode) {
                 this.transformConstantNode(method, iter, (LdcInsnNode)insn);
+            } else if (insn instanceof InvokeDynamicInsnNode) {
+                this.transformInvokeDynamicNode(method, iter, (InvokeDynamicInsnNode)insn);
             }
         }
     }
@@ -257,7 +252,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
-            Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
+            ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.targetClass.name);
@@ -266,51 +261,56 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Transforms method invocations in the method. Updates static and dynamic
-     * bindings.
+     * Transforms a method invocation/reference in the method. Updates static
+     * and dynamic bindings.
      * 
      * @param method Method being processed
      * @param iter Insn interator
-     * @param methodInsn Insn to transform
+     * @param methodRef Method reference to transform
      */
-    private void transformMethodNode(MethodNode method, Iterator<AbstractInsnNode> iter, MethodInsnNode methodInsn) {
-        this.transformDescriptor(methodInsn);
+    private void transformMethodRef(MethodNode method, Iterator<AbstractInsnNode> iter, MemberRef methodRef) {
+        this.transformDescriptor(methodRef);
         
-        if (methodInsn.owner.equals(this.getClassRef())) {
-            methodInsn.owner = this.targetClass.name;
+        if (methodRef.getOwner().equals(this.getClassRef())) {
+            methodRef.setOwner(this.targetClass.name);
         } else if ((this.detachedSuper || this.inheritsFromMixin)) {
-            if (methodInsn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                this.updateStaticBinding(method, methodInsn);
-            } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodInsn.owner).isMixin()) {
-                this.updateDynamicBinding(method, methodInsn);
+            if (methodRef.getOpcode() == Opcodes.INVOKESPECIAL) {
+                this.updateStaticBinding(method, methodRef);
+            } else if (methodRef.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodRef.getOwner()).isMixin()) {
+                this.updateDynamicBinding(method, methodRef);
             }
         }
     }
 
     /**
-     * Transforms field accesses in the method. Handles imaginary super accesses
-     * and converts them to real super-invocations and rewrites field accesses
-     * which refer to mixin or supermixin classes to their relevant targets.
+     * Transforms field access/reference in the method. Handles imaginary super
+     * accesses and converts them to real super-invocations and rewrites field
+     * accesses which refer to mixin or supermixin classes to their relevant
+     * targets.
      * 
      * @param method Method being processed
      * @param iter Insn interator
-     * @param fieldInsn Insn to transform
+     * @param fieldRef Field Reference to transform
      */
-    private void transformFieldNode(MethodNode method, Iterator<AbstractInsnNode> iter, FieldInsnNode fieldInsn) {
-        if (Constants.IMAGINARY_SUPER.equals(fieldInsn.name)) {
-            this.processImaginarySuper(method, fieldInsn);
-            iter.remove();
+    private void transformFieldRef(MethodNode method, Iterator<AbstractInsnNode> iter, MemberRef fieldRef) {
+        if (Constants.IMAGINARY_SUPER.equals(fieldRef.getName())) {
+            if (fieldRef instanceof MemberRef.Field) {
+                this.processImaginarySuper(method, ((MemberRef.Field) fieldRef).insn);
+                iter.remove();
+            } else {
+                throw new InvalidMixinException(this.mixin, "Cannot call imaginary super from method handle.");
+            }
         }
         
-        this.transformDescriptor(fieldInsn);
+        this.transformDescriptor(fieldRef);
         
-        if (fieldInsn.owner.equals(this.getClassRef())) {
-            fieldInsn.owner = this.targetClass.name;
+        if (fieldRef.getOwner().equals(this.getClassRef())) {
+            fieldRef.setOwner(this.targetClass.name);
         } else {
-            ClassInfo fieldOwner = ClassInfo.forName(fieldInsn.owner);
+            ClassInfo fieldOwner = ClassInfo.forName(fieldRef.getOwner());
             if (fieldOwner.isMixin()) {
                 ClassInfo actualOwner = this.targetClassInfo.findCorrespondingType(fieldOwner);
-                fieldInsn.owner = actualOwner != null ? actualOwner.getName() : this.targetClass.name;
+                fieldRef.setOwner(actualOwner != null ? actualOwner.getName() : this.targetClass.name);
             }
         }
     }
@@ -333,20 +333,71 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Transforms class literals in the method being processed.
+     * Transforms class literals and method handle loads in the method being
+     * processed.
      * 
      * @param method Method being processed
      * @param iter Insn interator
      * @param ldcInsn Insn to transform
      */
     private void transformConstantNode(MethodNode method, Iterator<AbstractInsnNode> iter, LdcInsnNode ldcInsn) {
-        if (ldcInsn.cst instanceof Type) {
-            Type type = (Type)ldcInsn.cst;
-            String desc = this.transformSingleDescriptor(type);
-            if (!type.toString().equals(desc)) {
-                ldcInsn.cst = Type.getType(desc);
-            }
+        ldcInsn.cst = this.transformConstant(method, iter, ldcInsn.cst);
+    }
+
+    /**
+     * Transforms a invoke dynamic instruction in the method being processed.
+     *
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param dynInsn Insn to transform
+     */
+    private void transformInvokeDynamicNode(MethodNode method, Iterator<AbstractInsnNode> iter, InvokeDynamicInsnNode dynInsn) {
+        dynInsn.desc = this.transformMethodDescriptor(dynInsn.desc);
+        dynInsn.bsm = this.transformHandle(method, iter, dynInsn.bsm);
+        for (int i = 0; i < dynInsn.bsmArgs.length; i++) {
+            dynInsn.bsmArgs[i] = this.transformConstant(method, iter, dynInsn.bsmArgs[i]);
         }
+    }
+
+    /**
+     * Transforms a constant in the constant pool.
+     *
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param constant Consatnt pool entry
+     * @return Transformed constant
+     */
+    private Object transformConstant(MethodNode method, Iterator<AbstractInsnNode> iter, Object constant) {
+        if (constant instanceof Type) {
+            Type type = (Type)constant;
+            String desc = this.transformDescriptor(type);
+            if (!type.toString().equals(desc)) {
+                return Type.getType(desc);
+            } else {
+                return constant;
+            }
+        } else if (constant instanceof Handle) {
+            return this.transformHandle(method, iter, (Handle)constant);
+        }
+        return constant;
+    }
+
+    /**
+     * Transforms a method handle that is referenced from the method being
+     * processed.
+     *
+     * @param method Method being processed
+     * @param iter Insn interator
+     * @param handle Handle to transform
+     */
+    private Handle transformHandle(MethodNode method, Iterator<AbstractInsnNode> iter, Handle handle) {
+        MemberRef.Handle memberRef = new MemberRef.Handle(handle);
+        if (memberRef.isField()) {
+            this.transformFieldRef(method, iter, memberRef);
+        } else {
+            this.transformMethodRef(method, iter, memberRef);
+        }
+        return memberRef.getMethodHandle();
     }
 
     /**
@@ -388,7 +439,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 MethodInsnNode methodNode = (MethodInsnNode)insn;
                 if (methodNode.owner.equals(this.getClassRef()) && methodNode.name.equals(method.name) && methodNode.desc.equals(method.desc)) {
                     methodNode.setOpcode(Opcodes.INVOKESPECIAL);
-                    this.updateStaticBinding(method, methodNode);
+                    this.updateStaticBinding(method, new MemberRef.Method(methodNode));
                     return;
                 }
             }
@@ -402,10 +453,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * which contains the specified method.
      * 
      * @param method Method containing the instruction
-     * @param insn INVOKE instruction node
+     * @param methodRef Unbound reference to the method
      */
-    private void updateStaticBinding(MethodNode method, MethodInsnNode insn) {
-        this.updateBinding(method, insn, Traversal.SUPER);
+    private void updateStaticBinding(MethodNode method, MemberRef methodRef) {
+        this.updateBinding(method, methodRef, Traversal.SUPER);
     }
 
     /**
@@ -413,27 +464,27 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * which contains the specified method.
      * 
      * @param method Method containing the instruction
-     * @param insn INVOKE instruction node
+     * @param methodRef Unbound reference to the method
      */
-    private void updateDynamicBinding(MethodNode method, MethodInsnNode insn) {
-        this.updateBinding(method, insn, Traversal.ALL);
+    private void updateDynamicBinding(MethodNode method, MemberRef methodRef) {
+        this.updateBinding(method, methodRef, Traversal.ALL);
     }
     
-    private void updateBinding(MethodNode method, MethodInsnNode insn, Traversal traversal) {
-        if (Constants.INIT.equals(method.name) || insn.owner.equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
+    private void updateBinding(MethodNode method, MemberRef methodRef, Traversal traversal) {
+        if (Constants.INIT.equals(method.name) || methodRef.getOwner().equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
             return;
         }
         
-        Method superMethod = this.targetClassInfo.findMethodInHierarchy(insn.name, insn.desc, traversal == Traversal.ALL, traversal);
+        ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(methodRef.getName(), methodRef.getDesc(),
+                traversal == Traversal.ALL, traversal);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
-                throw new InvalidMixinException(this, "Invalid " + ASMHelper.getOpcodeName(insn) + " in " + this + " resolved " + insn.owner
-                        + " -> " + superMethod.getOwner() + " for " + insn.name + insn.desc);
+                throw new InvalidMixinException(this, "Invalid " + methodRef + " in " + this + " resolved " + superMethod.getOwner()
+                        + " but is mixin.");
             }
-            insn.owner = superMethod.getOwner().getName();
-        } else if (ClassInfo.forName(insn.owner).isMixin()) {
-            throw new MixinTransformerError("Error resolving " + ASMHelper.getOpcodeName(insn) + " target for " + insn.owner + "." + insn.name
-                    + " in " + this);
+            methodRef.setOwner(superMethod.getOwner().getName());
+        } else if (ClassInfo.forName(methodRef.getOwner()).isMixin()) {
+            throw new MixinTransformerError("Error resolving " + methodRef + " in " + this);
         }
     }
     
@@ -443,18 +494,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param field Field node to transform
      */
     public void transformDescriptor(FieldNode field) {
-        if (!this.inheritsFromMixin) {
-            return;
-        }
-        field.desc = this.transformSingleDescriptor(field.desc, false);
-    }
-    
-    /**
-     * Transforms a field insn descriptor in the context of this mixin target
-     * 
-     * @param field Field instruction node to transform
-     */
-    public void transformDescriptor(FieldInsnNode field) {
         if (!this.inheritsFromMixin) {
             return;
         }
@@ -474,15 +513,20 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Transforms a method insn descriptor in the context of this mixin target
+     * Transforms a method or field reference descriptor in the context of this
+     * mixin target
      * 
-     * @param method Method instruction node to transform
+     * @param member Reference to the method or field
      */
-    public void transformDescriptor(MethodInsnNode method) {
+    public void transformDescriptor(MemberRef member) {
         if (!this.inheritsFromMixin) {
             return;
         }
-        method.desc = this.transformMethodDescriptor(method.desc);
+        if (member.isField()) {
+            member.setDesc(this.transformSingleDescriptor(member.getDesc(), false));
+        } else {
+            member.setDesc(this.transformMethodDescriptor(member.getDesc()));
+        }
     }
     
     /**
@@ -495,6 +539,13 @@ public class MixinTargetContext implements IReferenceMapperContext {
             return;
         }
         typeInsn.desc = this.transformSingleDescriptor(typeInsn.desc, true);
+    }
+
+    private String transformDescriptor(Type type) {
+        if (type.getSort() == Type.METHOD) {
+            return this.transformMethodDescriptor(type.getDescriptor());
+        }
+        return this.transformSingleDescriptor(type);
     }
     
     private String transformSingleDescriptor(Type type) {
