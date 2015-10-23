@@ -521,14 +521,6 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             MixinInfo mixin = iter.next();
             if (mixin.getClassName().equals(mixinClass)) {
                 mixin.reloadMixin(bytes);
-                try {
-                    mixin.validate();
-                } catch (Exception e) {
-                    this.logger.error(e.getMessage(), e);
-                    this.removeMixin(mixin);
-                    iter.remove();
-                    return Collections.<String>emptyList();
-                }
                 return mixin.getTargetClasses();
             }
         }

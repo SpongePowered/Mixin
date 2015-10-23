@@ -27,6 +27,7 @@ package org.spongepowered.tools.agent;
 import net.minecraft.launchwrapper.Launch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.mixin.transformer.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 
@@ -51,11 +52,8 @@ public class MixinAgent implements IHotSwap {
     private class Transformer implements ClassFileTransformer {
 
         @Override
-        public byte[] transform(ClassLoader loader,
-                                String className,
-                                Class<?> classBeingRedefined,
-                                ProtectionDomain protectionDomain,
-                                byte[] classfileBuffer) throws IllegalClassFormatException {
+        public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain domain, byte[] classfileBuffer)
+                throws IllegalClassFormatException {
             if (classBeingRedefined == null) {
                 return null;
             }
@@ -65,10 +63,13 @@ public class MixinAgent implements IHotSwap {
                 List<String> targets;
                 try {
                     targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
+                } catch (MixinReloadException e) {
+                    MixinAgent.logger.error("mixin " + e.getMixinInfo() + " cannot be reloaded, needs a restart to be applied: " + e.getMessage());
+                    return ERROR_BYTECODE;
                 } catch (Throwable th) {
                     // catch everything as otherwise it is ignored
                     MixinAgent.logger.error("Error while finding targets for mixin " + className, th);
-                    return mixinBytecode;
+                    return ERROR_BYTECODE;
                 }
                 for (String target : targets) {
                     String targetName = target.replace('/', '.');
@@ -78,12 +79,13 @@ public class MixinAgent implements IHotSwap {
                         byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
                         if (targetBytecode == null) {
                             MixinAgent.logger.error("Target class " + targetName + " hasn't registered its bytecode");
-                            continue;
+                            return ERROR_BYTECODE;
                         }
                         targetBytecode = MixinAgent.this.classTransformer.transform(null, targetName, targetBytecode);
                         instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                     } catch (Throwable th) {
                         MixinAgent.logger.error("Error while re-transforming target class " + target, th);
+                        return ERROR_BYTECODE;
                     }
                 }
                 return mixinBytecode;
@@ -93,15 +95,22 @@ public class MixinAgent implements IHotSwap {
                 return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
             } catch (Throwable th) {
                 MixinAgent.logger.error("Error while re-transforming class " + className, th);
-                return null;
+                return ERROR_BYTECODE;
             }
         }
     }
 
     /**
+     * Bytecode that signals an error. When returned from the class file
+     * transformer this causes a class file format exception and indicates in
+     * the ide that somethings went wrong.
+     */
+    public static byte[] ERROR_BYTECODE = new byte[]{1};
+
+    /**
      * Class loader used to load mixin classes
      */
-    private static final MixinClassLoader classLoader = new MixinClassLoader();
+    private static final MixinAgentClassLoader classLoader = new MixinAgentClassLoader();
 
     private static final Logger logger = LogManager.getLogger("mixin.agent");
 
@@ -175,7 +184,7 @@ public class MixinAgent implements IHotSwap {
      * @param instrumentation Instance to use to transform the mixins
      */
     public static void premain(String arg, Instrumentation instrumentation) {
-        init(instrumentation);
+        MixinAgent.init(instrumentation);
     }
 
     /**
@@ -188,6 +197,6 @@ public class MixinAgent implements IHotSwap {
      * @param instrumentation Instance to use to re-define the mixins
      */
     public static void agentmain(String arg, Instrumentation instrumentation) {
-        init(instrumentation);
+        MixinAgent.init(instrumentation);
     }
 }

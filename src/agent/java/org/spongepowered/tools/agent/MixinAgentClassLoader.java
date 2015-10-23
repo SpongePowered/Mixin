@@ -38,7 +38,7 @@ import java.util.Map;
  * Class loader that is used to load fake mixin classes so that they can be
  * re-defined.
  */
-class MixinClassLoader extends ClassLoader {
+class MixinAgentClassLoader extends ClassLoader {
 
     private static final Logger logger = LogManager.getLogger("mixin.agent");
 
@@ -59,9 +59,9 @@ class MixinClassLoader extends ClassLoader {
      * @param name Name of the fake class
      */
     void addMixinClass(String name) {
-        logger.debug("Mixin class " + name + " added to class loader");
+        MixinAgentClassLoader.logger.debug("Mixin class " + name + " added to class loader");
         try {
-            byte[] bytes = materialize(name);
+            byte[] bytes = this.materialise(name);
             Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
             // apparently the class needs to be instantiated at least once
             // to be including in list returned by allClasses() method in jdi api
@@ -108,7 +108,7 @@ class MixinClassLoader extends ClassLoader {
      * @param name Name of the generated class
      * @return Bytecode of the generated class
      */
-    private static byte[] materialize(String name) {
+    private byte[] materialise(String name) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, Type.getInternalName(Object.class), null);
 

@@ -465,7 +465,7 @@ public class MixinTransformer extends TreeTransformer {
             throw new MixinApplyError("Cannot reload mixin if re-entrant lock entered");
         }
         List<String> targets = new ArrayList<String>();
-        for (MixinConfig config:this.configs) {
+        for (MixinConfig config : this.configs) {
             targets.addAll(config.reloadMixin(mixinClass, bytes));
         }
         return targets;
