@@ -178,4 +178,26 @@ public class InterfaceInfo extends TreeInfo {
         
         return new InterfaceInfo(mixin, prefix, iface);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        InterfaceInfo that = (InterfaceInfo) o;
+
+        return this.mixin.equals(that.mixin) && this.prefix.equals(that.prefix) && this.iface.equals(that.iface);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = this.mixin.hashCode();
+        result = 31 * result + this.prefix.hashCode();
+        result = 31 * result + this.iface.hashCode();
+        return result;
+    }
 }

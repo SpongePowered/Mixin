@@ -76,7 +76,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         byte[] mixinBytes;
 
         /**
-         * All interfaces implemented by this mixin, including soft implementations
+         * All interfaces implemented by this mixin, including soft
+         * implementations
          */
         final Set<String> interfaces = new HashSet<String>();
 
@@ -96,8 +97,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         final ClassInfo classInfo;
 
         /**
-         * True if the superclass of the mixin is <b>not</b> the direct superclass
-         * of one or more targets
+         * True if the superclass of the mixin is <b>not</b> the direct
+         * superclass of one or more targets
          */
         boolean detachedSuper;
 
@@ -134,6 +135,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     private class ReloadedState extends ValidationState {
+        /**
+         * The previous validation state to compare the changes to
+         */
         final ValidationState parent;
 
         ReloadedState(ValidationState parent, byte[] mixinBytes) {
@@ -141,6 +145,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.parent = parent;
         }
 
+        /**
+         * Validates that the changes are allowed to be made, these restrictions
+         * only exits while reloading mixins.
+         */
         void validateChanges() {
             if (!this.syntheticInnerClasses.equals(this.parent.syntheticInnerClasses)) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change inner classes");
@@ -216,12 +224,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient IMixinConfigPlugin plugin;
 
     /**
-     * Holds state that currently is not fully initialised
+     * Holds state that currently is not fully initialised or validated
      */
     private transient ValidationState uninitialisedState;
 
     /**
-     * Holds state that can be reloaded
+     * Holds the current validated state
      */
     private transient ValidationState validationState;
 
@@ -375,7 +383,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Performs pre-flight checks on the mixin
      * 
-     * @param state ReloadableState to validate
+     * @param state State to validate
      */
     private void validateMixin(ValidationState state) {
         // isInner (shouldn't) return true for static inner classes
@@ -442,8 +450,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         for (InnerClassNode inner : state.validationClassNode.innerClasses) {
             ClassInfo innerClass = ClassInfo.forName(inner.name);
             if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
-                if ((inner.outerName != null && inner.outerName.equals(state.classInfo.getName())) ||
-                        inner.name.startsWith(state.validationClassNode.name + "$")) {
+                if ((inner.outerName != null && inner.outerName.equals(state.classInfo.getName()))
+                        || inner.name.startsWith(state.validationClassNode.name + "$")) {
                     state.syntheticInnerClasses.add(inner.name);
                 } else {
                     throw new InvalidMixinException(this, "Unhandled synthetic inner class found: " + inner.name);
@@ -453,8 +461,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     /**
-     * Current state, either the initialised state or the uninitialised state if
-     * it initialising for the first time. Should never return null.
+     * Current state, either the validated state or the uninitialised state if
+     * the mixin is initialising for the first time. Should never return null.
      */
     private ValidationState getCurrentState() {
         if (this.validationState == null) {
@@ -639,8 +647,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         if (this.uninitialisedState != null) {
             throw new IllegalStateException("Cannot reload mixin while it is initialising");
         }
-        ReloadedState state = new ReloadedState(this.validationState, mixinBytes);
-        this.uninitialisedState = state;
+        this.uninitialisedState = new ReloadedState(this.validationState, mixinBytes);
         this.validate();
     }
 
