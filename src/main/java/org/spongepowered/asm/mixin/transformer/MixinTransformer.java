@@ -27,14 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -44,6 +37,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
@@ -277,6 +271,10 @@ public class MixinTransformer extends TreeTransformer {
      */
     private final IDecompiler decompiler;
 
+    private HashMap<String, List<MixinInfo>> configInterfaceMixins = new HashMap<String, List<MixinInfo>>();
+
+    private HashMap<String, List<MixinInfo>> interfaceMixins = new HashMap<String, List<MixinInfo>>();
+
     /**
      * ctor 
      */
@@ -390,7 +388,14 @@ public class MixinTransformer extends TreeTransformer {
             if (invalidRef) {
                 throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
             }
-            
+
+            List<MixinInfo> interfaceMixins = loadInterfacesRecursively(transformedName, basicClass);
+            if (mixins != null) {
+                mixins.addAll(interfaceMixins);
+            } else if(!interfaceMixins.isEmpty()) {
+                mixins = new TreeSet<MixinInfo>(interfaceMixins);
+            }
+
             if (mixins != null) {
                 // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
                 if (locked) {
@@ -419,6 +424,43 @@ public class MixinTransformer extends TreeTransformer {
         } finally {
             this.lock.pop();
         }
+    }
+
+    private ClassNode getClassNode(int flags, byte[] bytes) {
+        ClassNode classNode = new ClassNode(Opcodes.ASM5);
+        ClassReader classReader = new ClassReader(bytes);
+        classReader.accept(classNode, flags);
+        return classNode;
+    }
+
+    private List<MixinInfo> loadInterfacesRecursively(String className, byte[] bytecodes) {
+        List<MixinInfo> interfaces = new ArrayList<MixinInfo>();
+        ClassNode node = this.getClassNode(0, bytecodes);
+        for (String intf : node.interfaces) {
+            String interfaceName = intf.replace('/', '.');
+            List<MixinInfo> mixinsForInterface = interfaceMixins.get(intf);
+            if (mixinsForInterface == null) {
+                try {
+                    Launch.classLoader.loadClass(interfaceName);
+                    mixinsForInterface = interfaceMixins.get(interfaceName);
+                } catch (ClassNotFoundException e) {
+                    this.logger.catching(e);
+                    mixinsForInterface = Collections.<MixinInfo>emptyList();
+                }
+            }
+            if (mixinsForInterface != null) {
+                interfaces.addAll(mixinsForInterface);
+            }
+        }
+        List<MixinInfo> configMixins = configInterfaceMixins.get(className);
+        if (configMixins != null) {
+            interfaces.addAll(configMixins);
+        }
+        interfaceMixins.put(className, interfaces);
+        if ((node.access & Opcodes.ACC_INTERFACE) != 0) {
+            return Collections.<MixinInfo>emptyList();
+        }
+        return interfaces;
     }
 
     private void init(MixinEnvironment environment) {
@@ -506,6 +548,13 @@ public class MixinTransformer extends TreeTransformer {
         for (MixinConfig config : this.pendingConfigs) {
             try {
                 config.postInitialise();
+                Map<String, List<MixinInfo>> interfaceMixins = config.getInterfaceMixins();
+                for (String interfaceTarget : interfaceMixins.keySet()) {
+                    if (!this.configInterfaceMixins.containsKey(interfaceTarget)) {
+                        this.configInterfaceMixins.put(interfaceTarget, new ArrayList<MixinInfo>());
+                    }
+                    this.configInterfaceMixins.get(interfaceTarget).addAll(interfaceMixins.get(interfaceTarget));
+                }
             } catch (Exception ex) {
                 this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
             }

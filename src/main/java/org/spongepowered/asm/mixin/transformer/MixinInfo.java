@@ -161,6 +161,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     private boolean detachedSuper;
 
+    private List<ClassInfo> interfacesTargeted = new ArrayList<ClassInfo>();
+
     /**
      * Internal ctor, called by {@link MixinConfig}
      * 
@@ -188,6 +190,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         this.validationClassNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
+        for (ClassInfo target : this.targetClasses) {
+            if (target.isInterface()) {
+                this.interfacesTargeted.add(target);
+            }
+        }
     }
     
     void validate() {
@@ -427,6 +434,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public boolean isDetachedSuper() {
         return this.detachedSuper;
+    }
+
+    public List<ClassInfo> getInterfacesTargeted() {
+        return this.interfacesTargeted;
     }
 
     /**

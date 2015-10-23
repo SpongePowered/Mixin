@@ -92,6 +92,8 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
 
+    private final transient Map<String, List<MixinInfo>> interfaceMixins = new HashMap<String, List<MixinInfo>>();
+
     /**
      * Minimum version of the mixin subsystem required to correctly apply mixins
      * in this configuration. 
@@ -310,6 +312,12 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 for (String innerClass : mixin.getSyntheticInnerClasses()) {
                     this.syntheticInnerClasses.add(innerClass.replace('/', '.'));
                 }
+                for (ClassInfo target : mixin.getInterfacesTargeted()) {
+                    if (!this.interfaceMixins.containsKey(target.getName())) {
+                        this.interfaceMixins.put(target.getName(), new ArrayList<MixinInfo>());
+                    }
+                    this.interfaceMixins.get(target.getName()).add(mixin);
+                }
             } catch (Exception ex) {
                 this.logger.error(ex.getMessage(), ex);
                 this.removeMixin(mixin);
@@ -503,6 +511,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.mixinMapping.put(targetClass, mixins);
         }
         return mixins;
+    }
+
+    public Map<String, List<MixinInfo>> getInterfaceMixins() {
+        return this.interfaceMixins;
     }
     
     @Override
