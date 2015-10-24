@@ -26,11 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -162,6 +158,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private boolean detachedSuper;
 
     /**
+     * Get all interfaces it targets
+     */
+    private List<ClassInfo> interfacesTargeted = new ArrayList<ClassInfo>();
+
+    /**
      * Internal ctor, called by {@link MixinConfig}
      * 
      * @param parent
@@ -188,6 +189,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         this.validationClassNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
+        Iterator<ClassInfo> iter = this.targetClasses.iterator();
+        while (iter.hasNext()) {
+            ClassInfo target = iter.next();
+            if (target.isInterface()) {
+                this.interfacesTargeted.add(target);
+                iter.remove();
+            }
+        }
     }
     
     void validate() {
@@ -242,9 +251,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 ClassInfo targetInfo = ClassInfo.forName(targetClassName);
                 if (targetInfo == null) {
                     throw new RuntimeException("@Mixin target " + targetClassName + " was not found " + this);
-                }
-                if (targetInfo.isInterface()) {
-                    throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is an interface in " + this);
                 }
                 if (checkPublic && targetInfo.isPublic()) {
                     throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is public in " + this
@@ -427,6 +433,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public boolean isDetachedSuper() {
         return this.detachedSuper;
+    }
+
+    /**
+     * Interfaces that the mixin targets
+     */
+    public List<ClassInfo> getInterfaceTargets() {
+        return this.interfacesTargeted;
     }
 
     /**

@@ -93,6 +93,11 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
 
     /**
+     * Interface mixins in this config
+     */
+    private final transient Map<String, List<MixinInfo>> interfaceMixins = new HashMap<String, List<MixinInfo>>();
+
+    /**
      * Minimum version of the mixin subsystem required to correctly apply mixins
      * in this configuration. 
      */
@@ -310,6 +315,13 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 for (String innerClass : mixin.getSyntheticInnerClasses()) {
                     this.syntheticInnerClasses.add(innerClass.replace('/', '.'));
                 }
+                for (ClassInfo target : mixin.getInterfaceTargets()) {
+                    String targetName = target.getName().replace('/', '.');
+                    if (!this.interfaceMixins.containsKey(targetName)) {
+                        this.interfaceMixins.put(targetName, new ArrayList<MixinInfo>());
+                    }
+                    this.interfaceMixins.get(targetName).add(mixin);
+                }
             } catch (Exception ex) {
                 this.logger.error(ex.getMessage(), ex);
                 this.removeMixin(mixin);
@@ -342,7 +354,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             
             try {
                 MixinInfo mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
-                if (mixin.getTargetClasses().size() > 0) {
+                if (mixin.getTargetClasses().size() > 0 || mixin.getInterfaceTargets().size() > 0) {
                     MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
                         String targetClassName = targetClass.replace('/', '.');
@@ -503,6 +515,13 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.mixinMapping.put(targetClass, mixins);
         }
         return mixins;
+    }
+
+    /**
+     * Mapping of targeted interfaces with a list of mixins that target it
+     */
+    public Map<String, List<MixinInfo>> getInterfaceMixins() {
+        return this.interfaceMixins;
     }
     
     @Override
