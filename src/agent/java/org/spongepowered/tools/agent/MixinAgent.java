@@ -65,11 +65,11 @@ public class MixinAgent implements IHotSwap {
                     targets = MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
                 } catch (MixinReloadException e) {
                     MixinAgent.logger.error("mixin " + e.getMixinInfo() + " cannot be reloaded, needs a restart to be applied: " + e.getMessage());
-                    return ERROR_BYTECODE;
+                    return MixinAgent.ERROR_BYTECODE;
                 } catch (Throwable th) {
                     // catch everything as otherwise it is ignored
                     MixinAgent.logger.error("Error while finding targets for mixin " + className, th);
-                    return ERROR_BYTECODE;
+                    return MixinAgent.ERROR_BYTECODE;
                 }
                 for (String target : targets) {
                     String targetName = target.replace('/', '.');
@@ -79,13 +79,13 @@ public class MixinAgent implements IHotSwap {
                         byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
                         if (targetBytecode == null) {
                             MixinAgent.logger.error("Target class " + targetName + " hasn't registered its bytecode");
-                            return ERROR_BYTECODE;
+                            return MixinAgent.ERROR_BYTECODE;
                         }
                         targetBytecode = MixinAgent.this.classTransformer.transform(null, targetName, targetBytecode);
                         instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                     } catch (Throwable th) {
                         MixinAgent.logger.error("Error while re-transforming target class " + target, th);
-                        return ERROR_BYTECODE;
+                        return MixinAgent.ERROR_BYTECODE;
                     }
                 }
                 return mixinBytecode;
@@ -95,7 +95,7 @@ public class MixinAgent implements IHotSwap {
                 return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
             } catch (Throwable th) {
                 MixinAgent.logger.error("Error while re-transforming class " + className, th);
-                return ERROR_BYTECODE;
+                return MixinAgent.ERROR_BYTECODE;
             }
         }
     }
@@ -105,7 +105,7 @@ public class MixinAgent implements IHotSwap {
      * transformer this causes a class file format exception and indicates in
      * the ide that somethings went wrong.
      */
-    public static byte[] ERROR_BYTECODE = new byte[]{1};
+    public static final byte[] ERROR_BYTECODE = new byte[]{1};
 
     /**
      * Class loader used to load mixin classes
