@@ -271,8 +271,16 @@ public class MixinTransformer extends TreeTransformer {
      */
     private final IDecompiler decompiler;
 
+    /**
+     * Mapping of all interface mixins, with the key being their there targeted
+     * interface
+     */
     private HashMap<String, List<MixinInfo>> configInterfaceMixins = new HashMap<String, List<MixinInfo>>();
 
+    /**
+     * Cache of all interface mixins. This is used to keep track of interface
+     * mixins while doing depth first search for them
+     */
     private HashMap<String, List<MixinInfo>> interfaceMixins = new HashMap<String, List<MixinInfo>>();
 
     /**
@@ -348,9 +356,11 @@ public class MixinTransformer extends TreeTransformer {
         if (basicClass == null || transformedName == null || this.errorState) {
             return basicClass;
         }
-        
+
+        List<MixinInfo> interfaceMixins = this.findInterfaceMixins(transformedName, basicClass);
+
         boolean locked = this.lock.push().isSet();
-        
+
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
 
         if (this.currentEnvironment != environment && !locked) {
@@ -389,10 +399,9 @@ public class MixinTransformer extends TreeTransformer {
                 throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", transformedName));
             }
 
-            List<MixinInfo> interfaceMixins = loadInterfacesRecursively(transformedName, basicClass);
             if (mixins != null) {
                 mixins.addAll(interfaceMixins);
-            } else if(!interfaceMixins.isEmpty()) {
+            } else if (!interfaceMixins.isEmpty()) {
                 mixins = new TreeSet<MixinInfo>(interfaceMixins);
             }
 
@@ -433,40 +442,61 @@ public class MixinTransformer extends TreeTransformer {
         return classNode;
     }
 
-    private List<MixinInfo> loadInterfacesRecursively(String className, byte[] bytecodes) {
-        List<MixinInfo> interfaces = new ArrayList<MixinInfo>();
+    private List<MixinInfo> interfaceMixinsForClass(String className) {
+        className = className.replace('/', '.');
+        List<MixinInfo> mixinsForInterface = this.interfaceMixins.get(className);
+        if (mixinsForInterface == null) {
+            try {
+                Launch.classLoader.loadClass(className);
+                mixinsForInterface = this.interfaceMixins.get(className);
+            } catch (ClassNotFoundException e) {
+                this.logger.catching(e);
+                mixinsForInterface = Collections.<MixinInfo>emptyList();
+            }
+        }
+        return mixinsForInterface;
+    }
+
+    /**
+     * Finds all of the interface mixins associated with the class.
+     *
+     * Its all of the mixins that target at least of of its super interfaces
+     * and not target any of its superclasses either directly or indirectly.
+     *
+     * @param className Name of the class
+     * @param bytecodes Bytecode of the class
+     * @return List containing all interface mixins for the class
+     */
+    private List<MixinInfo> findInterfaceMixins(String className, byte[] bytecodes) {
+        List<MixinInfo> classInterfaceMixins = new ArrayList<MixinInfo>();
         ClassNode node = this.getClassNode(0, bytecodes);
         for (String intf : node.interfaces) {
-            String interfaceName = intf.replace('/', '.');
-            List<MixinInfo> mixinsForInterface = interfaceMixins.get(intf);
-            if (mixinsForInterface == null) {
-                try {
-                    Launch.classLoader.loadClass(interfaceName);
-                    mixinsForInterface = interfaceMixins.get(interfaceName);
-                } catch (ClassNotFoundException e) {
-                    this.logger.catching(e);
-                    mixinsForInterface = Collections.<MixinInfo>emptyList();
-                }
-            }
+            List<MixinInfo> mixinsForInterface = this.interfaceMixinsForClass(intf);
             if (mixinsForInterface != null) {
-                interfaces.addAll(mixinsForInterface);
+                classInterfaceMixins.addAll(mixinsForInterface);
             }
         }
-        List<MixinInfo> configMixins = configInterfaceMixins.get(className);
-        if (configMixins != null) {
-            interfaces.addAll(configMixins);
+        List<MixinInfo> mixinsFoSuperClass = this.interfaceMixinsForClass(node.superName);
+        if (mixinsFoSuperClass != null) {
+            classInterfaceMixins.removeAll(mixinsFoSuperClass);
         }
-        interfaceMixins.put(className, interfaces);
+        List<MixinInfo> configMixins = this.configInterfaceMixins.get(className);
+        if (configMixins != null) {
+            classInterfaceMixins.addAll(configMixins);
+        }
+        this.interfaceMixins.put(className, classInterfaceMixins);
         if ((node.access & Opcodes.ACC_INTERFACE) != 0) {
             return Collections.<MixinInfo>emptyList();
         }
-        return interfaces;
+        return classInterfaceMixins;
     }
 
     private void init(MixinEnvironment environment) {
         this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
         this.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
-        
+
+        this.interfaceMixins.put("java.lang.Object", Collections.<MixinInfo>emptyList());
+
         this.addConfigs(environment);
         this.addModules(environment);
         this.initConfigs();
