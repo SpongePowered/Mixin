@@ -374,7 +374,7 @@ public class MixinTransformer extends TreeTransformer {
      *      #transform(java.lang.String, java.lang.String, byte[])
      */
     @Override
-    public byte[] transform(String name, String transformedName, byte[] basicClass) {
+    public synchronized byte[] transform(String name, String transformedName, byte[] basicClass) {
         if (basicClass == null || transformedName == null || this.errorState) {
             return basicClass;
         }
