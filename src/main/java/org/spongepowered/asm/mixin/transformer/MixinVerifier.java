@@ -94,6 +94,9 @@ public class MixinVerifier extends SimpleVerifier {
             return false;
         }
         ClassInfo typeInfo = ClassInfo.forType(type);
+        if (typeInfo == null) {
+            return false;
+        }
         if (typeInfo.isInterface()) {
             typeInfo = ClassInfo.forName("java/lang/Object");
         }
