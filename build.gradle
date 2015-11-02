@@ -92,6 +92,9 @@ sourceSets {
     fernflower {
         compileClasspath += main.output
     }
+    agent {
+        compileClasspath += main.output
+    }
 }
 
 // Dependencies for renamed ASM
@@ -132,7 +135,6 @@ task renamedASM {
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.7'
     compile 'com.google.guava:guava:17.0'
-    compile 'net.minecraft:launchwrapper:1.11'
     compile 'com.google.code.gson:gson:2.2.4'
     compile 'commons-io:commons-io:2.4'
     compile 'commons-codec:commons-codec:1.9'
@@ -150,6 +152,7 @@ dependencies {
     // remapped ASM
     compile tasks.renamedASM.outputs.files
     apCompile tasks.renamedASM.outputs.files
+    agentCompile tasks.renamedASM.outputs.files
 
     // fernflower bridge
     fernflowerCompile 'commons-io:commons-io:2.4'
@@ -157,6 +160,9 @@ dependencies {
     fernflowerCompile 'com.google.guava:guava:17.0'
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
     compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
+
+    compile 'net.minecraft:launchwrapper:1.11'
+    agentCompile 'net.minecraft:launchwrapper:1.11'
 }
 
 // Filter, process, and include resources
@@ -212,7 +218,10 @@ jar {
     
     // Include fernflower bridge
     from sourceSets.fernflower.output
-    
+
+    // Include hotswap agent
+    from sourceSets.agent.output
+
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0])
     
@@ -226,7 +235,12 @@ jar {
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
         "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
-        "Implementation-Vendor": url)
+        "Implementation-Vendor": url,
+        // for hotswap agent
+        "Premain-Class": "org.spongepowered.tools.agent.MixinAgent",
+        "Agent-Class": "org.spongepowered.tools.agent.MixinAgent",
+        "Can-Redefine-Classes": true,
+        "Can-Retransform-Classes": true)
 }
 
 // generate shadow jar so we can use the AP standalone
@@ -259,6 +273,8 @@ task sourceJar(type: Jar) {
 	from sourceSets.ap.resources
 	from sourceSets.fernflower.java
 	from sourceSets.fernflower.resources
+    from sourceSets.agent.java
+    from sourceSets.agent.resources
 	classifier = "sources"
 }
 

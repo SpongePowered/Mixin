@@ -289,8 +289,13 @@ public class MixinEnvironment implements ITokenProvider {
         /**
          * Ignore all constraints on mixin annotations, output warnings instead
          */
-        IGNORE_CONSTRAINTS("ignoreConstraints");
-        
+        IGNORE_CONSTRAINTS("ignoreConstraints"),
+
+        /**
+         * Enables the hot-swap agent
+         */
+        HOT_SWAP("hotSwap");
+
         /**
          * Prefix for mixin options
          */

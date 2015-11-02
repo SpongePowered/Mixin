@@ -56,6 +56,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
 import org.spongepowered.asm.mixin.transformer.debug.IDecompiler;
+import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 
@@ -278,6 +279,11 @@ public class MixinTransformer extends TreeTransformer {
     private final IDecompiler decompiler;
 
     /**
+     * Hot-Swap agent
+     */
+    private final IHotSwap hotSwapper;
+
+    /**
      * ctor 
      */
     MixinTransformer() {
@@ -294,7 +300,9 @@ public class MixinTransformer extends TreeTransformer {
         TreeInfo.setLock(this.lock);
         
         this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
-        
+
+        this.hotSwapper = this.initHotSwapper();
+
         try {
             FileUtils.deleteDirectory(this.classExportDir);
         } catch (IOException ex) {
@@ -318,6 +326,26 @@ public class MixinTransformer extends TreeTransformer {
             this.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
                     th.getClass().getSimpleName(), th.getMessage());
         }
+        return null;
+    }
+
+    private IHotSwap initHotSwapper() {
+        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.HOT_SWAP)) {
+            return null;
+        }
+
+        try {
+            this.logger.info("Attempting to load Hot-Swap agent");
+            @SuppressWarnings("unchecked")
+            Class<? extends IHotSwap> clazz =
+                    (Class<? extends IHotSwap>)Class.forName("org.spongepowered.tools.agent.MixinAgent");
+            Constructor<? extends IHotSwap> ctor = clazz.getDeclaredConstructor(MixinTransformer.class);
+            return ctor.newInstance(this);
+        } catch (Throwable th) {
+            this.logger.info("Hot-swap agent could not be loaded, hot swapping of mixins won't work. {}: {}",
+                    th.getClass().getSimpleName(), th.getMessage());
+        }
+
         return null;
     }
 
@@ -346,7 +374,7 @@ public class MixinTransformer extends TreeTransformer {
      *      #transform(java.lang.String, java.lang.String, byte[])
      */
     @Override
-    public byte[] transform(String name, String transformedName, byte[] basicClass) {
+    public synchronized byte[] transform(String name, String transformedName, byte[] basicClass) {
         if (basicClass == null || transformedName == null || this.errorState) {
             return basicClass;
         }
@@ -397,14 +425,18 @@ public class MixinTransformer extends TreeTransformer {
                     this.logger.warn("Re-entrance detected, this will cause serious problems.", new RuntimeException());
                     throw new MixinApplyError("Re-entrance error.");
                 }
-                
+
+                if (this.hotSwapper != null) {
+                    this.hotSwapper.registerTargetClass(transformedName, basicClass);
+                }
+
                 try {
                     basicClass = this.applyMixins(transformedName, basicClass, mixins);
                 } catch (InvalidMixinException th) {
                     if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
                         this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
                     }
-                    
+
                     this.handleMixinErrorState(transformedName, th);
                 }
             }
@@ -419,6 +451,24 @@ public class MixinTransformer extends TreeTransformer {
         } finally {
             this.lock.pop();
         }
+    }
+
+    /**
+     * Update a mixin class with new bytecode.
+     *
+     * @param mixinClass Name of the mixin
+     * @param bytes New bytecode
+     * @return List of classes that need to be updated
+     */
+    public List<String> reload(String mixinClass, byte[] bytes) {
+        if (this.lock.getDepth() > 0) {
+            throw new MixinApplyError("Cannot reload mixin if re-entrant lock entered");
+        }
+        List<String> targets = new ArrayList<String>();
+        for (MixinConfig config : this.configs) {
+            targets.addAll(config.reloadMixin(mixinClass, bytes));
+        }
+        return targets;
     }
 
     private void init(MixinEnvironment environment) {
@@ -481,7 +531,7 @@ public class MixinTransformer extends TreeTransformer {
     private void initConfigs() {
         for (MixinConfig config : this.pendingConfigs) {
             try {
-                config.initialise();
+                config.initialise(this.hotSwapper);
             } catch (Exception ex) {
                 this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
             }
@@ -505,7 +555,7 @@ public class MixinTransformer extends TreeTransformer {
 
         for (MixinConfig config : this.pendingConfigs) {
             try {
-                config.postInitialise();
+                config.postInitialise(this.hotSwapper);
             } catch (Exception ex) {
                 this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
             }
