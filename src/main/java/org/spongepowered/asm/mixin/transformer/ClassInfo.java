@@ -730,7 +730,8 @@ public class ClassInfo extends TreeInfo {
      * containing all methods for all interfaces implemented by this class and
      * all super interfaces of those interfaces.
      *
-     * @param  includeMixins Whether to include methods from mixins targeting this class info
+     * @param  includeMixins Whether to include methods from mixins targeting
+     *      this class info
      * @return read-only view of class methods
      */
     public Set<Method> getInterfaceMethods(boolean includeMixins) {
@@ -758,7 +759,8 @@ public class ClassInfo extends TreeInfo {
      * interface methods to the supplied set
      *
      * @param methods Method set to add to
-     * @param includeMixins Whether to include methods from mixins targeting this class info
+     * @param includeMixins Whether to include methods from mixins targeting
+     *      this class info
      * @return superclass reference, used to make the code above more fluent
      */
     private ClassInfo addMethodsRecursive(Set<Method> methods, boolean includeMixins) {

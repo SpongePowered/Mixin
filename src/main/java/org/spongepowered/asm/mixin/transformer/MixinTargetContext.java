@@ -373,9 +373,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
             String desc = this.transformDescriptor(type);
             if (!type.toString().equals(desc)) {
                 return Type.getType(desc);
-            } else {
-                return constant;
             }
+            return constant;
         } else if (constant instanceof Handle) {
             return this.transformHandle(method, iter, (Handle)constant);
         }
