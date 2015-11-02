@@ -70,6 +70,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * State that can be reloaded.
      */
     private class ValidationState {
+        
         /**
          * Mixin bytes (read once, generate tree on demand)
          */
@@ -135,14 +136,15 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     private class ReloadedState extends ValidationState {
+        
         /**
          * The previous validation state to compare the changes to
          */
-        final ValidationState parent;
+        private final ValidationState previous;
 
-        ReloadedState(ValidationState parent, byte[] mixinBytes) {
-            super(mixinBytes, parent.classInfo);
-            this.parent = parent;
+        ReloadedState(ValidationState previous, byte[] mixinBytes) {
+            super(mixinBytes, previous.classInfo);
+            this.previous = previous;
         }
 
         /**
@@ -150,21 +152,21 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * only exits while reloading mixins.
          */
         void validateChanges() {
-            if (!this.syntheticInnerClasses.equals(this.parent.syntheticInnerClasses)) {
+            if (!this.syntheticInnerClasses.equals(this.previous.syntheticInnerClasses)) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change inner classes");
             }
-            if (!this.interfaces.equals(this.parent.interfaces)) {
+            if (!this.interfaces.equals(this.previous.interfaces)) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change interfaces");
             }
-            if (!new HashSet<InterfaceInfo>(this.softImplements).equals(new HashSet<InterfaceInfo>(this.parent.softImplements))) {
+            if (!new HashSet<InterfaceInfo>(this.softImplements).equals(new HashSet<InterfaceInfo>(this.previous.softImplements))) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change soft interfaces");
             }
             List<ClassInfo> targets = MixinInfo.this.readTargetClasses(this.validationClassNode, true);
-            if (!new HashSet<ClassInfo>(targets).equals(new HashSet<ClassInfo>(MixinInfo.this.targetClasses))) {
+            if (!new HashSet<ClassInfo>(targets).equals(new HashSet<ClassInfo>(MixinInfo.this.getTargets0()))) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change target classes");
             }
             int priority = MixinInfo.this.readPriority(this.validationClassNode);
-            if (priority != MixinInfo.this.priority) {
+            if (priority != MixinInfo.this.getPriority()) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change mixin priority");
             }
         }
@@ -293,7 +295,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param suppressPlugin 
      * @return
      */
-    private List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
+    protected List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
@@ -351,7 +353,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param classNode
      * @return
      */
-    private int readPriority(ClassNode classNode) {
+    protected int readPriority(ClassNode classNode) {
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
@@ -580,7 +582,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Get the target class list for this mixin
      */
     public List<ClassInfo> getTargets() {
-        return Collections.unmodifiableList(this.targetClasses);
+        return Collections.unmodifiableList(this.getTargets0());
+    }
+
+    /**
+     * Internal method to avoid synthetic bridge generation
+     */
+    protected List<ClassInfo> getTargets0() {
+        return this.targetClasses;
     }
     
     /**

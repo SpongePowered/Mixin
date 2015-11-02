@@ -49,7 +49,7 @@ public class MixinAgent implements IHotSwap {
      * Class file transformer that re-transforms mixin's target classes if the
      * mixin has been redefined.
      */
-    private class Transformer implements ClassFileTransformer {
+    class Transformer implements ClassFileTransformer {
 
         @Override
         public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain domain, byte[] classfileBuffer)
@@ -110,14 +110,14 @@ public class MixinAgent implements IHotSwap {
     /**
      * Class loader used to load mixin classes
      */
-    private static final MixinAgentClassLoader classLoader = new MixinAgentClassLoader();
+    static final MixinAgentClassLoader classLoader = new MixinAgentClassLoader();
 
-    private static final Logger logger = LogManager.getLogger("mixin.agent");
+    static final Logger logger = LogManager.getLogger("mixin.agent");
 
     /**
      * Instance used to register the transformer
      */
-    private static Instrumentation instrumentation = null;
+    static Instrumentation instrumentation = null;
 
     /**
      * Instances of all agents
@@ -127,7 +127,7 @@ public class MixinAgent implements IHotSwap {
     /**
      * MixinTransformer instance to use to transform the mixin's target classes
      */
-    private final MixinTransformer classTransformer;
+    final MixinTransformer classTransformer;
 
     /**
      * Constructs an agent from a class transformer in which it will use to
