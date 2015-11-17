@@ -36,6 +36,8 @@ import org.spongepowered.asm.lib.Handle;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -99,6 +101,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * True if this mixin's superclass is detached from the target superclass 
      */
     private final boolean detachedSuper;
+    
+    /**
+     * Minimum class version required to apply this mixin, target class will be
+     * upgraded if the version is below this value
+     */
+    private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.classVersion();
 
     /**
      * ctor
@@ -114,6 +122,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.targetClassInfo = ClassInfo.forName(target.name);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.targetClass.superName);
+        this.requireVersion(classNode.version);
     }
     
     /**
@@ -191,6 +200,13 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     public ClassInfo getTargetClassInfo() {
         return this.targetClassInfo;
+    }
+    
+    /**
+     * Get the minimum required class version for this mixin
+     */
+    public int getMinRequiredClassVersion() {
+        return this.minRequiredClassVersion;
     }
 
     /**
@@ -352,6 +368,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param dynInsn Insn to transform
      */
     private void transformInvokeDynamicNode(MethodNode method, Iterator<AbstractInsnNode> iter, InvokeDynamicInsnNode dynInsn) {
+        this.requireVersion(Opcodes.V1_7);
         dynInsn.desc = this.transformMethodDescriptor(dynInsn.desc);
         dynInsn.bsm = this.transformHandle(method, iter, dynInsn.bsm);
         for (int i = 0; i < dynInsn.bsmArgs.length; i++) {
@@ -609,6 +626,23 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     /**
+     * Mark this mixin as requiring the specified class version in the context
+     * of the current target
+     * 
+     * @param version version to require
+     */
+    protected void requireVersion(int version) {
+        this.minRequiredClassVersion = Math.max(this.minRequiredClassVersion, version);
+        
+        // This validation is done on the mixin beforehand, however it's still
+        // possible that an upstream transformer can inject java 7 instructions
+        // without updating the class version.
+        if (version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
+            throw new InvalidMixinException(this, "Unsupported mixin class version " + version);
+        }
+    }
+
+    /**
      * Get the mixin info for this mixin
      */
     MixinInfo getInfo() {
@@ -725,4 +759,5 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public void postApply(String transformedName, ClassNode targetClass) {
         this.mixin.postApply(transformedName, targetClass);
     }
+
 }

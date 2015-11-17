@@ -39,6 +39,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 
 
@@ -194,6 +195,22 @@ public class MixinTweaker implements ITweaker {
     @Override
     public String[] getLaunchArguments() {
         return new String[]{};
+    }
+    
+    /**
+     * Set the desired compatibility level as a string, used by agents to set
+     * compatibility level from jar manifest
+     * 
+     * @param level compatibility level as a string
+     */
+    static void setCompatibilityLevel(String level) {
+        try {
+            CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase());
+            MixinTweaker.logger.debug("Setting mixin compatibility level: {}", value);
+            MixinEnvironment.setCompatibilityLevel(value);
+        } catch (IllegalArgumentException ex) {
+            MixinTweaker.logger.warn("Invalid compatibility level specified: {}", level);
+        }
     }
 
     /**

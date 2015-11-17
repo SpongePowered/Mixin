@@ -37,6 +37,7 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
     protected static final String MFATT_MIXINCONFIGS = "MixinConfigs";
     protected static final String MFATT_TOKENPROVIDERS = "MixinTokenProviders";
     protected static final String MFATT_MAINCLASS = "Main-Class";
+    protected static final String MFATT_COMPATIBILITY = "MixinCompatibilityLevel";
 
     public MixinLaunchAgentDefault(URI uri) {
         super(uri);
@@ -44,6 +45,11 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
 
     @Override
     public void prepare() {
+        String compatibilityLevel = this.attributes.get(MixinLaunchAgentDefault.MFATT_COMPATIBILITY);
+        if (compatibilityLevel != null) {
+            MixinTweaker.setCompatibilityLevel(compatibilityLevel);
+        }
+        
         String mixinConfigs = this.attributes.get(MixinLaunchAgentDefault.MFATT_MIXINCONFIGS);
         if (mixinConfigs != null) {
             for (String config : mixinConfigs.split(",")) {

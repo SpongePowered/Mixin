@@ -30,6 +30,7 @@ import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -110,7 +111,8 @@ class MixinAgentClassLoader extends ClassLoader {
      */
     private byte[] materialise(String name) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, Type.getInternalName(Object.class), null);
+        cw.visit(MixinEnvironment.getCompatibilityLevel().classVersion(), Opcodes.ACC_PUBLIC, name.replace('.', '/'), null,
+                Type.getInternalName(Object.class), null);
 
         // create init method
         MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);

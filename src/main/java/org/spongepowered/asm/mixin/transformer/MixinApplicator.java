@@ -237,6 +237,7 @@ public class MixinApplicator {
         if (mixin.shouldSetSourceFile()) {
             this.targetClass.sourceFile = mixin.getSourceFile();
         }
+        this.targetClass.version = Math.max(this.targetClass.version, mixin.getMinRequiredClassVersion());
     }
 
     /**
@@ -676,9 +677,9 @@ public class MixinApplicator {
                     if (node instanceof JumpInsnNode) {
                         throw new InvalidMixinException(mixin, "Unsupported opcode in initialiser");
                     }
-                    AbstractInsnNode iThinkWereACloneNow = node.clone(labels);
-                    ctor.instructions.insert(insn, iThinkWereACloneNow);
-                    insn = iThinkWereACloneNow;
+                    AbstractInsnNode imACloneNow = node.clone(labels);
+                    ctor.instructions.insert(insn, imACloneNow);
+                    insn = imACloneNow;
                 }
                 return;
             }

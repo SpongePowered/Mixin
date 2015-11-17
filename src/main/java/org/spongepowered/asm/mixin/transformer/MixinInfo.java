@@ -107,18 +107,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * Initial ClassNode created for mixin validation, not used for actual
          * application
          */
-        ClassNode validationClassNode;
+        ClassNode classNode;
 
         ValidationState(byte[] mixinBytes, ClassInfo classInfo) {
             this.mixinBytes = mixinBytes;
-            this.validationClassNode = this.getClassNode(0);
+            this.classNode = this.getClassNode(0);
             this.classInfo = classInfo;
         }
 
         ValidationState(byte[] mixinBytes) {
             this.mixinBytes = mixinBytes;
-            this.validationClassNode = this.getClassNode(0);
-            this.classInfo = ClassInfo.fromClassNode(this.validationClassNode);
+            this.classNode = this.getClassNode(0);
+            this.classInfo = ClassInfo.fromClassNode(this.classNode);
         }
 
         /**
@@ -161,11 +161,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (!new HashSet<InterfaceInfo>(this.softImplements).equals(new HashSet<InterfaceInfo>(this.previous.softImplements))) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change soft interfaces");
             }
-            List<ClassInfo> targets = MixinInfo.this.readTargetClasses(this.validationClassNode, true);
+            List<ClassInfo> targets = MixinInfo.this.readTargetClasses(this.classNode, true);
             if (!new HashSet<ClassInfo>(targets).equals(new HashSet<ClassInfo>(MixinInfo.this.getTargets0()))) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change target classes");
             }
-            int priority = MixinInfo.this.readPriority(this.validationClassNode);
+            int priority = MixinInfo.this.readPriority(this.classNode);
             if (priority != MixinInfo.this.getPriority()) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change mixin priority");
             }
@@ -270,7 +270,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     void validate() {
         try {
-            ClassNode classNode = this.uninitialisedState.validationClassNode;
+            ClassNode classNode = this.uninitialisedState.classNode;
             this.uninitialisedState.detachedSuper = this.validateTargetClasses(classNode);
             this.validateMixin(this.uninitialisedState);
             this.readImplementations(this.uninitialisedState);
@@ -280,7 +280,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             } else {
                 new MixinPreProcessor(this, classNode).prepare();
             }
-            this.uninitialisedState.validationClassNode = null;
+            this.uninitialisedState.classNode = null;
             // the state is now fully initialised and validated
             this.validationState = this.uninitialisedState;
         } finally {
@@ -392,14 +392,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         if (!state.classInfo.isProbablyStatic()) {
             throw new InvalidMixinException(this, "Inner class mixin must be declared static");
         }
+        
+        if (state.classNode.version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
+            throw new InvalidMixinException(this, "Unsupported mixin class version " + state.classNode.version);
+        }
 
         // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
         if (this.targetClasses.size() > 1) {
-            for (FieldNode field : state.validationClassNode.fields) {
+            for (FieldNode field : state.classNode.fields) {
                 this.checkRemappable(Shadow.class, field.name, ASMHelper.getVisibleAnnotation(field, Shadow.class));
             }
             
-            for (MethodNode method : state.validationClassNode.methods) {
+            for (MethodNode method : state.classNode.methods) {
                 this.checkRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
                 AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
                 if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
@@ -420,9 +424,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Read and process any {@link Implements} annotations on the mixin
      */
     private void readImplementations(ValidationState state) {
-        state.interfaces.addAll(state.validationClassNode.interfaces);
+        state.interfaces.addAll(state.classNode.interfaces);
         
-        AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(state.validationClassNode, Implements.class);
+        AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(state.classNode, Implements.class);
         if (implementsAnnotation == null) {
             return;
         }
@@ -449,11 +453,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * config.
      */
     private void readInnerClasses(ValidationState state) {
-        for (InnerClassNode inner : state.validationClassNode.innerClasses) {
+        for (InnerClassNode inner : state.classNode.innerClasses) {
             ClassInfo innerClass = ClassInfo.forName(inner.name);
             if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
                 if ((inner.outerName != null && inner.outerName.equals(state.classInfo.getName()))
-                        || inner.name.startsWith(state.validationClassNode.name + "$")) {
+                        || inner.name.startsWith(state.classNode.name + "$")) {
                     state.syntheticInnerClasses.add(inner.name);
                 } else {
                     throw new InvalidMixinException(this, "Unhandled synthetic inner class found: " + inner.name);
