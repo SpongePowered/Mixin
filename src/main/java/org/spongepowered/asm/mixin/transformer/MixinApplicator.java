@@ -524,14 +524,12 @@ public class MixinApplicator {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
-            if (Constants.INIT.equals(mixinMethod.name)) {
-                if (MixinApplicator.hasLineNumbers(mixinMethod)) {
-                    if (ctor == null) {
-                        ctor = mixinMethod;
-                    } else {
-                        // Not an error condition, just weird
-                        this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
-                    }
+            if (Constants.INIT.equals(mixinMethod.name) && MixinApplicator.hasLineNumbers(mixinMethod)) {
+                if (ctor == null) {
+                    ctor = mixinMethod;
+                } else {
+                    // Not an error condition, just weird
+                    this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
                 }
             }
         }
