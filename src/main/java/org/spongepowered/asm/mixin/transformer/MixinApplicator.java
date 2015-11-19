@@ -224,6 +224,7 @@ public class MixinApplicator {
         for (String interfaceName : mixin.getInterfaces()) {
             if (!this.targetClass.interfaces.contains(interfaceName)) {
                 this.targetClass.interfaces.add(interfaceName);
+                mixin.getTargetClassInfo().addInterface(interfaceName);
             }
         }
     }
@@ -237,6 +238,7 @@ public class MixinApplicator {
         if (mixin.shouldSetSourceFile()) {
             this.targetClass.sourceFile = mixin.getSourceFile();
         }
+        this.targetClass.version = Math.max(this.targetClass.version, mixin.getMinRequiredClassVersion());
     }
 
     /**
@@ -522,14 +524,12 @@ public class MixinApplicator {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
-            if (Constants.INIT.equals(mixinMethod.name)) {
-                if (MixinApplicator.hasLineNumbers(mixinMethod)) {
-                    if (ctor == null) {
-                        ctor = mixinMethod;
-                    } else {
-                        // Not an error condition, just weird
-                        this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
-                    }
+            if (Constants.INIT.equals(mixinMethod.name) && MixinApplicator.hasLineNumbers(mixinMethod)) {
+                if (ctor == null) {
+                    ctor = mixinMethod;
+                } else {
+                    // Not an error condition, just weird
+                    this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
                 }
             }
         }
@@ -676,9 +676,9 @@ public class MixinApplicator {
                     if (node instanceof JumpInsnNode) {
                         throw new InvalidMixinException(mixin, "Unsupported opcode in initialiser");
                     }
-                    AbstractInsnNode iThinkWereACloneNow = node.clone(labels);
-                    ctor.instructions.insert(insn, iThinkWereACloneNow);
-                    insn = iThinkWereACloneNow;
+                    AbstractInsnNode imACloneNow = node.clone(labels);
+                    ctor.instructions.insert(insn, imACloneNow);
+                    insn = imACloneNow;
                 }
                 return;
             }

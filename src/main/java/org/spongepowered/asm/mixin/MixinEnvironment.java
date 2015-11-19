@@ -24,27 +24,6 @@
  */
 package org.spongepowered.asm.mixin;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
-import net.minecraft.launchwrapper.IClassNameTransformer;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.AbstractAppender;
-import org.apache.logging.log4j.core.helpers.Booleans;
-import org.spongepowered.asm.launch.MixinBootstrap;
-import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
-import org.spongepowered.asm.mixin.transformer.MixinTransformer;
-import org.spongepowered.asm.util.ITokenProvider;
-import org.spongepowered.asm.util.PrettyPrinter;
-
 import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -56,6 +35,31 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import net.minecraft.launchwrapper.IClassNameTransformer;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.helpers.Booleans;
+import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
+import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.spongepowered.asm.util.ITokenProvider;
+import org.spongepowered.asm.util.JavaVersion;
+import org.spongepowered.asm.util.PrettyPrinter;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
 
 /**
@@ -340,6 +344,58 @@ public class MixinEnvironment implements ITokenProvider {
     }
     
     /**
+     * Operational compatibility level for the mixin subsystem
+     */
+    public static enum CompatibilityLevel {
+        
+        JAVA_6(Opcodes.V1_6, false),
+        
+        JAVA_7(Opcodes.V1_7, false) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 1.7;
+            }
+            
+        },
+        
+        JAVA_8(Opcodes.V1_8, true) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 1.8;
+            }
+            
+        };
+        
+        private final int classVersion;
+        
+        private final boolean resolveMethodsInInterfaces;
+        
+        private CompatibilityLevel(int classVersion, boolean resolveMethodsInInterfaces) {
+            this.classVersion = classVersion;
+            this.resolveMethodsInInterfaces = resolveMethodsInInterfaces;
+        }
+        
+        boolean isSupported() {
+            return true;
+        }
+        
+        public int classVersion() {
+            return this.classVersion;
+        }
+        
+        public boolean resolveMethodsInInterfaces() {
+            return this.resolveMethodsInInterfaces;
+        }
+        
+        public boolean isAtLeast(CompatibilityLevel level) {
+            return this.ordinal() >= level.ordinal(); 
+        }
+        
+    }
+    
+    /**
      * Tweaker used to notify the environment when we transition from preinit to
      * default
      */
@@ -462,6 +518,11 @@ public class MixinEnvironment implements ITokenProvider {
     private static Phase currentPhase = Phase.NOT_INITIALISED;
     
     /**
+     * Current compatibility level
+     */
+    private static CompatibilityLevel compatibility = CompatibilityLevel.JAVA_6;
+    
+    /**
      * Show debug header info on first environment construction
      */
     private static boolean showHeader = true;
@@ -469,7 +530,7 @@ public class MixinEnvironment implements ITokenProvider {
     /**
      * Logger 
      */
-    private final Logger logger = LogManager.getLogger("mixin");
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * The phase for this environment
@@ -553,13 +614,14 @@ public class MixinEnvironment implements ITokenProvider {
     private void printHeader(Object version) {
         Side side = this.getSide();
         String codeSource = this.getCodeSource();
-        this.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
+        MixinEnvironment.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
         
         if (this.getOption(Option.DEBUG_VERBOSE)) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
             printer.add("%25s : %s", "Code source", codeSource);
-            printer.add("%25s : %s", "Internal Version", version).hr();
+            printer.add("%25s : %s", "Internal Version", version);
+            printer.add("%25s : %s", "Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
             for (Option option : Option.values()) {
                 printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
             }
@@ -640,7 +702,7 @@ public class MixinEnvironment implements ITokenProvider {
                 IEnvironmentTokenProvider provider = providerClass.newInstance();
                 this.registerTokenProvider(provider);
             } catch (Throwable th) {
-                this.logger.error("Error instantiating " + providerName, th);
+                MixinEnvironment.logger.error("Error instantiating " + providerName, th);
             }
         }
         return this;
@@ -656,7 +718,7 @@ public class MixinEnvironment implements ITokenProvider {
         if (provider != null && !this.tokenProviderClasses.contains(provider.getClass().getName())) {
             String providerName = provider.getClass().getName();
             TokenProviderWrapper wrapper = new TokenProviderWrapper(provider, this);
-            this.logger.info("Adding new token provider {} to {}", providerName, this);
+            MixinEnvironment.logger.info("Adding new token provider {} to {}", providerName, this);
             this.tokenProviders.add(wrapper);
             this.tokenProviderClasses.add(providerName);
             Collections.sort(this.tokenProviders);
@@ -847,7 +909,7 @@ public class MixinEnvironment implements ITokenProvider {
      * list just once per environment and cache the result.
      */
     private void buildTransformerDelegationList() {
-        this.logger.debug("Rebuilding transformer delegation list:");
+        MixinEnvironment.logger.debug("Rebuilding transformer delegation list:");
         this.transformers = new ArrayList<IClassTransformer>();
         for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
             String transformerName = transformer.getClass().getName();
@@ -859,18 +921,18 @@ public class MixinEnvironment implements ITokenProvider {
                 }
             }
             if (include && !transformerName.contains(MixinTransformer.class.getName())) {
-                this.logger.debug("  Adding:    {}", transformerName);
+                MixinEnvironment.logger.debug("  Adding:    {}", transformerName);
                 this.transformers.add(transformer);
             } else {
-                this.logger.debug("  Excluding: {}", transformerName);
+                MixinEnvironment.logger.debug("  Excluding: {}", transformerName);
             }
         }
 
-        this.logger.debug("Transformer delegation list created with {} entries", this.transformers.size());
+        MixinEnvironment.logger.debug("Transformer delegation list created with {} entries", this.transformers.size());
         
         for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
             if (transformer instanceof IClassNameTransformer) {
-                this.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                MixinEnvironment.logger.debug("Found name transformer: {}", transformer.getClass().getName());
                 this.nameTransformer = (IClassNameTransformer) transformer;
             }
         }
@@ -904,7 +966,9 @@ public class MixinEnvironment implements ITokenProvider {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
             MixinEnvironment.currentPhase = phase;
             MixinEnvironment.getEnvironment(phase);
-            new MixinLogger();
+            
+            @SuppressWarnings("unused")
+            MixinLogger logSpy = new MixinLogger();
         }
     }
     
@@ -943,6 +1007,30 @@ public class MixinEnvironment implements ITokenProvider {
         return MixinEnvironment.currentEnvironment;
     }
 
+    /**
+     * Get the current compatibility level
+     */
+    public static CompatibilityLevel getCompatibilityLevel() {
+        return MixinEnvironment.compatibility;
+    }
+    
+    /**
+     * Set desired compatibility level for the entire environment
+     * 
+     * @param level Level to set, ignored if less than the current level
+     * @throws IllegalArgumentException if the specified level is not supported
+     */
+    public static void setCompatibilityLevel(CompatibilityLevel level) throws IllegalArgumentException {
+        if (level != MixinEnvironment.compatibility && level.isAtLeast(MixinEnvironment.compatibility)) {
+            if (!level.isSupported()) {
+                throw new IllegalArgumentException("The requested compatibility level " + level + " could not be set. Level is not supported");
+            }
+            
+            MixinEnvironment.compatibility = level;
+            MixinEnvironment.logger.info("Compatibility level set to {}", level);
+        }
+    }
+    
     /**
      * Internal callback
      * 

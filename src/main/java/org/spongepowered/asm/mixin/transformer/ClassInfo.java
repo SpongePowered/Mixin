@@ -43,6 +43,7 @@ import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.FrameNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 
 import com.google.common.collect.ImmutableList;
@@ -1197,6 +1198,16 @@ public class ClassInfo extends TreeInfo {
         if (superClassInfo != null) {
             for (ClassInfo superTarget : superClassInfo.getTargets()) {
                 M member = superTarget.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
+                if (member != null) {
+                    return member;
+                }
+            }
+        }
+        
+        if (this.isInterface || MixinEnvironment.getCompatibilityLevel().resolveMethodsInInterfaces()) {
+            for (String implemented : this.interfaces) {
+                ClassInfo iface = ClassInfo.forName(implemented);
+                M member = iface.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
                     return member;
                 }
