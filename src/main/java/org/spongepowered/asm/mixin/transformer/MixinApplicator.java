@@ -224,6 +224,7 @@ public class MixinApplicator {
         for (String interfaceName : mixin.getInterfaces()) {
             if (!this.targetClass.interfaces.contains(interfaceName)) {
                 this.targetClass.interfaces.add(interfaceName);
+                mixin.getTargetClassInfo().addInterface(interfaceName);
             }
         }
     }
