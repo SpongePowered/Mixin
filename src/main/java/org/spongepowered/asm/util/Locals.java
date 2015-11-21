@@ -72,9 +72,10 @@ public class Locals {
      */
     public static void loadLocals(Type[] locals, InsnList insns, int pos, int limit) {
         limit += pos;
-        for (; pos < locals.length && pos < limit; pos++) {
+        for (; pos < locals.length && limit > 0; pos++) {
             if (locals[pos] != null) {
                 insns.add(new VarInsnNode(locals[pos].getOpcode(Opcodes.ILOAD), pos));
+                limit--;
             }
         }
     }

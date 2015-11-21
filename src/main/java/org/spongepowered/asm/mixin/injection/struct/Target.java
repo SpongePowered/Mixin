@@ -255,9 +255,10 @@ public class Target {
         }
 
         String descriptor = this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')'));
-        for (int l = startIndex; l < locals.length && l < (startIndex + extra); l++) {
+        for (int l = startIndex; l < locals.length && extra > 0; l++) {
             if (locals[l] != null) {
                 descriptor += locals[l].getDescriptor();
+                extra--;
             }
         }
 
