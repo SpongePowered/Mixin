@@ -226,6 +226,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient IMixinConfigPlugin plugin;
 
     /**
+     * The environment phase in which this mixin was initialised
+     */
+    private final transient Phase phase;
+
+    /**
      * Holds state that currently is not fully initialised or validated
      */
     private transient ValidationState uninitialisedState;
@@ -234,11 +239,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Holds the current validated state
      */
     private transient ValidationState validationState;
-
-    /**
-     * The environment phase in which this mixin was initialised
-     */
-    private final transient Phase phase;
 
     /**
      * Internal ctor, called by {@link MixinConfig}

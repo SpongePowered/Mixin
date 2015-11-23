@@ -60,7 +60,7 @@ class MixinAgentClassLoader extends ClassLoader {
      * @param name Name of the fake class
      */
     void addMixinClass(String name) {
-        MixinAgentClassLoader.logger.debug("Mixin class " + name + " added to class loader");
+        MixinAgentClassLoader.logger.debug("Mixin class {} added to class loader", name);
         try {
             byte[] bytes = this.materialise(name);
             Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
@@ -69,7 +69,7 @@ class MixinAgentClassLoader extends ClassLoader {
             clazz.newInstance();
             this.mixins.put(clazz, bytes);
         } catch (Throwable e) {
-            logger.catching(e);
+            MixinAgentClassLoader.logger.catching(e);
         }
     }
 
