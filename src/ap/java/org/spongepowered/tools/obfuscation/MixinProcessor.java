@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
@@ -70,4 +71,15 @@ public abstract class MixinProcessor extends AbstractProcessor {
         this.mixins.onPassCompleted();
     }
 
+    @Override
+    public SourceVersion getSupportedSourceVersion() {
+        try {
+            return SourceVersion.valueOf("RELEASE_8");
+        } catch (IllegalArgumentException ex) {
+            // Java 8 not supported
+        }
+        
+        return super.getSupportedSourceVersion();
+    }
+    
 }
