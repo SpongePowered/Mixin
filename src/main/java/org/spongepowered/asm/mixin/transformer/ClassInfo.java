@@ -1207,6 +1207,9 @@ public class ClassInfo extends TreeInfo {
         if (this.isInterface || MixinEnvironment.getCompatibilityLevel().resolveMethodsInInterfaces()) {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);
+                if (iface == null) {
+                    throw new RuntimeException(new ClassNotFoundException(implemented));
+                }
                 M member = iface.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
                     return member;
