@@ -47,6 +47,7 @@ import javax.tools.Diagnostic.Kind;
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
@@ -497,6 +498,12 @@ class AnnotatedMixin {
         if (targetMember.name == null) {
             return;
         }
+
+        try {
+            targetMember.validate();
+        } catch (InvalidMemberDescriptorException ex) {
+            this.mixins.printMessage(Kind.ERROR, ex.getMessage(), method, inject);
+        }
         
         if (targetMember.desc != null) {
             this.validateReferencedTarget(method, inject, targetMember, "@Inject");
@@ -560,6 +567,12 @@ class AnnotatedMixin {
             String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
             this.mixins.printMessage(Kind.ERROR, "@At(" + key + ") is not fully qualified, " + missing, element, inject);
             return;
+        }
+        
+        try {
+            targetMember.validate();
+        } catch (InvalidMemberDescriptorException ex) {
+            this.mixins.printMessage(Kind.ERROR, ex.getMessage(), element, inject);
         }
         
         MemberInfo remappedReference = null;

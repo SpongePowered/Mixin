@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
@@ -257,6 +258,50 @@ public class MemberInfo {
     public boolean isField() {
         return this.desc != null && !this.desc.startsWith("(");
     }
+    
+    /**
+     * Perform ultra-simple validation of the descriptor, checks that the parts
+     * of the descriptor are basically sane.
+     * 
+     * @return fluent
+     * 
+     * @throws InvalidMemberDescriptorException if any validation check fails
+     */
+    public MemberInfo validate() throws InvalidMemberDescriptorException {
+        // Extremely naive class name validation, just to spot really egregious errors
+        if (this.owner != null && !this.owner.matches("(?i)^[\\w\\p{Sc}/]+$")) {
+            throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
+        }
+        
+        // Also naive validation, we're looking for stupid errors here
+        if (this.name != null && !this.name.matches("(?i)^<?[\\w\\p{Sc}]+>?$")) {
+            throw new InvalidMemberDescriptorException("Invalid name: " + this.name);
+        }
+        
+        if (this.desc != null) {
+            if (!this.desc.matches("^(\\([\\w\\[/;]*\\))?\\[?[\\w/;]+$")) {
+                throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+            }
+            if (this.isField()) {
+                if (!this.desc.equals(Type.getType(this.desc).getDescriptor())) {
+                    throw new InvalidMemberDescriptorException("Invalid field type in descriptor: " + this.desc);
+                }
+            } else {
+                try {
+                    Type.getArgumentTypes(this.desc);
+                } catch (Exception ex) {
+                    throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+                }
+    
+                String retString = this.desc.substring(this.desc.indexOf(')') + 1);
+                if (!retString.equals(Type.getType(retString).getDescriptor())) {
+                    throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                }
+            }
+        }
+        
+        return this;
+    }
 
     /**
      * Test whether this MemberInfo matches the supplied values. Null values are
@@ -339,6 +384,27 @@ public class MemberInfo {
     }
     
     /**
+     * Parse a MemberInfo from a string and perform validation
+     * 
+     * @param string String to parse MemberInfo from
+     * @return parsed MemberInfo
+     */
+    public static MemberInfo parseAndValidate(String string) throws InvalidMemberDescriptorException {
+        return MemberInfo.parse(string, null, null).validate();
+    }
+    
+    /**
+     * Parse a MemberInfo from a string and perform validation
+     * 
+     * @param string String to parse MemberInfo from
+     * @param context Context to use for reference mapping
+     * @return parsed MemberInfo
+     */
+    public static MemberInfo parseAndValidate(String string, IReferenceMapperContext context) throws InvalidMemberDescriptorException {
+        return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef()).validate();
+    }
+    
+    /**
      * Parse a MemberInfo from a string
      * 
      * @param string String to parse MemberInfo from
@@ -371,6 +437,8 @@ public class MemberInfo {
         String desc = null;
         String owner = null;
         
+        name = name.replaceAll("\\s", "");
+
         if (refMapper != null) {
             name = refMapper.remap(mixinClass, name);
         }

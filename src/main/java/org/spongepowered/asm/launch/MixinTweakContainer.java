@@ -34,7 +34,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 
 
 /**
- * A collection of {@link IMixinLaunchAgent launch agents)
+ * A collection of {@link IMixinLaunchAgent} launch agents)
  */
 public class MixinTweakContainer {
 

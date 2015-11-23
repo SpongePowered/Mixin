@@ -139,7 +139,7 @@ public abstract class InjectionInfo {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
         
-        MemberInfo targetMember = MemberInfo.parse(method, this.mixin);
+        MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
         
         if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"

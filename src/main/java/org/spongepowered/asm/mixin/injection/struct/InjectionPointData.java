@@ -102,7 +102,7 @@ public class InjectionPointData {
     }
 
     public MemberInfo get(String key) {
-        return MemberInfo.parse(this.get(key, ""), this.mixin);
+        return MemberInfo.parseAndValidate(this.get(key, ""), this.mixin);
     }
     
     private int parseInt(String string, int defaultValue) {
@@ -122,7 +122,7 @@ public class InjectionPointData {
     }
     
     public MemberInfo getTarget() {
-        return MemberInfo.parse(this.target, this.mixin);
+        return MemberInfo.parseAndValidate(this.target, this.mixin);
     }
     
     public int getOrdinal() {
