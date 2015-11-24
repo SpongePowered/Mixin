@@ -245,6 +245,10 @@ public class ClassInfo extends TreeInfo {
 
         // Abstract because this has to be static in order to contain the enum
         public abstract ClassInfo getOwner();
+        
+        public ClassInfo getImplementor() {
+            return this.getOwner();
+        }
 
         public int getAccess() {
             return this.modifiers;
@@ -351,6 +355,31 @@ public class ClassInfo extends TreeInfo {
 
             return super.equals(obj);
         }
+    }
+    
+    /**
+     * A method resolved in an interface <em>via</em> a class, return the member
+     * wrapped so that the implementing class can be retrieved.
+     */
+    public class InterfaceMethod extends Method {
+        
+        private final ClassInfo owner;
+
+        public InterfaceMethod(Member member) {
+            super(member);
+            this.owner = member.getOwner();
+        }
+        
+        @Override
+        public ClassInfo getOwner() {
+            return this.owner;
+        }
+        
+        @Override
+        public ClassInfo getImplementor() {
+            return ClassInfo.this;
+        }
+        
     }
 
     /**
@@ -1177,6 +1206,7 @@ public class ClassInfo extends TreeInfo {
      * @param type Type of member to search for (field or method)
      * @return the discovered member or null if the member could not be resolved
      */
+    @SuppressWarnings("unchecked")
     private <M extends Member> M findInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags, Type type) {
         if (includeThisClass) {
             M member = this.findMember(name, desc, flags, type);
@@ -1204,7 +1234,7 @@ public class ClassInfo extends TreeInfo {
             }
         }
         
-        if (this.isInterface || MixinEnvironment.getCompatibilityLevel().resolveMethodsInInterfaces()) {
+        if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().resolveMethodsInInterfaces())) {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);
                 if (iface == null) {
@@ -1212,7 +1242,7 @@ public class ClassInfo extends TreeInfo {
                 }
                 M member = iface.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
-                    return member;
+                    return  this.isInterface ? member : (M)new InterfaceMethod(member);
                 }
             }
         }

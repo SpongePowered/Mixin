@@ -498,7 +498,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 throw new InvalidMixinException(this, "Invalid " + methodRef + " in " + this + " resolved " + superMethod.getOwner()
                         + " but is mixin.");
             }
-            methodRef.setOwner(superMethod.getOwner().getName());
+            methodRef.setOwner(superMethod.getImplementor().getName());
         } else if (ClassInfo.forName(methodRef.getOwner()).isMixin()) {
             throw new MixinTransformerError("Error resolving " + methodRef + " in " + this);
         }
