@@ -97,9 +97,12 @@ public class RedirectInjector extends InvokeInjector {
         
         InsnList insns = new InsnList();
         int extraLocals = ASMHelper.getArgsSize(stackVars) + 1;
+        int extraStack = 1; // Normally only need 1 extra stack pos to store target ref 
         int[] argMap = this.storeArgs(target, stackVars, insns, 0);
         if (injectTargetParams) {
-            extraLocals += ASMHelper.getArgsSize(target.arguments);
+            int argSize = ASMHelper.getArgsSize(target.arguments);
+            extraLocals += argSize;
+            extraStack += argSize;
             argMap = Ints.concat(argMap, target.argIndices);
         }
         this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
@@ -107,6 +110,6 @@ public class RedirectInjector extends InvokeInjector {
         target.insns.insertBefore(node, insns);
         target.insns.remove(node);
         target.addToLocals(extraLocals);
-        target.addToStack(1);
+        target.addToStack(extraStack);
     }
 }
