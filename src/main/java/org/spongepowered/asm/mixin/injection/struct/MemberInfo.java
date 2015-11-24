@@ -279,7 +279,7 @@ public class MemberInfo {
         }
         
         if (this.desc != null) {
-            if (!this.desc.matches("^(\\([\\w\\[/;]*\\))?\\[?[\\w/;]+$")) {
+            if (!this.desc.matches("^(\\([\\w\\p{Sc}\\[/;]*\\))?\\[?[\\w\\p{Sc}/;]+$")) {
                 throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
             }
             if (this.isField()) {
