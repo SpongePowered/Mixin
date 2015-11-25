@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -204,4 +205,20 @@ public abstract class MirrorUtils {
         }
         return reference.toString();
     }
+
+    public static boolean isAssignable(ProcessingEnvironment processingEnv, TypeMirror targetType, TypeMirror superClass) {
+        boolean assignable = processingEnv.getTypeUtils().isAssignable(targetType, superClass);
+        if (!assignable && targetType instanceof DeclaredType && superClass instanceof DeclaredType) {
+            TypeMirror rawTargetType = MirrorUtils.toRawType(processingEnv, (DeclaredType)targetType);
+            TypeMirror rawSuperType = MirrorUtils.toRawType(processingEnv, (DeclaredType)superClass);
+            return processingEnv.getTypeUtils().isAssignable(rawTargetType, rawSuperType);
+        }
+        
+        return assignable;
+    }
+
+    private static TypeMirror toRawType(ProcessingEnvironment processingEnv, DeclaredType targetType) {
+        return processingEnv.getElementUtils().getTypeElement(((TypeElement)targetType.asElement()).getQualifiedName()).asType();
+    }
+    
 }

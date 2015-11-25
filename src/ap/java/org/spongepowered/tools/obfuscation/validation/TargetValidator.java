@@ -34,6 +34,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
+import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
@@ -79,7 +80,7 @@ public class TargetValidator extends MixinValidator {
     }
 
     private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {
-        if (this.isAssignable(targetType, superClass)) {
+        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
             return true;
         }
         
@@ -106,15 +107,11 @@ public class TargetValidator extends MixinValidator {
 
     private boolean checkMixinsFor(TypeMirror targetType, TypeMirror superClass) {
         for (TypeMirror mixinType : this.getMixinsTargeting(targetType)) {
-            if (this.isAssignable(mixinType, superClass)) {
+            if (MirrorUtils.isAssignable(this.processingEnv, mixinType, superClass)) {
                 return true;
             }
         }
         
         return false;
-    }
-
-    protected final boolean isAssignable(TypeMirror targetType, TypeMirror superClass) {
-        return this.processingEnv.getTypeUtils().isAssignable(targetType, superClass);
     }
 }
