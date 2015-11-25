@@ -80,6 +80,8 @@ import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
  */
 class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     
+    private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
+
     static enum CompilerEnvironment {
         /**
          * Default environment
@@ -145,6 +147,11 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private final Map<String, Integer> tokenCache = new HashMap<String, Integer>();
     
     /**
+     * Serialisable mixin target map 
+     */
+    private final TargetMap targets;
+    
+    /**
      * SRG container for mcp->srg mappings
      */
     private SrgContainer srgs;
@@ -167,6 +174,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+        this.targets = this.initTargetMap();
 
         this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
         
@@ -180,6 +188,12 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
         );
         
         this.initTokenCache(this.getOption("tokens"));
+    }
+
+    protected TargetMap initTargetMap() {
+        TargetMap targets = TargetMap.create(System.getProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY));
+        System.setProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY, targets.getSessionId());
+        return targets;
     }
 
     private void initTokenCache(String tokens) {
@@ -384,6 +398,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
         
         if (!this.mixins.containsKey(name)) {
             AnnotatedMixin mixin = new AnnotatedMixin(this, mixinType);
+            this.targets.registerTargets(mixin);
             mixin.runValidators(ValidationPass.EARLY, this.validators);
             this.mixins.put(name, mixin);
             this.mixinsForPass.add(mixin);
@@ -411,12 +426,10 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     public Collection<TypeMirror> getMixinsTargeting(TypeElement targetType) {
         List<TypeMirror> minions = new ArrayList<TypeMirror>();
         
-        for (AnnotatedMixin mixin : this.mixins.values()) {
-            for (TypeHandle mixinTarget : mixin.getTargets()) {
-                if (targetType.equals(mixinTarget.getElement())) {
-                    minions.add(mixin.getMixin().asType());
-                    break;
-                }
+        for (TypeReference mixin : this.targets.getMixinsTargeting(targetType)) {
+            TypeHandle handle = mixin.getHandle(this.processingEnv);
+            if (handle != null) {
+                minions.add(handle.getType());
             }
         }
         
@@ -530,6 +543,10 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
      * Called from each AP when a pass is completed 
      */
     public void onPassCompleted() {
+        if (!"true".equalsIgnoreCase(this.getOption("disableTargetExport"))) {
+            this.targets.write(true);
+        }
+        
         for (AnnotatedMixin mixin : this.mixinsForPass) {
             mixin.runValidators(ValidationPass.LATE, this.validators);
         }

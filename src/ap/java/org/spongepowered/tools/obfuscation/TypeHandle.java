@@ -63,6 +63,11 @@ public class TypeHandle {
      * Actual type element, this is null for inaccessible classes
      */
     private final TypeElement element;
+    
+    /**
+     * Reference to this handle, for serialisation 
+     */
+    private TypeReference reference;
 
     /**
      * Ctor for imaginary elements, require the enclosing package and the FQ
@@ -153,6 +158,13 @@ public class TypeHandle {
      */
     public boolean isImaginary() {
         return this.element == null;
+    }
+    
+    public TypeReference getReference() {
+        if (this.reference == null) {
+            this.reference = new TypeReference(this);
+        }
+        return this.reference;
     }
 
     public String findDescriptor(MemberInfo memberInfo) {

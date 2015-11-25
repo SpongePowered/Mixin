@@ -226,6 +226,11 @@ class AnnotatedMixin {
     private final TypeElement mixin;
     
     /**
+     * Mixin class
+     */
+    private final TypeHandle handle;
+    
+    /**
      * Specified targets
      */
     private final List<TypeHandle> targets = new ArrayList<TypeHandle>();
@@ -265,6 +270,7 @@ class AnnotatedMixin {
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.mixins = mixins;
         this.mixin = type;
+        this.handle = new TypeHandle(type);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         
         TypeHandle primaryTarget = this.initTargets();
@@ -356,6 +362,13 @@ class AnnotatedMixin {
      */
     public TypeElement getMixin() {
         return this.mixin;
+    }
+    
+    /**
+     * Get the type handle for the mixin class
+     */
+    public TypeHandle getHandle() {
+        return this.handle;
     }
     
     /**
