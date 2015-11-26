@@ -56,6 +56,7 @@ import org.spongepowered.asm.util.ConstraintViolationException;
 import org.spongepowered.asm.util.InvalidConstraintException;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.struct.Message;
 
 
 /**
@@ -504,12 +505,17 @@ class AnnotatedMixin {
 
     /**
      * Register a {@link org.spongepowered.asm.mixin.injection.Inject} method
+     * 
+     * @param method Callback method
+     * @param inject Inject annotation
+     * @param remap 
+     * @return
      */
-    public void registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
+    public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
         String originalReference = MirrorUtils.<String>getAnnotationValue(inject, "method");
         MemberInfo targetMember = MemberInfo.parse(originalReference);
         if (targetMember.name == null) {
-            return;
+            return null;
         }
 
         try {
@@ -518,68 +524,71 @@ class AnnotatedMixin {
             this.mixins.printMessage(Kind.ERROR, ex.getMessage(), method, inject);
         }
         
+        String type = "@" + inject.getAnnotationType().asElement().getSimpleName() + "";
         if (targetMember.desc != null) {
-            this.validateReferencedTarget(method, inject, targetMember, "@Inject");
+            this.validateReferencedTarget(method, inject, targetMember, type);
         }
         
-        if (!remap || !this.validateSingleTarget("@Inject", method)) {
-            return;
+        if (!remap || !this.validateSingleTarget(type, method)) {
+            return null;
         }
         
         String desc = this.targetType.findDescriptor(targetMember);
         if (desc == null) {
             if (this.targetType.isImaginary()) {
-                this.mixins.printMessage(Kind.WARNING, "@Inject target requires method signature because enclosing type information is unavailable",
+                this.mixins.printMessage(Kind.WARNING, type + " target requires method signature because enclosing type information is unavailable",
                         method, inject);
             } else if (!Constants.INIT.equals(targetMember.name)) {
-                this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for @Inject target method", method, inject);
+                this.mixins.printMessage(Kind.WARNING, "Unable to determine signature for " + type + " target method", method, inject);
             }
-            return;
+            return null;
        }
         
         MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + targetMember.name, desc));
         if (obfMethod == null) {
             Kind error = Constants.INIT.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
-            this.mixins.printMessage(error, "No obfuscation mapping for @Inject target " + targetMember.name, method, inject);
-            return;
+            return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);
         }
         
         String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
         MemberInfo remappedReference = new MemberInfo(obfName, this.targetRef, obfMethod.sig, false);
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, originalReference, remappedReference.toString());
+        return null;
     }
 
     /**
      * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation
      * and process the references
      */
-    public void registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
+    public int registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
         if (!AnnotatedMixins.getRemapValue(at)) {
-            return;
+            return 0;
         }
         
         String type = MirrorUtils.<String>getAnnotationValue(at, "value");
         String target = MirrorUtils.<String>getAnnotationValue(at, "target");
-        this.remapReference(type + ".<target>", target, element, inject, at);
+        int remapped = this.remapReference(type + ".<target>", target, element, inject, at) ? 1 : 0;
         
         // Pattern for replacing references in args, not used yet
 //        if ("SOMETYPE".equals(type)) {
 //            Map<String, String> args = AnnotatedMixin.getAtArgs(at);
 //            this.remapReference(type + ".args[target]", args.get("target"));
 //        }
+        
+        return remapped;
     }
 
-    private void remapReference(String key, String target, Element element, AnnotationMirror inject, AnnotationMirror at) {
+    private boolean remapReference(String key, String target, Element element, AnnotationMirror inject, AnnotationMirror at) {
         if (target == null) {
-            return;
+            return false;
         }
         
         MemberInfo targetMember = MemberInfo.parse(target);
         if (!targetMember.isFullyQualified()) {
             String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
             this.mixins.printMessage(Kind.ERROR, "@At(" + key + ") is not fully qualified, " + missing, element, inject);
-            return;
+            return false;
         }
         
         try {
@@ -593,7 +602,7 @@ class AnnotatedMixin {
             String obfField = this.mixins.getObfField(targetMember.toSrg());
             if (obfField == null) {
                 this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
-                return;
+                return false;
             }
             remappedReference = MemberInfo.fromSrgField(obfField, targetMember.desc);
         } else {
@@ -602,12 +611,13 @@ class AnnotatedMixin {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
                 }
-                return;
+                return false;
             }
             remappedReference = targetMember.remapUsing(obfMethod, false);
         }
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, target, remappedReference.toString());
+        return true;
     }
 
     /**

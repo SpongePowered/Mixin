@@ -65,6 +65,7 @@ import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.struct.Message;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
@@ -497,12 +498,14 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Inject annotation on a non-mixin method", method);
+            String type = "@" + inject.getAnnotationType().asElement().getSimpleName() + "";
+            this.printMessage(Kind.ERROR, "Found " + type + " annotation on a non-mixin method", method);
             return;
         }
 
         boolean remap = this.shouldRemap(mixinClass, inject);
-        mixinClass.registerInjector(method, inject, remap);
+        Message errorMessage = mixinClass.registerInjector(method, inject, remap);
+        int remappedAts = 0;
         if (remap) {
             Object ats = MirrorUtils.getAnnotationValue(inject, "at");
             
@@ -514,20 +517,27 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
                         at = ((AnnotationValue)at).getValue();
                     }
                     if (at instanceof AnnotationMirror) {
-                        mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
+                        remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
                     } else {
                         this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
                     }
                 }
             } else if (ats instanceof AnnotationMirror) {
-                mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
+                remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
             } else if (ats instanceof AnnotationValue) {
                 // Fix for JDT
                 Object mirror = ((AnnotationValue)ats).getValue();
                 if (mirror instanceof AnnotationMirror) {
-                    mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
+                    remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
                 }
             }
+        }
+        
+        // The annotation was *not* marked as remap=false and failed so we
+        // checked for remappable @At annotations, if that failed as well then
+        // we raise the original error.
+        if (remappedAts == 0 && errorMessage != null) {
+            errorMessage.sendTo(this);
         }
     }
     

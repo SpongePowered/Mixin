@@ -53,7 +53,7 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
     private final String sessionId;
 
     /**
-     * Create a new TargetMap with a session ID based on the current system time 
+     * Create a new TargetMap with a session ID based on the current system time
      */
     private TargetMap() {
         this(String.valueOf(System.currentTimeMillis()));
@@ -208,7 +208,7 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            if(objectinputstream != null){
+            if (objectinputstream != null) {
                 try {
                     objectinputstream .close();
                 } catch (IOException ex) {

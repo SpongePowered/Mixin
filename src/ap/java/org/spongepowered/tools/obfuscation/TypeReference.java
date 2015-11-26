@@ -79,7 +79,7 @@ public class TypeReference implements Serializable, Comparable<TypeReference> {
      */
     public TypeHandle getHandle(ProcessingEnvironment processingEnv) {
         if (this.handle == null) {
-            TypeElement element = processingEnv.getElementUtils().getTypeElement(getClassName());
+            TypeElement element = processingEnv.getElementUtils().getTypeElement(this.getClassName());
             try {
                 this.handle = new TypeHandle(element);
             } catch (Exception ex) {
