@@ -550,8 +550,10 @@ class AnnotatedMixin {
             return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);
         }
         
-        String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
-        MemberInfo remappedReference = new MemberInfo(obfName, this.targetRef, obfMethod.sig, false);
+        int slashPos = obfMethod.name.lastIndexOf('/');
+        String obfName = obfMethod.name.substring(slashPos + 1);
+        String obfOwner = obfMethod.name.substring(0, slashPos); 
+        MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
         
         this.mixins.getReferenceMapper().addMapping(this.classRef, originalReference, remappedReference.toString());
         return null;

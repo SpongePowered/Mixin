@@ -29,6 +29,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -46,6 +49,8 @@ public class MixinTweakContainer {
         MixinTweakContainer.agentClasses.add("org.spongepowered.asm.launch.MixinLaunchAgentDefault");
     }
     
+    private final Logger logger = LogManager.getLogger("mixin");
+    
     private final URI uri;
     
     private final List<IMixinLaunchAgent> agents = new ArrayList<IMixinLaunchAgent>();
@@ -61,7 +66,7 @@ public class MixinTweakContainer {
                 IMixinLaunchAgent agent = ctor.newInstance(uri);
                 this.agents.add(agent);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                this.logger.catching(ex);
             }
         }
     }

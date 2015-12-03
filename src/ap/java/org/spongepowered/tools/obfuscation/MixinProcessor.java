@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.util.Set;
+
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -35,7 +37,13 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
 
+import com.google.common.collect.ImmutableSet;
+
 public abstract class MixinProcessor extends AbstractProcessor {
+    
+    private static final Set<String> supportedOptions = ImmutableSet.<String>of(
+        "reobfSrgFile", "outSrgFile", "outRefMapFile", "disableTargetValidator"
+    );
 
     /**
      * Mixin info manager 
@@ -80,6 +88,11 @@ public abstract class MixinProcessor extends AbstractProcessor {
         }
         
         return super.getSupportedSourceVersion();
+    }
+    
+    @Override
+    public Set<String> getSupportedOptions() {
+        return MixinProcessor.supportedOptions;
     }
     
 }

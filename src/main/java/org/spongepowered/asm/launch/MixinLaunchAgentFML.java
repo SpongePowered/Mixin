@@ -91,9 +91,8 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
 
             return this.injectCorePlugin();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            return null;
         }
-        return null;
     }
 
     /**

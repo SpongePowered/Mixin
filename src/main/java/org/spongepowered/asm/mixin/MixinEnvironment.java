@@ -211,7 +211,7 @@ public class MixinEnvironment implements ITokenProvider {
                 return name;
             }
             
-            name = this.getSideName("com.mumfrey.liteloader.core.LiteLoader", "getEnvironmentType");
+            name = this.getSideName("com.mumfrey.liteloader.launch.LiteLoaderTweaker", "getEnvironmentType");
             if (name != null) {
                 return name;
             }

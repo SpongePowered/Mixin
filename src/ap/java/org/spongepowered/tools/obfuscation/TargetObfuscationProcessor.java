@@ -28,9 +28,6 @@ import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedOptions;
-import javax.annotation.processing.SupportedSourceVersion;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -47,9 +44,7 @@ import org.spongepowered.tools.MirrorUtils;
  * Annotation processor which finds {@link Shadow} and {@link Overwrite}
  * annotations in mixin classes and generates SRG mappings
  */
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.Mixin", "org.spongepowered.asm.mixin.Shadow", "org.spongepowered.asm.mixin.Overwrite" })
-@SupportedOptions({ "reobfSrgFile", "outSrgFile", "outRefMapFile", "disableTargetValidator" })
 public class TargetObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)
@@ -60,7 +55,7 @@ public class TargetObfuscationProcessor extends MixinProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
-            return false;
+            return true;
         }
         
         this.processMixins(roundEnv);
