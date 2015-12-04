@@ -24,7 +24,10 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,6 +58,7 @@ import javax.tools.StandardLocation;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
@@ -65,7 +69,6 @@ import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
-
 
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
@@ -110,9 +113,19 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
     private final List<AnnotatedMixin> mixinsForPass = new ArrayList<AnnotatedMixin>();
     
     /**
+     * Name of the resource to write remapped refs to
+     */
+    private final String outRefMapFileName;
+    
+    /**
      * Target obfuscation environments
      */
     private final List<TargetObfuscationEnvironment> targetEnvironments = new ArrayList<TargetObfuscationEnvironment>();
+    
+    /**
+     * Reference mapper for reference mapping 
+     */
+    private final ReferenceMapper refMapper = new ReferenceMapper();
     
     /**
      * Rule validators
@@ -142,12 +155,13 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
         this.targets = this.initTargetMap();
+        this.outRefMapFileName = this.getOption(SupportedOptions.OUT_REFMAP_FILE);
 
         this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
 
         for (ObfuscationType obfType : ObfuscationType.values()) {
             if (obfType.isSupported(this)) {
-                this.targetEnvironments.add(new TargetObfuscationEnvironment(obfType, this, this, this));
+                this.targetEnvironments.add(new TargetObfuscationEnvironment(obfType, this, this, this, this.refMapper));
             }
         }
         
@@ -248,11 +262,44 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
      * Write out stored mappings
      */
     public void writeRefs() {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            targetEnv.writeRefs(this.processingEnv.getFiler());
+        if (this.outRefMapFileName == null) {
+            return;
+        }
+        
+        PrintWriter writer = null;
+        
+        try {
+            writer = this.openFileWriter(this.outRefMapFileName, "refmap");
+            this.refMapper.write(writer);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (Exception ex) {
+                    // oh well
+                }
+            }
         }
     }
-    
+
+    /**
+     * Open a writer for an output file
+     */
+    private PrintWriter openFileWriter(String fileName, String description) throws IOException {
+        if (fileName.matches("^.*[\\\\/:].*$")) {
+            File outSrgFile = new File(fileName);
+            outSrgFile.getParentFile().mkdirs();
+            this.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
+            return new PrintWriter(outSrgFile);
+        }
+        
+        FileObject outSrg = this.processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
+        this.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
+        return new PrintWriter(outSrg.openWriter());
+    }
+
     public ObfuscationData<MethodData> getObfMethod(MemberInfo method) {
         ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
         
@@ -306,7 +353,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
                 String obfName = obfMethod.name.substring(slashPos + 1);
                 String obfOwner = obfMethod.name.substring(0, slashPos); 
                 MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
-                targetEnv.getReferenceMapper().addMapping(className, reference, remappedReference.toString());
+                targetEnv.addMapping(className, reference, remappedReference.toString());
             }
         }
     }
@@ -316,7 +363,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
             MethodData obfMethod = obfMethodData.get(targetEnv.getType());
             if (obfMethod != null) {
                 MemberInfo remappedReference = context.remapUsing(obfMethod, false);
-                targetEnv.getReferenceMapper().addMapping(className, reference, remappedReference.toString());
+                targetEnv.addMapping(className, reference, remappedReference.toString());
             }
         }
     }
@@ -327,11 +374,18 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
             if (obfField != null) {
                 MemberInfo remappedReference = MemberInfo.fromSrgField(obfField, context.desc);
                 String remapped = remappedReference.toString();
-                targetEnv.getReferenceMapper().addMapping(className, reference, remapped);
+                targetEnv.addMapping(className, reference, remapped);
             }
         }
     }
-        
+
+    /**
+     * Get the reference mapper
+     */
+    public ReferenceMapper getReferenceMapper() {
+        return this.refMapper;
+    }
+    
     /**
      * Clear all registered mixins 
      */

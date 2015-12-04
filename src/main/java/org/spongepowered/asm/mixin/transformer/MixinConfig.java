@@ -174,6 +174,11 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private final transient int order = MixinConfig.configOrder++;
 
     /**
+     * Parent environment 
+     */
+    private transient MixinEnvironment env;
+    
+    /**
      * Name of the file this config was initialised from
      */
     private transient String name;
@@ -198,7 +203,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Keep track of initialisation state 
      */
     private transient boolean initialised = false;
-    
+
     /**
      * Spawn via GSON, no public ctor for you 
      */
@@ -207,16 +212,18 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Called immediately after deserialisation
      * 
+     * @param env Parent environment
      * @param name Mixin config name
      * @return true if the config was successfully initialised and should be
      *      returned, or false if initialisation failed and the config should
      *      be discarded
      */
-    private boolean onLoad(String name) {
+    private boolean onLoad(MixinEnvironment env, String name) {
+        this.env = env;
         this.name = name;
         
         VersionNumber minVersion = VersionNumber.parse(this.version);
-        VersionNumber curVersion = VersionNumber.parse(MixinEnvironment.getCurrentEnvironment().getVersion());
+        VersionNumber curVersion = VersionNumber.parse(env.getVersion());
         if (minVersion.compareTo(curVersion) > 0) {
             this.logger.warn("Mixin config {} requires mixin subsystem version {} but {} was found. The mixin config will not be applied.",
                     this.name, minVersion, curVersion);
@@ -257,7 +264,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
-        this.verboseLogging |= MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE);
+        this.verboseLogging |= env.getOption(Option.DEBUG_VERBOSE);
         
         return true;
     }
@@ -283,7 +290,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         this.initialiseMixins(this.mixinClasses, false, hotSwapper);
         
-        switch (MixinEnvironment.getCurrentEnvironment().getSide()) {
+        switch (this.env.getSide()) {
             case CLIENT:
                 this.initialiseMixins(this.mixinClassesClient, false, hotSwapper);
                 break;
@@ -372,7 +379,16 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public boolean isRequired() {
         return this.required;
     }
-
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.extensibility.IMixinConfig
+     *      #getEnvironment()
+     */
+    @Override
+    public MixinEnvironment getEnvironment() {
+        return this.env;
+    }
+    
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#getName()
      */
@@ -424,6 +440,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Get the reference remapper for injectors
      */
     public ReferenceMapper getReferenceMapper() {
+        this.refMapper.setContext(this.env.getObfuscationContext());
         return this.refMapper;
     }
     
@@ -551,12 +568,13 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * specified configFile, which must be accessible on the classpath
      * 
      * @param configFile
+     * @param env parent environment
      * @return
      */
-    static MixinConfig create(String configFile) {
+    static MixinConfig create(String configFile, MixinEnvironment env) {
         try {
             MixinConfig config = new Gson().fromJson(new InputStreamReader(Launch.classLoader.getResourceAsStream(configFile)), MixinConfig.class);
-            if (config.onLoad(configFile)) {
+            if (config.onLoad(env, configFile)) {
                 return config;
             }
             return null;

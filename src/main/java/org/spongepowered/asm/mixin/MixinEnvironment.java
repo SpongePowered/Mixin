@@ -585,6 +585,11 @@ public class MixinEnvironment implements ITokenProvider {
      */
     private IClassNameTransformer nameTransformer;
     
+    /**
+     * Obfuscation context (refmap key to use in this environment) 
+     */
+    private String obfuscationContext = null;
+    
     MixinEnvironment(Phase phase) {
         this.phase = phase;
         this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
@@ -845,6 +850,19 @@ public class MixinEnvironment implements ITokenProvider {
      */
     public String getOptionValue(Option option) {
         return option.getStringValue();
+    }
+    
+    /**
+     * Set the obfuscation context
+     * 
+     * @param context
+     */
+    public void setObfuscationContext(String context) {
+        this.obfuscationContext = context;
+    }
+    
+    public String getObfuscationContext() {
+        return this.obfuscationContext;
     }
     
     /**

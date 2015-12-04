@@ -67,17 +67,12 @@ class TargetObfuscationEnvironment {
     /**
      * Options
      */
-//    private final IOptionProvider options;
+    private final IOptionProvider options;
 
     /**
      * Name of the resource to write generated srgs to
      */
     private final String outSrgFileName;
-    
-    /**
-     * Name of the resource to write remapped refs to
-     */
-    private final String outRefMapFileName;
     
     /**
      * File containing the reobfd srgs
@@ -87,7 +82,7 @@ class TargetObfuscationEnvironment {
     /**
      * Reference mapper for reference mapping 
      */
-    private final ReferenceMapper refMapper = new ReferenceMapper();
+    private final ReferenceMapper refMapper;
     
     /**
      * SRG container for mcp->? mappings
@@ -100,15 +95,16 @@ class TargetObfuscationEnvironment {
      */
     private boolean initDone;
 
-    public TargetObfuscationEnvironment(ObfuscationType type, Messager messager, ITypeHandleProvider typeProvider, IOptionProvider options) {
+    public TargetObfuscationEnvironment(ObfuscationType type, Messager messager, ITypeHandleProvider typeProvider, IOptionProvider options,
+            ReferenceMapper refMapper) {
         this.type = type;
         this.messager = messager;
         this.typeProvider = typeProvider;
-//        this.options = options;
+        this.options = options;
+        this.refMapper = refMapper;
         
         this.reobfSrgFileName = type.getSrgFileName(options);
         this.outSrgFileName = type.getOutputSrgFileName(options);
-        this.outRefMapFileName = type.getRefMapFileName(options);
     }
     
     private boolean initSrgs() {
@@ -134,7 +130,21 @@ class TargetObfuscationEnvironment {
         
         return this.srgs != null;
     }
-    
+
+    /**
+     * Get the type
+     */
+    public ObfuscationType getType() {
+        return this.type;
+    }
+
+    public void addMapping(String className, String reference, String newReference) {
+        this.refMapper.addMapping(this.type.getKey(), className, reference, newReference);
+        if (this.type.isDefault(this.options)) {
+            this.refMapper.addMapping(null, className, reference, newReference);
+        }
+    }
+
     /**
      * Get an obfuscation mapping for a method
      */
@@ -219,33 +229,7 @@ class TargetObfuscationEnvironment {
             }
         }
     }
-
-    /**
-     * Write out stored mappings
-     */
-    public void writeRefs(Filer filer) {
-        if (this.outRefMapFileName == null) {
-            return;
-        }
-        
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(filer, this.outRefMapFileName, this.type + "refmap");
-            this.refMapper.write(writer);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
-            }
-        }
-    }
-
+    
     /**
      * Open a writer for an output file
      */
@@ -260,20 +244,6 @@ class TargetObfuscationEnvironment {
         FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
         this.messager.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
         return new PrintWriter(outSrg.openWriter());
-    }
-
-    /**
-     * Get the type
-     */
-    public ObfuscationType getType() {
-        return this.type;
-    }
-
-    /**
-     * Get the reference mapper
-     */
-    public ReferenceMapper getReferenceMapper() {
-        return this.refMapper;
     }
 
 }

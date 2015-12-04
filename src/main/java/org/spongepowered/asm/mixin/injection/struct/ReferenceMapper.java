@@ -33,35 +33,58 @@ import java.util.Map;
 
 import net.minecraft.launchwrapper.Launch;
 
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public final class ReferenceMapper implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     public static final String DEFAULT_RESOURCE = "mixin.refmap.json";
-
-    private final Map<String, Map<String, String>> mappings;
+    
+    private final Map<String, Map<String, String>> mappings = Maps.newHashMap();
+    
+    private final Map<String, Map<String, Map<String, String>>> data = Maps.newHashMap();
+    
+    private transient String context = null;
     
     public ReferenceMapper() {
-        this(new HashMap<String, Map<String, String>>());
     }
-
-    public ReferenceMapper(Map<String, Map<String, String>> mappings) {
-        this.mappings = mappings;
+    
+    public String getContext() {
+        return this.context;
+    }
+    
+    public void setContext(String context) {
+        this.context = context;
     }
     
     public String remap(String className, String reference) {
+        return this.remapWithContext(this.context, className, reference);
+    }
+    
+    public String remapWithContext(String context, String className, String reference) {
+        Map<String, Map<String, String>> mappings = this.mappings;
+        if (context != null) {
+            mappings = this.data.get(context);
+            if (mappings == null) {
+                mappings = this.mappings;
+            }
+        }
+        return this.remap(mappings, className, reference);
+    }
+    
+    private String remap(Map<String, Map<String, String>> mappings, String className, String reference) {
         if (className == null) {
-            for (Map<String, String> mappings : this.mappings.values()) {
-                if (mappings.containsKey(reference)) {
-                    return mappings.get(reference);
+            for (Map<String, String> mapping : mappings.values()) {
+                if (mapping.containsKey(reference)) {
+                    return mapping.get(reference);
                 }
             }
         }
         
-        Map<String, String> classMappings = this.mappings.get(className);
+        Map<String, String> classMappings = mappings.get(className);
         if (classMappings == null) {
             return reference;
         }
@@ -69,11 +92,19 @@ public final class ReferenceMapper implements Serializable {
         return remappedReference != null ? remappedReference : reference;
     }
     
-    public void addMapping(String className, String reference, String newReference) {
-        Map<String, String> classMappings = this.mappings.get(className);
+    public void addMapping(String context, String className, String reference, String newReference) {
+        Map<String, Map<String, String>> mappings = this.mappings;
+        if (context != null) {
+            mappings = this.data.get(context);
+            if (mappings == null) {
+                mappings = Maps.newHashMap();
+                this.data.put(context, mappings);
+            }
+        }
+        Map<String, String> classMappings = mappings.get(className);
         if (classMappings == null) {
             classMappings = new HashMap<String, String>();
-            this.mappings.put(className, classMappings);
+            mappings.put(className, classMappings);
         }
         classMappings.put(reference, newReference);
     }

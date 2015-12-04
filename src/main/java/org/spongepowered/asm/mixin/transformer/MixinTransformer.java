@@ -492,7 +492,7 @@ public class MixinTransformer extends TreeTransformer {
         if (configs != null) {
             for (String configFile : configs) {
                 try {
-                    MixinConfig config = MixinConfig.create(configFile);
+                    MixinConfig config = MixinConfig.create(configFile, environment);
                     if (config != null) {
                         this.logger.log(this.verboseLoggingLevel, "Adding mixin config {}", config);
                         this.pendingConfigs.add(config);

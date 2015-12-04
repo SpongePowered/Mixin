@@ -433,7 +433,7 @@ public class MemberInfo {
      * @param mixinClass Mixin class to use for remapping
      * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
+    private static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
         String desc = null;
         String owner = null;
         

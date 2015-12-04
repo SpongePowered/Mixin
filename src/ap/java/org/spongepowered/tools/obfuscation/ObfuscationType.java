@@ -26,28 +26,26 @@ package org.spongepowered.tools.obfuscation;
 
 enum ObfuscationType {
     
-    SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.OUT_SRG_SRG_FILE, SupportedOptions.OUT_SRG_REFMAP_FILE),
-    NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.OUT_NOTCH_SRG_FILE, SupportedOptions.OUT_NOTCH_REFMAP_FILE);
+    SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.OUT_SRG_SRG_FILE),
+    NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.OUT_NOTCH_SRG_FILE);
     
-    private final String displayName;
+    private final String key;
     private final String srgFileArgName;
     private final String outSrgFileArgName;
-    private final String refmapArgName;
     
-    private ObfuscationType(String displayName, String srgFileArgName, String outSrgFileArgName, String refmapArgName) {
-        this.displayName = displayName;
+    private ObfuscationType(String displayName, String srgFileArgName, String outSrgFileArgName) {
+        this.key = displayName;
         this.srgFileArgName = srgFileArgName;
         this.outSrgFileArgName = outSrgFileArgName;
-        this.refmapArgName = refmapArgName;
     }
     
     @Override
     public String toString() {
-        return this.displayName;
+        return this.key;
     }
     
-    public String getDisplayName() {
-        return this.displayName;
+    public String getKey() {
+        return this.key;
     }
     
     public String getSrgFileOption() {
@@ -58,8 +56,9 @@ enum ObfuscationType {
         return this.outSrgFileArgName;
     }
     
-    public String getRefMapFileOption() {
-        return this.refmapArgName;
+    public boolean isDefault(IOptionProvider options) {
+        String defaultEnv = options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
+        return (defaultEnv == null && this == ObfuscationType.SRG) || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase()));
     }
     
     public boolean isSupported(IOptionProvider options) {
@@ -73,9 +72,5 @@ enum ObfuscationType {
     public String getOutputSrgFileName(IOptionProvider options) {
         return options.getOption(this.outSrgFileArgName);
     }
-    
-    public String getRefMapFileName(IOptionProvider options) {
-        return options.getOption(this.refmapArgName);
-    }
-    
+   
 }

@@ -34,20 +34,20 @@ public final class SupportedOptions {
     public static final String REOBF_NOTCH_FILE         = "reobfNotchSrgFile";
     public static final String OUT_SRG_SRG_FILE         = "outSrgFile";
     public static final String OUT_NOTCH_SRG_FILE       = "outNotchSrgFile";
-    public static final String OUT_SRG_REFMAP_FILE      = "outRefMapFile";
-    public static final String OUT_NOTCH_REFMAP_FILE    = "outNotchRefMapFile";
+    public static final String OUT_REFMAP_FILE          = "outRefMapFile";
     public static final String DISABLE_TARGET_VALIDATOR = "disableTargetValidator";
     public static final String DISABLE_TARGET_EXPORT    = "disableTargetExport";
+    public static final String DEFAULT_OBFUSCATION_ENV  = "defaultObfuscationEnv";
 
     public static final Set<String> all = ImmutableSet.<String>of(
         SupportedOptions.REOBF_SRG_FILE,
         SupportedOptions.REOBF_NOTCH_FILE,
         SupportedOptions.OUT_SRG_SRG_FILE,
         SupportedOptions.OUT_NOTCH_SRG_FILE,
-        SupportedOptions.OUT_SRG_REFMAP_FILE,
-        SupportedOptions.OUT_NOTCH_REFMAP_FILE,
+        SupportedOptions.OUT_REFMAP_FILE,
         SupportedOptions.DISABLE_TARGET_VALIDATOR,
-        SupportedOptions.DISABLE_TARGET_EXPORT
+        SupportedOptions.DISABLE_TARGET_EXPORT,
+        SupportedOptions.DEFAULT_OBFUSCATION_ENV
     );
 
     private SupportedOptions() {}
