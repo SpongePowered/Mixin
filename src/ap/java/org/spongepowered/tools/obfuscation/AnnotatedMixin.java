@@ -259,12 +259,12 @@ class AnnotatedMixin {
     /**
      * Stored (ordered) field mappings
      */
-    private final Set<String> fieldMappings = new LinkedHashSet<String>();
+    private final Map<ObfuscationType, Set<String>> fieldMappings = new HashMap<ObfuscationType, Set<String>>();
     
     /**
      * Stored (ordered) method mappings
      */
-    private final Set<String> methodMappings = new LinkedHashSet<String>();
+    private final Map<ObfuscationType, Set<String>> methodMappings = new HashMap<ObfuscationType, Set<String>>();
 
     public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type) {
         
@@ -284,6 +284,11 @@ class AnnotatedMixin {
         }
 
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
+        
+        for (ObfuscationType obfType : ObfuscationType.values()) {
+            this.fieldMappings.put(obfType, new LinkedHashSet<String>());
+            this.methodMappings.put(obfType, new LinkedHashSet<String>());
+        }
     }
 
     AnnotatedMixin runValidators(ValidationPass pass, Collection<IMixinValidator> validators) {
@@ -389,15 +394,15 @@ class AnnotatedMixin {
     /**
      * Get stored field mappings
      */
-    public Set<String> getFieldMappings() {
-        return this.fieldMappings;
+    public Set<String> getFieldMappings(ObfuscationType type) {
+        return this.fieldMappings.get(type);
     }
     
     /**
      * Get stored method mappings
      */
-    public Set<String> getMethodMappings() {
-        return this.methodMappings;
+    public Set<String> getMethodMappings(ObfuscationType type) {
+        return this.methodMappings.get(type);
     }
     
     /**
@@ -437,9 +442,9 @@ class AnnotatedMixin {
         
         String mcpName = method.getSimpleName().toString();
         String mcpSignature = MirrorUtils.generateSignature(method);
-        MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + mcpName, mcpSignature));
+        ObfuscationData<MethodData> obfMethodData = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + mcpName, mcpSignature));
         
-        if (obfMethod == null) {
+        if (obfMethodData.isEmpty()) {
             Kind error = Kind.ERROR;
             
             try {
@@ -455,9 +460,12 @@ class AnnotatedMixin {
             this.mixins.printMessage(error, "No obfuscation mapping for @Overwrite method", method);
             return;
         }
-        
-        String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
-        this.addMethodMapping(mcpName, obfName, mcpSignature, obfMethod.sig);
+
+        for (ObfuscationType type : obfMethodData) {
+            MethodData obfMethod = obfMethodData.get(type);
+            String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
+            this.addMethodMapping(type, mcpName, obfName, mcpSignature, obfMethod.sig);
+        }
     }
 
     /**
@@ -471,14 +479,17 @@ class AnnotatedMixin {
             return;
         }
         
-        String obfField = this.mixins.getObfField(this.targetRef + "/" + name);
+        ObfuscationData<String> obfFieldData = this.mixins.getObfField(this.targetRef + "/" + name);
         
-        if (obfField == null) {
+        if (obfFieldData.isEmpty()) {
             this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow field", field, shadow);
             return;
         }
 
-        this.addFieldMapping(name.setObfuscatedName(obfField));
+        for (ObfuscationType type : obfFieldData) {
+            String fieldName = obfFieldData.get(type);
+            this.addFieldMapping(type, name.setObfuscatedName(fieldName));
+        }
     }
 
     /**
@@ -493,14 +504,17 @@ class AnnotatedMixin {
         }
         
         String mcpSignature = MirrorUtils.generateSignature(method);
-        MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + name, mcpSignature));
+        ObfuscationData<MethodData> obfMethodData = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + name, mcpSignature));
         
-        if (obfMethod == null) {
+        if (obfMethodData.isEmpty()) {
             this.mixins.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow method", method, shadow);
             return;
         }
         
-        this.addMethodMapping(name.setObfuscatedName(obfMethod.name), mcpSignature, obfMethod.sig);
+        for (ObfuscationType type : obfMethodData) {
+            MethodData obfMethod = obfMethodData.get(type);
+            this.addMethodMapping(type, name.setObfuscatedName(obfMethod.name), mcpSignature, obfMethod.sig);
+        }
     }
 
     /**
@@ -544,18 +558,13 @@ class AnnotatedMixin {
             return null;
        }
         
-        MethodData obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + targetMember.name, desc));
-        if (obfMethod == null) {
+        ObfuscationData<MethodData> obfMethod = this.mixins.getObfMethod(new MethodData(this.targetRef + "/" + targetMember.name, desc));
+        if (obfMethod.isEmpty()) {
             Kind error = Constants.INIT.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
             return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);
         }
         
-        int slashPos = obfMethod.name.lastIndexOf('/');
-        String obfName = obfMethod.name.substring(slashPos + 1);
-        String obfOwner = obfMethod.name.substring(0, slashPos); 
-        MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
-        
-        this.mixins.getReferenceMapper().addMapping(this.classRef, originalReference, remappedReference.toString());
+        this.mixins.addMethodMapping(this.classRef, originalReference, obfMethod);
         return null;
     }
 
@@ -599,50 +608,46 @@ class AnnotatedMixin {
             this.mixins.printMessage(Kind.ERROR, ex.getMessage(), element, inject);
         }
         
-        MemberInfo remappedReference = null;
         if (targetMember.isField()) {
-            String obfField = this.mixins.getObfField(targetMember.toSrg());
-            if (obfField == null) {
+            ObfuscationData<String> obfFieldData = this.mixins.getObfField(targetMember.toSrg());
+            if (obfFieldData.isEmpty()) {
                 this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
                 return false;
             }
-            remappedReference = MemberInfo.fromSrgField(obfField, targetMember.desc);
+            this.mixins.addFieldMapping(this.classRef, target, targetMember, obfFieldData);
         } else {
-            MethodData obfMethod = this.mixins.getObfMethod(targetMember);
-            if (obfMethod == null) {
+            ObfuscationData<MethodData> obfMethodData = this.mixins.getObfMethod(targetMember);
+            if (obfMethodData.isEmpty()) {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
                 }
-                return false;
             }
-            remappedReference = targetMember.remapUsing(obfMethod, false);
+            this.mixins.addMethodMapping(this.classRef, target, targetMember, obfMethodData);
         }
-        
-        this.mixins.getReferenceMapper().addMapping(this.classRef, target, remappedReference.toString());
         return true;
     }
 
     /**
      * Add a field mapping to the local table
      */
-    private void addFieldMapping(ShadowElementName name) {
+    private void addFieldMapping(ObfuscationType type, ShadowElementName name) {
         String mapping = String.format("FD: %s %s", this.classRef + "/" + name.name(), this.classRef + "/" + name.obfuscated());
-        this.fieldMappings.add(mapping);
+        this.fieldMappings.get(type).add(mapping);
     }
     
     /**
      * Add a method mapping to the local table
      */
-    private void addMethodMapping(ShadowElementName name, String mcpSignature, String obfSignature) {
-        this.addMethodMapping(name.name(), name.obfuscated(), mcpSignature, obfSignature);
+    private void addMethodMapping(ObfuscationType type, ShadowElementName name, String mcpSignature, String obfSignature) {
+        this.addMethodMapping(type, name.name(), name.obfuscated(), mcpSignature, obfSignature);
     }
 
     /**
      * Add a method mapping to the local table
      */
-    private void addMethodMapping(String mcpName, String obfName, String mcpSignature, String obfSignature) {
+    private void addMethodMapping(ObfuscationType type, String mcpName, String obfName, String mcpSignature, String obfSignature) {
         String mapping = String.format("MD: %s %s %s %s", this.classRef + "/" + mcpName, mcpSignature, this.classRef + "/" + obfName, obfSignature);
-        this.methodMappings.add(mapping);
+        this.methodMappings.get(type).add(mapping);
     }
     
     /**

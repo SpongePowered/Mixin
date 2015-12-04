@@ -24,18 +24,13 @@
  */
 package org.spongepowered.tools.obfuscation;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,7 +45,6 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
@@ -61,7 +55,6 @@ import javax.tools.StandardLocation;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
@@ -72,14 +65,13 @@ import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
-import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
 
 
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the srgs
  */
-class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
+class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITypeHandleProvider {
     
     private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
 
@@ -118,24 +110,9 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private final List<AnnotatedMixin> mixinsForPass = new ArrayList<AnnotatedMixin>();
     
     /**
-     * Name of the resource to write generated srgs to
+     * Target obfuscation environments
      */
-    private final String outSrgFileName;
-    
-    /**
-     * Name of the resource to write remapped refs to
-     */
-    private final String outRefMapFileName;
-    
-    /**
-     * File containing the reobfd srgs
-     */
-    private final String reobfSrgFileName;
-    
-    /**
-     * Reference mapper for reference mapping 
-     */
-    private final ReferenceMapper refMapper = new ReferenceMapper();
+    private final List<TargetObfuscationEnvironment> targetEnvironments = new ArrayList<TargetObfuscationEnvironment>();
     
     /**
      * Rule validators
@@ -153,17 +130,6 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private final TargetMap targets;
     
     /**
-     * SRG container for mcp->srg mappings
-     */
-    private SrgContainer srgs;
-    
-    /**
-     * True once we've tried to initialise the srgs, initially false so that we
-     * can do srg init lazily
-     */
-    private boolean initDone;
-    
-    /**
      * Properties file used to specify options when AP options cannot be
      * configured via the build script (eg. when using AP with MCP)
      */
@@ -178,10 +144,12 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
         this.targets = this.initTargetMap();
 
         this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
-        
-        this.reobfSrgFileName = this.getOption("reobfSrgFile");
-        this.outSrgFileName = this.getOption("outSrgFile");
-        this.outRefMapFileName = this.getOption("outRefMapFile"); 
+
+        for (ObfuscationType obfType : ObfuscationType.values()) {
+            if (obfType.isSupported(this)) {
+                this.targetEnvironments.add(new TargetObfuscationEnvironment(obfType, this, this, this));
+            }
+        }
         
         this.validators = ImmutableList.<IMixinValidator>of(
             new ParentValidator(processingEnv, this, this),
@@ -268,122 +236,102 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     }
 
     /**
-     * Lazy initialisation for srgs, so that we only initialise the srgs if
-     * they're actually required.
-     */
-    private boolean initSrgs() {
-        if (!this.initDone) {
-            this.initDone = true;
-            
-            if (this.reobfSrgFileName == null) {
-                this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, obfuscation processing will not occur");
-                return false;
-            }
-            
-            try {
-                File reobfSrgFile = new File(this.reobfSrgFileName);
-                this.printMessage(Kind.NOTE, "Loading SRGs from " + reobfSrgFile.getAbsolutePath());
-                this.srgs = new SrgContainer().readSrg(reobfSrgFile);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                this.printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
-                this.srgs = null;
-            }
-        }
-        
-        return this.srgs != null;
-    }
-
-    /**
      * Write out generated srgs
      */
     public void writeSrgs() {
-        if (this.outSrgFileName == null) {
-            return;
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            targetEnv.writeSrgs(this.processingEnv.getFiler(), this.mixins);
         }
-        
-        Set<String> fieldMappings = new LinkedHashSet<String>();
-        Set<String> methodMappings = new LinkedHashSet<String>();
-        
-        for (AnnotatedMixin mixin : this.mixins.values()) {
-            fieldMappings.addAll(mixin.getFieldMappings());
-            methodMappings.addAll(mixin.getMethodMappings());
-        }
-        
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(this.outSrgFileName, "output SRGs");
-            for (String fieldMapping : fieldMappings) {
-                writer.println(fieldMapping);
-            }
-            for (String methodMapping : methodMappings) {
-                writer.println(methodMapping);
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
-            }
-        }
-    }
-
-    /**
-     * Open a writer for an output file
-     */
-    private PrintWriter openFileWriter(String fileName, String description) throws IOException {
-        if (fileName.matches("^.*[\\\\/:].*$")) {
-            File outSrgFile = new File(fileName);
-            outSrgFile.getParentFile().mkdirs();
-            this.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
-            return new PrintWriter(outSrgFile);
-        }
-        
-        Filer filer = this.processingEnv.getFiler();
-        FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
-        this.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
-        return new PrintWriter(outSrg.openWriter());
     }
 
     /**
      * Write out stored mappings
      */
     public void writeRefs() {
-        if (this.outRefMapFileName == null) {
-            return;
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            targetEnv.writeRefs(this.processingEnv.getFiler());
         }
+    }
+    
+    public ObfuscationData<MethodData> getObfMethod(MemberInfo method) {
+        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
         
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(this.outRefMapFileName, "refmap");
-            this.refMapper.write(writer);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            MethodData obfMethod = targetEnv.getObfMethod(method);
+            if (obfMethod != null) {
+                data.add(targetEnv.getType(), obfMethod);
             }
         }
         
+        return data;
     }
 
     /**
-     * Get the reference mapper
+     * Get an obfuscation mapping for a method
      */
-    public ReferenceMapper getReferenceMapper() {
-        return this.refMapper;
+    public ObfuscationData<MethodData> getObfMethod(MethodData method) {
+        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
+        
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            MethodData obfMethod = targetEnv.getObfMethod(method);
+            if (obfMethod != null) {
+                data.add(targetEnv.getType(), obfMethod);
+            }
+        }
+        
+        return data;
+    }
+
+    /**
+     * Get an obfuscation mapping for a field
+     */
+    public ObfuscationData<String> getObfField(String field) {
+        ObfuscationData<String> data = new ObfuscationData<String>();
+        
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            String obfField = targetEnv.getObfField(field);
+            if (obfField != null) {
+                data.add(targetEnv.getType(), obfField);
+            }
+        }
+        
+        return data;
+    }
+
+    void addMethodMapping(String className, String reference, ObfuscationData<MethodData> obfMethodData) {
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
+            if (obfMethod != null) {
+                int slashPos = obfMethod.name.lastIndexOf('/');
+                String obfName = obfMethod.name.substring(slashPos + 1);
+                String obfOwner = obfMethod.name.substring(0, slashPos); 
+                MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
+                targetEnv.getReferenceMapper().addMapping(className, reference, remappedReference.toString());
+            }
+        }
     }
     
+    void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MethodData> obfMethodData) {
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
+            if (obfMethod != null) {
+                MemberInfo remappedReference = context.remapUsing(obfMethod, false);
+                targetEnv.getReferenceMapper().addMapping(className, reference, remappedReference.toString());
+            }
+        }
+    }
+        
+    void addFieldMapping(String className, String reference, MemberInfo context, ObfuscationData<String> obfFieldData) {
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            String obfField = obfFieldData.get(targetEnv.getType());
+            if (obfField != null) {
+                MemberInfo remappedReference = MemberInfo.fromSrgField(obfField, context.desc);
+                String remapped = remappedReference.toString();
+                targetEnv.getReferenceMapper().addMapping(className, reference, remapped);
+            }
+        }
+    }
+        
     /**
      * Clear all registered mixins 
      */
@@ -553,7 +501,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
      * Called from each AP when a pass is completed 
      */
     public void onPassCompleted() {
-        if (!"true".equalsIgnoreCase(this.getOption("disableTargetExport"))) {
+        if (!"true".equalsIgnoreCase(this.getOption(SupportedOptions.DISABLE_TARGET_EXPORT))) {
             this.targets.write(true);
         }
         
@@ -618,6 +566,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
      * Get a TypeHandle representing another type in the current processing
      * environment
      */
+    @Override
     public TypeHandle getTypeHandle(String name) {
         name = name.replace('/', '.');
         
@@ -640,52 +589,6 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
             }
         }
         
-        return null;
-    }
-    
-    /**
-     * Get an obfuscation mapping for a method
-     */
-    public MethodData getObfMethod(MemberInfo method) {
-        MethodData obfd = this.getObfMethod(method.asMethodData());
-        if (obfd != null || !method.isFullyQualified()) {
-            return obfd;
-        }
-        
-        // Get a type handle for the declared method owner
-        TypeHandle type = this.getTypeHandle(method.owner);
-        if (type.isImaginary()) {
-            return null;
-        }
-        
-        // See if we can get the superclass from the reference
-        TypeMirror superClass = type.getElement().getSuperclass();
-        if (superClass.getKind() != TypeKind.DECLARED) {
-            return null;
-        }
-        
-        // Well we found it, let's inflect the class name and recurse the search
-        String superClassName = ((TypeElement)((DeclaredType)superClass).asElement()).getQualifiedName().toString();
-        return this.getObfMethod(new MemberInfo(method.name, superClassName.replace('.', '/'), method.desc, method.matchAll));
-    }
-
-    /**
-     * Get an obfuscation mapping for a method
-     */
-    public MethodData getObfMethod(MethodData method) {
-        if (this.initSrgs()) {
-            return this.srgs.methodMap.get(method);
-        }
-        return null;
-    }
-
-    /**
-     * Get an obfuscation mapping for a field
-     */
-    public String getObfField(String field) {
-        if (this.initSrgs()) {
-            return this.srgs.fieldMap.get(field);
-        }
         return null;
     }
 

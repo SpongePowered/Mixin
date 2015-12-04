@@ -37,14 +37,8 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
 
-import com.google.common.collect.ImmutableSet;
-
 public abstract class MixinProcessor extends AbstractProcessor {
     
-    private static final Set<String> supportedOptions = ImmutableSet.<String>of(
-        "reobfSrgFile", "outSrgFile", "outRefMapFile", "disableTargetValidator"
-    );
-
     /**
      * Mixin info manager 
      */
@@ -92,7 +86,7 @@ public abstract class MixinProcessor extends AbstractProcessor {
     
     @Override
     public Set<String> getSupportedOptions() {
-        return MixinProcessor.supportedOptions;
+        return SupportedOptions.all;
     }
     
 }

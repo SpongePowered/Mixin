@@ -37,6 +37,7 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
+import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
 
@@ -63,7 +64,7 @@ public class TargetValidator extends MixinValidator {
      */
     @Override
     public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
-        if ("true".equalsIgnoreCase(this.options.getOption("disableTargetValidator"))) {
+        if ("true".equalsIgnoreCase(this.options.getOption(SupportedOptions.DISABLE_TARGET_VALIDATOR))) {
             return true;
         }
         
