@@ -260,7 +260,7 @@ public class MixinEnvironment implements ITokenProvider {
          *   <dt>?</dt><dd>Matches exactly one character</dd>
          * </dl>
          */
-        DEBUG_EXPORT_FILTER(Option.DEBUG_EXPORT, "filter"),
+        DEBUG_EXPORT_FILTER(Option.DEBUG_EXPORT, "filter", false),
         
         /**
          * Allow fernflower to be disabled even if it is found on the classpath
@@ -325,14 +325,38 @@ public class MixinEnvironment implements ITokenProvider {
          * Java property name
          */
         final String property;
+        
+        /**
+         * Whether this property is boolean or not
+         */
+        final boolean flag;
+        
+        /**
+         * Number of parents 
+         */
+        final int depth;
 
         private Option(String property) {
-            this(null, property);
+            this(null, property, true);
+        }
+        
+        private Option(String property, boolean flag) {
+            this(null, property, flag);
         }
         
         private Option(Option parent, String property) {
+            this(parent, property, true);
+        }
+        
+        private Option(Option parent, String property, boolean flag) {
             this.parent = parent;
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
+            this.flag = flag;
+            int depth = 0;
+            for (; parent != null; depth++) {
+                parent = parent.parent;
+            }
+            this.depth = depth;
         }
         
         Option getParent() {
@@ -341,6 +365,11 @@ public class MixinEnvironment implements ITokenProvider {
         
         String getProperty() {
             return this.property;
+        }
+        
+        @Override
+        public String toString() {
+            return this.flag ? String.valueOf(this.getBooleanValue()) : this.getStringValue();
         }
         
         boolean getBooleanValue() {
@@ -638,7 +667,11 @@ public class MixinEnvironment implements ITokenProvider {
             printer.add("%28s : %s", "Internal Version", version);
             printer.add("%28s : %s", "Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
             for (Option option : Option.values()) {
-                printer.add("%28s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+                StringBuilder indent = new StringBuilder();
+                for (int i = 0; i < option.depth; i++) {
+                    indent.append("- ");
+                }
+                printer.add("%28s : %s<%s>", option.property, indent, option);
             }
             printer.hr().add("%28s : %s", "Detected Side", side);
             printer.print(System.err);
