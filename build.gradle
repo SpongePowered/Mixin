@@ -331,7 +331,20 @@ uploadArchives {
                         }
                     }
                 }
+                whenConfigured {
+                    dependencies = dependencies.findAll {
+                        !it.artifactId.contains('fernflower')
+                    }
+                }
             }
+        }
+    }
+}
+
+install.repositories.mavenInstaller.pom {
+    whenConfigured {
+        dependencies = dependencies.findAll {
+            !it.artifactId.contains('fernflower')
         }
     }
 }
