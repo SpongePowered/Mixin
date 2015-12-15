@@ -300,7 +300,6 @@ public class MixinTransformer extends TreeTransformer {
         TreeInfo.setLock(this.lock);
         
         this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
-
         this.hotSwapper = this.initHotSwapper();
 
         try {
@@ -311,7 +310,7 @@ public class MixinTransformer extends TreeTransformer {
     }
     
     private IDecompiler initDecompiler(File outputPath) {
-        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
+        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
             return null;
         }
 
@@ -321,7 +320,9 @@ public class MixinTransformer extends TreeTransformer {
             Class<? extends IDecompiler> clazz =
                 (Class<? extends IDecompiler>)Class.forName("org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler");
             Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
-            return ctor.newInstance(outputPath);
+            IDecompiler decompiler = ctor.newInstance(outputPath);
+            this.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled");
+            return decompiler;
         } catch (Throwable th) {
             this.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
                     th.getClass().getSimpleName(), th.getMessage());

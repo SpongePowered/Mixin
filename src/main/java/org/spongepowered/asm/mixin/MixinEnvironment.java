@@ -263,6 +263,16 @@ public class MixinEnvironment implements ITokenProvider {
         DEBUG_EXPORT_FILTER(Option.DEBUG_EXPORT, "filter"),
         
         /**
+         * Allow fernflower to be disabled even if it is found on the classpath
+         */
+        DEBUG_EXPORT_DECOMPILE(Option.DEBUG_EXPORT, "decompile") {
+            @Override
+            boolean getBooleanValue() {
+                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
+            }
+        },
+        
+        /**
          * Run the CheckClassAdapter on all classes after mixins are applied 
          */
         DEBUG_VERIFY(Option.DEBUG_ALL, "verify"),
@@ -619,13 +629,13 @@ public class MixinEnvironment implements ITokenProvider {
         if (this.getOption(Option.DEBUG_VERBOSE)) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-            printer.add("%25s : %s", "Code source", codeSource);
-            printer.add("%25s : %s", "Internal Version", version);
-            printer.add("%25s : %s", "Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
+            printer.add("%28s : %s", "Code source", codeSource);
+            printer.add("%28s : %s", "Internal Version", version);
+            printer.add("%28s : %s", "Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
             for (Option option : Option.values()) {
-                printer.add("%25s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
+                printer.add("%28s : %s%s", option.property, option.parent == null ? "" : " - ", this.getOption(option));
             }
-            printer.hr().add("%25s : %s", "Detected Side", side);
+            printer.hr().add("%28s : %s", "Detected Side", side);
             printer.print(System.err);
         }
     }
