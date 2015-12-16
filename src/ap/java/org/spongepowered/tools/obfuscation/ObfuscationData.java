@@ -31,9 +31,19 @@ import java.util.Map;
 public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     
     private final Map<ObfuscationType, T> data = new HashMap<ObfuscationType, T>();
-
-    public void add(ObfuscationType type, T method) {
-        this.data.put(type, method);
+    
+    private final T defaultValue;
+    
+    public ObfuscationData() {
+        this(null);
+    }
+    
+    public ObfuscationData(T defaultValue) {
+        this.defaultValue = defaultValue;
+    }
+    
+    public void add(ObfuscationType type, T value) {
+        this.data.put(type, value);
     }
 
     public boolean isEmpty() {
@@ -41,7 +51,8 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     }
     
     public T get(ObfuscationType type) {
-        return this.data.get(type);
+        T value = this.data.get(type);
+        return value != null ? value : this.defaultValue;
     }
 
     @Override

@@ -190,6 +190,16 @@ class TargetObfuscationEnvironment {
         }
         return null;
     }
+    
+    /**
+     * Get an obfuscation mapping for a class
+     */
+    public String getObfClass(String className) {
+        if (this.initSrgs()) {
+            return this.srgs.classMap.get(className);
+        }
+        return null;
+    }
 
     /**
      * Write out generated srgs

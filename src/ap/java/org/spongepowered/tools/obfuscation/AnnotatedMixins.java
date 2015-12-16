@@ -344,6 +344,22 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         
         return data;
     }
+    
+    /**
+     * Get an obfuscation mapping for a class
+     */
+    public ObfuscationData<String> getObfClass(String className) {
+        ObfuscationData<String> data = new ObfuscationData<String>(className);
+        
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            String obfClass = targetEnv.getObfClass(className);
+            if (obfClass != null) {
+                data.add(targetEnv.getType(), obfClass);
+            }
+        }
+        
+        return data;
+    }
 
     void addMethodMapping(String className, String reference, ObfuscationData<MethodData> obfMethodData) {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {

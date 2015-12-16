@@ -35,6 +35,7 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
@@ -144,6 +145,23 @@ public class TypeHandle {
      */
     public TypeMirror getType() {
         return this.element != null ? this.element.asType() : null;
+    }
+    
+    /**
+     * Returns the enclosed element's superclass if available, or null if this
+     * class does not have a superclass
+     */
+    public TypeHandle getSuperclass() {
+        if (this.element == null) {
+            return null;
+        }
+        
+        TypeMirror superClass = this.element.getSuperclass();
+        if (superClass == null || superClass.getKind() == TypeKind.NONE) {
+            return null;
+        }
+        
+        return new TypeHandle((DeclaredType)superClass);
     }
 
     /**

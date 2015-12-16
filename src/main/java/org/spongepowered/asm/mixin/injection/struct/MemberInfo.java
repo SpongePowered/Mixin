@@ -190,6 +190,19 @@ public class MemberInfo {
         this.matchAll = remapped.matchAll;
     }
 
+    /**
+     * Initialise a remapped MemberInfo with a new name
+     * 
+     * @param original Original MemberInfo
+     * @param owner new owner
+     */
+    private MemberInfo(MemberInfo original, String owner) {
+        this.owner = owner;
+        this.name = original.name;
+        this.desc = original.desc;
+        this.matchAll = original.matchAll;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
@@ -210,7 +223,7 @@ public class MemberInfo {
      */
     public String toSrg() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqalified reference to SRG mapping");
+            throw new RuntimeException("Cannot convert unqualified reference to SRG mapping");
         }
         
         if (this.desc.startsWith("(")) {
@@ -230,7 +243,7 @@ public class MemberInfo {
     
     public MethodData asMethodData() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqalified reference to MethodData");
+            throw new RuntimeException("Cannot convert unqualified reference to MethodData");
         }
         
         if (this.isField()) {
@@ -375,6 +388,20 @@ public class MemberInfo {
         return (this.name == null || this.name.equals(name)) 
             && (this.desc == null || (desc != null && desc.equals(this.desc)))
             && (ordinal == 0 || this.matchAll);
+    }
+    
+    /**
+     * Create a new version of this member with a different owner
+     * 
+     * @param methodData Method data to use
+     * @param setOwner True to set the owner as well as the name
+     * @return New MethodInfo with remapped values
+     */
+    public MemberInfo move(String newOwner) {
+        if (newOwner.equals(this.owner)) {
+            return this;
+        }
+        return new MemberInfo(this, newOwner); 
     }
     
     /**
