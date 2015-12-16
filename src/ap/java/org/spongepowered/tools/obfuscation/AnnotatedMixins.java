@@ -362,7 +362,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
             MethodData obfMethod = obfMethodData.get(targetEnv.getType());
             if (obfMethod != null) {
-                MemberInfo remappedReference = context.remapUsing(obfMethod, false);
+                MemberInfo remappedReference = context.remapUsing(obfMethod, true);
                 targetEnv.addMapping(className, reference, remappedReference.toString());
             }
         }

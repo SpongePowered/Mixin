@@ -186,8 +186,8 @@ public class MemberInfo {
         int slashPos = methodData.name.lastIndexOf('/');
         this.owner = setOwner ? methodData.name.substring(0, slashPos) : remapped.owner;
         this.name = methodData.name.substring(slashPos + 1);
-        this.desc = remapped.desc;
-        this.matchAll = false;
+        this.desc = methodData.sig;
+        this.matchAll = remapped.matchAll;
     }
 
     /* (non-Javadoc)
@@ -294,7 +294,12 @@ public class MemberInfo {
                 }
     
                 String retString = this.desc.substring(this.desc.indexOf(')') + 1);
-                if (!retString.equals(Type.getType(retString).getDescriptor())) {
+                try {
+                    Type retType = Type.getType(retString);
+                    if (!retString.equals(retType.getDescriptor())) {
+                        throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                    }
+                } catch (Exception ex) {
                     throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
                 }
             }
