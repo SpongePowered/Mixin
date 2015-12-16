@@ -405,7 +405,9 @@ public class CallbackInjector extends Injector {
             }
         }
         
-        this.createCallbackInfo(callback);
+        if (this.cancellable) {
+            this.createCallbackInfo(callback, true);
+        }
         this.invokeCallback(callback, callbackMethod);
         this.injectCancellationCode(callback);
         
@@ -489,15 +491,29 @@ public class CallbackInjector extends Injector {
 
     /**
      * @param callback callback handle
+     * @param store store the callback info in a local variable
      */
-    private void createCallbackInfo(final Callback callback) {
+    private void createCallbackInfo(final Callback callback, boolean store) {
         this.dupReturnValue(callback);
 
-        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, false);
+        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
         callback.add(new InsnNode(Opcodes.DUP), true, true);
         
         this.invokeCallbackInfoCtor(callback);
-        callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        if (store) {
+            callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        }
+    }
+
+    /**
+     * @param callback callback handle
+     */
+    private void loadOrCreateCallbackInfo(final Callback callback) {
+        if (this.cancellable) {
+            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
+        } else {
+            this.createCallbackInfo(callback, false);
+        }
     }
 
     /**
@@ -549,7 +565,7 @@ public class CallbackInjector extends Injector {
         }
         
         // Push the callback info onto the stack
-        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
+        this.loadOrCreateCallbackInfo(callback);
         
         // (Maybe) push the locals onto the stack
         if (callback.canCaptureLocals) {

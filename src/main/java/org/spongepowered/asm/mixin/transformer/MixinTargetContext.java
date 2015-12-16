@@ -242,6 +242,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.validateMethod(method);
         this.transformDescriptor(method);
         
+        AbstractInsnNode lastInsn = null;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
 
@@ -250,12 +251,14 @@ public class MixinTargetContext implements IReferenceMapperContext {
             } else if (insn instanceof FieldInsnNode) {
                 this.transformFieldRef(method, iter, new MemberRef.Field((FieldInsnNode)insn));
             } else if (insn instanceof TypeInsnNode) {
-                this.transformTypeNode(method, iter, (TypeInsnNode)insn);
+                this.transformTypeNode(method, iter, (TypeInsnNode)insn, lastInsn);
             } else if (insn instanceof LdcInsnNode) {
                 this.transformConstantNode(method, iter, (LdcInsnNode)insn);
             } else if (insn instanceof InvokeDynamicInsnNode) {
                 this.transformInvokeDynamicNode(method, iter, (InvokeDynamicInsnNode)insn);
             }
+            
+            lastInsn = insn;
         }
     }
 
@@ -339,8 +342,17 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param method Method being processed
      * @param iter Insn interator
      * @param typeInsn Insn to transform
+     * @param lastNode Last insn in the method
      */
-    private void transformTypeNode(MethodNode method, Iterator<AbstractInsnNode> iter, TypeInsnNode typeInsn) {
+    private void transformTypeNode(MethodNode method, Iterator<AbstractInsnNode> iter, TypeInsnNode typeInsn, AbstractInsnNode lastNode) {
+        if (typeInsn.getOpcode() == Opcodes.CHECKCAST
+                && typeInsn.desc.equals(this.targetClass.name)
+                && lastNode.getOpcode() == Opcodes.ALOAD
+                && ((VarInsnNode)lastNode).var == 0) {
+            iter.remove();
+            return;
+        }
+        
         if (typeInsn.desc.equals(this.getClassRef())) {
             typeInsn.desc = this.targetClass.name;
         }
