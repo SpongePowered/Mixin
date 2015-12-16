@@ -222,7 +222,7 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(String name, String type) {
-        String rawType = type.replaceAll("<[^>]+>", "");
+        String rawType = TypeHandle.stripGenerics(type);
 
         for (Element element : this.getEnclosedElements()) {
             if (element.getKind() != ElementKind.FIELD) {
@@ -260,7 +260,7 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(String name, String signature) {
-        String rawSignature = signature.replaceAll("<[^>]+>", "");
+        String rawSignature = TypeHandle.stripGenerics(signature);
 
         for (Element element : this.getEnclosedElements()) {
             switch (element.getKind()) {
@@ -310,6 +310,22 @@ public class TypeHandle {
         }
         
         return element.asType().toString();
+    }
+
+    static String stripGenerics(String type) {
+        StringBuilder sb = new StringBuilder();
+        for (int pos = 0, depth = 0; pos < type.length(); pos++) {
+            char c = type.charAt(pos);
+            if (c == '<') {
+                depth++;
+            }
+            if (depth == 0) {
+                sb.append(c);
+            } else if (c == '>') {
+                depth--;
+            }
+        }
+        return sb.toString();
     }
 
 }
