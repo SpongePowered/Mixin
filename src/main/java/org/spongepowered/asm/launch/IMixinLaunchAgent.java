@@ -45,6 +45,13 @@ interface IMixinLaunchAgent {
     public abstract void prepare();
     
     /**
+     * Called from <tt>injectIntoClassLoader</tt> in the parent tweaker but <b>
+     * only called on the primary tweak container</b>. This is useful if the
+     * agent needs to perform some environment-specific setup just once.
+     */
+    public abstract void initPrimaryContainer();
+    
+    /**
      * Called from <tt>injectIntoClassLoader</tt> in the parent tweaker
      * 
      * @param classLoader

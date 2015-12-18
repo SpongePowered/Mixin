@@ -605,6 +605,11 @@ public class MixinEnvironment implements ITokenProvider {
      * Internal tokens defined by this environment
      */
     private final Map<String, Integer> internalTokens = new HashMap<String, Integer>();
+    
+    /**
+     * Remappers for this environment 
+     */
+    private final RemapperChain remappers = new RemapperChain();
 
     /**
      * Detected side 
@@ -904,8 +909,18 @@ public class MixinEnvironment implements ITokenProvider {
         this.obfuscationContext = context;
     }
     
+    /**
+     * Get the current obfuscation context
+     */
     public String getObfuscationContext() {
         return this.obfuscationContext;
+    }
+    
+    /**
+     * Get the remapper chain for this environment
+     */
+    public RemapperChain getRemappers() {
+        return this.remappers;
     }
     
     /**

@@ -1256,8 +1256,8 @@ public class ClassInfo extends TreeInfo {
      * of the existing class. Basically creates a cloned member with this
      * ClassInfo as its parent.
      *
-     * @param member
-     * @return
+     * @param member member to clone
+     * @return wrapper member
      */
     @SuppressWarnings("unchecked")
     private <M extends Member> M cloneMember(M member) {
@@ -1402,8 +1402,8 @@ public class ClassInfo extends TreeInfo {
      * from the internal cache. Otherwise a new ClassInfo is created and
      * returned.
      *
-     * @param classNode
-     * @return
+     * @param classNode classNode to get info for
+     * @return ClassInfo instance for the supplied classNode
      */
     static ClassInfo fromClassNode(ClassNode classNode) {
         ClassInfo info = ClassInfo.cache.get(classNode.name);

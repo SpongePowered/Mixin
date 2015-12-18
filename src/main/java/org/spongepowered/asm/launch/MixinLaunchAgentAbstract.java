@@ -24,6 +24,9 @@
  */
 package org.spongepowered.asm.launch;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.File;
 import java.net.URI;
 
@@ -33,6 +36,11 @@ import java.net.URI;
  */
 public abstract class MixinLaunchAgentAbstract implements IMixinLaunchAgent {
 
+    /**
+     * Logger 
+     */
+    protected final Logger logger = LogManager.getLogger("mixin");
+    
     /**
      * URI to the container
      */

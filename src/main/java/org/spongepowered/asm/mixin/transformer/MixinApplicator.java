@@ -518,7 +518,7 @@ public class MixinApplicator {
      * Finds a suitable ctor for reading the instance initialiser bytecode
      * 
      * @param mixin mixin to search
-     * @return
+     * @return appropriate ctor or null if none found
      */
     private MethodNode getConstructor(MixinTargetContext mixin) {
         MethodNode ctor = null;

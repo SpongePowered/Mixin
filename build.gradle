@@ -95,6 +95,9 @@ sourceSets {
     agent {
         compileClasspath += main.output
     }
+    bridge {
+        compileClasspath += main.output
+    }
 }
 
 // Dependencies for renamed ASM
@@ -130,6 +133,7 @@ task renamedASM {
         }
     }
 }
+eclipseClasspath.dependsOn(renamedASM)
 
 // Project dependencies
 dependencies {
@@ -163,6 +167,11 @@ dependencies {
 
     compile 'net.minecraft:launchwrapper:1.11'
     agentCompile 'net.minecraft:launchwrapper:1.11'
+    
+    // asm bridge
+    compile 'org.ow2.asm:asm-commons:5.0.3'
+    bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
+    bridgeCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 }
 
 // Filter, process, and include resources
@@ -221,7 +230,10 @@ jar {
 
     // Include hotswap agent
     from sourceSets.agent.output
-
+    
+    // Bridge
+    from sourceSets.bridge.output
+    
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0])
     
@@ -275,6 +287,8 @@ task sourceJar(type: Jar) {
 	from sourceSets.fernflower.resources
     from sourceSets.agent.java
     from sourceSets.agent.resources
+    from sourceSets.bridge.java
+    from sourceSets.bridge.resources
 	classifier = "sources"
 }
 
@@ -333,7 +347,7 @@ uploadArchives {
                 }
                 whenConfigured {
                     dependencies = dependencies.findAll {
-                        !it.artifactId.contains('fernflower')
+                        !it.artifactId.matches('^(fernflower|asm-commons|Srg2Source|jarjar|junit|mockito-core|hamcrest-library)$')
                     }
                 }
             }
@@ -344,7 +358,7 @@ uploadArchives {
 install.repositories.mavenInstaller.pom {
     whenConfigured {
         dependencies = dependencies.findAll {
-            !it.artifactId.contains('fernflower')
+            !it.artifactId.matches('^(fernflower|asm-commons|Srg2Source|jarjar|junit|mockito-core|hamcrest-library)$')
         }
     }
 }

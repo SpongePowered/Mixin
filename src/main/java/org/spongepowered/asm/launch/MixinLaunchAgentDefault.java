@@ -64,6 +64,10 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
             }
         }
     }
+    
+    @Override
+    public void initPrimaryContainer() {
+    }
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {

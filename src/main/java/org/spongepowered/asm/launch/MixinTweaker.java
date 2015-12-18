@@ -64,6 +64,11 @@ public class MixinTweaker implements ITweaker {
     private final Map<URI, MixinTweakContainer> containers = new LinkedHashMap<URI, MixinTweakContainer>();
     
     /**
+     * Container for this tweaker 
+     */
+    private MixinTweakContainer primaryContainer;
+    
+    /**
      * Tracks whether {@link #acceptOptions} was called yet, if true, causes new
      * launch agents to be <tt>prepare</tt>d immediately 
      */
@@ -80,16 +85,17 @@ public class MixinTweaker implements ITweaker {
         try {
             uri = this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
             if (uri != null) {
-                this.addContainer(uri);
+                this.primaryContainer = this.addContainer(uri);
             }
         } catch (URISyntaxException ex) {
             ex.printStackTrace();
         }
     }
     
-    public final void addContainer(URI uri) {
-        if (this.containers.containsKey(uri)) {
-            return;
+    public final MixinTweakContainer addContainer(URI uri) {
+        MixinTweakContainer existingContainer = this.containers.get(uri);
+        if (existingContainer != null) {
+            return existingContainer;
         }
         
         MixinTweaker.logger.debug("Adding mixin launch agents for container {}", uri);
@@ -99,6 +105,7 @@ public class MixinTweaker implements ITweaker {
         if (this.prepared) {
             container.prepare();
         }
+        return container;
     }
 
     /* (non-Javadoc)
@@ -136,6 +143,10 @@ public class MixinTweaker implements ITweaker {
      */
     @Override
     public final void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        if (this.primaryContainer != null) {
+            this.primaryContainer.initPrimaryContainer();
+        }
+        
         this.scanClasspath();
         MixinTweaker.logger.debug("injectIntoClassLoader running with {} agents", this.containers.size());
         for (MixinTweakContainer container : this.containers.values()) {

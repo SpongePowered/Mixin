@@ -86,6 +86,13 @@ public class MixinTweakContainer {
             agent.prepare();
         }
     }
+    
+    public void initPrimaryContainer() {
+        for (IMixinLaunchAgent agent : this.agents) {
+            this.logger.debug("Processing launch tasks for {}", agent);
+            agent.initPrimaryContainer();
+        }
+    }
 
     /**
      * @param classLoader

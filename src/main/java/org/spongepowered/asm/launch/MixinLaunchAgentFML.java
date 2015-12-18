@@ -33,7 +33,8 @@ import java.util.List;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
-
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.extensibility.IRemapper;
 
 /**
  * Launch agent for use under FML.
@@ -159,6 +160,28 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     @Override
     public void prepare() {
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.launch.IMixinLaunchAgent
+     *      #initPrimaryContainer()
+     */
+    @Override
+    public void initPrimaryContainer() {
+        if (this.clCoreModManager != null) {
+            this.injectRemapper();
+        }
+    }
+
+    private void injectRemapper() {
+        try {
+            Class<?> clFmlRemapperAdapter = Class.forName("org.spongepowered.asm.bridge.RemapperAdapterFML", true, Launch.classLoader);
+            Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
+            IRemapper remapper = (IRemapper)mdCreate.invoke(null);
+            MixinEnvironment.getDefaultEnvironment().getRemappers().add(remapper);
+        } catch (Exception ex) {
+            this.logger.debug("Failed instancing remapper adapter for FML, things will probably go horribly for notch-obf'd mods!");
+        }
     }
 
     /* (non-Javadoc)

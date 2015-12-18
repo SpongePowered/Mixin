@@ -648,9 +648,10 @@ class AnnotatedMixin {
                     }
                 }
             }
-        } finally {
-            return obfFieldData;
+        } catch (Exception ex) {
+            // ???
         }
+        return obfFieldData;
     }
 
     /**

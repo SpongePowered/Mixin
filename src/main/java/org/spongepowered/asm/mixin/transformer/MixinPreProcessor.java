@@ -38,7 +38,9 @@ import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.RemapperChain;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
@@ -182,9 +184,13 @@ class MixinPreProcessor {
             if (!mustExist) {
                 return false;
             }
-            
-            throw new InvalidMixinException(this.mixin, annotationType.getSimpleName() + " method " + mixinMethod.name
-                    + " was not located in the target class");
+            target = MixinPreProcessor.findRemappedMethod(context.getTargetClass(), mixinMethod);
+            if (target == null) {
+                throw new InvalidMixinException(this.mixin, annotationType.getSimpleName() + " method " + mixinMethod.name
+                        + " was not located in the target class");
+            }
+            mixinMethod.name = target.name;
+            method.renameTo(target.name);
         }
         
         if (Constants.INIT.equals(target.name)) {
@@ -215,33 +221,39 @@ class MixinPreProcessor {
             context.transformDescriptor(mixinField);
             
             Field field = this.mixin.getClassInfo().findField(mixinField);
-            FieldNode target = this.findField(context.getTargetClass(), mixinField, shadow);
+            FieldNode target = MixinPreProcessor.findField(context.getTargetClass(), mixinField, shadow);
             if (target == null) {
-                // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                if (shadow != null) {
+                if (shadow == null) {
+                    continue;
+                }
+                target = MixinPreProcessor.findRemappedField(context.getTargetClass(), mixinField);
+                if (target == null) {
+                    // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
                     throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
                 }
-            } else {
-                // Check that the shadow field has a matching descriptor
-                if (!target.desc.equals(mixinField.desc)) {
-                    throw new InvalidMixinException(this.mixin, "The field " + mixinField.name + " in the target class has a conflicting signature");
+                mixinField.name = target.name;
+                field.renameTo(target.name);
+            } 
+            
+            // Check that the shadow field has a matching descriptor
+            if (!target.desc.equals(mixinField.desc)) {
+                throw new InvalidMixinException(this.mixin, "The field " + mixinField.name + " in the target class has a conflicting signature");
+            }
+            
+            if (!target.name.equals(mixinField.name)) {
+                if ((target.access & Opcodes.ACC_PRIVATE) == 0 && (target.access & Opcodes.ACC_SYNTHETIC) == 0) {
+                    throw new InvalidMixinException(this.mixin, "Non-private field cannot be aliased. Found " + target.name);
                 }
                 
-                if (!target.name.equals(mixinField.name)) {
-                    if ((target.access & Opcodes.ACC_PRIVATE) == 0 && (target.access & Opcodes.ACC_SYNTHETIC) == 0) {
-                        throw new InvalidMixinException(this.mixin, "Non-private field cannot be aliased. Found " + target.name);
-                    }
-                    
-                    mixinField.name = target.name;
-                    field.renameTo(target.name);
-                }
-                
-                // Shadow fields get stripped from the mixin class
-                iter.remove();
-                
-                if (shadow != null) {
-                    context.addShadowField(mixinField);
-                }
+                mixinField.name = target.name;
+                field.renameTo(target.name);
+            }
+            
+            // Shadow fields get stripped from the mixin class
+            iter.remove();
+            
+            if (shadow != null) {
+                context.addShadowField(mixinField);
             }
         }
     }
@@ -314,6 +326,19 @@ class MixinPreProcessor {
         return MixinPreProcessor.findMethod(classNode, aliases, method.desc);
     }
 
+    private static MethodNode findRemappedMethod(ClassNode classNode, MethodNode method) {
+        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        String remappedName = remapperChain.mapMethodName(classNode.name, method.name, method.desc);
+        if (remappedName.equals(method.name)) {
+            return null;
+        }
+
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(remappedName);
+        
+        return MixinPreProcessor.findMethod(classNode, aliases, method.desc);
+    }
+    
     private static MethodNode findMethod(ClassNode classNode, Deque<String> aliases, String desc) {
         String alias = aliases.poll();
         if (alias == null) {
@@ -329,7 +354,7 @@ class MixinPreProcessor {
         return MixinPreProcessor.findMethod(classNode, aliases, desc);
     }
 
-    private FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
+    private static FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(field.name);
         if (shadow != null) {
@@ -339,9 +364,21 @@ class MixinPreProcessor {
             }
         }
         
-        return this.findField(classNode, aliases, field.desc);
+        return MixinPreProcessor.findField(classNode, aliases, field.desc);
     }
 
+    private static FieldNode findRemappedField(ClassNode classNode, FieldNode field) {
+        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        String remappedName = remapperChain.mapFieldName(classNode.name, field.name, field.desc);
+        if (remappedName.equals(field.name)) {
+            return null;
+        }
+      
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(remappedName);
+        return MixinPreProcessor.findField(classNode, aliases, field.desc);
+    }
+    
     /**
      * Finds a field in the target class
      * 
@@ -349,7 +386,7 @@ class MixinPreProcessor {
      * @param desc
      * @return Target field  or null if not found
      */
-    private FieldNode findField(ClassNode classNode, Deque<String> aliases, String desc) {
+    private static FieldNode findField(ClassNode classNode, Deque<String> aliases, String desc) {
         String alias = aliases.poll();
         if (alias == null) {
             return null;
@@ -361,6 +398,6 @@ class MixinPreProcessor {
             }
         }
 
-        return this.findField(classNode, aliases, desc);
+        return MixinPreProcessor.findField(classNode, aliases, desc);
     }
 }

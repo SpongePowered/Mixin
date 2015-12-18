@@ -367,10 +367,10 @@ public class CallbackInjector extends Injector {
                 // signature for the current locals. This allows silent failover
                 // if changes to the local variable table are EXPECTED for some
                 // reason.
-                MethodNode handler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
-                if (handler != null && ASMHelper.getVisibleAnnotation(handler, Surrogate.class) != null) {
+                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching method, use it
-                    callbackMethod = handler;
+                    callbackMethod = surrogateHandler;
                 } else {
                     // No matching method, generate a message to bitch about it
                     String message = this.generateBadLVTMessage(callback);
@@ -400,8 +400,14 @@ public class CallbackInjector extends Injector {
                     throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: CallbackInfoReturnable is required!");  
                 }
                 
-                throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.getDescriptor()
-                        + " but found " + this.methodNode.desc);
+                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
+                    // Found a matching surrogate method, use it
+                    callbackMethod = surrogateHandler;
+                } else {
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.getDescriptor()
+                            + " but found " + this.methodNode.desc);
+                }
             }
         }
         

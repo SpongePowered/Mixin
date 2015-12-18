@@ -393,9 +393,7 @@ public class MemberInfo {
     /**
      * Create a new version of this member with a different owner
      * 
-     * @param methodData Method data to use
-     * @param setOwner True to set the owner as well as the name
-     * @return New MethodInfo with remapped values
+     * @param newOwner New owner for this member
      */
     public MemberInfo move(String newOwner) {
         if (newOwner.equals(this.owner)) {
