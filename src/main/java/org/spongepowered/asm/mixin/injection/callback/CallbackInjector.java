@@ -505,9 +505,11 @@ public class CallbackInjector extends Injector {
         callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
         callback.add(new InsnNode(Opcodes.DUP), true, true);
         
-        this.invokeCallbackInfoCtor(callback);
+        this.invokeCallbackInfoCtor(callback, store);
         if (store) {
             callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        } else if (callback.target.returnType != Type.VOID_TYPE) {
+            callback.invoke++;
         }
     }
 
@@ -541,13 +543,14 @@ public class CallbackInjector extends Injector {
 
     /**
      * @param callback callback handle
+     * @param store true if storing in a local, false if this is happening at an invoke
      */
-    protected void invokeCallbackInfoCtor(final Callback callback) {
-        callback.add(new LdcInsnNode(callback.target.method.name), true, false);
-        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, false);
+    protected void invokeCallbackInfoCtor(final Callback callback, boolean store) {
+        callback.add(new LdcInsnNode(callback.target.method.name), true, !store);
+        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, !store);
 
         if (callback.isAtReturn) {
-            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar));
+            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar), true, !store);
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
                     callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
         } else {

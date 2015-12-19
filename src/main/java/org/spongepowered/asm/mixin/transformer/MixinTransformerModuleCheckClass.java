@@ -53,7 +53,12 @@ public class MixinTransformerModuleCheckClass implements IMixinTransformerModule
      */
     @Override
     public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        targetClass.accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
+        try {
+            targetClass.accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
+        } catch (RuntimeException ex) {
+            System.err.printf("%s\n", ex.getMessage());
+            throw ex;
+        }
     }
 
 }
