@@ -118,7 +118,7 @@ public class CallbackInfo implements Cancellable {
             return CallbackInfo.getConstructorDescriptor();
         }
 
-        if (returnType.getSort() == Type.OBJECT) {
+        if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
             return String.format("(%sZ%s)V", CallbackInfo.STRING, CallbackInfo.OBJECT);
         }
 
