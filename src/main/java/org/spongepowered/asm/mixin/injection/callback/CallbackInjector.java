@@ -543,7 +543,8 @@ public class CallbackInjector extends Injector {
 
     /**
      * @param callback callback handle
-     * @param store true if storing in a local, false if this is happening at an invoke
+     * @param store true if storing in a local, false if this is happening at an
+     *      invoke
      */
     protected void invokeCallbackInfoCtor(final Callback callback, boolean store) {
         callback.add(new LdcInsnNode(callback.target.method.name), true, !store);
