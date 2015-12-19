@@ -124,7 +124,7 @@ public class CallbackInfoReturnable<R> extends CallbackInfo {
     // CHECKSTYLE:ON
 
     static String getReturnAccessor(Type returnType) {
-        if (returnType.getSort() == Type.OBJECT) {
+        if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
             return "getReturnValue";
         }
 
@@ -132,7 +132,7 @@ public class CallbackInfoReturnable<R> extends CallbackInfo {
     }
 
     static String getReturnDescriptor(Type returnType) {
-        if (returnType.getSort() == Type.OBJECT) {
+        if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
             return String.format("()%s", CallbackInfo.OBJECT);
         }
 
