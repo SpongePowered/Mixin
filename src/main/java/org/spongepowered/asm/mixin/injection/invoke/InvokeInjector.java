@@ -86,8 +86,8 @@ public abstract class InvokeInjector extends Injector {
     @Override
     protected void inject(Target target, AbstractInsnNode node) {
         if (!(node instanceof MethodInsnNode)) {
-            throw new InvalidInjectionException(this.info, this.annotationType + " annotation is targetting a non-method insn in " + target
-                    + " in " + this.classNode.name);
+            throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting a non-method insn in " + target
+                    + " in " + this.classNode.name + "/" + this.methodNode.name);
         }
         
         this.inject(target, (MethodInsnNode)node);
