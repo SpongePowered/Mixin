@@ -347,7 +347,7 @@ uploadArchives {
                 }
                 whenConfigured {
                     dependencies = dependencies.findAll {
-                        !it.artifactId.matches('^(fernflower|asm-commons|Srg2Source|jarjar|junit|mockito-core|hamcrest-library)$')
+                        !it.artifactId.matches('^(fernflower|asm-commons|jarjar|junit|mockito-core|hamcrest-library)$')
                     }
                 }
             }
@@ -358,7 +358,7 @@ uploadArchives {
 install.repositories.mavenInstaller.pom {
     whenConfigured {
         dependencies = dependencies.findAll {
-            !it.artifactId.matches('^(fernflower|asm-commons|Srg2Source|jarjar|junit|mockito-core|hamcrest-library)$')
+            !it.artifactId.matches('^(fernflower|asm-commons|jarjar|junit|mockito-core|hamcrest-library)$')
         }
     }
 }
