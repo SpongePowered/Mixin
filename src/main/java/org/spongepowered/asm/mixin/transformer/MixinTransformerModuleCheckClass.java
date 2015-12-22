@@ -36,6 +36,24 @@ import org.spongepowered.asm.lib.util.CheckClassAdapter;
  * bytecode
  */
 public class MixinTransformerModuleCheckClass implements IMixinTransformerModule {
+    
+    public static class ValidationFailedException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ValidationFailedException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public ValidationFailedException(String message) {
+            super(message);
+        }
+
+        public ValidationFailedException(Throwable cause) {
+            super(cause);
+        }
+        
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
@@ -56,8 +74,7 @@ public class MixinTransformerModuleCheckClass implements IMixinTransformerModule
         try {
             targetClass.accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
         } catch (RuntimeException ex) {
-            System.err.printf("%s\n", ex.getMessage());
-            throw ex;
+            throw new ValidationFailedException(ex.getMessage(), ex);
         }
     }
 

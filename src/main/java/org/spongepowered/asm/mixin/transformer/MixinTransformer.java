@@ -37,9 +37,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -55,10 +52,15 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
+import org.spongepowered.asm.mixin.transformer.MixinTransformerModuleCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.debug.IDecompiler;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
+import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
+
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 /**
  * Transformer which manages the mixin configuration and application process
@@ -615,7 +617,15 @@ public class MixinTransformer extends TreeTransformer {
         
         this.preApply(transformedName, targetClass, mixins);
         this.apply(transformedName, targetClass, mixins);
-        this.postApply(transformedName, targetClass, mixins);
+        try {
+            this.postApply(transformedName, targetClass, mixins);
+        } catch (ValidationFailedException ex) {
+            this.logger.info(ex.getMessage());
+            // If verify is enabled and failed, write out the bytecode to allow us to inspect it
+            if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
+                this.writeClass(transformedName, targetClass);
+            }
+        }
         
         return this.writeClass(transformedName, targetClass);
     }
