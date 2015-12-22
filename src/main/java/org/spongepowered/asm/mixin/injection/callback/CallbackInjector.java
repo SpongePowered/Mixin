@@ -580,7 +580,7 @@ public class CallbackInjector extends Injector {
         }
         
         // Call the callback!
-        this.invokeMethod(callback, callbackMethod);
+        this.invokeHandler(callback, callbackMethod);
     }
 
     /**

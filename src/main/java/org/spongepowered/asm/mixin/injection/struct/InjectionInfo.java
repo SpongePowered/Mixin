@@ -34,7 +34,10 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.InjectionError;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -95,6 +98,21 @@ public abstract class InjectionInfo {
      * Methods injected by injectors 
      */
     private final List<MethodNode> injectedMethods = new ArrayList<MethodNode>(0);
+    
+    /**
+     * Number of callbacks we expect to inject into targets 
+     */
+    private int expectedCallbackCount = 1;
+    
+    /**
+     * Number of callbacks we require injected 
+     */
+    private int requiredCallbackCount = 0;
+    
+    /**
+     * Actual number of injected callbacks
+     */
+    private int injectedCallbackCount = 0;
     
     /**
      * ctor
@@ -159,6 +177,16 @@ public abstract class InjectionInfo {
             }
         }
         
+        Integer expect = ASMHelper.<Integer>getAnnotationValue(this.annotation, "expect");
+        if (expect != null) {
+            this.expectedCallbackCount = expect.intValue();
+        }
+
+        Integer require = ASMHelper.<Integer>getAnnotationValue(this.annotation, "require");
+        if (require != null) {
+            this.requiredCallbackCount = require.intValue();
+        }
+        
         this.injector = this.initInjector(this.annotation);
     }
 
@@ -191,6 +219,16 @@ public abstract class InjectionInfo {
     public void postInject() {
         for (MethodNode method : this.injectedMethods) {
             this.classNode.methods.add(method);
+        }
+        
+        if ((MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
+            throw new InvalidInjectionException(this,
+                    String.format("Injection validation failed: Callback method %s%s in %s expected %d invocation(s) but %d succeeded",
+                    this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount));
+        } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
+            throw new InjectionError(
+                    String.format("Critical injection failure: Callback method %s%s in %s failed injection check, (%d/%d) succeeded",
+                    this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
         }
     }
     
@@ -252,6 +290,15 @@ public abstract class InjectionInfo {
         MethodNode method = new MethodNode(Opcodes.ASM5, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
         this.injectedMethods.add(method);
         return method;
+    }
+    
+    /**
+     * Notify method, called by injector when adding a callback into a target
+     * 
+     * @param handler callback handler being invoked
+     */
+    public void addCallbackInvocation(MethodNode handler) {
+        this.injectedCallbackCount++;
     }
     
     /**

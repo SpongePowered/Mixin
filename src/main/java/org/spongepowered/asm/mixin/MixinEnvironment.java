@@ -36,12 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.launchwrapper.IClassNameTransformer;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -53,6 +47,7 @@ import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.JavaVersion;
@@ -60,6 +55,12 @@ import org.spongepowered.asm.util.PrettyPrinter;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+
+import net.minecraft.launchwrapper.IClassNameTransformer;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 
 /**
@@ -282,6 +283,12 @@ public class MixinEnvironment implements ITokenProvider {
          * INFO level) 
          */
         DEBUG_VERBOSE(Option.DEBUG_ALL, "verbose"),
+        
+        /**
+         * Elevates failed injections to an error condition, see
+         * {@link Inject#expect} for details
+         */
+        DEBUG_INJECTORS(Option.DEBUG_ALL, "countInjections"),
         
         /**
          * Dumps the bytecode for the target class to disk when mixin
