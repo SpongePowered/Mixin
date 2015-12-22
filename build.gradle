@@ -169,7 +169,6 @@ dependencies {
     agentCompile 'net.minecraft:launchwrapper:1.11'
     
     // asm bridge
-    compile 'org.ow2.asm:asm-commons:5.0.3'
     bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
     bridgeCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 }
@@ -271,6 +270,14 @@ shadowJar  {
 }
 build.dependsOn(shadowJar)
 
+//task bridgeJar(type: Jar) {
+//    from sourceSets.bridge.output
+//    from file("D:\\Development\\SSD\\Sponge\\new\\Mixin\\build\\classes\\main\\org\\spongepowered\\asm\\mixin\\transformer\\MixinPreProcessor.class")
+//    rename "MixinPreProcessor.class", "org/spongepowered/asm/mixin/transformer/MixinPreProcessor.class"
+//    archiveName = "mixinbridge-0.4.10.jar"
+//    destinationDir = new File("D:\\Development\\SSD\\.minecraft\\libraries\\org\\spongepowered\\mixinbridge\\0.4.10")
+//}
+
 // Run this task instead of build to generate a timestamped shadow jar (for dev)
 task timestamp(type: Jar, dependsOn: build) {
     if (gradle.startParameter.taskNames.contains(name)) {
@@ -347,7 +354,7 @@ uploadArchives {
                 }
                 whenConfigured {
                     dependencies = dependencies.findAll {
-                        !it.artifactId.matches('^(fernflower|asm-commons|jarjar|junit|mockito-core|hamcrest-library)$')
+                        !it.artifactId.contains('fernflower')
                     }
                 }
             }
@@ -358,7 +365,7 @@ uploadArchives {
 install.repositories.mavenInstaller.pom {
     whenConfigured {
         dependencies = dependencies.findAll {
-            !it.artifactId.matches('^(fernflower|asm-commons|jarjar|junit|mockito-core|hamcrest-library)$')
+            !it.artifactId.contains('fernflower')
         }
     }
 }
