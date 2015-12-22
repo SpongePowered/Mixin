@@ -887,8 +887,6 @@ public class ClassInfo extends TreeInfo {
     public ClassInfo findSuperClass(String superClass) {
         return this.findSuperClass(superClass, Traversal.NONE);
     }
-    
-    public static boolean b;
 
     /**
      * Search for the specified superclass in this class's hierarchy. If found
