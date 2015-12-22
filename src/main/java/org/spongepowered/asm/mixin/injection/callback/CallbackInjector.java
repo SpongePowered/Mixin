@@ -411,6 +411,7 @@ public class CallbackInjector extends Injector {
             }
         }
         
+        this.dupReturnValue(callback);
         if (this.cancellable) {
             this.createCallbackInfo(callback, true);
         }
@@ -500,16 +501,12 @@ public class CallbackInjector extends Injector {
      * @param store store the callback info in a local variable
      */
     private void createCallbackInfo(final Callback callback, boolean store) {
-        this.dupReturnValue(callback);
-
         callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
         callback.add(new InsnNode(Opcodes.DUP), true, true);
         
         this.invokeCallbackInfoCtor(callback, store);
         if (store) {
             callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
-        } else if (callback.target.returnType != Type.VOID_TYPE) {
-            callback.invoke++;
         }
     }
 
@@ -566,7 +563,7 @@ public class CallbackInjector extends Injector {
     private void invokeCallback(final Callback callback, final MethodNode callbackMethod) {
         // Push "this" onto the stack if the callback is not static
         if (!this.isStatic) {
-            callback.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            callback.add(new VarInsnNode(Opcodes.ALOAD, 0), false, true);
         }
 
         // Push the target method's parameters onto the stack
