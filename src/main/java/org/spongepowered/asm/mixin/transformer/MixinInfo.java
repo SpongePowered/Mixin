@@ -229,6 +229,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * The environment phase in which this mixin was initialised
      */
     private final transient Phase phase;
+    
+    /**
+     * Cached class info 
+     */
+    private final transient ClassInfo info;
 
     /**
      * Holds state that currently is not fully initialised or validated
@@ -239,7 +244,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Holds the current validated state
      */
     private transient ValidationState validationState;
-
+    
     /**
      * Internal ctor, called by {@link MixinConfig}
      * 
@@ -261,6 +266,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         // Read the class bytes and transform
         byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
         this.uninitialisedState = new ValidationState(mixinBytes);
+        this.info = this.uninitialisedState.classInfo;
 
         ClassNode classNode = this.uninitialisedState.getClassNode(0);
         this.priority = this.readPriority(classNode);
@@ -478,7 +484,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     ClassInfo getClassInfo() {
-        return this.getCurrentState().classInfo;
+        return this.info;
     }
     
     /**
