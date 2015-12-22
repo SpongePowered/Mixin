@@ -377,7 +377,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 continue;
             }
             
-            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.IMMEDIATE)) {
+            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.SUPER)) {
+                ClassInfo superClass = ClassInfo.forName(classNode.superName);
+                if (superClass.isMixin()) {
+                    // If superclass is a mixin, check for hierarchy derp
+                    for (ClassInfo superTarget : superClass.getTargets()) {
+                        if (this.targetClasses.contains(superTarget)) {
+                            throw new InvalidMixinException(this, "Illegal hierarchy detected. Derived mixin " + this + " targets the same class "
+                                    + superTarget.getClassName() + " as its superclass " + superClass.getClassName());
+                        }
+                    }
+                }
+                
                 throw new InvalidMixinException(this, "Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
                         + " was not found in the hierarchy of target class '" + targetClass + "'");
             }

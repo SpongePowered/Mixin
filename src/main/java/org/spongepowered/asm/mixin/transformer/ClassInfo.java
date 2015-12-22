@@ -692,6 +692,13 @@ public class ClassInfo extends TreeInfo {
     public String getName() {
         return this.name;
     }
+    
+    /**
+     * Get the class name (java format)
+     */
+    public String getClassName() {
+        return this.name.replace('/', '.');
+    }
 
     /**
      * Get the superclass name (binary name)
@@ -880,6 +887,8 @@ public class ClassInfo extends TreeInfo {
     public ClassInfo findSuperClass(String superClass) {
         return this.findSuperClass(superClass, Traversal.NONE);
     }
+    
+    public static boolean b;
 
     /**
      * Search for the specified superclass in this class's hierarchy. If found
@@ -890,6 +899,14 @@ public class ClassInfo extends TreeInfo {
      * @return Matched superclass or null if not found
      */
     public ClassInfo findSuperClass(String superClass, Traversal traversal) {
+        if (ClassInfo.OBJECT.name == superClass) {
+            return null;
+        }
+        
+        return this.findSuperClass(superClass, traversal, new HashSet<String>());
+    }
+    
+    private ClassInfo findSuperClass(String superClass, Traversal traversal, Set<String> traversed) {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
             List<ClassInfo> targets = superClassInfo.getTargets();
@@ -898,16 +915,25 @@ public class ClassInfo extends TreeInfo {
                     return superClassInfo;
                 }
 
-                ClassInfo found = superTarget.findSuperClass(superClass, traversal.next());
+                ClassInfo found = superTarget.findSuperClass(superClass, traversal.next(), traversed);
                 if (found != null) {
                     return found;
                 }
             }
         }
-
+        
         if (traversal.canTraverse()) {
             for (MixinInfo mixin : this.mixins) {
-                ClassInfo targetSuper = mixin.getClassInfo().findSuperClass(superClass, traversal);
+                String mixinClassName = mixin.getClassName();
+                if (traversed.contains(mixinClassName)) {
+                    continue;
+                }
+                traversed.add(mixinClassName);
+                ClassInfo mixinClass = mixin.getClassInfo();
+                if (superClass.equals(mixinClass.getName())) {
+                    return mixinClass;
+                }
+                ClassInfo targetSuper = mixinClass.findSuperClass(superClass, Traversal.ALL, traversed);
                 if (targetSuper != null) {
                     return targetSuper;
                 }
