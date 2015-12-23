@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Resource;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -1003,7 +1005,8 @@ public class MixinEnvironment implements ITokenProvider {
                     break;
                 }
             }
-            if (include && !transformerName.contains(MixinTransformer.class.getName())) {
+            boolean ignoreTransformer = transformer.getClass().getAnnotation(Resource.class) != null;
+            if (include && !ignoreTransformer && !transformerName.contains(MixinTransformer.class.getName())) {
                 MixinEnvironment.logger.debug("  Adding:    {}", transformerName);
                 this.transformers.add(transformer);
             } else {
