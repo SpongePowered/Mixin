@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
@@ -1434,7 +1435,7 @@ public class ClassInfo extends TreeInfo {
                 ClassNode classNode = TreeInfo.getClassNode(className);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                ClassInfo.logger.catching(Level.DEBUG, ex);
             }
 
             // Put null in the cache if load failed
