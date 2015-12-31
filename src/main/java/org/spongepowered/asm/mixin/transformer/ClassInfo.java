@@ -1238,7 +1238,9 @@ public class ClassInfo extends TreeInfo {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);
                 if (iface == null) {
-                    throw new RuntimeException(new ClassNotFoundException(implemented));
+                    ClassInfo.logger.debug("Failed to resolve declared interface {} on {}", implemented, this.name);
+                    continue;
+//                    throw new RuntimeException(new ClassNotFoundException(implemented));
                 }
                 M member = iface.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
