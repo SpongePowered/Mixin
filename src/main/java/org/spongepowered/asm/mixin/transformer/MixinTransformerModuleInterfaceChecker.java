@@ -125,7 +125,8 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         for (Method method : interfaceMethods) {
             Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
 
-            if (found != null) {
+            // If method IS found and IS implemented, then do nothing (don't print an error)
+            if (found != null && !found.isAbstract()) {
                 continue;
             }
 
