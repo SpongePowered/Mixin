@@ -270,14 +270,6 @@ shadowJar  {
 }
 build.dependsOn(shadowJar)
 
-//task bridgeJar(type: Jar) {
-//    from sourceSets.bridge.output
-//    from file("D:\\Development\\SSD\\Sponge\\new\\Mixin\\build\\classes\\main\\org\\spongepowered\\asm\\mixin\\transformer\\MixinPreProcessor.class")
-//    rename "MixinPreProcessor.class", "org/spongepowered/asm/mixin/transformer/MixinPreProcessor.class"
-//    archiveName = "mixinbridge-0.4.10.jar"
-//    destinationDir = new File("D:\\Development\\SSD\\.minecraft\\libraries\\org\\spongepowered\\mixinbridge\\0.4.10")
-//}
-
 // Run this task instead of build to generate a timestamped shadow jar (for dev)
 task timestamp(type: Jar, dependsOn: build) {
     if (gradle.startParameter.taskNames.contains(name)) {
