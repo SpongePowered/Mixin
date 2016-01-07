@@ -467,7 +467,7 @@ class AnnotatedMixin {
             this.addMethodMapping(type, mcpName, obfName, mcpSignature, obfMethod.sig);
         }
         
-        if ("true".equalsIgnoreCase(this.mixins.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
+        if (!"true".equalsIgnoreCase(this.mixins.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
             Kind overwriteErrorKind = "error".equalsIgnoreCase(this.mixins.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))
                     ? Kind.ERROR : Kind.WARNING;
             
