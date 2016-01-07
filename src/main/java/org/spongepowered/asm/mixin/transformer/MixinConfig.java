@@ -34,13 +34,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.minecraft.launchwrapper.Launch;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.launch.MixinInitialisationError;
+import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
@@ -51,6 +49,8 @@ import org.spongepowered.asm.util.VersionNumber;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+
+import net.minecraft.launchwrapper.Launch;
 
 /**
  * Mixin configuration bundle

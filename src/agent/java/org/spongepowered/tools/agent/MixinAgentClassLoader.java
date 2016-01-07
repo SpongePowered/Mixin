@@ -24,6 +24,9 @@
  */
 package org.spongepowered.tools.agent;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.ClassWriter;
@@ -31,9 +34,6 @@ import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.mixin.MixinEnvironment;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Class loader that is used to load fake mixin classes so that they can be

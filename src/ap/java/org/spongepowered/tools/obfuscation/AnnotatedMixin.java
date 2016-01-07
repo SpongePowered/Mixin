@@ -44,8 +44,6 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
@@ -57,6 +55,8 @@ import org.spongepowered.asm.util.InvalidConstraintException;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
 import org.spongepowered.tools.obfuscation.struct.Message;
+
+import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 
 /**

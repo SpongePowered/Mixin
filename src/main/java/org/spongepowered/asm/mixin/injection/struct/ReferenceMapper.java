@@ -31,11 +31,11 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.minecraft.launchwrapper.Launch;
-
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+import net.minecraft.launchwrapper.Launch;
 
 public final class ReferenceMapper implements Serializable {
     

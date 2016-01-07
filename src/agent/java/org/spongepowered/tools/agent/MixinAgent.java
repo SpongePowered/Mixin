@@ -24,13 +24,6 @@
  */
 package org.spongepowered.tools.agent;
 
-import net.minecraft.launchwrapper.Launch;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.mixin.transformer.MixinReloadException;
-import org.spongepowered.asm.mixin.transformer.MixinTransformer;
-import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
-
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -38,6 +31,14 @@ import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.mixin.transformer.MixinReloadException;
+import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
+
+import net.minecraft.launchwrapper.Launch;
 
 /**
  * An agent that re-transforms a mixin's target classes if the mixin has been

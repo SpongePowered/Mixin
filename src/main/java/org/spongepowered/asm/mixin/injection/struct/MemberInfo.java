@@ -24,14 +24,14 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 import org.spongepowered.asm.util.SignaturePrinter;
+
+import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 
 /**

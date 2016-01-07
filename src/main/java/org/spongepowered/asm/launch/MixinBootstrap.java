@@ -26,12 +26,12 @@ package org.spongepowered.asm.launch;
 
 import java.util.List;
 
-import net.minecraft.launchwrapper.Launch;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+
+import net.minecraft.launchwrapper.Launch;
 
 /**
  * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin

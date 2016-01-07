@@ -30,11 +30,12 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.List;
 
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.extensibility.IRemapper;
+
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
-import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.extensibility.IRemapper;
 
 /**
  * Launch agent for use under FML.
