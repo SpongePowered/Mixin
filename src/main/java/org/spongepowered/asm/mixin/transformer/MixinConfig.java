@@ -440,7 +440,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Get the reference remapper for injectors
      */
     public ReferenceMapper getReferenceMapper() {
-        this.refMapper.setContext(this.env.getObfuscationContext());
+        if (this.env.getOption(Option.DISABLE_REFMAP)) {
+            return ReferenceMapper.DEFAULT_MAPPER;
+        }
+        this.refMapper.setContext(this.env.getRefmapObfuscationContext());
         return this.refMapper;
     }
     

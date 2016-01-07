@@ -38,18 +38,27 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public final class ReferenceMapper implements Serializable {
-
+    
     private static final long serialVersionUID = 2L;
 
     public static final String DEFAULT_RESOURCE = "mixin.refmap.json";
+    
+    public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true);
     
     private final Map<String, Map<String, String>> mappings = Maps.newHashMap();
     
     private final Map<String, Map<String, Map<String, String>>> data = Maps.newHashMap();
     
+    private final transient boolean readOnly; 
+    
     private transient String context = null;
     
     public ReferenceMapper() {
+        this(false);
+    }
+    
+    private ReferenceMapper(boolean readOnly) {
+        this.readOnly = readOnly;
     }
     
     public String getContext() {
@@ -93,6 +102,9 @@ public final class ReferenceMapper implements Serializable {
     }
     
     public void addMapping(String context, String className, String reference, String newReference) {
+        if (this.readOnly) {
+            return;
+        }
         Map<String, Map<String, String>> mappings = this.mappings;
         if (context != null) {
             mappings = this.data.get(context);
@@ -119,7 +131,7 @@ public final class ReferenceMapper implements Serializable {
             reader = new InputStreamReader(Launch.classLoader.getResourceAsStream(resource));
             return ReferenceMapper.read(reader);
         } catch (Exception ex) {
-            return new ReferenceMapper();
+            return ReferenceMapper.DEFAULT_MAPPER;
         } finally {
             if (reader != null) {
                 try {

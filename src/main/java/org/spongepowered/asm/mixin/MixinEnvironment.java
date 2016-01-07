@@ -317,7 +317,27 @@ public class MixinEnvironment implements ITokenProvider {
         /**
          * Enables the hot-swap agent
          */
-        HOT_SWAP("hotSwap");
+        HOT_SWAP("hotSwap"),
+        
+        /**
+         * Parent for environment settings
+         */
+        ENVIRONMENT("env") {
+            @Override
+            boolean getBooleanValue() {
+                return false;
+            }
+        },
+        
+        /**
+         * Force refmap obf type when required 
+         */
+        OBFUSCATION_TYPE(Option.ENVIRONMENT, "obf"),
+        
+        /**
+         * Disable refmap when required 
+         */
+        DISABLE_REFMAP(Option.ENVIRONMENT, "disableRefMap");
 
         /**
          * Prefix for mixin options
@@ -922,6 +942,17 @@ public class MixinEnvironment implements ITokenProvider {
      * Get the current obfuscation context
      */
     public String getObfuscationContext() {
+        return this.obfuscationContext;
+    }
+    
+    /**
+     * Get the current obfuscation context
+     */
+    public String getRefmapObfuscationContext() {
+        String overrideObfuscationType = Option.OBFUSCATION_TYPE.getStringValue();
+        if (overrideObfuscationType != null) {
+            return overrideObfuscationType;
+        }
         return this.obfuscationContext;
     }
     
