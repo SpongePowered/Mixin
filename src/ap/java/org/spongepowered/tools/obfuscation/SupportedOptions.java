@@ -30,14 +30,16 @@ import com.google.common.collect.ImmutableSet;
 
 public final class SupportedOptions {
     
-    public static final String REOBF_SRG_FILE           = "reobfSrgFile";
-    public static final String REOBF_NOTCH_FILE         = "reobfNotchSrgFile";
-    public static final String OUT_SRG_SRG_FILE         = "outSrgFile";
-    public static final String OUT_NOTCH_SRG_FILE       = "outNotchSrgFile";
-    public static final String OUT_REFMAP_FILE          = "outRefMapFile";
-    public static final String DISABLE_TARGET_VALIDATOR = "disableTargetValidator";
-    public static final String DISABLE_TARGET_EXPORT    = "disableTargetExport";
-    public static final String DEFAULT_OBFUSCATION_ENV  = "defaultObfuscationEnv";
+    public static final String REOBF_SRG_FILE            = "reobfSrgFile";
+    public static final String REOBF_NOTCH_FILE          = "reobfNotchSrgFile";
+    public static final String OUT_SRG_SRG_FILE          = "outSrgFile";
+    public static final String OUT_NOTCH_SRG_FILE        = "outNotchSrgFile";
+    public static final String OUT_REFMAP_FILE           = "outRefMapFile";
+    public static final String DISABLE_TARGET_VALIDATOR  = "disableTargetValidator";
+    public static final String DISABLE_TARGET_EXPORT     = "disableTargetExport";
+    public static final String DISABLE_OVERWRITE_CHECKER = "disableOverwriteChecker";
+    public static final String OVERWRITE_ERROR_LEVEL     = "overwriteErrorLevel";
+    public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
 
     public static final Set<String> all = ImmutableSet.<String>of(
         SupportedOptions.REOBF_SRG_FILE,
@@ -47,6 +49,8 @@ public final class SupportedOptions {
         SupportedOptions.OUT_REFMAP_FILE,
         SupportedOptions.DISABLE_TARGET_VALIDATOR,
         SupportedOptions.DISABLE_TARGET_EXPORT,
+        SupportedOptions.DISABLE_OVERWRITE_CHECKER,
+        SupportedOptions.OVERWRITE_ERROR_LEVEL,
         SupportedOptions.DEFAULT_OBFUSCATION_ENV
     );
 

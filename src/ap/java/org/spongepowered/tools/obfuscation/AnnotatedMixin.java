@@ -466,6 +466,25 @@ class AnnotatedMixin {
             String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
             this.addMethodMapping(type, mcpName, obfName, mcpSignature, obfMethod.sig);
         }
+        
+        if ("true".equalsIgnoreCase(this.mixins.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
+            Kind overwriteErrorKind = "error".equalsIgnoreCase(this.mixins.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))
+                    ? Kind.ERROR : Kind.WARNING;
+            
+            String javadoc = this.mixins.getJavadoc(method);
+            if (javadoc == null) {
+                this.mixins.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", method);
+                return;
+            }
+            
+            if (!javadoc.toLowerCase().contains("@author")) {
+                this.mixins.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", method);
+            }
+            
+            if (!javadoc.toLowerCase().contains("@reason")) {
+                this.mixins.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", method);
+            }
+        }
     }
 
     /**

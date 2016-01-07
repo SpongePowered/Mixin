@@ -663,6 +663,17 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
     }
 
     /**
+     * Get javadoc on element
+     * 
+     * @param element Element to fetch javadoc for
+     * @return javadoc
+     */
+    public String getJavadoc(Element element) {
+        Elements elements = this.processingEnv.getElementUtils();
+        return elements.getDocComment(element);
+    }
+
+    /**
      * Get the mixin manager instance for this environment
      */
     public static AnnotatedMixins getMixinsForEnvironment(ProcessingEnvironment processingEnv) {

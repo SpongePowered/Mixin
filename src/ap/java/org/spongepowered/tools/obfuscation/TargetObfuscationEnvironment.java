@@ -156,7 +156,7 @@ class TargetObfuscationEnvironment {
         
         // Get a type handle for the declared method owner
         TypeHandle type = this.typeProvider.getTypeHandle(method.owner);
-        if (type.isImaginary()) {
+        if (type == null || type.isImaginary()) {
             return null;
         }
         
