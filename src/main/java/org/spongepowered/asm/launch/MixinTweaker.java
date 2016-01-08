@@ -78,7 +78,7 @@ public class MixinTweaker implements ITweaker {
      * Hello world
      */
     public MixinTweaker() {
-        MixinBootstrap.preInit();
+        MixinBootstrap.start();
         
         // Add agents for the tweak container 
         URI uri = null;
@@ -114,7 +114,7 @@ public class MixinTweaker implements ITweaker {
      */
     @Override
     public final void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        MixinBootstrap.register();
+        MixinBootstrap.doInit();
         this.prepared = true;
         for (MixinTweakContainer container : this.containers.values()) {
             container.prepare();

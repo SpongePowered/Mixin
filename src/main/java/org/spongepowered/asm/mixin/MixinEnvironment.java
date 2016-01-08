@@ -24,30 +24,24 @@
  */
 package org.spongepowered.asm.mixin;
 
-import java.io.File;
-import java.io.Serializable;
+import static com.google.common.base.Preconditions.*;
+
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.annotation.Resource;
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.mixin.environment.IPhaseProvider;
+import org.spongepowered.asm.mixin.environment.IPhase;
+import org.spongepowered.asm.mixin.environment.IPhaseTransition;
+import org.spongepowered.asm.mixin.environment.PhaseDefinition;
+import org.spongepowered.asm.mixin.environment.phase.AbstractPhaseTransition;
+import org.spongepowered.asm.mixin.environment.phase.OnBeginGame;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
@@ -56,14 +50,13 @@ import org.spongepowered.asm.util.JavaVersion;
 import org.spongepowered.asm.util.PrettyPrinter;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import net.minecraft.launchwrapper.IClassNameTransformer;
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-
 
 /**
  * The mixin environment manages global state information for the mixin
@@ -75,41 +68,230 @@ public class MixinEnvironment implements ITokenProvider {
      * Environment phase, deliberately not implemented as an enum
      */
     public static class Phase {
+
+        static class Collection implements Iterable<Phase> {
+            
+            private final List<String> providerClassNames = new ArrayList<String>();
+            
+            private final List<IPhaseProvider> providers = new ArrayList<IPhaseProvider>();
+            
+            private final List<PhaseDefinition> definitions = new ArrayList<PhaseDefinition>();
+            
+            private final Map<String, Phase> phaseMap = new HashMap<String, Phase>();
+            
+            private final List<Phase> phaseList = new ArrayList<Phase>();
+            
+            private Collection() {
+            }
+
+            @SuppressWarnings("unchecked")
+            public Collection add(String providerClassName) {
+                if (!this.providerClassNames.contains(providerClassName)) {
+                    this.providerClassNames.add(providerClassName);
+                    try {
+                        Class<? extends IPhaseProvider> providerClass = (Class<? extends IPhaseProvider>)Class.forName(providerClassName);
+                        this.add(providerClass.newInstance());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                return this;
+            }
+            
+            public Collection add(IPhaseProvider provider) {
+                if (!this.providers.contains(provider)) {
+                    this.providers.add(provider);
+                    for (PhaseDefinition definition : provider.getPhases()) {
+                        this.add(definition);
+                    }
+                }
+                return this;
+            }
+            
+            public Collection add(PhaseDefinition definition) {
+                if (!this.definitions.contains(definition)) {
+                    this.definitions.add(definition);
+                    Phase phase = this.get(definition);
+                    for (IPhaseTransition criterion : definition.getCriteria()) {
+                        criterion.attach(phase.handle);
+                    }
+                    this.refresh();
+                }
+                return this;
+            }
+
+            public Collection add(Phase phase) {
+                checkArgument(checkNotNull(phase, "phase").name.toUpperCase().equals(phase.name), "Invalid phase name, phase name must be uppercase");
+                if (!this.phaseMap.containsKey(phase.name)) {
+                    this.phaseMap.put(phase.name, phase);
+                    this.refresh();
+                }
+                return this;
+            }
+
+            @Override
+            public Iterator<Phase> iterator() {
+                return this.phaseList.iterator();
+            } 
+
+            public int indexOf(Phase phase) {
+                return this.phaseList.indexOf(phase);
+            }
+
+            public int indexOf(String name) {
+                return this.phaseList.indexOf(this.get(name));
+            }
+            
+            public int indexOf(PhaseDefinition definition) {
+                return this.phaseList.indexOf(this.get(definition.getName()));
+            }
+            
+            public Phase get(String name) {
+                return this.phaseMap.get(checkNotNull(name, "name").toUpperCase());
+            }
+            
+            private Phase get(PhaseDefinition definition) {
+                return this.getOrCreate(definition.getName());
+            }
+            
+            private Phase getOrCreate(String name) {
+                name = checkNotNull(name, "name").toUpperCase();
+                Phase phase = this.phaseMap.get(name);
+                if (phase == null) {
+                    phase = new Phase(name);
+                    this.phaseMap.put(name, phase);
+                }
+                return phase;
+            }
+
+            public void refresh() {
+                this.phaseList.clear();
+                for (PhaseDefinition definition : this.definitions) {
+                    this.phaseList.add(this.get(definition));
+                }
+                
+                for (PhaseDefinition definition : this.definitions) {
+                    Phase phase = this.get(definition);
+                    int myIndex = this.indexOf(definition.getName());
+                    
+                    for (String after : definition.getAfter()) {
+                        int afterIndex = this.indexOf(after);
+                        if (afterIndex > myIndex) {
+                            this.phaseList.add(afterIndex + 1, phase);
+                            this.phaseList.remove(myIndex);
+                            myIndex = afterIndex;
+                        }
+                    }
+                }
+
+                for (PhaseDefinition definition : this.definitions) {
+                    Phase phase = this.get(definition);
+                    int myIndex = this.indexOf(definition.getName());
+                    
+                    for (String before : definition.getBefore()) {
+                        int beforeIndex = this.indexOf(before);
+                        if (beforeIndex < myIndex) {
+                            this.phaseList.remove(myIndex);
+                            this.phaseList.add(beforeIndex, phase);
+                            myIndex = beforeIndex;
+                        }
+                    }
+                }
+            }
+            
+            public static Collection of(Phase... phases) {
+                Collection collection = new Collection();
+                for (Phase phase : phases) {
+                    collection.add(phase);
+                }
+                return collection;
+            }
+            
+        }
+        
+        static enum State {
+            
+            /**
+             * Phase is loaded but otherwise untouched
+             */
+            LOADED(false),
+            
+            /**
+             * Phase has been assigned as the current phase but no
+             * transformations have yet taken place, the phase is still unbaked 
+             */
+            PENDING(false),
+            
+            /**
+             * The phase is being baked by the transformer
+             */
+            PREPARE(true),
+            
+            /**
+             * The phase has been baked and is now active 
+             */
+            ACTIVE(true),
+            
+            /**
+             * The phase is no longer active 
+             */
+            CLOSED(true);
+            
+            private final boolean lockConfig;
+
+            private State(boolean lockConfig) {
+                this.lockConfig = lockConfig;
+            }
+            
+            public boolean isConfigLocked() {
+                return this.lockConfig;
+            }
+            
+        }
+
+        class Handle implements IPhase {
+            
+            @Override
+            public String getName() {
+                return Phase.this.name;
+            }
+        
+            @Override
+            public void begin() {
+                Phase.this.begin();
+            }
+            
+        }
         
         /**
          * Not initialised phase 
          */
-        static final Phase NOT_INITIALISED = new Phase(-1, "NOT_INITIALISED");
+        static final Phase NOT_INITIALISED = new Phase("NOT_INITIALISED");
         
         /**
          * "Pre initialisation" phase, everything before the tweak system begins
          * to load the game
          */
-        public static final Phase PREINIT = new Phase(0, "PREINIT");
+        public static final Phase PREINIT = new Phase("PREINIT");
         
         /**
          * "Initialisation" phase, after FML's deobf transformer has loaded
          */
-        public static final Phase INIT = new Phase(1, "INIT");
+        public static final Phase INIT = new Phase("INIT");
         
         /**
          * "Default" phase, during runtime
          */
-        public static final Phase DEFAULT = new Phase(2, "DEFAULT");
+        public static final Phase DEFAULT = new Phase("DEFAULT");
         
         /**
          * All phases
          */
-        static final List<Phase> phases = ImmutableList.of(
+        private static final Phase.Collection phases = Phase.Collection.of(
             Phase.PREINIT,
             Phase.INIT,
             Phase.DEFAULT
         );
-        
-        /**
-         * Phase ordinal
-         */
-        final int ordinal;
         
         /**
          * Phase name
@@ -117,32 +299,52 @@ public class MixinEnvironment implements ITokenProvider {
         final String name;
         
         /**
+         * Phase handle 
+         */
+        final Handle handle = new Handle();
+        
+        /**
+         * Transitions which trigger this phase 
+         */
+        private final List<IPhaseTransition> transitions = new ArrayList<IPhaseTransition>();
+        
+        /**
+         * Current state
+         */
+        private State state = State.LOADED;
+        
+        /**
          * Environment for this phase 
          */
         private MixinEnvironment environment;
         
-        private Phase(int ordinal, String name) {
-            this.ordinal = ordinal;
+        Phase(String name) {
             this.name = name;
         }
         
+        public void begin() {
+            MixinEnvironment.gotoPhase(this);
+            for (IPhaseTransition transition : this.transitions) {
+                transition.detach(this.handle);
+            }
+        }
+
         @Override
         public String toString() {
             return this.name;
         }
-
-        public static Phase forName(String name) {
-            for (Phase phase : Phase.phases) {
-                if (phase.name.equals(name)) {
-                    return phase;
-                }
-            }
-            return null;
+        
+        int ordinal() {
+            return Phase.phases.indexOf(this);
         }
 
         MixinEnvironment getEnvironment() {
-            if (this.ordinal < 0) {
+            if (this == Phase.NOT_INITIALISED) {
                 throw new IllegalArgumentException("Cannot access the NOT_INITIALISED environment");
+            }
+            
+            if (this.ordinal() < 0) {
+                throw new IllegalArgumentException("Unregistered phase: '" + this.name + "'");
             }
             
             if (this.environment == null) {
@@ -151,8 +353,80 @@ public class MixinEnvironment implements ITokenProvider {
 
             return this.environment;
         }
+        
+        State getState() {
+            return this.state;
+        }
+        
+        boolean isInState(State state) {
+            return this.state == state;
+        }
+        
+        void gotoState(State state) {
+            if (!this.tryGotoState(state)) {
+                throw new IllegalStateException("Cannot go to state PREPARE for Phase '" + this + "', phase state was " + this.state);
+            }
+        }
+        
+        boolean tryGotoState(State state) {
+            if (state.ordinal() >= this.state.ordinal()) {
+                this.state = state;
+                return true;
+            }
+            
+            return false;
+        }
+        
+        boolean isConfigLocked() {
+            return this.state.isConfigLocked();
+        }
+        
+        void addTransition(IPhaseTransition transition) {
+            this.transitions.add(transition);
+        }
+
+        static void addPhaseProvider(String phaseProviderClass) {
+            Phase.phases.add(phaseProviderClass);
+        }
+        
+        public static Phase forName(String name) {
+            return Phase.phases.get(name);
+        }
+
     }
     
+    static class OnStartup extends AbstractPhaseTransition {
+        
+        static List<OnStartup> instances = new ArrayList<OnStartup>();
+        
+        public OnStartup() {
+            OnStartup.instances.add(this);
+        }
+        
+        void raise() {
+            this.phase.begin();
+        }
+
+        static void raiseEvents() {
+            for (OnStartup onStartupEvent : MixinEnvironment.OnStartup.instances) {
+                onStartupEvent.raise();
+            }
+        }
+        
+    }
+    
+    static class DefaultPhaseProvider implements IPhaseProvider {
+
+        @Override
+        public Collection<PhaseDefinition> getPhases() {
+            PhaseDefinition preInitPhase = PhaseDefinition.named("PREINIT").when(MixinEnvironment.onStartup());
+            PhaseDefinition initPhase    = PhaseDefinition.named("INIT").after("PREINIT");
+            PhaseDefinition defaultPhase = PhaseDefinition.named("DEFAULT").after("INIT").when(OnBeginGame.onBeginGame());
+            return ImmutableList.<PhaseDefinition>of(preInitPhase, initPhase, defaultPhase);
+        }
+
+    }
+
     /**
      * Represents a "side", client or dedicated server
      */
@@ -464,33 +738,6 @@ public class MixinEnvironment implements ITokenProvider {
     }
     
     /**
-     * Tweaker used to notify the environment when we transition from preinit to
-     * default
-     */
-    public static class EnvironmentStateTweaker implements ITweaker {
-
-        @Override
-        public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        }
-
-        @Override
-        public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        }
-
-        @Override
-        public String getLaunchTarget() {
-            return "";
-        }
-
-        @Override
-        public String[] getLaunchArguments() {
-            MixinEnvironment.gotoPhase(Phase.DEFAULT);
-            return new String[0];
-        }
-        
-    }
-    
-    /**
      * Wrapper for providing a natural sorting order for providers
      */
     static class TokenProviderWrapper implements Comparable<TokenProviderWrapper> {
@@ -531,34 +778,6 @@ public class MixinEnvironment implements ITokenProvider {
 
     }
     
-    static class MixinLogger {
-
-        static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
-
-        public MixinLogger() {
-            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            appender.start();
-            log.addAppender(appender);
-        }
-
-        static class MixinAppender extends AbstractAppender {
-
-            protected MixinAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
-                super(name, filter, layout);
-                // TODO Auto-generated constructor stub
-            }
-
-            @Override
-            public void append(LogEvent event) {
-                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormat())) {
-                    // transition to INIT
-                    MixinEnvironment.gotoPhase(Phase.INIT);
-                }
-            }
-            
-        }
-    }
-    
     /**
      * Known re-entrant transformers, other re-entrant transformers will
      * detected automatically 
@@ -574,6 +793,18 @@ public class MixinEnvironment implements ITokenProvider {
     private static final String CONFIGS_KEY = "mixin.configs";
     private static final String TRANSFORMER_KEY = "mixin.transformer";
     
+    /**
+     * Logger 
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
+
+    /**
+     * Pending phase provider classes 
+     */
+    private static final List<String> phaseProviderClasses = Lists.<String>newArrayList(
+        MixinEnvironment.class.getName() + "$DefaultPhaseProvider"
+    );
+
     /**
      * Currently active environment
      */
@@ -595,11 +826,6 @@ public class MixinEnvironment implements ITokenProvider {
      */
     private static boolean showHeader = true;
     
-    /**
-     * Logger 
-     */
-    private static final Logger logger = LogManager.getLogger("mixin");
-
     /**
      * The phase for this environment
      */
@@ -751,6 +977,10 @@ public class MixinEnvironment implements ITokenProvider {
      * @return fluent interface
      */
     public MixinEnvironment addConfiguration(String config) {
+        if (this.phase.isConfigLocked()) {
+            throw new IllegalStateException("Cannot add config " + config + " to " + this + ", current state is " + this.phase.getState());
+        }
+        
         List<String> configs = this.getMixinConfigs();
         if (!configs.contains(config)) {
             configs.add(config);
@@ -1063,12 +1293,21 @@ public class MixinEnvironment implements ITokenProvider {
         return String.format("%s[%s]", this.getClass().getSimpleName(), this.phase);
     }
     
+    public void prepare() {
+        this.phase.gotoState(Phase.State.PREPARE);
+    }
+    
+    public void activate() {
+        this.phase.gotoState(Phase.State.ACTIVE);
+    }
+    
     /**
      * Get the current phase, triggers initialisation if necessary
      */
     private static Phase getCurrentPhase() {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
-            MixinEnvironment.init(Phase.PREINIT);
+            OnStartup.raiseEvents();
+            MixinEnvironment.start(Phase.PREINIT);
         }
         
         return MixinEnvironment.currentPhase;
@@ -1079,13 +1318,33 @@ public class MixinEnvironment implements ITokenProvider {
      * 
      * @param phase initial phase
      */
-    public static void init(Phase phase) {
+    public static void start(Phase phase) {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
-            MixinEnvironment.currentPhase = phase;
+            MixinEnvironment.applyPhases();
+            OnStartup.raiseEvents();
             MixinEnvironment.getEnvironment(phase);
-            
-            @SuppressWarnings("unused")
-            MixinLogger logSpy = new MixinLogger();
+            MixinEnvironment.setPhase(phase);
+        }
+    }
+    
+    public static void init() {
+        MixinEnvironment.applyPhases();
+    }
+    
+    public static void applyPhases() {
+        for (String phaseProviderClass : MixinEnvironment.phaseProviderClasses) {
+            Phase.addPhaseProvider(phaseProviderClass);
+        }
+        MixinEnvironment.phaseProviderClasses.clear();
+    }
+    
+    public static void registerPhaseProvider(String className) {
+        if (!MixinEnvironment.phaseProviderClasses.contains(className)) {
+            MixinEnvironment.phaseProviderClasses.add(className);
+        }
+        
+        if (MixinEnvironment.currentPhase.ordinal() >= Phase.PREINIT.ordinal()) {
+            MixinEnvironment.applyPhases();
         }
     }
     
@@ -1148,27 +1407,40 @@ public class MixinEnvironment implements ITokenProvider {
         }
     }
     
+    public static IPhaseTransition onStartup() {
+        return new OnStartup();
+    }
+    
     /**
      * Internal callback
      * 
      * @param phase
      */
     static void gotoPhase(Phase phase) {
-        if (phase == null || phase.ordinal < 0) {
+        if (phase == null || phase.ordinal() < 0) {
             throw new IllegalArgumentException("Cannot go to the specified phase, phase is null or invalid");
         }
         
-        if (phase.ordinal > getCurrentPhase().ordinal) {
+        if (phase.ordinal() > MixinEnvironment.currentPhase.ordinal()) {
             MixinBootstrap.addProxy();
         }
         
-        if (phase == Phase.DEFAULT) {
-            // remove appender
-            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            log.removeAppender(MixinLogger.appender);
+        MixinEnvironment.setPhase(phase);
+    }
+
+    /**
+     * Internal setter for currentPhase
+     * 
+     * @param phase phase to set
+     */
+    private static void setPhase(Phase phase) {
+        if (MixinEnvironment.currentPhase != phase) {
+            MixinEnvironment.currentPhase.gotoState(Phase.State.CLOSED);
+            phase.gotoState(Phase.State.PENDING);
         }
         
         MixinEnvironment.currentPhase = phase;
         MixinEnvironment.currentEnvironment = MixinEnvironment.getEnvironment(MixinEnvironment.getCurrentPhase());
     }
+
 }

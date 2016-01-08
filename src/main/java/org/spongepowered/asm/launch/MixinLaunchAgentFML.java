@@ -28,10 +28,17 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.environment.IPhaseProvider;
+import org.spongepowered.asm.mixin.environment.PhaseDefinition;
+import org.spongepowered.asm.mixin.environment.phase.OnLogMessage;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
+
+import com.google.common.collect.ImmutableList;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
@@ -46,6 +53,17 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * performs no further processing of containers if they contain a tweaker!</p>
  */
 public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
+    
+    public static final class PhaseProvider implements IPhaseProvider {
+        
+        @Override
+        public Collection<PhaseDefinition> getPhases() {
+            return ImmutableList.<PhaseDefinition>of(
+                PhaseDefinition.named("INIT").when(new OnLogMessage("FML", "Validating minecraft", Level.DEBUG))
+            );
+        }
+        
+    }
 
     private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
     private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
@@ -170,6 +188,7 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     @Override
     public void initPrimaryContainer() {
         if (this.clCoreModManager != null) {
+            MixinEnvironment.registerPhaseProvider(MixinLaunchAgentFML.class.getName() + "$PhaseProvider");
             this.injectRemapper();
         }
     }
@@ -203,7 +222,7 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     public String getLaunchTarget() {
         return null;
     }
-    
+
     /**
      * Performs a naive check which attempts to discover whether we are pre or
      * post FML's main injection. If we are <i>pre</i>, then we must <b>not</b>

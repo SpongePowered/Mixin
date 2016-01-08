@@ -340,8 +340,7 @@ public class MixinTransformer extends TreeTransformer {
         try {
             this.logger.info("Attempting to load Hot-Swap agent");
             @SuppressWarnings("unchecked")
-            Class<? extends IHotSwap> clazz =
-                    (Class<? extends IHotSwap>)Class.forName("org.spongepowered.tools.agent.MixinAgent");
+            Class<? extends IHotSwap> clazz = (Class<? extends IHotSwap>)Class.forName("org.spongepowered.tools.agent.MixinAgent");
             Constructor<? extends IHotSwap> ctor = clazz.getDeclaredConstructor(MixinTransformer.class);
             return ctor.newInstance(this);
         } catch (Throwable th) {
@@ -477,11 +476,13 @@ public class MixinTransformer extends TreeTransformer {
     private void init(MixinEnvironment environment) {
         this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
         this.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
-        
+
+        environment.prepare();
         this.addConfigs(environment);
         this.addModules(environment);
         this.initConfigs();
         this.currentEnvironment = environment;
+        environment.activate();
     }
 
     /**

@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.launch;
 
-import java.util.List;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -60,7 +58,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.4.10";
+    public static final String VERSION = "0.5";
     
     /**
      * Blackboard key where the subsystem version will be stored to indicate
@@ -82,7 +80,7 @@ public abstract class MixinBootstrap {
     
     // These are Klass local, with luck this shouldn't be a problem
     private static boolean initialised = false;
-    private static boolean injectStateTweaker = true;
+    private static boolean initState = true;
     
     // Static initialiser, add classloader exclusions as early as possible
     static {
@@ -108,17 +106,17 @@ public abstract class MixinBootstrap {
      * Initialise the mixin subsystem
      */
     public static void init() {
-        if (!MixinBootstrap.preInit()) {
+        if (!MixinBootstrap.start()) {
             return;
         }
 
-        MixinBootstrap.register();
+        MixinBootstrap.doInit();
     }
 
     /**
      * Phase 1 of mixin initialisation
      */
-    static boolean preInit() {
+    static boolean start() {
         Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
         if (registeredVersion != null) {
             if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
@@ -136,10 +134,10 @@ public abstract class MixinBootstrap {
 
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
-                MixinEnvironment.init(Phase.DEFAULT);
-                MixinBootstrap.injectStateTweaker = false;
+                MixinEnvironment.start(Phase.DEFAULT);
+                MixinBootstrap.initState = false;
             } else {
-                MixinEnvironment.init(Phase.PREINIT);
+                MixinEnvironment.start(Phase.PREINIT);
             }
             
             MixinBootstrap.addProxy();
@@ -149,23 +147,19 @@ public abstract class MixinBootstrap {
     }
 
     /**
-     * Phase 2 of mixin initialisation, register the state tweaker
+     * Phase 2 of mixin initialisation, initialise the phases
      */
-    static void register() {
+    static void doInit() {
         if (!MixinBootstrap.initialised) {
-            throw new IllegalStateException("MixinBootstrap.register() called before MixinBootstrap.preInit()");
+            throw new IllegalStateException("MixinBootstrap.doInit() called before MixinBootstrap.preInit()");
         }
 
-        if (MixinBootstrap.injectStateTweaker) {
+        if (MixinBootstrap.initState) {
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") < 4) {
-                MixinBootstrap.logger.warn("MixinBootstrap.register() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
+                MixinBootstrap.logger.warn("MixinBootstrap.doInit() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
             }
             
-            @SuppressWarnings("unchecked")
-            List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
-            if (tweakClasses != null) {
-                tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
-            }
+            MixinEnvironment.init();
         }
     }
 
