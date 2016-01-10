@@ -86,14 +86,14 @@ abstract class TreeInfo {
     protected static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
         String transformedName = className.replace('/', '.');
         String name = MixinEnvironment.getCurrentEnvironment().unmap(transformedName);
-        byte[] classBytes = null;
-
-        if ((classBytes = TreeInfo.getClassBytes(name, transformedName)) == null) {
-            throw new ClassNotFoundException(String.format("The specified class '%s' was not found", transformedName));
-        }
+        byte[] classBytes = TreeInfo.getClassBytes(name, transformedName);
 
         if (runTransformers) {
             classBytes = TreeInfo.applyTransformers(name, transformedName, classBytes);
+        }
+
+        if (classBytes == null) {
+            throw new ClassNotFoundException(String.format("The specified class '%s' was not found", transformedName));
         }
 
         return classBytes;
