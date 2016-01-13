@@ -48,7 +48,7 @@ public class InjectorGroupInfo {
         
         private static final long serialVersionUID = 1L;
         
-        private static final InjectorGroupInfo NO_GROUP = new InjectorGroupInfo("NONE");
+        private static final InjectorGroupInfo NO_GROUP = new InjectorGroupInfo("NONE", true);
         
         @Override
         public InjectorGroupInfo get(Object key) {
@@ -139,6 +139,11 @@ public class InjectorGroupInfo {
     private final List<InjectionInfo> members = new ArrayList<InjectionInfo>();
     
     /**
+     * True if this is the default group
+     */
+    private final boolean isDefault;
+    
+    /**
      * Number of callbacks we require injected across this group
      */
     private int minCallbackCount = -1;
@@ -147,14 +152,23 @@ public class InjectorGroupInfo {
      * Maximum number of callbacks allowed across this group 
      */
     private int maxCallbackCount = Integer.MAX_VALUE;
-    
+
     public InjectorGroupInfo(String name) {
+        this(name, false);
+    }
+    
+    InjectorGroupInfo(String name, boolean flag) {
         this.name = name;
+        this.isDefault = flag;
     }
     
     @Override
     public String toString() {
         return String.format("@Group(name=%s, min=%d, max=%d)", this.getName(), this.getMinRequired(), this.getMaxAllowed());
+    }
+    
+    public boolean isDefault() {
+        return this.isDefault;
     }
     
     public String getName() {

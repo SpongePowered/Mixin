@@ -134,7 +134,6 @@ public abstract class InjectionInfo {
         this.annotationType = annotation.desc.substring(annotation.desc.lastIndexOf('/') + 1).replace(";", "");
         this.classNode = mixin.getTargetClass();
         this.isStatic = ASMHelper.methodIsStatic(method);
-        this.requiredCallbackCount = mixin.getDefaultRequiredInjections();
         this.readAnnotation();
     }
 
@@ -195,6 +194,8 @@ public abstract class InjectionInfo {
         Integer require = ASMHelper.<Integer>getAnnotationValue(this.annotation, "require");
         if (require != null) {
             this.requiredCallbackCount = require.intValue();
+        } else if (this.group.isDefault()) {
+            this.requiredCallbackCount = this.mixin.getDefaultRequiredInjections();
         }
         
         this.injector = this.initInjector(this.annotation);
