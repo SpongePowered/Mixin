@@ -40,7 +40,6 @@ import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
-
 /**
  * Validator which checks that the mixin targets are sane
  */

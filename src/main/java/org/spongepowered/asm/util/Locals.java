@@ -49,7 +49,6 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
 import org.spongepowered.asm.mixin.transformer.MixinVerifier;
 
-
 /**
  * Utility methods for working with local variables using ASM
  */

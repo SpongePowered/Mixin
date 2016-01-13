@@ -475,7 +475,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
      * Register a {@link org.spongepowered.asm.mixin.Shadow} field
      * 
      * @param mixinType Mixin class
-     * @param method Shadow field
+     * @param field Shadow field
      * @param shadow {@link org.spongepowered.asm.mixin.Shadow} annotation
      */
     public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationMirror shadow) {

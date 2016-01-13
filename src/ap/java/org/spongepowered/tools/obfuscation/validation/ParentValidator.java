@@ -37,7 +37,6 @@ import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
-
 /**
  * Validator which checks that the mixin parent is sane
  */

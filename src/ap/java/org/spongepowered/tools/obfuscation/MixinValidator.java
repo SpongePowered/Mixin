@@ -34,7 +34,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
-
 /**
  * Base class for mixin validators
  */

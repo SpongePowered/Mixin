@@ -27,7 +27,6 @@ package org.spongepowered.asm.mixin.injection;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
-
 /**
  * Indicates that a local capture injector should coerce top-level primitive
  * types to covariant types.

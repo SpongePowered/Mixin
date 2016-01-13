@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 
-
 /**
  * Parser for constraints
  */

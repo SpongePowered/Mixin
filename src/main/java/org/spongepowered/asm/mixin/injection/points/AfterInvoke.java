@@ -35,7 +35,6 @@ import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
-
 /**
  * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
  * INVOKESPECIAL opcodes matching its arguments and returns a list of insns

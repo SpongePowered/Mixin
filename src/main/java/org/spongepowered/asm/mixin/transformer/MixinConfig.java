@@ -43,6 +43,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import org.spongepowered.asm.util.VersionNumber;
@@ -543,7 +544,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * class
      * 
      * @param targetClass
-     * @return
+     * @return true if this bundle contains any mixins for the specified target
      */
     public boolean hasMixinsFor(String targetClass) {
         return this.mixinMapping.containsKey(targetClass);
@@ -553,7 +554,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Get mixins for the specified target class
      * 
      * @param targetClass
-     * @return
+     * @return mixins for the specified target
      */
     public List<MixinInfo> getMixinsFor(String targetClass) {
         return this.mixinsFor(targetClass);

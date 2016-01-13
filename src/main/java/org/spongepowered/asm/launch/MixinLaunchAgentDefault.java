@@ -28,7 +28,6 @@ import java.net.URI;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-
 /**
  * Default launch agent, handles the <tt>MixinConfigs</tt> manifest key
  */

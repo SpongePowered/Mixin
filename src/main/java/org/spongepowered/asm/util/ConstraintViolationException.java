@@ -26,7 +26,6 @@ package org.spongepowered.asm.util;
 
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
-
 /**
  * Exception thrown when a constraint violation is encountered
  */

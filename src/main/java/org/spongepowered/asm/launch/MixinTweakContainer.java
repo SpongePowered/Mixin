@@ -35,7 +35,6 @@ import org.apache.logging.log4j.Logger;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-
 /**
  * A collection of {@link IMixinLaunchAgent} launch agents)
  */

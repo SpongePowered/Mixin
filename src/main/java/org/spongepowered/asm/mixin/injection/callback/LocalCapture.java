@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-
 /**
  * Specifies the behaviour for capturing local variables at an injection point.
  * 

@@ -61,7 +61,6 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.ConstraintViolationException;
 import org.spongepowered.asm.util.InvalidConstraintException;
 
-
 /**
  * Applies mixins to a target class
  */

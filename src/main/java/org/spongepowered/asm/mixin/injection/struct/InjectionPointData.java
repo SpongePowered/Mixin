@@ -31,7 +31,6 @@ import java.util.Map;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 
-
 /**
  * Data read from an {@link org.spongepowered.asm.mixin.injection.At} annotation
  * and passed into an InjectionPoint ctor

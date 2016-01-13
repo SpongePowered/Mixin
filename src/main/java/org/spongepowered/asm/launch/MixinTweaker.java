@@ -42,7 +42,6 @@ import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-
 /**
  * TweakClass for running mixins in production. Being a tweaker ensures that we
  * get injected into the AppClassLoader but does mean that we will need to

@@ -48,7 +48,6 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
-
 /**
  * <p>Mixin bytecode pre-processor. This class is responsible for bytecode pre-
  * processing tasks required to be performed on mixin bytecode before the mixin

@@ -29,7 +29,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-
 /**
  * Decorator for methods which override a method in a supermixin which the
  * containing mixin does not directly extend

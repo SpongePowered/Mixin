@@ -35,7 +35,6 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Strings;
 
-
 /**
  * Prints information in a pretty box
  */

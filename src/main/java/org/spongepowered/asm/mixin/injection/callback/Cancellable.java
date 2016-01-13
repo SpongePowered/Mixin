@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-
 /**
  * Interface for things which can be cancelled
  */

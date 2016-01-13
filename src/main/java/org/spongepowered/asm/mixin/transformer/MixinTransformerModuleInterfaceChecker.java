@@ -46,7 +46,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.io.Files;
 
-
 /**
  * Checks whether interfaces declared on mixin target classes are actually fully
  * implemented and generates reports to the console and to files on disk

@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.util;
 
-
 /**
  * Exception thrown when a constraint declaration is invalid
  */

@@ -33,7 +33,6 @@ import org.spongepowered.asm.util.SignaturePrinter;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
-
 /**
  * <p>Information bundle about a member (method or field) parsed from a String
  * token in another annotation, this is used where target members need to be

@@ -41,7 +41,6 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
 
-
 /**
  * A wrapper for TypeElement which gives us a soft-failover mechanism when
  * dealing with classes that are inaccessible via mirror (such as anonymous

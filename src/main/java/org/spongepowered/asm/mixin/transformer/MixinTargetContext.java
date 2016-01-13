@@ -35,7 +35,16 @@ import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.lib.Handle;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.lib.tree.FieldNode;
+import org.spongepowered.asm.lib.tree.InvokeDynamicInsnNode;
+import org.spongepowered.asm.lib.tree.LdcInsnNode;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.TypeInsnNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.SoftOverride;
@@ -239,7 +248,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Get the injector groups for this target
      * 
-     * @return
+     * @return injector groups
      */
     public InjectorGroupInfo.Map getInjectorGroups() {
         return this.injectorGroups;

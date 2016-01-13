@@ -26,7 +26,6 @@ package org.spongepowered.asm.mixin.extensibility;
 
 import org.apache.logging.log4j.Level;
 
-
 /**
  * Interface for objects which want to perform custom behaviour when fatal mixin
  * errors occur. For example displaying a user-friendly error message

@@ -30,7 +30,6 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.util.ASMHelper;
 
-
 /**
  * Information about the current injection target, mainly just convenience
  * rather than passing a bunch of values around.

@@ -28,7 +28,6 @@ import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 /**
  * Represents a software version number in <code>major.minor.revision.build
  * </code> format as a sequence of four shorts packed into a long. This is to

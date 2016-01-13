@@ -44,7 +44,6 @@ import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
 
-
 /**
  * Base class for bytecode injectors
  */

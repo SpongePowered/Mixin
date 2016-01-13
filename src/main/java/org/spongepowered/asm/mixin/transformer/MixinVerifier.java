@@ -29,7 +29,6 @@ import java.util.List;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.analysis.SimpleVerifier;
 
-
 /**
  * Verifier which handles class info lookups via {@link ClassInfo}
  */

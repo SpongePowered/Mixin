@@ -58,7 +58,6 @@ import org.spongepowered.tools.obfuscation.struct.Message;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
-
 /**
  * Information about a mixin stored during processing
  */
@@ -542,7 +541,7 @@ class AnnotatedMixin {
      * @param method Callback method
      * @param inject Inject annotation
      * @param remap 
-     * @return
+     * @return pending error message or null if no error condition
      */
     public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
         String originalReference = MirrorUtils.<String>getAnnotationValue(inject, "method");

@@ -64,7 +64,6 @@ import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
-
 /**
  * The mixin environment manages global state information for the mixin
  * subsystem.

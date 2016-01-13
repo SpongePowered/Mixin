@@ -26,7 +26,6 @@ package org.spongepowered.asm.util;
 
 import org.spongepowered.asm.mixin.Mixin;
 
-
 /**
  * Miscellaneous shared constants
  */

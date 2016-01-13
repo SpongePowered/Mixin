@@ -634,7 +634,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Get a new mixin target context object for the specified target
      * 
      * @param target
-     * @return
+     * @return new context
      */
     public MixinTargetContext createContextFor(ClassNode target) {
         return new MixinPreProcessor(this, this.getClassNode(ClassReader.EXPAND_FRAMES)).createContextFor(target);

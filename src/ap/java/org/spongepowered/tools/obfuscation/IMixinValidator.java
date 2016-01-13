@@ -29,7 +29,6 @@ import java.util.Collection;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 
-
 /**
  * A mixin validator module, basically just a way of making the various sanity
  * checks modular

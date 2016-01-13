@@ -30,7 +30,6 @@ import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
-
 /**
  * Mixin transformer module which runs CheckClassAdapter on the post-mixin
  * bytecode

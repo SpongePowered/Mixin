@@ -42,7 +42,6 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 
-
 /**
  * Convenience functions for mirror
  */

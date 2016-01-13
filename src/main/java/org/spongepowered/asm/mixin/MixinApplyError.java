@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin;
 
-
 /**
  * Error to throw for required mixins when mixing of the mixin fails
  */

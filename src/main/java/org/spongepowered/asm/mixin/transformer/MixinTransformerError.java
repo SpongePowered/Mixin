@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-
 /**
  * Error to throw for things which really shouldn't happen
  */

@@ -24,17 +24,17 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
-import org.apache.logging.log4j.LogManager;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.util.ASMHelper;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+
+import org.apache.logging.log4j.LogManager;
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.util.ASMHelper;
 
 /**
  * Information store for injector groups
@@ -87,7 +87,7 @@ public class InjectorGroupInfo {
          * Parse a group from the specified annotation, use the default group
          * name if no group name is specified on the annotation
          * 
-         * @param method Annotation or null
+         * @param annotation Annotation or null
          * @param defaultGroup Default group name to use
          * @return Group or NO_GROUP if no group
          */

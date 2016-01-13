@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
-
 /**
  * Error to throw for critical injection problems
  */

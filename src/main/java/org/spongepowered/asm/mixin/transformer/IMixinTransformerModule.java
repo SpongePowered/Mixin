@@ -28,7 +28,6 @@ import java.util.SortedSet;
 
 import org.spongepowered.asm.lib.tree.ClassNode;
 
-
 /**
  * Mixin Transformer Module interface for pre- and post-processors
  */
