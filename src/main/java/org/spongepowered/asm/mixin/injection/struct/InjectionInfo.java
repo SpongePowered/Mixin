@@ -39,6 +39,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionError;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -48,7 +49,6 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.util.ASMHelper;
 
-
 /**
  * Contructs information about an injection from an {@link Inject} annotation
  * and allows the injection to be processed.
@@ -56,6 +56,8 @@ import org.spongepowered.asm.util.ASMHelper;
 public abstract class InjectionInfo {
     
     protected final AnnotationNode annotation;
+    
+    protected final String annotationType;
     
     /**
      * Class
@@ -71,8 +73,7 @@ public abstract class InjectionInfo {
      * Mixin data
      */
     protected final MixinTargetContext mixin;
-
-
+    
     /**
      * Annotated method is static 
      */
@@ -93,6 +94,11 @@ public abstract class InjectionInfo {
      * Bytecode injector
      */
     protected Injector injector;
+    
+    /**
+     * Injection group
+     */
+    protected InjectorGroupInfo group;
     
     /**
      * Methods injected by injectors 
@@ -122,11 +128,13 @@ public abstract class InjectionInfo {
      * @param annotation Annotation to parse
      */
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        this.annotation = annotation;
-        this.method = method;
         this.mixin = mixin;
+        this.method = method;
+        this.annotation = annotation;
+        this.annotationType = annotation.desc.substring(annotation.desc.lastIndexOf('/') + 1).replace(";", "");
         this.classNode = mixin.getTargetClass();
         this.isStatic = ASMHelper.methodIsStatic(method);
+        this.requiredCallbackCount = mixin.getDefaultRequiredInjections();
         this.readAnnotation();
     }
 
@@ -176,6 +184,8 @@ public abstract class InjectionInfo {
                 this.injectionPoints.add(injectionPoint);
             }
         }
+        
+        this.group = this.mixin.getInjectorGroups().parseGroup(this.method, this.mixin.getDefaultInjectorGroup()).add(this);
         
         Integer expect = ASMHelper.<Integer>getAnnotationValue(this.annotation, "expect");
         if (expect != null) {
@@ -232,6 +242,11 @@ public abstract class InjectionInfo {
         }
     }
     
+    @Override
+    public String toString() {
+        return String.format("%s->@%s::%s%s", this.mixin.toString(), this.annotationType, this.method.name, this.method.desc);
+    }
+    
     /**
      * Get the mixin target context for this injection
      * 
@@ -275,6 +290,15 @@ public abstract class InjectionInfo {
      */
     public Collection<MethodNode> getTargets() {
         return this.targets;
+    }
+    
+    /**
+     * Get the injected callback count
+     * 
+     * @return the injected callback count
+     */
+    public int getInjectedCallbackCount() {
+        return this.injectedCallbackCount;
     }
 
     /**

@@ -39,12 +39,15 @@ import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.SoftOverride;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.InjectionError;
+import org.spongepowered.asm.mixin.injection.InjectionValidationException;
+import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
-
 
 /**
  * This object keeps track of data for applying a mixin to a specific target
@@ -91,7 +94,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * transformations we apply
      */
     private final Map<String, Target> targetMethods = new HashMap<String, Target>();
-    
+
+    /**
+     * Injector groups 
+     */
+    protected final InjectorGroupInfo.Map injectorGroups = new InjectorGroupInfo.Map();
+
     /**
      * True if this mixin inherits from a mixin at any point in its hierarchy 
      */
@@ -207,6 +215,34 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     public int getMinRequiredClassVersion() {
         return this.minRequiredClassVersion;
+    }
+    
+    /**
+     * Get the defined value for the {@link Inject#require} parameter on
+     * injectors defined in mixins in this configuration.
+     * 
+     * @return default require value
+     */
+    public int getDefaultRequiredInjections() {
+        return this.mixin.getParent().getDefaultRequiredInjections();
+    }
+    
+    /**
+     * Get the defined injector group for injectors
+     * 
+     * @return default group name
+     */
+    public String getDefaultInjectorGroup() {
+        return this.mixin.getParent().getDefaultInjectorGroup();
+    }
+    
+    /**
+     * Get the injector groups for this target
+     * 
+     * @return
+     */
+    public InjectorGroupInfo.Map getInjectorGroups() {
+        return this.injectorGroups;
     }
 
     /**
@@ -769,6 +805,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param targetClass Target class
      */
     public void postApply(String transformedName, ClassNode targetClass) {
+        try {
+            this.injectorGroups.validateAll();
+        } catch (InjectionValidationException ex) {
+            InjectorGroupInfo group = ex.getGroup();
+            throw new InjectionError(
+                String.format("Critical injection failure: Callback group %s in %s failed injection check: %s",
+                group, this.mixin, ex.getMessage()));
+        }
+        
         this.mixin.postApply(transformedName, targetClass);
     }
 

@@ -58,6 +58,19 @@ import net.minecraft.launchwrapper.Launch;
 class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     
     /**
+     * Wrapper for injection options
+     */
+    static class InjectorOptions {
+        
+        @SerializedName("defaultRequire")
+        int defaultRequireValue = 0;
+        
+        @SerializedName("defaultGroup")
+        String defaultGroup = "default";
+        
+    }
+    
+    /**
      * Global order of mixin configs, used to determine ordering between configs
      * with equivalent priority
      */
@@ -188,6 +201,12 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @SerializedName("plugin")
     private String pluginClassName;
+    
+    /**
+     * Injector options 
+     */
+    @SerializedName("injectors")
+    private InjectorOptions injectorOptions = new InjectorOptions();
     
     /**
      * Config plugin, if supplied
@@ -419,6 +438,26 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     public int getDefaultMixinPriority() {
         return this.mixinPriority;
+    }
+    
+    /**
+     * Get the defined value for the {@link Inject#require} parameter on
+     * injectors defined in mixins in this configuration.
+     * 
+     * @return default require value
+     */
+    public int getDefaultRequiredInjections() {
+        return this.injectorOptions.defaultRequireValue;
+    }
+    
+    /**
+     * Get the defined injector group for injectors
+     * 
+     * @return default group name
+     */
+    public String getDefaultInjectorGroup() {
+        String defaultGroup = this.injectorOptions.defaultGroup;
+        return defaultGroup != null && !defaultGroup.isEmpty() ? defaultGroup : "default";
     }
 
     /**
