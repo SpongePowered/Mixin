@@ -102,11 +102,14 @@ public class InjectorGroupInfo {
             }
             InjectorGroupInfo groupInfo = this.forName(name);
             
-            Integer require = ASMHelper.<Integer>getAnnotationValue(annotation, "require");
-            if (require != null) {
-                if (require.intValue() != -1) {
-                    groupInfo.setRequired(require.intValue());
-                }
+            Integer min = ASMHelper.<Integer>getAnnotationValue(annotation, "min");
+            if (min != null && min.intValue() != -1) {
+                groupInfo.setMinRequired(min.intValue());
+            }
+            
+            Integer max = ASMHelper.<Integer>getAnnotationValue(annotation, "max");
+            if (max != null && max.intValue() != -1) {
+                groupInfo.setMaxAllowed(max.intValue());
             }
             
             return groupInfo;
@@ -138,7 +141,12 @@ public class InjectorGroupInfo {
     /**
      * Number of callbacks we require injected across this group
      */
-    private int requiredCallbackCount = -1;
+    private int minCallbackCount = -1;
+    
+    /**
+     * Maximum number of callbacks allowed across this group 
+     */
+    private int maxCallbackCount = Integer.MAX_VALUE;
     
     public InjectorGroupInfo(String name) {
         this.name = name;
@@ -146,15 +154,19 @@ public class InjectorGroupInfo {
     
     @Override
     public String toString() {
-        return String.format("@Group(name=%s, require=%d)", this.getName(), this.getRequired());
+        return String.format("@Group(name=%s, min=%d, max=%d)", this.getName(), this.getMinRequired(), this.getMaxAllowed());
     }
     
     public String getName() {
         return this.name;
     }
     
-    public int getRequired() {
-        return Math.max(this.requiredCallbackCount, 1);
+    public int getMinRequired() {
+        return Math.max(this.minCallbackCount, 1);
+    }
+    
+    public int getMaxAllowed() {
+        return Math.min(this.maxCallbackCount, Integer.MAX_VALUE);
     }
     
     /**
@@ -167,23 +179,43 @@ public class InjectorGroupInfo {
     }
     
     /**
-     * Set the required value for this group. Since this is normally done on the
-     * first {@link Group} annotation it is considered a warning-level event if
-     * a later annotation sets a different value. The highest value specified on
-     * all annotations is always used
+     * Set the required minimum value for this group. Since this is normally
+     * done on the first {@link Group} annotation it is considered a
+     * warning-level event if a later annotation sets a different value. The
+     * highest value specified on all annotations is always used.
      * 
-     * @param required new value for required
+     * @param min new value for min required
      */
-    public void setRequired(int required) {
-        if (required < 1) {
-            throw new IllegalArgumentException("Cannot set zero or negative value for injector group required count. Attempted to set required="
-                    + required + " on " + this + "");
+    public void setMinRequired(int min) {
+        if (min < 1) {
+            throw new IllegalArgumentException("Cannot set zero or negative value for injector group min count. Attempted to set min="
+                    + min + " on " + this);
         }
-        if (this.requiredCallbackCount > 0 && this.requiredCallbackCount != required) {
-            LogManager.getLogger("mixin").warn("Conflicting require value '{}' on @Group({}), previously specified {}", required, this.name,
-                    this.requiredCallbackCount);
+        if (this.minCallbackCount > 0 && this.minCallbackCount != min) {
+            LogManager.getLogger("mixin").warn("Conflicting min value '{}' on @Group({}), previously specified {}", min, this.name,
+                    this.minCallbackCount);
         }
-        this.requiredCallbackCount = Math.max(this.requiredCallbackCount, required);
+        this.minCallbackCount = Math.max(this.minCallbackCount, min);
+    }
+    
+    /**
+     * Set the required minimum value for this group. Since this is normally
+     * done on the first {@link Group} annotation it is considered a
+     * warning-level event if a later annotation sets a different value. The
+     * highest value specified on all annotations is always used.
+     * 
+     * @param max new value for max allowed
+     */
+    public void setMaxAllowed(int max) {
+        if (max < 1) {
+            throw new IllegalArgumentException("Cannot set zero or negative value for injector group max count. Attempted to set max="
+                    + max + " on " + this);
+        }
+        if (this.maxCallbackCount > 0 && this.maxCallbackCount != max) {
+            LogManager.getLogger("mixin").warn("Conflicting max value '{}' on @Group({}), previously specified {}", max, this.name,
+                    this.maxCallbackCount);
+        }
+        this.maxCallbackCount = Math.min(this.maxCallbackCount, max);
     }
     
     /**
@@ -214,9 +246,12 @@ public class InjectorGroupInfo {
             total += member.getInjectedCallbackCount();
         }
         
-        int required = this.getRequired();
-        if (total < required) {
-            throw new InjectionValidationException(this, String.format("expected %d invocation(s) but only %d succeeded", required, total));
+        int min = this.getMinRequired();
+        int max = this.getMaxAllowed();
+        if (total < min) {
+            throw new InjectionValidationException(this, String.format("expected %d invocation(s) but only %d succeeded", min, total));
+        } else if (total > max) {
+            throw new InjectionValidationException(this, String.format("maximum of %d invocation(s) allowed but %d succeeded", max, total));
         }
         
         return this;

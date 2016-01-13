@@ -49,10 +49,17 @@ public @interface Group {
     public String name() default "";
     
     /**
-     * Require value for this injector group
+     * Minimum required injections for this injector group
      * 
-     * @return require value 
+     * @return required min value 
      */
-    public int require() default -1;
+    public int min() default -1;
+    
+    /**
+     * Maximum allowed injections for this injector group
+     * 
+     * @return allowed max value 
+     */
+    public int max() default -1;
     
 }
