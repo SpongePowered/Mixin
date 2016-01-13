@@ -408,7 +408,7 @@ public class CallbackInjector extends Injector {
                 if (callback.checkDescriptor(returnableSig)) {
                     // Switching out CallbackInfo for CallbackInfoReturnable
                     // worked, so notify the user that they done derped
-                    throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: CallbackInfoReturnable is required!");  
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! CallbackInfoReturnable is required!");  
                 }
                 
                 MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
@@ -416,7 +416,7 @@ public class CallbackInjector extends Injector {
                     // Found a matching surrogate method, use it
                     callbackMethod = surrogateHandler;
                 } else {
-                    throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.getDescriptor()
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! Expected " + callback.getDescriptor()
                             + " but found " + this.methodNode.desc);
                 }
             }
