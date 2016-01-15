@@ -46,6 +46,7 @@ import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.helpers.Booleans;
+import org.spongepowered.asm.launch.Blackboard;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
@@ -191,11 +192,10 @@ public class MixinEnvironment implements ITokenProvider {
         
         protected abstract boolean detect();
 
-        @SuppressWarnings("unchecked")
         protected final String getSideName() {
             // Using this method first prevents us from accidentally loading FML classes
             // too early when using the tweaker in dev
-            for (ITweaker tweaker : (List<ITweaker>)Launch.blackboard.get("Tweaks")) {
+            for (ITweaker tweaker : Blackboard.<List<ITweaker>>get(Blackboard.Keys.TWEAKS)) {
                 if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
                     return "SERVER";
                 } else if (tweaker.getClass().getName().endsWith(".common.launcher.FMLTweaker")) {
@@ -569,10 +569,6 @@ public class MixinEnvironment implements ITokenProvider {
         "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
     );
 
-    // Blackboard keys
-    private static final String CONFIGS_KEY = "mixin.configs";
-    private static final String TRANSFORMER_KEY = "mixin.transformer";
-    
     /**
      * Currently active environment
      */
@@ -664,10 +660,10 @@ public class MixinEnvironment implements ITokenProvider {
     
     MixinEnvironment(Phase phase) {
         this.phase = phase;
-        this.configsKey = MixinEnvironment.CONFIGS_KEY + "." + this.phase.name.toLowerCase();
+        this.configsKey = Blackboard.Keys.CONFIGS + "." + this.phase.name.toLowerCase();
         
         // Sanity check
-        Object version = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+        Object version = this.getVersion();
         if (version == null || !MixinBootstrap.VERSION.equals(version)) {
             throw new RuntimeException("Environment conflict, mismatched versions or you didn't call MixinBootstrap.init()");
         }
@@ -734,8 +730,7 @@ public class MixinEnvironment implements ITokenProvider {
      * @return list of registered mixin configs
      */
     public List<String> getMixinConfigs() {
-        @SuppressWarnings("unchecked")
-        List<String> mixinConfigs = (List<String>) Launch.blackboard.get(this.configsKey);
+        List<String> mixinConfigs = Blackboard.<List<String>>get(this.configsKey);
         if (mixinConfigs == null) {
             mixinConfigs = new ArrayList<String>();
             Launch.blackboard.put(this.configsKey, mixinConfigs);
@@ -844,7 +839,7 @@ public class MixinEnvironment implements ITokenProvider {
      * @return active mixin transformer instance
      */
     public Object getActiveTransformer() {
-        return Launch.blackboard.get(MixinEnvironment.TRANSFORMER_KEY);
+        return Blackboard.get(Blackboard.Keys.TRANSFORMER);
     }
 
     /**
@@ -854,7 +849,7 @@ public class MixinEnvironment implements ITokenProvider {
      */
     public void setActiveTransformer(IClassTransformer transformer) {
         if (transformer != null) {
-            Launch.blackboard.put(MixinEnvironment.TRANSFORMER_KEY, transformer);        
+            Blackboard.put(Blackboard.Keys.TRANSFORMER, transformer);        
         }
     }
     
@@ -895,7 +890,7 @@ public class MixinEnvironment implements ITokenProvider {
      * @return current version
      */
     public String getVersion() {
-        return (String)Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+        return Blackboard.<String>get(Blackboard.Keys.INIT);
     }
 
     /**

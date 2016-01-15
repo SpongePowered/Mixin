@@ -38,7 +38,7 @@ public abstract class MixinLaunchAgentAbstract implements IMixinLaunchAgent {
     /**
      * Logger 
      */
-    protected final Logger logger = LogManager.getLogger("mixin");
+    protected static final Logger logger = LogManager.getLogger("mixin");
     
     /**
      * URI to the container

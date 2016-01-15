@@ -60,13 +60,13 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.4.11";
+    public static final String VERSION = "0.4.12";
     
     /**
      * Blackboard key where the subsystem version will be stored to indicate
      * successful bootstrap
      */
-    public static final String INIT_KEY = "mixin.initialised";
+//    public static final String INIT_KEY = Blackboard.Keys.INIT;
     
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
@@ -119,7 +119,7 @@ public abstract class MixinBootstrap {
      * Phase 1 of mixin initialisation
      */
     static boolean preInit() {
-        Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+        Object registeredVersion = Blackboard.get(Blackboard.Keys.INIT);
         if (registeredVersion != null) {
             if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
                 throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
@@ -129,7 +129,7 @@ public abstract class MixinBootstrap {
             return false;
         }
 
-        Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
+        Blackboard.put(Blackboard.Keys.INIT, MixinBootstrap.VERSION);
         
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
@@ -161,8 +161,7 @@ public abstract class MixinBootstrap {
                 MixinBootstrap.logger.warn("MixinBootstrap.register() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
             }
             
-            @SuppressWarnings("unchecked")
-            List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+            List<String> tweakClasses = Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES);
             if (tweakClasses != null) {
                 tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
             }

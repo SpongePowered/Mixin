@@ -32,7 +32,6 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -43,7 +42,7 @@ public class MixinTweakContainer {
     public static final List<String> agentClasses = new ArrayList<String>();
     
     static {
-        Launch.blackboard.put("mixin.agents", MixinTweakContainer.agentClasses);
+        Blackboard.put(Blackboard.Keys.AGENTS, MixinTweakContainer.agentClasses);
         MixinTweakContainer.agentClasses.add("org.spongepowered.asm.launch.MixinLaunchAgentFML");
         MixinTweakContainer.agentClasses.add("org.spongepowered.asm.launch.MixinLaunchAgentDefault");
     }

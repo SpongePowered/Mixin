@@ -28,8 +28,10 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
 
@@ -46,6 +48,13 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * performs no further processing of containers if they contain a tweaker!</p>
  */
 public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
+    
+    private static final String LOAD_CORE_MOD_METHOD = "loadCoreMod";
+    private static final String GET_REPARSEABLE_COREMODS_METHOD = "getReparseableCoremods";
+    private static final String CORE_MOD_MANAGER_CLASS = "net.minecraftforge.fml.relauncher.CoreModManager";
+    private static final String GET_IGNORED_MODS_METHOD = "getIgnoredMods";
+    
+    private static final String FML_REMAPPER_ADAPTER_CLASS = "org.spongepowered.asm.bridge.RemapperAdapterFML";
 
     private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
     private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
@@ -110,12 +119,9 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     private void loadAsMod() {
         try {
-            Method mdGetLoadedCoremods = this.clCoreModManager.getDeclaredMethod("getLoadedCoremods");
-            @SuppressWarnings("unchecked")
-            List<String> loadedCoremods = (List<String>)mdGetLoadedCoremods.invoke(null);
-            loadedCoremods.remove(this.fileName);
+            MixinLaunchAgentFML.getIgnoredMods(this.clCoreModManager).remove(this.fileName);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            MixinLaunchAgentAbstract.logger.catching(ex);
         }
         
         if (this.attributes.get(MixinLaunchAgentFML.MFATT_COREMODCONTAINSMOD) != null) {    
@@ -129,7 +135,8 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     private void addReparseableJar() {
         try {
-            Method mdGetReparsedCoremods = this.clCoreModManager.getDeclaredMethod("getReparseableCoremods");
+            Method mdGetReparsedCoremods = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
+                    Blackboard.Keys.FML_GET_REPARSEABLE_COREMODS, MixinLaunchAgentFML.GET_REPARSEABLE_COREMODS_METHOD));
             @SuppressWarnings("unchecked")
             List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
             if (!reparsedCoremods.contains(this.fileName)) {
@@ -146,7 +153,8 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
             return null;
         }
 
-        Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
+        Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
+                Blackboard.Keys.FML_LOAD_CORE_MOD, MixinLaunchAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
         mdLoadCoreMod.setAccessible(true);
         ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
         if (wrapper == null) {
@@ -176,12 +184,12 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
 
     private void injectRemapper() {
         try {
-            Class<?> clFmlRemapperAdapter = Class.forName("org.spongepowered.asm.bridge.RemapperAdapterFML", true, Launch.classLoader);
+            Class<?> clFmlRemapperAdapter = Class.forName(MixinLaunchAgentFML.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
             Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
             IRemapper remapper = (IRemapper)mdCreate.invoke(null);
             MixinEnvironment.getDefaultEnvironment().getRemappers().add(remapper);
         } catch (Exception ex) {
-            this.logger.debug("Failed instancing remapper adapter for FML, things will probably go horribly for notch-obf'd mods!");
+            MixinLaunchAgentAbstract.logger.debug("Failed instancing FML remapper adapter, things will probably go horribly for notch-obf'd mods!");
         }
     }
 
@@ -216,9 +224,8 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      * 
      * @return true if FML was already injected
      */
-    @SuppressWarnings("unchecked")
     protected final boolean isFMLInjected() {
-        for (String tweaker : (List<String>)Launch.blackboard.get("TweakClasses")) {
+        for (String tweaker : Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES)) {
             if (tweaker.endsWith("FMLDeobfTweaker")) {
                 return true;
             }
@@ -232,10 +239,31 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     private static Class<?> getCoreModManagerClass() throws ClassNotFoundException {
         try {
-            return Class.forName("net.minecraftforge.fml.relauncher.CoreModManager");
+            return Class.forName(Blackboard.getString(
+                    Blackboard.Keys.FML_CORE_MOD_MANAGER, MixinLaunchAgentFML.CORE_MOD_MANAGER_CLASS));
         } catch (ClassNotFoundException ex) {
             return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getIgnoredMods(Class<?> clCoreModManager) throws IllegalAccessException, InvocationTargetException {
+        Method mdGetIgnoredMods = null;
+        
+        try {
+            mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(Blackboard.getString(
+                    Blackboard.Keys.FML_GET_IGNORED_MODS, MixinLaunchAgentFML.GET_IGNORED_MODS_METHOD));
+        } catch (NoSuchMethodException ex1) {
+            try {
+                // Legacy name
+                mdGetIgnoredMods = clCoreModManager.getDeclaredMethod("getLoadedCoremods");
+            } catch (NoSuchMethodException ex2) {
+                MixinLaunchAgentAbstract.logger.catching(Level.DEBUG, ex2);
+                return Collections.<String>emptyList();
+            }
+        }
+        
+        return (List<String>)mdGetIgnoredMods.invoke(null);
     }
 
 }
