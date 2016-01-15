@@ -29,6 +29,7 @@ import java.util.Collection;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -67,6 +68,25 @@ public class TargetValidator extends MixinValidator {
             return true;
         }
         
+        if (mixin.getKind() == ElementKind.INTERFACE) {
+            this.validateInterfaceMixin(mixin, targets);
+        } else {
+            this.validateClassMixin(mixin, targets);
+        }
+        
+        return true;
+    }
+
+    private void validateInterfaceMixin(TypeElement mixin, Collection<TypeHandle> targets) {
+        for (TypeHandle target : targets) {
+            TypeElement targetType = target.getElement();
+            if (targetType != null && !(targetType.getKind() == ElementKind.INTERFACE)) {
+                this.error("Targetted type '" + target + " of " + mixin + " is not an interface", mixin);
+            }
+        }
+    }
+
+    private void validateClassMixin(TypeElement mixin, Collection<TypeHandle> targets) {
         TypeMirror superClass = mixin.getSuperclass();
         
         for (TypeHandle target : targets) {
@@ -75,8 +95,6 @@ public class TargetValidator extends MixinValidator {
                 this.error("Superclass " + superClass + " of " + mixin + " was not found in the hierarchy of target class " + targetType, mixin);
             }
         }
-        
-        return true;
     }
 
     private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {

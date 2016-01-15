@@ -434,7 +434,10 @@ public class MixinTransformer extends TreeTransformer {
                 }
 
                 try {
-                    basicClass = this.applyMixins(transformedName, basicClass, mixins);
+                    // Tree for target class
+                    ClassNode targetClassNode = this.readClass(basicClass, true);
+                    TargetClassContext context = new TargetClassContext(this.sessionId, transformedName, targetClassNode, mixins);
+                    basicClass = this.applyMixins(context);
                 } catch (InvalidMixinException th) {
                     if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
                         this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
@@ -606,65 +609,52 @@ public class MixinTransformer extends TreeTransformer {
      * Apply mixins for specified target class to the class described by the
      * supplied byte array.
      * 
-     * @param transformedName 
-     * @param basicClass
-     * @param mixins
+     * @param context 
      * @return class bytecode after application of mixins
      */
-    private byte[] applyMixins(String transformedName, byte[] basicClass, SortedSet<MixinInfo> mixins) {
-        // Tree for target class
-        ClassNode targetClass = this.readClass(basicClass, true);
-        
-        this.preApply(transformedName, targetClass, mixins);
-        this.apply(transformedName, targetClass, mixins);
+    private byte[] applyMixins(TargetClassContext context) {
+        this.preApply(context);
+        this.apply(context);
         try {
-            this.postApply(transformedName, targetClass, mixins);
+            this.postApply(context);
         } catch (ValidationFailedException ex) {
             this.logger.info(ex.getMessage());
             // If verify is enabled and failed, write out the bytecode to allow us to inspect it
             if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
-                this.writeClass(transformedName, targetClass);
+                this.writeClass(context);
             }
         }
-        
-        return this.writeClass(transformedName, targetClass);
+        return this.writeClass(context);
     }
 
     /**
      * Process tasks before mixin application
      * 
-     * @param transformedName Target class transformed name
-     * @param targetClass Target class
-     * @param mixins Mixin which were just applied
+     * @param context Target class context
      */
-    private void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    private void preApply(TargetClassContext context) {
         for (IMixinTransformerModule module : this.modules) {
-            module.preApply(transformedName, targetClass, mixins);
+            module.preApply(context);
         }
     }
 
     /**
      * Apply the mixins to the target class
      * 
-     * @param transformedName Target class transformed name
-     * @param targetClass Target class
-     * @param mixins Mixin which were just applied
+     * @param context Target class context
      */
-    private void apply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        MixinApplicator applicator = new MixinApplicator(this.sessionId, transformedName, targetClass);
-        applicator.apply(mixins);
+    private void apply(TargetClassContext context) {
+        context.applyMixins();
     }
 
     /**
      * Process tasks after mixin application
      * 
-     * @param transformedName Target class transformed name
-     * @param targetClass Target class
-     * @param mixins Mixin which were just applied
+     * @param context Target class context
      */
-    private void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    private void postApply(TargetClassContext context) {
         for (IMixinTransformerModule module : this.modules) {
-            module.postApply(transformedName, targetClass, mixins);
+            module.postApply(context);
         }
     }
 
@@ -725,6 +715,10 @@ public class MixinTransformer extends TreeTransformer {
         return Pattern.compile(this.prepareFilter(filter), Pattern.CASE_INSENSITIVE).matcher(subject).matches();
     }
 
+    private byte[] writeClass(TargetClassContext context) {
+        return this.writeClass(context.getName(), context.getClassNode());
+    }
+    
     private byte[] writeClass(String transformedName, ClassNode targetClass) {
         // Collapse tree to bytes
         byte[] bytes = this.writeClass(targetClass);

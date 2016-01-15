@@ -81,12 +81,12 @@ class MixinPreProcessor {
     /**
      * The mixin
      */
-    private final MixinInfo mixin;
+    protected final MixinInfo mixin;
     
     /**
      * Mixin class node
      */
-    private final ClassNode classNode;
+    protected final ClassNode classNode;
     
     private final boolean verboseLogging;
     
@@ -103,21 +103,29 @@ class MixinPreProcessor {
      * 
      * @return Prepared classnode
      */
-    ClassNode prepare() {
+    MixinPreProcessor prepare() {
         if (!this.prepared) {
             this.prepared = true;
             
             for (MethodNode mixinMethod : this.classNode.methods) {
                 Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
-                this.prepareShadow(mixinMethod, method);
-                this.prepareSoftImplements(mixinMethod, method);
+                this.prepareMethod(mixinMethod, method);
+            }
+            
+            for (FieldNode mixinField : this.classNode.fields) {
+                this.prepareField(mixinField);
             }
         }
         
-        return this.classNode;
+        return this;
     }
 
-    private void prepareShadow(MethodNode mixinMethod, Method method) {
+    protected void prepareMethod(MethodNode mixinMethod, Method method) {
+        this.prepareShadow(mixinMethod, method);
+        this.prepareSoftImplements(mixinMethod, method);
+    }
+
+    protected void prepareShadow(MethodNode mixinMethod, Method method) {
         AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
         if (shadowAnnotation == null) {
             return;
@@ -132,7 +140,7 @@ class MixinPreProcessor {
         }
     }
 
-    private void prepareSoftImplements(MethodNode mixinMethod, Method method) {
+    protected void prepareSoftImplements(MethodNode mixinMethod, Method method) {
         for (InterfaceInfo iface : this.mixin.getSoftImplements()) {
             if (iface.renameMethod(mixinMethod)) {
                 method.renameTo(mixinMethod.name);
@@ -140,8 +148,11 @@ class MixinPreProcessor {
         }
     }
 
+    protected void prepareField(FieldNode mixinField) {
+        // stub
+    }
+
     MixinTargetContext createContextFor(ClassNode target) {
-        this.prepare();
         MixinTargetContext context = new MixinTargetContext(this.mixin, this.classNode, target);
         this.attach(context);
         return context;
@@ -167,9 +178,14 @@ class MixinPreProcessor {
         this.transform(context);
     }
 
-    private void attachMethods(MixinTargetContext context) {
+    protected void attachMethods(MixinTargetContext context) {
         for (Iterator<MethodNode> iter = this.classNode.methods.iterator(); iter.hasNext();) {
             MethodNode mixinMethod = iter.next();
+            
+            if (!this.validateMethod(context, mixinMethod)) {
+                iter.remove();
+                continue;
+            }
             
             if (this.processMethod(context, mixinMethod, Shadow.class, true, true)) {
                 iter.remove();
@@ -181,7 +197,11 @@ class MixinPreProcessor {
         }
     }
 
-    private boolean processMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
+    protected boolean validateMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        return true;
+    }
+
+    protected boolean processMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
             boolean mustExist, boolean mustBePrivate) {
         AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, annotationType);
         if (annotation == null) {
@@ -220,7 +240,7 @@ class MixinPreProcessor {
         return true;
     }
 
-    private void attachFields(MixinTargetContext context) {
+    protected void attachFields(MixinTargetContext context) {
         for (Iterator<FieldNode> iter = this.classNode.fields.iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(mixinField, Shadow.class);
@@ -282,7 +302,7 @@ class MixinPreProcessor {
         }
     }
 
-    private boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
+    protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
         if (MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)
                 && !MixinApplicator.hasFlag(field, Opcodes.ACC_PRIVATE)
@@ -316,7 +336,7 @@ class MixinPreProcessor {
      * Apply discovered method and field renames to method invocations and field
      * accesses in the mixin
      */
-    private void transform(MixinTargetContext context) {
+    protected void transform(MixinTargetContext context) {
         for (MethodNode mixinMethod : this.classNode.methods) {
             for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
                 AbstractInsnNode insn = iter.next();
@@ -337,7 +357,7 @@ class MixinPreProcessor {
         }
     }
 
-    private static MethodNode findMethod(ClassNode classNode, MethodNode method, AnnotationNode annotation) {
+    protected static MethodNode findMethod(ClassNode classNode, MethodNode method, AnnotationNode annotation) {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(method.name);
         if (annotation != null) {
@@ -347,10 +367,10 @@ class MixinPreProcessor {
             }
         }
         
-        return MixinPreProcessor.findMethod(classNode, aliases, method.desc);
+        return MixinPreProcessor.findMethodRecursive(classNode, aliases, method.desc);
     }
 
-    private static MethodNode findRemappedMethod(ClassNode classNode, MethodNode method) {
+    protected static MethodNode findRemappedMethod(ClassNode classNode, MethodNode method) {
         RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
         String remappedName = remapperChain.mapMethodName(classNode.name, method.name, method.desc);
         if (remappedName.equals(method.name)) {
@@ -360,10 +380,10 @@ class MixinPreProcessor {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(remappedName);
         
-        return MixinPreProcessor.findMethod(classNode, aliases, method.desc);
+        return MixinPreProcessor.findMethodRecursive(classNode, aliases, method.desc);
     }
     
-    private static MethodNode findMethod(ClassNode classNode, Deque<String> aliases, String desc) {
+    private static MethodNode findMethodRecursive(ClassNode classNode, Deque<String> aliases, String desc) {
         String alias = aliases.poll();
         if (alias == null) {
             return null;
@@ -375,10 +395,10 @@ class MixinPreProcessor {
             }
         }
 
-        return MixinPreProcessor.findMethod(classNode, aliases, desc);
+        return MixinPreProcessor.findMethodRecursive(classNode, aliases, desc);
     }
 
-    private static FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
+    protected static FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(field.name);
         if (shadow != null) {
@@ -388,10 +408,10 @@ class MixinPreProcessor {
             }
         }
         
-        return MixinPreProcessor.findField(classNode, aliases, field.desc);
+        return MixinPreProcessor.findFieldRecursive(classNode, aliases, field.desc);
     }
 
-    private static FieldNode findRemappedField(ClassNode classNode, FieldNode field) {
+    protected static FieldNode findRemappedField(ClassNode classNode, FieldNode field) {
         RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
         String remappedName = remapperChain.mapFieldName(classNode.name, field.name, field.desc);
         if (remappedName.equals(field.name)) {
@@ -400,7 +420,7 @@ class MixinPreProcessor {
       
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(remappedName);
-        return MixinPreProcessor.findField(classNode, aliases, field.desc);
+        return MixinPreProcessor.findFieldRecursive(classNode, aliases, field.desc);
     }
     
     /**
@@ -410,7 +430,7 @@ class MixinPreProcessor {
      * @param desc
      * @return Target field  or null if not found
      */
-    private static FieldNode findField(ClassNode classNode, Deque<String> aliases, String desc) {
+    private static FieldNode findFieldRecursive(ClassNode classNode, Deque<String> aliases, String desc) {
         String alias = aliases.poll();
         if (alias == null) {
             return null;
@@ -422,6 +442,6 @@ class MixinPreProcessor {
             }
         }
 
-        return MixinPreProcessor.findField(classNode, aliases, desc);
+        return MixinPreProcessor.findFieldRecursive(classNode, aliases, desc);
     }
 }

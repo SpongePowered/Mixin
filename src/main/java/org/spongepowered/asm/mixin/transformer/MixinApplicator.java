@@ -146,7 +146,7 @@ public class MixinApplicator {
      * locals are shifted so that they don't interfere with locals in the
      * receiving constructor. 
      */
-    private static final int[] INITIALISER_OPCODE_BLACKLIST = {
+    protected static final int[] INITIALISER_OPCODE_BLACKLIST = {
         Opcodes.RETURN, Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
         Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD, Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE,
         Opcodes.ASTORE, Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE, Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE,
@@ -156,29 +156,29 @@ public class MixinApplicator {
     /**
      * Log more things
      */
-    private final Logger logger = LogManager.getLogger("mixin");
+    protected final Logger logger = LogManager.getLogger("mixin");
     
     /**
      * Session ID, used as a check when parsing {@link MixinMerged} annotations
      * to prevent them being applied at compile time by people trying to
      * circumvent mixin application
      */
-    private final String sessionId;
+    protected final String sessionId;
     
     /**
      * Target class name
      */
-    private final String targetName;
+    protected final String targetName;
     
     /**
      * Target class tree 
      */
-    private final ClassNode targetClass;
+    protected final ClassNode targetClass;
     
-    MixinApplicator(String sessionId, String transformedName, ClassNode targetClass) {
-        this.sessionId = sessionId;
-        this.targetName = transformedName;
-        this.targetClass = targetClass;
+    MixinApplicator(TargetClassContext context) {
+        this.sessionId = context.getSessionId();
+        this.targetName = context.getName();
+        this.targetClass = context.getClassNode();
     }
     
     /**
@@ -196,7 +196,7 @@ public class MixinApplicator {
      * 
      * @param mixin Mixin to apply
      */
-    private void applyMixin(MixinTargetContext mixin) {
+    protected final void applyMixin(MixinTargetContext mixin) {
         try {
             mixin.preApply(this.targetName, this.targetClass);
             
@@ -221,7 +221,7 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyInterfaces(MixinTargetContext mixin) {
+    protected void applyInterfaces(MixinTargetContext mixin) {
         for (String interfaceName : mixin.getInterfaces()) {
             if (!this.targetClass.interfaces.contains(interfaceName)) {
                 this.targetClass.interfaces.add(interfaceName);
@@ -235,7 +235,7 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyAttributes(MixinTargetContext mixin) {
+    protected void applyAttributes(MixinTargetContext mixin) {
         if (mixin.shouldSetSourceFile()) {
             this.targetClass.sourceFile = mixin.getSourceFile();
         }
@@ -247,7 +247,7 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyAnnotations(MixinTargetContext mixin) {
+    protected void applyAnnotations(MixinTargetContext mixin) {
         ClassNode sourceClass = mixin.getClassNode();
         this.mergeAnnotations(sourceClass, this.targetClass);
     }
@@ -260,14 +260,21 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyFields(MixinTargetContext mixin) {
+    protected void applyFields(MixinTargetContext mixin) {
+        this.mergeShadowFieldAnnotations(mixin);
+        this.mergeNewFields(mixin);
+    }
+
+    protected void mergeShadowFieldAnnotations(MixinTargetContext mixin) {
         for (FieldNode shadow : mixin.getShadowFields()) {
             FieldNode target = this.findTargetField(shadow);
             if (target != null) {
                 this.mergeAnnotations(shadow, target);
             }
         }
-        
+    }
+
+    protected void mergeNewFields(MixinTargetContext mixin) {
         for (FieldNode field : mixin.getFields()) {
             FieldNode target = this.findTargetField(field);
             if (target == null) {
@@ -282,7 +289,7 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyMethods(MixinTargetContext mixin) {
+    protected void applyMethods(MixinTargetContext mixin) {
         for (MethodNode shadow : mixin.getShadowMethods()) {
             MethodNode target = this.findTargetMethod(shadow);
             if (target != null) {
@@ -325,11 +332,11 @@ public class MixinApplicator {
      * @param isOverwrite true if the method is annotated with an
      *      {@link Overwrite} annotation
      */
-    private void mergeMethod(MixinTargetContext mixin, MethodNode method, boolean isOverwrite) {
+    protected void mergeMethod(MixinTargetContext mixin, MethodNode method, boolean isOverwrite) {
         MethodNode target = this.findTargetMethod(method);
         
         if (target != null) {
-            if (this.alreadyMerged(mixin, method, isOverwrite, target)) {
+            if (this.isAlreadyMerged(mixin, method, isOverwrite, target)) {
                 return;
             }
             
@@ -365,7 +372,7 @@ public class MixinApplicator {
      * @param target target method being checked
      * @return true if the target was already merged and should be skipped
      */
-    private boolean alreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
+    protected boolean isAlreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
         AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
         if (merged == null) {
             return false;
@@ -406,7 +413,7 @@ public class MixinApplicator {
      * @return true if the intrinsic method was skipped (short-circuit further
      *      merge operations)
      */
-    private boolean mergeIntrinsic(MixinTargetContext mixin, MethodNode method, boolean isOverwrite,
+    protected boolean mergeIntrinsic(MixinTargetContext mixin, MethodNode method, boolean isOverwrite,
             MethodNode target, AnnotationNode intrinsic) {
         
         if (isOverwrite) {
@@ -439,7 +446,7 @@ public class MixinApplicator {
      * @param method Method being merged
      * @param target target method being checked
      */
-    private void displaceIntrinsic(MixinTargetContext mixin, MethodNode method, MethodNode target) {
+    protected void displaceIntrinsic(MixinTargetContext mixin, MethodNode method, MethodNode target) {
         // Deliberately include invalid character in the method name so that
         // we guarantee no hackiness
         String proxyName = "proxy+" + target.name;
@@ -463,7 +470,7 @@ public class MixinApplicator {
      * 
      * @param method
      */
-    private void appendInsns(MethodNode method) {
+    protected final void appendInsns(MethodNode method) {
         if (Type.getReturnType(method.desc) != Type.VOID_TYPE) {
             throw new IllegalArgumentException("Attempted to merge insns from a method which does not return void");
         }
@@ -498,7 +505,7 @@ public class MixinApplicator {
      * 
      * @param mixin
      */
-    private void applyInitialisers(MixinTargetContext mixin) {
+    protected void applyInitialisers(MixinTargetContext mixin) {
         // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
         MethodNode ctor = this.getConstructor(mixin);
         if (ctor == null) {
@@ -526,7 +533,7 @@ public class MixinApplicator {
      * @param mixin mixin to search
      * @return appropriate ctor or null if none found
      */
-    private MethodNode getConstructor(MixinTargetContext mixin) {
+    protected MethodNode getConstructor(MixinTargetContext mixin) {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
@@ -598,7 +605,7 @@ public class MixinApplicator {
      * @return initialiser bytecode extracted from the supplied constructor, or
      *      null if the constructor range could not be parsed
      */
-    private Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
+    protected final Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
         // Find the range of line numbers which corresponds to the constructor body
         Range init = this.getConstructorRange(ctor);
         if (!init.isValid()) {
@@ -669,7 +676,7 @@ public class MixinApplicator {
      * @param ctor
      * @param initialiser
      */
-    private void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
+    protected final void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
         Map<LabelNode, LabelNode> labels = ASMHelper.cloneLabels(ctor.instructions);
         
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
@@ -698,7 +705,7 @@ public class MixinApplicator {
      * methods
      * @param mixin
      */
-    private void applyInjections(MixinTargetContext mixin) {
+    protected void applyInjections(MixinTargetContext mixin) {
         List<InjectionInfo> injected = new ArrayList<InjectionInfo>();
         
         for (MethodNode method : this.targetClass.methods) {
@@ -727,7 +734,7 @@ public class MixinApplicator {
      * @param mixin Mixin being applied
      * @param annotation Annotation node to check constraints
      */
-    private void checkConstraints(MixinTargetContext mixin, AnnotationNode annotation) {
+    protected final void checkConstraints(MixinTargetContext mixin, AnnotationNode annotation) {
         try {
             Constraint constraint = ConstraintParser.parse(annotation);
             MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
@@ -756,7 +763,7 @@ public class MixinApplicator {
      * @param from ClassNode to merge annotations from
      * @param to ClassNode to merge annotations to
      */
-    private void mergeAnnotations(ClassNode from, ClassNode to) {
+    protected final void mergeAnnotations(ClassNode from, ClassNode to) {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
@@ -772,7 +779,7 @@ public class MixinApplicator {
      * @param from MethodNode to merge annotations from
      * @param to MethodNode to merge annotations to
      */
-    private void mergeAnnotations(MethodNode from, MethodNode to) {
+    protected final void mergeAnnotations(MethodNode from, MethodNode to) {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
@@ -788,7 +795,7 @@ public class MixinApplicator {
      * @param from FieldNode to merge annotations from
      * @param to FieldNode to merge annotations to
      */
-    private void mergeAnnotations(FieldNode from, FieldNode to) {
+    protected final void mergeAnnotations(FieldNode from, FieldNode to) {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
@@ -840,7 +847,7 @@ public class MixinApplicator {
      * @param opcode opcode to search for
      * @return found node or null if not found 
      */
-    private static AbstractInsnNode findInsn(MethodNode method, int opcode) {
+    protected static AbstractInsnNode findInsn(MethodNode method, int opcode) {
         Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
         while (findReturnIter.hasNext()) {
             AbstractInsnNode insn = findReturnIter.next();
@@ -872,7 +879,7 @@ public class MixinApplicator {
      * 
      * @return Target method matching searchFor, or null if not found
      */
-    private MethodNode findTargetMethod(MethodNode searchFor) {
+    protected final MethodNode findTargetMethod(MethodNode searchFor) {
         for (MethodNode target : this.targetClass.methods) {
             if (target.name.equals(searchFor.name) && target.desc.equals(searchFor.desc)) {
                 return target;
@@ -888,7 +895,7 @@ public class MixinApplicator {
      * 
      * @return Target field matching searchFor, or null if not found
      */
-    private FieldNode findTargetField(FieldNode searchFor) {
+    protected final FieldNode findTargetField(FieldNode searchFor) {
         for (FieldNode target : this.targetClass.fields) {
             if (target.name.equals(searchFor.name)) {
                 return target;
@@ -905,7 +912,7 @@ public class MixinApplicator {
      * @param flag 
      * @return True if the specified flag is set in this method's access flags
      */
-    static boolean hasFlag(MethodNode method, int flag) {
+    protected static boolean hasFlag(MethodNode method, int flag) {
         return (method.access & flag) == flag;
     }
     
@@ -916,7 +923,7 @@ public class MixinApplicator {
      * @param flag 
      * @return True if the specified flag is set in this field's access flags
      */
-    static boolean hasFlag(FieldNode field, int flag) {
+    protected static boolean hasFlag(FieldNode field, int flag) {
         return (field.access & flag) == flag;
     }
 }
