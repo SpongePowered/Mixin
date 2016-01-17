@@ -300,6 +300,33 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         return new PrintWriter(outSrg.openWriter());
     }
 
+    public ObfuscationData<MethodData> getObfMethodRecursive(MemberInfo targetMember) {
+        ObfuscationData<String> targetNames = this.getObfClass(targetMember.owner);
+        ObfuscationData<MethodData> obfMethodData = this.getObfMethod(targetMember.asMethodData());
+        try {
+            while (obfMethodData.isEmpty()) {
+                TypeHandle targetType = this.getTypeHandle(targetMember.owner);
+                if (targetType == null) {
+                    return obfMethodData;
+                }
+                TypeHandle superClass = targetType.getSuperclass();
+                if (superClass == null) {
+                    return obfMethodData;
+                }
+                targetMember = targetMember.move(superClass.getName());
+                obfMethodData = this.getObfMethod(targetMember.asMethodData());
+                if (!obfMethodData.isEmpty()) {
+                    for (ObfuscationType type : obfMethodData) {
+                        obfMethodData.add(type, MemberInfo.fromSrgMethod(obfMethodData.get(type)).move(targetNames.get(type)).asMethodData());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // ???
+        }
+        return obfMethodData;
+    }
+    
     public ObfuscationData<MethodData> getObfMethod(MemberInfo method) {
         ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
         
@@ -327,6 +354,33 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         }
         
         return data;
+    }
+
+    public ObfuscationData<String> getObfFieldRecursive(MemberInfo targetMember) {
+        ObfuscationData<String> targetNames = this.getObfClass(targetMember.owner);
+        ObfuscationData<String> obfFieldData = this.getObfField(targetMember.toSrg());
+        try {
+            while (obfFieldData.isEmpty()) {
+                TypeHandle targetType = this.getTypeHandle(targetMember.owner);
+                if (targetType == null) {
+                    return obfFieldData;
+                }
+                TypeHandle superClass = targetType.getSuperclass();
+                if (superClass == null) {
+                    return obfFieldData;
+                }
+                targetMember = targetMember.move(superClass.getName());
+                obfFieldData = this.getObfField(targetMember.toSrg());
+                if (!obfFieldData.isEmpty()) {
+                    for (ObfuscationType type : obfFieldData) {
+                        obfFieldData.add(type, MemberInfo.fromSrgField(obfFieldData.get(type), "").move(targetNames.get(type)).toSrg());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            // ???
+        }
+        return obfFieldData;
     }
 
     /**

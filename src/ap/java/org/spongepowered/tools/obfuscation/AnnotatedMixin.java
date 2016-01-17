@@ -627,7 +627,7 @@ class AnnotatedMixin {
         }
         
         if (targetMember.isField()) {
-            ObfuscationData<String> obfFieldData = this.getObfFieldRecursive(targetMember);
+            ObfuscationData<String> obfFieldData = this.mixins.getObfFieldRecursive(targetMember);
             if (obfFieldData.isEmpty()) {
                 this.mixins.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
                 return false;
@@ -643,33 +643,6 @@ class AnnotatedMixin {
             this.mixins.addMethodMapping(this.classRef, target, targetMember, obfMethodData);
         }
         return true;
-    }
-
-    private ObfuscationData<String> getObfFieldRecursive(MemberInfo targetMember) {
-        ObfuscationData<String> targetNames = this.mixins.getObfClass(targetMember.owner);
-        ObfuscationData<String> obfFieldData = this.mixins.getObfField(targetMember.toSrg());
-        try {
-            while (obfFieldData.isEmpty()) {
-                TypeHandle targetType = this.mixins.getTypeHandle(targetMember.owner);
-                if (targetType == null) {
-                    return obfFieldData;
-                }
-                TypeHandle superClass = targetType.getSuperclass();
-                if (superClass == null) {
-                    return obfFieldData;
-                }
-                targetMember = targetMember.move(superClass.getName());
-                obfFieldData = this.mixins.getObfField(targetMember.toSrg());
-                if (!obfFieldData.isEmpty()) {
-                    for (ObfuscationType type : obfFieldData) {
-                        obfFieldData.add(type, MemberInfo.fromSrgField(obfFieldData.get(type), "").move(targetNames.get(type)).toSrg());
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            // ???
-        }
-        return obfFieldData;
     }
 
     /**
