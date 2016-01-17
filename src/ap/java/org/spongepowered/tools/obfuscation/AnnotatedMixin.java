@@ -634,7 +634,7 @@ class AnnotatedMixin {
             }
             this.mixins.addFieldMapping(this.classRef, target, targetMember, obfFieldData);
         } else {
-            ObfuscationData<MethodData> obfMethodData = this.mixins.getObfMethod(targetMember);
+            ObfuscationData<MethodData> obfMethodData = this.mixins.getObfMethodRecursive(targetMember);
             if (obfMethodData.isEmpty()) {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.mixins.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
