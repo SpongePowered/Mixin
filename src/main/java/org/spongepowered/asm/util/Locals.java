@@ -219,23 +219,48 @@ public class Locals {
      *      variable at the specified location in the specified local slot
      */
     public static LocalVariableNode getLocalVariableAt(ClassNode classNode, MethodNode method, AbstractInsnNode node, int var) {
+        return Locals.getLocalVariableAt(classNode, method, method.instructions.indexOf(node), var);
+    }
+
+    /**
+     * Attempts to locate the appropriate entry in the local variable table for
+     * the specified local variable index at the location specified by pos.
+     * 
+     * @param classNode Containing class
+     * @param method Method
+     * @param var Local variable index
+     * @param pos The opcode index to get the local variable table at
+     * @return a LocalVariableNode containing information about the local
+     *      variable at the specified location in the specified local slot
+     */
+    private static LocalVariableNode getLocalVariableAt(ClassNode classNode, MethodNode method, int pos, int var) {
         LocalVariableNode localVariableNode = null;
+        LocalVariableNode fallbackNode = null;
 
-        int pos = method.instructions.indexOf(node);
-
-        List<LocalVariableNode> localVariables = Locals.getLocalVariableTable(classNode, method);
-        for (LocalVariableNode local : localVariables) {
+        for (LocalVariableNode local : Locals.getLocalVariableTable(classNode, method)) {
             if (local.index != var) {
                 continue;
             }
-            int start = method.instructions.indexOf(local.start);
-            int end = method.instructions.indexOf(local.end);
-            if (localVariableNode == null || start < pos && end > pos) {
+            if (Locals.isOpcodeInRange(method.instructions, local, pos)) {
                 localVariableNode = local;
+            } else if (localVariableNode == null) {
+                fallbackNode = local;
             }
         }
+        
+        if (localVariableNode == null && !method.localVariables.isEmpty()) {
+            for (LocalVariableNode local : Locals.getGeneratedLocalVariableTable(classNode, method)) {
+                if (local.index == var && Locals.isOpcodeInRange(method.instructions, local, pos)) {
+                    localVariableNode = local;
+                }
+            }
+        }
+        
+        return localVariableNode != null ? localVariableNode : fallbackNode;
+    }
 
-        return localVariableNode;
+    private static boolean isOpcodeInRange(InsnList insns, LocalVariableNode local, int pos) {
+        return insns.indexOf(local.start) < pos && insns.indexOf(local.end) > pos;
     }
 
     /**
@@ -247,23 +272,32 @@ public class Locals {
      * 
      * @param classNode Containing class
      * @param method Method
-     * @return generated local variable table 
+     * @return local variable table 
      */
     public static List<LocalVariableNode> getLocalVariableTable(ClassNode classNode, MethodNode method) {
         if (method.localVariables.isEmpty()) {
-            String signature = String.format("%s.%s%s", classNode.name, method.name, method.desc);
-
-            List<LocalVariableNode> localVars = Locals.calculatedLocalVariables.get(signature);
-            if (localVars != null) {
-                return localVars;
-            }
-
-            localVars = Locals.generateLocalVariableTable(classNode, method);
-            Locals.calculatedLocalVariables.put(signature, localVars);
+            return Locals.getGeneratedLocalVariableTable(classNode, method);
+        }
+        return method.localVariables;
+    }
+    
+    /**
+     * Gets the generated the local variable table for the specified method.
+     * 
+     * @param classNode Containing class
+     * @param method Method
+     * @return generated local variable table 
+     */
+    public static List<LocalVariableNode> getGeneratedLocalVariableTable(ClassNode classNode, MethodNode method) {
+        String methodId = String.format("%s.%s%s", classNode.name, method.name, method.desc);
+        List<LocalVariableNode> localVars = Locals.calculatedLocalVariables.get(methodId);
+        if (localVars != null) {
             return localVars;
         }
 
-        return method.localVariables;
+        localVars = Locals.generateLocalVariableTable(classNode, method);
+        Locals.calculatedLocalVariables.put(methodId, localVars);
+        return localVars;
     }
 
     /**
