@@ -30,6 +30,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
@@ -38,10 +40,12 @@ import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.RemapperChain;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -68,6 +72,11 @@ import org.spongepowered.asm.util.Constants;
  * class members for obvious reasons.</p>  
  */
 class MixinPreProcessor {
+    
+    /**
+     * Logger
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * The mixin
@@ -79,11 +88,14 @@ class MixinPreProcessor {
      */
     private final ClassNode classNode;
     
+    private final boolean verboseLogging;
+    
     private boolean prepared, attached;
 
     MixinPreProcessor(MixinInfo mixin, ClassNode classNode) {
         this.mixin = mixin;
         this.classNode = classNode;
+        this.verboseLogging = mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERBOSE);
     }
 
     /**
@@ -212,6 +224,7 @@ class MixinPreProcessor {
         for (Iterator<FieldNode> iter = this.classNode.fields.iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(mixinField, Shadow.class);
+            boolean isFinal = ASMHelper.getVisibleAnnotation(mixinField, Final.class) != null;
             if (!this.validateField(context, mixinField, shadow)) {
                 iter.remove();
                 continue;
@@ -252,7 +265,19 @@ class MixinPreProcessor {
             iter.remove();
             
             if (shadow != null) {
-                context.addShadowField(mixinField);
+                if (field == null) {
+                    throw new InvalidMixinException(this.mixin, "Unable to locate field surrogate: " + mixinField.name + " in " + this.mixin);
+                }
+                field.setDecoratedFinal(isFinal);
+
+                if (this.verboseLogging && MixinApplicator.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
+                    String message = isFinal
+                        ? "@Shadow field {}::{} is decorated with @Final but target is not final"
+                        : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
+                    MixinPreProcessor.logger.warn(message, this.mixin, mixinField.name);
+                }
+
+                context.addShadowField(mixinField, field);
             }
         }
     }

@@ -43,6 +43,7 @@ import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.FrameNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 
@@ -190,6 +191,11 @@ public class ClassInfo extends TreeInfo {
          * if the member has been renamed
          */
         private String currentName;
+        
+        /**
+         * True if this member is decorated with {@link Final} 
+         */
+        private boolean decoratedFinal;
 
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
@@ -237,6 +243,22 @@ public class ClassInfo extends TreeInfo {
             return (this.modifiers & Opcodes.ACC_STATIC) != 0;
         }
 
+        public boolean isAbstract() {
+            return (this.modifiers & Opcodes.ACC_ABSTRACT) != 0;
+        }
+
+        public boolean isFinal() {
+            return (this.modifiers & Opcodes.ACC_FINAL) != 0;
+        }
+        
+        public boolean isDecoratedFinal() {
+            return this.decoratedFinal;
+        }
+
+        public void setDecoratedFinal(boolean decoratedFinal) {
+            this.decoratedFinal = decoratedFinal;
+        }
+            
         public boolean matchesFlags(int flags) {
             return (((~this.modifiers | (flags & ClassInfo.INCLUDE_PRIVATE)) & ClassInfo.INCLUDE_PRIVATE) != 0
                  && ((~this.modifiers | (flags & ClassInfo.INCLUDE_STATIC)) & ClassInfo.INCLUDE_STATIC) != 0);
@@ -282,11 +304,11 @@ public class ClassInfo extends TreeInfo {
 
         @Override
         public String toString() {
-            return this.memberName + this.memberDesc;
+            return String.format(this.getDisplayFormat(), this.memberName, this.memberDesc);
         }
 
-        public boolean isAbstract() {
-            return (this.modifiers & Opcodes.ACC_ABSTRACT) != 0;
+        protected String getDisplayFormat() {
+            return "%s%s";
         }
     }
 
@@ -418,6 +440,11 @@ public class ClassInfo extends TreeInfo {
             }
 
             return super.equals(obj);
+        }
+        
+        @Override
+        protected String getDisplayFormat() {
+            return "%s:%s";
         }
     }
 
@@ -579,9 +606,7 @@ public class ClassInfo extends TreeInfo {
                     }
                 }
 
-                if ((field.access & Opcodes.ACC_STATIC) == 0) {
-                    this.fields.add(new Field(field, this.isMixin));
-                }
+                this.fields.add(new Field(field, this.isMixin));
             }
         }
 

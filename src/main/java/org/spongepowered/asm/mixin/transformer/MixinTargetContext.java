@@ -25,19 +25,25 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Handle;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionError;
@@ -45,6 +51,7 @@ import org.spongepowered.asm.mixin.injection.InjectionValidationException;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
@@ -58,6 +65,11 @@ import org.spongepowered.asm.util.Constants;
  * in the mixin to the appropriate members in the target class hierarchy. 
  */
 public class MixinTargetContext implements IReferenceMapperContext {
+    
+    /**
+     * Logger
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * Mixin info
@@ -87,7 +99,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Shadow field list
      */
-    private final List<FieldNode> shadowFields = new ArrayList<FieldNode>();
+    private final Map<FieldNode, Field> shadowFields = new LinkedHashMap<FieldNode, Field>();
 
     /**
      * Information about methods in the target class, used to keep track of
@@ -141,10 +153,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     /**
-     * @param field
+     * @param fieldNode
      */
-    void addShadowField(FieldNode field) {
-        this.shadowFields.add(field);
+    void addShadowField(FieldNode fieldNode, Field fieldInfo) {
+        this.shadowFields.put(fieldNode, fieldInfo);
     }
     
     /* (non-Javadoc)
@@ -286,6 +298,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
                 this.transformMethodRef(method, iter, new MemberRef.Method((MethodInsnNode)insn));
             } else if (insn instanceof FieldInsnNode) {
                 this.transformFieldRef(method, iter, new MemberRef.Field((FieldInsnNode)insn));
+                this.checkFinal(method, iter, (FieldInsnNode)insn);
             } else if (insn instanceof TypeInsnNode) {
                 this.transformTypeNode(method, iter, (TypeInsnNode)insn, lastInsn);
             } else if (insn instanceof LdcInsnNode) {
@@ -370,6 +383,32 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
     }
 
+    private void checkFinal(MethodNode method, Iterator<AbstractInsnNode> iter, FieldInsnNode fieldNode) {
+        if (!fieldNode.owner.equals(this.targetClass.name)) {
+            return;
+        }
+        
+        int opcode = fieldNode.getOpcode();
+        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+            return;
+        }
+        
+        for (Entry<FieldNode, Field> shadow : this.shadowFields.entrySet()) {
+            FieldNode shadowField = shadow.getKey();
+            if (!shadowField.desc.equals(fieldNode.desc) || !shadowField.name.equals(fieldNode.name)) {
+                continue;
+            }
+            if (shadow.getValue().isDecoratedFinal()) {
+                MixinTargetContext.logger.error("Write access detected to @Final field {} in {}::{}", shadow.getValue(), this.mixin, method.name);
+                if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERIFY)) {
+                    throw new InvalidMixinException(this.mixin, "Write access detected to @Final field " + shadow.getValue() + " in " + this.mixin
+                            + "::" + method.name);
+                }
+            }
+            return;
+        }
+    }
+    
     /**
      * Transforms type operations (eg. cast, instanceof) in the method being
      * processed. Changes references to mixin classes to that of the appropriate
@@ -720,7 +759,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @return shadow methods in the mixin
      */
-    public List<MethodNode> getShadowMethods() {
+    public Collection<MethodNode> getShadowMethods() {
         return this.shadowMethods;
     }
 
@@ -738,8 +777,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @return shadow fields in the mixin
      */
-    public List<FieldNode> getShadowFields() {
-        return this.shadowFields;
+    public Collection<FieldNode> getShadowFields() {
+        return this.shadowFields.keySet();
     }
     
     /**

@@ -46,6 +46,7 @@ import org.spongepowered.asm.lib.tree.LabelNode;
 import org.spongepowered.asm.lib.tree.LineNumberNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -380,7 +381,12 @@ public class MixinApplicator {
         int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
         
         if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
-            this.logger.warn("Method overwrite conflict for {}, previously written by {}. Skipping method.", method.name, owner);
+            this.logger.warn("Method overwrite conflict for {} in {}, previously written by {}. Skipping method.", method.name, mixin, owner);
+            return true;
+        }
+        
+        if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+            this.logger.warn("Method overwrite conflict for @Final method {} in {} declared by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
 
