@@ -1282,7 +1282,7 @@ public class ClassInfo extends TreeInfo {
             }
         }
         
-        if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().resolveMethodsInInterfaces())) {
+        if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces())) {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);
                 if (iface == null) {

@@ -24,10 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.util.SortedSet;
-
 import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
 /**
@@ -56,22 +53,20 @@ public class MixinTransformerModuleCheckClass implements IMixinTransformerModule
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #preTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+     *     #preApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void preApply(TargetClassContext context) {
     }
-
+    
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #postTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+     *    #postApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public void postApply(TargetClassContext context) {
         try {
-            targetClass.accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
+            context.getClassNode().accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
         } catch (RuntimeException ex) {
             throw new ValidationFailedException(ex.getMessage(), ex);
         }

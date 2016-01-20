@@ -234,6 +234,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Cached class info 
      */
     private final transient ClassInfo info;
+    
+    /**
+     * True if this is an interface mixin rather than a regular mixin
+     */
+    private final transient boolean isInterfaceMixin;
 
     /**
      * Holds state that currently is not fully initialised or validated
@@ -267,6 +272,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
         this.uninitialisedState = new ValidationState(mixinBytes);
         this.info = this.uninitialisedState.classInfo;
+        this.isInterfaceMixin = this.info.isInterface();
 
         ClassNode classNode = this.uninitialisedState.getClassNode(0);
         this.priority = this.readPriority(classNode);
@@ -284,7 +290,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (this.uninitialisedState instanceof ReloadedState) {
                 ((ReloadedState) this.uninitialisedState).validateChanges();
             } else {
-                new MixinPreProcessor(this, classNode).prepare();
+                this.createPreProcessor(classNode).prepare();
             }
             this.uninitialisedState.classNode = null;
             // the state is now fully initialised and validated
@@ -316,7 +322,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 @Override
                 public String apply(Type input) {
                     return input.getClassName();
-                };
+                }
             }), suppressPlugin, false);
         }
         
@@ -335,21 +341,27 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             targetClassName = targetClassName.replace('/', '.');
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
                 ClassInfo targetInfo = ClassInfo.forName(targetClassName);
-                if (targetInfo == null) {
-                    throw new RuntimeException("@Mixin target " + targetClassName + " was not found " + this);
-                }
-                if (targetInfo.isInterface()) {
-                    throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is an interface in " + this);
-                }
-                if (checkPublic && targetInfo.isPublic()) {
-                    throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is public in " + this
-                            + " and must be specified in value");
-                }
+                this.checkTarget(targetClassName, targetInfo, checkPublic);
                 if (!outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
                     targetInfo.addMixin(this);
                 }
             }
+        }
+    }
+
+    private void checkTarget(String targetClassName, ClassInfo targetInfo, boolean checkPublic) throws InvalidMixinException {
+        if (targetInfo == null) {
+            throw new RuntimeException("@Mixin target " + targetClassName + " was not found " + this);
+        }
+        boolean targetIsInterface = targetInfo.isInterface();
+        if (targetIsInterface != this.isInterfaceMixin) {
+            String not = targetIsInterface ? "" : "not ";
+            throw new InvalidMixinException(this, "@Mixin target type mismatch: " + targetClassName + " is " + not + "an interface in " + this);
+        }
+        if (checkPublic && targetInfo.isPublic()) {
+            throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is public in " + this
+                    + " and must be specified in value");
         }
     }
 
@@ -370,6 +382,21 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     private boolean validateTargetClasses(ClassNode classNode) {
+        if (this.isInterfaceMixin) {
+            return this.validateInterfaceMixinTargets(classNode);
+        }
+        return this.validateClassMixinTargets(classNode);
+    }
+
+    private boolean validateInterfaceMixinTargets(ClassNode classNode) {
+        if (!"java/lang/Object".equals(classNode.superName)) {
+            throw new InvalidMixinException(this, "Super class of " + this + " is invalid, found " + classNode.superName.replace('/', '.'));
+        }
+        
+        return false;
+    }
+
+    private boolean validateClassMixinTargets(ClassNode classNode) {
         boolean detached = false;
         
         for (ClassInfo targetClass : this.targetClasses) {
@@ -405,6 +432,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param state State to validate
      */
     private void validateMixin(ValidationState state) {
+        if (this.isInterfaceMixin && !MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces()) {
+            throw new InvalidMixinException(this, "Interface mixin not supported in current enviromnment");
+        }
+        
         // isInner (shouldn't) return true for static inner classes
         if (!state.classInfo.isProbablyStatic()) {
             throw new InvalidMixinException(this, "Inner class mixin must be declared static");
@@ -568,6 +599,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     public Phase getPhase() {
         return this.phase;
     }
+    
+    /**
+     * Get whether this is an interface mixin or not
+     */
+    @Override
+    public boolean isInterfaceMixin() {
+        return this.isInterfaceMixin;
+    }
 
     /**
      * Get a new tree for the class bytecode
@@ -637,7 +676,20 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @return new context
      */
     public MixinTargetContext createContextFor(ClassNode target) {
-        return new MixinPreProcessor(this, this.getClassNode(ClassReader.EXPAND_FRAMES)).createContextFor(target);
+        ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
+        return this.createPreProcessor(classNode).prepare().createContextFor(target);
+    }
+
+    /**
+     * Create a preprocessor based on this mixin's type
+     * 
+     * @return new preprocessor
+     */
+    private MixinPreProcessor createPreProcessor(ClassNode classNode) {
+        if (this.isInterfaceMixin) {
+            return new InterfaceMixinPreProcessor(this, classNode);
+        }
+        return new MixinPreProcessor(this, classNode);
     }
 
     /**

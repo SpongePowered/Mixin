@@ -61,10 +61,10 @@ public abstract class MixinProcessor extends AbstractProcessor {
         this.mixins.onPassStarted();
         
         for (Element elem : roundEnv.getElementsAnnotatedWith(Mixin.class)) {
-            if (elem.getKind() == ElementKind.CLASS) {
+            if (elem.getKind() == ElementKind.CLASS || elem.getKind() == ElementKind.INTERFACE) {
                 this.mixins.registerMixin((TypeElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Found an @Mixin annotation on an element which is not a class", elem);
+                this.mixins.printMessage(Kind.ERROR, "Found an @Mixin annotation on an element which is not a class or interface", elem);
             }
         }
     }

@@ -32,10 +32,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.SortedSet;
 
 import org.apache.commons.io.IOUtils;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -90,12 +88,11 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #preTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+     *     #preApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
+    public void preApply(TargetClassContext context) {
+        ClassInfo targetClassInfo = context.getClassInfo();
         for (Method m : targetClassInfo.getInterfaceMethods(false)) {
             this.interfaceMethods.put(targetClassInfo, m);
         }
@@ -103,12 +100,11 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #postTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+     *    #postApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        ClassInfo targetClassInfo = ClassInfo.forName(targetClass.name);
+    public void postApply(TargetClassContext context) {
+        ClassInfo targetClassInfo = context.getClassInfo();
 
         String className = targetClassInfo.getName().replace('/', '.');
         int missingMethodCount = 0;

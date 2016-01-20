@@ -102,4 +102,12 @@ public interface IMixinInfo {
      * @return the phase
      */
     public abstract Phase getPhase();
+    
+    /**
+     * Get whether this is an interface mixin or not
+     * 
+     * @return true if this is an interface mixin
+     */
+    public abstract boolean isInterfaceMixin();
+    
 }

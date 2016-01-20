@@ -32,29 +32,41 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 public class InvalidInjectionException extends InvalidMixinException {
 
     private static final long serialVersionUID = 1L;
+    
+    private final InjectionInfo info;
 
     public InvalidInjectionException(MixinTargetContext mixin, String message) {
         super(mixin, message);
+        this.info = null;
     }
 
     public InvalidInjectionException(InjectionInfo info, String message) {
         super(info.getContext(), message);
+        this.info = info;
     }
 
     public InvalidInjectionException(MixinTargetContext mixin, Throwable cause) {
         super(mixin, cause);
+        this.info = null;
     }
 
     public InvalidInjectionException(InjectionInfo info, Throwable cause) {
         super(info.getContext(), cause);
+        this.info = info;
     }
 
     public InvalidInjectionException(MixinTargetContext mixin, String message, Throwable cause) {
         super(mixin, message, cause);
+        this.info = null;
     }
 
     public InvalidInjectionException(InjectionInfo info, String message, Throwable cause) {
         super(info.getContext(), message, cause);
+        this.info = info;
+    }
+    
+    public InjectionInfo getInjectionInfo() {
+        return this.info;
     }
     
 }

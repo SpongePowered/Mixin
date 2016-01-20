@@ -37,6 +37,7 @@ import java.util.Set;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -231,6 +232,11 @@ class AnnotatedMixin {
     private final TypeHandle handle;
     
     /**
+     * True if this is an interface mixin 
+     */
+    private final boolean isInterface;
+
+    /**
      * Specified targets
      */
     private final List<TypeHandle> targets = new ArrayList<TypeHandle>();
@@ -266,11 +272,11 @@ class AnnotatedMixin {
     private final Map<ObfuscationType, Set<String>> methodMappings = new HashMap<ObfuscationType, Set<String>>();
 
     public AnnotatedMixin(AnnotatedMixins mixins, TypeElement type) {
-        
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.mixins = mixins;
         this.mixin = type;
         this.handle = new TypeHandle(type);
+        this.isInterface = type.getKind() == ElementKind.INTERFACE;
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         
         TypeHandle primaryTarget = this.initTargets();
@@ -374,6 +380,13 @@ class AnnotatedMixin {
      */
     public TypeHandle getHandle() {
         return this.handle;
+    }
+    
+    /**
+     * Get whether this is an interface mixin
+     */
+    public boolean isInterface() {
+        return this.isInterface;
     }
     
     /**
@@ -544,6 +557,10 @@ class AnnotatedMixin {
      * @return pending error message or null if no error condition
      */
     public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
+        if (this.isInterface) {
+            this.mixins.printMessage(Kind.ERROR, "Injector in interface is unsupported", method);
+        }
+        
         String originalReference = MirrorUtils.<String>getAnnotationValue(inject, "method");
         MemberInfo targetMember = MemberInfo.parse(originalReference);
         if (targetMember.name == null) {
@@ -591,6 +608,10 @@ class AnnotatedMixin {
      * and process the references
      */
     public int registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
+        if (this.isInterface) {
+            this.mixins.printMessage(Kind.ERROR, "Injector in interface is unsupported", element);
+        }
+        
         if (!AnnotatedMixins.getRemapValue(at)) {
             return 0;
         }

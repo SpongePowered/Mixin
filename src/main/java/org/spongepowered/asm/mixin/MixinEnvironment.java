@@ -437,11 +437,11 @@ public class MixinEnvironment implements ITokenProvider {
         
         private final int classVersion;
         
-        private final boolean resolveMethodsInInterfaces;
+        private final boolean supportsMethodsInInterfaces;
         
         private CompatibilityLevel(int classVersion, boolean resolveMethodsInInterfaces) {
             this.classVersion = classVersion;
-            this.resolveMethodsInInterfaces = resolveMethodsInInterfaces;
+            this.supportsMethodsInInterfaces = resolveMethodsInInterfaces;
         }
         
         boolean isSupported() {
@@ -452,8 +452,8 @@ public class MixinEnvironment implements ITokenProvider {
             return this.classVersion;
         }
         
-        public boolean resolveMethodsInInterfaces() {
-            return this.resolveMethodsInInterfaces;
+        public boolean supportsMethodsInInterfaces() {
+            return this.supportsMethodsInInterfaces;
         }
         
         public boolean isAtLeast(CompatibilityLevel level) {
