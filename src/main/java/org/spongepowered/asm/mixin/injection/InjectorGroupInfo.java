@@ -225,7 +225,7 @@ public class InjectorGroupInfo {
             throw new IllegalArgumentException("Cannot set zero or negative value for injector group max count. Attempted to set max="
                     + max + " on " + this);
         }
-        if (this.maxCallbackCount > 0 && this.maxCallbackCount != max) {
+        if (this.maxCallbackCount < Integer.MAX_VALUE && this.maxCallbackCount != max) {
             LogManager.getLogger("mixin").warn("Conflicting max value '{}' on @Group({}), previously specified {}", max, this.name,
                     this.maxCallbackCount);
         }
