@@ -22,10 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.interfaces;
 
-public interface ITypeHandleProvider {
+import javax.lang.model.element.Element;
 
-    public abstract TypeHandle getTypeHandle(String name);
-    
+/**
+ * Provides javadoc. What else did you expect?
+ */
+public interface IJavadocProvider {
+
+    /**
+     * Get javadoc on element
+     * 
+     * @param element Element to fetch javadoc for
+     * @return javadoc
+     */
+    public abstract String getJavadoc(Element element);
+
 }

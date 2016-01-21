@@ -24,10 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,7 +35,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -57,24 +53,25 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
+import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.struct.Message;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
 import com.google.common.collect.ImmutableList;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the srgs
  */
-class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITypeHandleProvider {
+class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
     
     private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
 
@@ -113,19 +110,9 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
     private final List<AnnotatedMixin> mixinsForPass = new ArrayList<AnnotatedMixin>();
     
     /**
-     * Name of the resource to write remapped refs to
+     * Obfuscation manager
      */
-    private final String outRefMapFileName;
-    
-    /**
-     * Target obfuscation environments
-     */
-    private final List<TargetObfuscationEnvironment> targetEnvironments = new ArrayList<TargetObfuscationEnvironment>();
-    
-    /**
-     * Reference mapper for reference mapping 
-     */
-    private final ReferenceMapper refMapper = new ReferenceMapper();
+    private final ObfuscationManager obf;
     
     /**
      * Rule validators
@@ -155,19 +142,13 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
         this.targets = this.initTargetMap();
-        this.outRefMapFileName = this.getOption(SupportedOptions.OUT_REFMAP_FILE);
+        this.obf = new ObfuscationManager(this);
 
         this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
 
-        for (ObfuscationType obfType : ObfuscationType.values()) {
-            if (obfType.isSupported(this)) {
-                this.targetEnvironments.add(new TargetObfuscationEnvironment(obfType, this, this, this, this.refMapper));
-            }
-        }
-        
         this.validators = ImmutableList.<IMixinValidator>of(
-            new ParentValidator(processingEnv, this, this),
-            new TargetValidator(processingEnv, this, this)
+            new ParentValidator(this),
+            new TargetValidator(this)
         );
         
         this.initTokenCache(this.getOption("tokens"));
@@ -191,6 +172,31 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
                 }
             }
         }
+    }
+    
+    @Override
+    public ITypeHandleProvider getTypeProvider() {
+        return this;
+    }
+
+    @Override
+    public ITokenProvider getTokenProvider() {
+        return this;
+    }
+
+    @Override
+    public IObfuscationManager getObfuscationManager() {
+        return this.obf;
+    }
+
+    @Override
+    public IJavadocProvider getJavadocProvider() {
+        return this;
+    }
+    
+    @Override
+    public ProcessingEnvironment getProcessingEnvironment() {
+        return this.processingEnv;
     }
 
     @Override
@@ -253,222 +259,16 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
      * Write out generated srgs
      */
     public void writeSrgs() {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            targetEnv.writeSrgs(this.processingEnv.getFiler(), this.mixins);
-        }
+        this.obf.writeSrgs(this.mixins);
     }
 
     /**
      * Write out stored mappings
      */
     public void writeRefs() {
-        if (this.outRefMapFileName == null) {
-            return;
-        }
-        
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(this.outRefMapFileName, "refmap");
-            this.refMapper.write(writer);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
-            }
-        }
+        this.obf.writeRefs();
     }
 
-    /**
-     * Open a writer for an output file
-     */
-    private PrintWriter openFileWriter(String fileName, String description) throws IOException {
-        if (fileName.matches("^.*[\\\\/:].*$")) {
-            File outSrgFile = new File(fileName);
-            outSrgFile.getParentFile().mkdirs();
-            this.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
-            return new PrintWriter(outSrgFile);
-        }
-        
-        FileObject outSrg = this.processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
-        this.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
-        return new PrintWriter(outSrg.openWriter());
-    }
-    
-    @SuppressWarnings("unchecked")
-    public <T> ObfuscationData<T> getObfEntryRecursive(final MemberInfo targetMember) {
-        MemberInfo currentTarget = targetMember;
-        ObfuscationData<String> obfTargetNames = this.getObfClass(currentTarget.owner);
-        ObfuscationData<T> obfData = this.getObfEntry(currentTarget);
-        try {
-            while (obfData.isEmpty()) {
-                TypeHandle targetType = this.getTypeHandle(currentTarget.owner);
-                if (targetType == null) {
-                    return obfData;
-                }
-                TypeHandle superClass = targetType.getSuperclass();
-                if (superClass == null) {
-                    return obfData;
-                }
-                currentTarget = currentTarget.move(superClass.getName());
-                obfData = this.getObfEntry(currentTarget);
-                if (!obfData.isEmpty()) {
-                    for (ObfuscationType type : obfData) {
-                        String obfClass = obfTargetNames.get(type);
-                        T obfMember = obfData.get(type);
-                        if (currentTarget.isField()) {
-                            obfData.add(type, (T)MemberInfo.fromSrgField(obfMember.toString(), "").move(obfClass).toSrg());
-                        } else {
-                            obfData.add(type, (T)MemberInfo.fromSrgMethod((MethodData)obfMember).move(obfClass).asMethodData());
-                        }
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            return this.getObfEntry(targetMember);
-        }
-        return obfData;
-    }
-    
-    @SuppressWarnings("unchecked")
-    public <T> ObfuscationData<T> getObfEntry(MemberInfo targetMember) {
-        if (targetMember.isField()) {
-            return (ObfuscationData<T>)this.getObfField(targetMember.toSrg());
-        }
-        return (ObfuscationData<T>)this.getObfMethod(targetMember.asMethodData());
-    }
-    
-    public ObfuscationData<MethodData> getObfMethodRecursive(MemberInfo targetMember) {
-        return this.<MethodData>getObfEntryRecursive(targetMember);
-    }
-    
-    public ObfuscationData<MethodData> getObfMethod(MemberInfo method) {
-        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
-        
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = targetEnv.getObfMethod(method);
-            if (obfMethod != null) {
-                data.add(targetEnv.getType(), obfMethod);
-            }
-        }
-        
-        return data;
-    }
-
-    /**
-     * Get an obfuscation mapping for a method
-     */
-    public ObfuscationData<MethodData> getObfMethod(MethodData method) {
-        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
-        
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = targetEnv.getObfMethod(method);
-            if (obfMethod != null) {
-                data.add(targetEnv.getType(), obfMethod);
-            }
-        }
-        
-        return data;
-    }
-
-    public ObfuscationData<String> getObfFieldRecursive(MemberInfo targetMember) {
-        return this.<String>getObfEntryRecursive(targetMember);
-    }
-
-    /**
-     * Get an obfuscation mapping for a field
-     */
-    public ObfuscationData<String> getObfField(String field) {
-        ObfuscationData<String> data = new ObfuscationData<String>();
-        
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            String obfField = targetEnv.getObfField(field);
-            if (obfField != null) {
-                data.add(targetEnv.getType(), obfField);
-            }
-        }
-        
-        return data;
-    }
-    
-    /**
-     * Get an obfuscation mapping for a class
-     */
-    public ObfuscationData<String> getObfClass(TypeHandle type) {
-        return this.getObfClass(type.getName());
-    }
-    
-    /**
-     * Get an obfuscation mapping for a class
-     */
-    public ObfuscationData<String> getObfClass(String className) {
-        ObfuscationData<String> data = new ObfuscationData<String>(className);
-        
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            String obfClass = targetEnv.getObfClass(className);
-            if (obfClass != null) {
-                data.add(targetEnv.getType(), obfClass);
-            }
-        }
-        
-        return data;
-    }
-
-    void addMethodMapping(String className, String reference, ObfuscationData<MethodData> obfMethodData) {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
-            if (obfMethod != null) {
-                int slashPos = obfMethod.name.lastIndexOf('/');
-                String obfName = obfMethod.name.substring(slashPos + 1);
-                String obfOwner = obfMethod.name.substring(0, slashPos); 
-                MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
-                targetEnv.addMapping(className, reference, remappedReference.toString());
-            }
-        }
-    }
-    
-    void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MethodData> obfMethodData) {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
-            if (obfMethod != null) {
-                MemberInfo remappedReference = context.remapUsing(obfMethod, true);
-                targetEnv.addMapping(className, reference, remappedReference.toString());
-            }
-        }
-    }
-        
-    void addFieldMapping(String className, String reference, MemberInfo context, ObfuscationData<String> obfFieldData) {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            String obfField = obfFieldData.get(targetEnv.getType());
-            if (obfField != null) {
-                MemberInfo remappedReference = MemberInfo.fromSrgField(obfField, context.desc);
-                String remapped = remappedReference.toString();
-                targetEnv.addMapping(className, reference, remapped);
-            }
-        }
-    }
-
-    void addClassMapping(String className, String reference, ObfuscationData<String> obfClassData) {
-        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            String remapped = obfClassData.get(targetEnv.getType());
-            if (remapped != null) {
-                targetEnv.addMapping(className, reference, remapped);
-            }
-        }
-    }
-    
-    /**
-     * Get the reference mapper
-     */
-    public ReferenceMapper getReferenceMapper() {
-        return this.refMapper;
-    }
-    
     /**
      * Clear all registered mixins 
      */
@@ -693,13 +493,6 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
     }
     
     /**
-     * Print a message to the AP messager
-     */
-    public void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
-        this.processingEnv.getMessager().printMessage(kind, msg, mixin.getMixin(), mixin.getAnnotation());
-    }
-    
-    /**
      * Get a TypeHandle representing another type in the current processing
      * environment
      */
@@ -729,12 +522,11 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         return null;
     }
 
-    /**
-     * Get javadoc on element
-     * 
-     * @param element Element to fetch javadoc for
-     * @return javadoc
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.IJavadocProvider
+     *      #getJavadoc(javax.lang.model.element.Element)
      */
+    @Override
     public String getJavadoc(Element element) {
         Elements elements = this.processingEnv.getElementUtils();
         return elements.getDocComment(element);

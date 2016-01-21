@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+
 enum ObfuscationType {
     
     SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.OUT_SRG_SRG_FILE),

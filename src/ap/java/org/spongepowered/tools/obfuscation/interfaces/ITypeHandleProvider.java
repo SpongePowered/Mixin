@@ -22,33 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.interfaces;
 
-import java.util.Collection;
-
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.TypeElement;
+import org.spongepowered.tools.obfuscation.TypeHandle;
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * Manager object which cann supply {@link TypeHandle} instances
  */
-public interface IMixinValidator {
-    
-    public enum ValidationPass {
-        EARLY,
-        LATE
-    }
-    
+public interface ITypeHandleProvider {
+
     /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * @param pass TODO
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
+     * Generate a type handle for the specified type
      * 
-     * @return False to halt processing of further validators
+     * @param name Type name (class name)
+     * @return A new type handle
      */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
+    public abstract TypeHandle getTypeHandle(String name);
+    
 }

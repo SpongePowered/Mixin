@@ -22,19 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.interfaces;
+
+import javax.annotation.processing.Messager;
+import javax.annotation.processing.ProcessingEnvironment;
+
+import org.spongepowered.asm.util.ITokenProvider;
 
 /**
- * An object which can provide option values to consumers
+ * Interface for annotation processor core
  */
-public interface IOptionProvider {
+public interface IMixinAnnotationProcessor extends Messager, IOptionProvider {
 
     /**
-     * Fetch the value of the specified option, if available
-     * 
-     * @param option Name of the option to fetch
-     * @return Option value or null if absent
+     * Get the underlying processing environment
      */
-    public abstract String getOption(String option);
+    public abstract ProcessingEnvironment getProcessingEnvironment();
+
+    /**
+     * Get the obfuscation manager
+     */
+    public abstract IObfuscationManager getObfuscationManager();
+    
+    /**
+     * Get the token provider
+     */
+    public abstract ITokenProvider getTokenProvider();
+    
+    /**
+     * Get the type handle provider
+     */
+    public abstract ITypeHandleProvider getTypeProvider();
+
+    /**
+     * Get the javadoc provider
+     */
+    public abstract IJavadocProvider getJavadocProvider();
 
 }

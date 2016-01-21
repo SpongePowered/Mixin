@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -43,6 +42,7 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 import net.minecraftforge.srg2source.rangeapplier.MethodData;
 import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
@@ -55,19 +55,9 @@ class TargetObfuscationEnvironment {
     private final ObfuscationType type;
 
     /**
-     * Messager
+     * Annotation processor
      */
-    private final Messager messager;
-    
-    /**
-     * Type handle provider
-     */
-    private final ITypeHandleProvider typeProvider;
-
-    /**
-     * Options
-     */
-    private final IOptionProvider options;
+    private final IMixinAnnotationProcessor ap;
 
     /**
      * Name of the resource to write generated srgs to
@@ -95,16 +85,13 @@ class TargetObfuscationEnvironment {
      */
     private boolean initDone;
 
-    public TargetObfuscationEnvironment(ObfuscationType type, Messager messager, ITypeHandleProvider typeProvider, IOptionProvider options,
-            ReferenceMapper refMapper) {
+    public TargetObfuscationEnvironment(IMixinAnnotationProcessor ap, ObfuscationType type, ReferenceMapper refMapper) {
+        this.ap = ap;
         this.type = type;
-        this.messager = messager;
-        this.typeProvider = typeProvider;
-        this.options = options;
         this.refMapper = refMapper;
         
-        this.reobfSrgFileName = type.getSrgFileName(options);
-        this.outSrgFileName = type.getOutputSrgFileName(options);
+        this.reobfSrgFileName = type.getSrgFileName(ap);
+        this.outSrgFileName = type.getOutputSrgFileName(ap);
     }
     
     private boolean initSrgs() {
@@ -112,18 +99,18 @@ class TargetObfuscationEnvironment {
             this.initDone = true;
         
             if (this.reobfSrgFileName == null) {
-                this.messager.printMessage(Kind.ERROR, "The " + this.type.getSrgFileOption()
+                this.ap.printMessage(Kind.ERROR, "The " + this.type.getSrgFileOption()
                     + " argument was not supplied, obfuscation processing will not occur");
                 return false;
             }
             
             try {
                 File reobfSrgFile = new File(this.reobfSrgFileName);
-                this.messager.printMessage(Kind.NOTE, "Loading " + this.type + " mappings from " + reobfSrgFile.getAbsolutePath());
+                this.ap.printMessage(Kind.NOTE, "Loading " + this.type + " mappings from " + reobfSrgFile.getAbsolutePath());
                 this.srgs = new SrgContainer().readSrg(reobfSrgFile);
             } catch (Exception ex) {
                 ex.printStackTrace();
-                this.messager.printMessage(Kind.ERROR, "The specified " + this.type + " SRG file could not be read, processing cannot continue");
+                this.ap.printMessage(Kind.ERROR, "The specified " + this.type + " SRG file could not be read, processing cannot continue");
                 this.srgs = null;
             }
         }
@@ -140,7 +127,7 @@ class TargetObfuscationEnvironment {
 
     public void addMapping(String className, String reference, String newReference) {
         this.refMapper.addMapping(this.type.getKey(), className, reference, newReference);
-        if (this.type.isDefault(this.options)) {
+        if (this.type.isDefault(this.ap)) {
             this.refMapper.addMapping(null, className, reference, newReference);
         }
     }
@@ -155,7 +142,7 @@ class TargetObfuscationEnvironment {
         }
         
         // Get a type handle for the declared method owner
-        TypeHandle type = this.typeProvider.getTypeHandle(method.owner);
+        TypeHandle type = this.ap.getTypeProvider().getTypeHandle(method.owner);
         if (type == null || type.isImaginary()) {
             return null;
         }
@@ -247,12 +234,12 @@ class TargetObfuscationEnvironment {
         if (fileName.matches("^.*[\\\\/:].*$")) {
             File outSrgFile = new File(fileName);
             outSrgFile.getParentFile().mkdirs();
-            this.messager.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
+            this.ap.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
             return new PrintWriter(outSrgFile);
         }
         
         FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
-        this.messager.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
+        this.ap.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
         return new PrintWriter(outSrg.openWriter());
     }
 

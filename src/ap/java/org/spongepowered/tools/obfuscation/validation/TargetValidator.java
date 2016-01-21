@@ -26,8 +26,6 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
@@ -36,10 +34,10 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.TypeHandle;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
  * Validator which checks that the mixin targets are sane
@@ -49,12 +47,10 @@ public class TargetValidator extends MixinValidator {
     /**
      * ctor
      * 
-     * @param processingEnv Processing environment
-     * @param messager Messager
-     * @param options Option provider
+     * @param ap Processing environment
      */
-    public TargetValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options) {
-        super(processingEnv, messager, options, ValidationPass.LATE);
+    public TargetValidator(IMixinAnnotationProcessor ap) {
+        super(ap, ValidationPass.LATE);
     }
 
     /* (non-Javadoc)

@@ -34,6 +34,10 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
+import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+
 /**
  * Base class for mixin validators
  */
@@ -68,10 +72,10 @@ public abstract class MixinValidator implements IMixinValidator {
      * @param options Option provider
      * @param pass Validation pass being performed
      */
-    public MixinValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options, ValidationPass pass) {
-        this.processingEnv = processingEnv;
-        this.messager = messager;
-        this.options = options;
+    public MixinValidator(IMixinAnnotationProcessor ap, ValidationPass pass) {
+        this.processingEnv = ap.getProcessingEnvironment();
+        this.messager = ap;
+        this.options = ap;
         this.pass = pass;
     }
     

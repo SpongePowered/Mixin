@@ -22,44 +22,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.validation;
+package org.spongepowered.tools.obfuscation.interfaces;
 
 import java.util.Collection;
 
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
-import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
-import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
- * Validator which checks that the mixin parent is sane
+ * A mixin validator module, basically just a way of making the various sanity
+ * checks modular
  */
-public class ParentValidator extends MixinValidator {
-
+public interface IMixinValidator {
+    
+    public enum ValidationPass {
+        EARLY,
+        LATE
+    }
+    
     /**
-     * ctor
+     * Validate all the things, return false to halt processing of further
+     * validators. Raise compiler errors/warnings directly.
+     * @param pass TODO
+     * @param mixin Mixin being validated
+     * @param annotation Mixin annotation
+     * @param targets Mixin targets
      * 
-     * @param ap Processing environment
+     * @return False to halt processing of further validators
      */
-    public ParentValidator(IMixinAnnotationProcessor ap) {
-        super(ap, ValidationPass.EARLY);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.tools.obfuscation.MixinValidator
-     *      #validate(javax.lang.model.element.TypeElement,
-     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
-     */
-    @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
-        if (mixin.getEnclosingElement().getKind() != ElementKind.PACKAGE && !mixin.getModifiers().contains(Modifier.STATIC)) {
-            this.error("Inner class mixin must be declared static", mixin);
-        }
-        
-        return true;
-    }
+    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
 }
