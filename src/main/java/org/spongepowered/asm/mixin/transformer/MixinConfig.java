@@ -487,6 +487,14 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return this.refMapper;
     }
     
+    String remapClassName(String className, String reference) {
+//        String remapped = this.plugin != null ? this.plugin.remap(className, reference) : null;
+//        if (remapped != null) {
+//            return remapped;
+//        }
+        return this.getReferenceMapper().remap(className, reference);
+    }
+    
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinConfig#getPlugin()
      */
@@ -626,4 +634,5 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             throw new IllegalArgumentException(String.format("The specified configuration file '%s' was invalid or could not be read", configFile));
         }
     }
+
 }

@@ -318,7 +318,7 @@ class AnnotatedMixin {
                 if (this.targets.contains(type)) {
                     continue;
                 }
-                this.targets.add(type);
+                this.addTarget(type);
                 if (primaryTarget == null) {
                     primaryTarget = type;
                 }
@@ -343,7 +343,7 @@ class AnnotatedMixin {
                     this.mixins.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " is public and must be specified in value", this);
                     return null;
                 }
-                this.targets.add(type);
+                this.addSoftTarget(type, privateTarget);
                 if (primaryTarget == null) {
                     primaryTarget = type;
                 }
@@ -358,7 +358,20 @@ class AnnotatedMixin {
         
         return primaryTarget;
     }
+
+    private void addSoftTarget(TypeHandle type, String reference) {
+        ObfuscationData<String> obfClassData = this.mixins.getObfClass(type);
+        if (!obfClassData.isEmpty()) {
+            this.mixins.addClassMapping(this.classRef, reference, obfClassData);
+        }
+        
+        this.addTarget(type);
+    }
     
+    private void addTarget(TypeHandle type) {
+        this.targets.add(type);
+    }
+
     @Override
     public String toString() {
         return this.mixin.getSimpleName().toString();

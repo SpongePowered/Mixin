@@ -327,7 +327,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         if (privateTargets != null) {
-            this.readTargets(targets, privateTargets, suppressPlugin, true);
+            this.readTargets(targets, Lists.transform(privateTargets, new Function<String, String>() {
+                @Override
+                public String apply(String input) {
+                    return MixinInfo.this.getParent().remapClassName(MixinInfo.this.getClassRef(), input);
+                }
+            }), suppressPlugin, true);
         }
         
         return targets;

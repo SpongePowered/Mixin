@@ -399,6 +399,13 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
     /**
      * Get an obfuscation mapping for a class
      */
+    public ObfuscationData<String> getObfClass(TypeHandle type) {
+        return this.getObfClass(type.getName());
+    }
+    
+    /**
+     * Get an obfuscation mapping for a class
+     */
     public ObfuscationData<String> getObfClass(String className) {
         ObfuscationData<String> data = new ObfuscationData<String>(className);
         
@@ -446,6 +453,15 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider, ITyp
         }
     }
 
+    void addClassMapping(String className, String reference, ObfuscationData<String> obfClassData) {
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            String remapped = obfClassData.get(targetEnv.getType());
+            if (remapped != null) {
+                targetEnv.addMapping(className, reference, remapped);
+            }
+        }
+    }
+    
     /**
      * Get the reference mapper
      */
