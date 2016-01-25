@@ -151,7 +151,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
             new TargetValidator(this)
         );
         
-        this.initTokenCache(this.getOption("tokens"));
+        this.initTokenCache(this.getOption(SupportedOptions.TOKENS));
     }
 
     protected TargetMap initTargetMap() {

@@ -24,20 +24,27 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.util.List;
+
 import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 enum ObfuscationType {
     
-    SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.OUT_SRG_SRG_FILE),
-    NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.OUT_NOTCH_SRG_FILE);
+    SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.REOBF_EXTRA_SRG_FILES, SupportedOptions.OUT_SRG_SRG_FILE),
+    NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.REOBF_EXTRA_NOTCH_FILES, SupportedOptions.OUT_NOTCH_SRG_FILE);
     
     private final String key;
     private final String srgFileArgName;
+    private final String extraSrgFilesArgName;
     private final String outSrgFileArgName;
     
-    private ObfuscationType(String displayName, String srgFileArgName, String outSrgFileArgName) {
+    private ObfuscationType(String displayName, String srgFileArgName, String extraSrgFilesArgName, String outSrgFileArgName) {
         this.key = displayName;
         this.srgFileArgName = srgFileArgName;
+        this.extraSrgFilesArgName = extraSrgFilesArgName;
         this.outSrgFileArgName = outSrgFileArgName;
     }
     
@@ -54,6 +61,10 @@ enum ObfuscationType {
         return this.srgFileArgName;
     }
     
+    public String getExtraSrgFilesOption() {
+        return this.extraSrgFilesArgName;
+    }
+    
     public String getOutputSrgFileOption() {
         return this.outSrgFileArgName;
     }
@@ -64,11 +75,25 @@ enum ObfuscationType {
     }
     
     public boolean isSupported(IOptionProvider options) {
-        return this.getSrgFileName(options) != null;
+        return this.getSrgFileNames(options).size() > 0;
     }
     
-    public String getSrgFileName(IOptionProvider options) {
-        return options.getOption(this.srgFileArgName);
+    public List<String> getSrgFileNames(IOptionProvider options) {
+        Builder<String> builder = ImmutableList.<String>builder();
+        
+        String srgFile = options.getOption(this.srgFileArgName);
+        if (srgFile != null) {
+            builder.add(srgFile);
+        }
+        
+        String extraSrgFiles = options.getOption(this.extraSrgFilesArgName);
+        if (extraSrgFiles != null) {
+            for (String extraSrgFile : extraSrgFiles.split(";")) {
+                builder.add(extraSrgFile.trim());
+            }
+        }
+        
+        return builder.build();
     }
     
     public String getOutputSrgFileName(IOptionProvider options) {

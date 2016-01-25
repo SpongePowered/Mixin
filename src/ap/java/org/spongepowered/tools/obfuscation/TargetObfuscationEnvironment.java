@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -67,7 +68,7 @@ class TargetObfuscationEnvironment {
     /**
      * File containing the reobfd srgs
      */
-    private final String reobfSrgFileName;
+    private final List<String> reobfSrgFileNames;
     
     /**
      * Reference mapper for reference mapping 
@@ -90,7 +91,7 @@ class TargetObfuscationEnvironment {
         this.type = type;
         this.refMapper = refMapper;
         
-        this.reobfSrgFileName = type.getSrgFileName(ap);
+        this.reobfSrgFileNames = type.getSrgFileNames(ap);
         this.outSrgFileName = type.getOutputSrgFileName(ap);
     }
     
@@ -98,19 +99,30 @@ class TargetObfuscationEnvironment {
         if (!this.initDone) {
             this.initDone = true;
         
-            if (this.reobfSrgFileName == null) {
+            if (this.reobfSrgFileNames == null) {
                 this.ap.printMessage(Kind.ERROR, "The " + this.type.getSrgFileOption()
                     + " argument was not supplied, obfuscation processing will not occur");
                 return false;
             }
             
-            try {
-                File reobfSrgFile = new File(this.reobfSrgFileName);
-                this.ap.printMessage(Kind.NOTE, "Loading " + this.type + " mappings from " + reobfSrgFile.getAbsolutePath());
-                this.srgs = new SrgContainer().readSrg(reobfSrgFile);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                this.ap.printMessage(Kind.ERROR, "The specified " + this.type + " SRG file could not be read, processing cannot continue");
+            int successCount = 0;
+            this.srgs = new SrgContainer();
+            
+            for (String srgFileName : this.reobfSrgFileNames) {
+                File reobfSrgFile = new File(srgFileName);
+                try {
+                    if (reobfSrgFile.isFile()) {
+                        this.ap.printMessage(Kind.NOTE, "Loading " + this.type + " mappings from " + reobfSrgFile.getAbsolutePath());
+                        this.srgs.readSrg(reobfSrgFile);
+                        successCount++;
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+            
+            if (successCount < 1) {
+                this.ap.printMessage(Kind.ERROR, "No valid SRG files for " + this.type + " could be read, processing may not be sucessful.");
                 this.srgs = null;
             }
         }
