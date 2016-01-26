@@ -30,7 +30,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
@@ -51,7 +51,7 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
         
         String mcpName = method.getSimpleName().toString();
         String mcpSignature = MirrorUtils.generateSignature(method);
-        ObfuscationData<MethodData> obfData = this.obf.getObfMethod(new MethodData(this.mixin.getPrimaryTargetRef() + "/" + mcpName, mcpSignature));
+        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + mcpName, mcpSignature));
         
         if (obfData.isEmpty()) {
             Kind error = Kind.ERROR;
@@ -71,7 +71,7 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
         }
 
         for (ObfuscationType type : obfData) {
-            MethodData obfMethod = obfData.get(type);
+            SrgMethod obfMethod = obfData.get(type);
             this.addMethodMapping(type, mcpName, obfMethod.getSimpleName(), mcpSignature, obfMethod.getDesc());
         }
         

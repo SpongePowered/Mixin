@@ -43,7 +43,7 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.obfuscation.SrgContainer;
 import org.spongepowered.asm.util.ObfuscationUtil;
 import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
@@ -170,8 +170,8 @@ class TargetObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a method
      */
-    public MethodData getObfMethod(MemberInfo method) {
-        MethodData obfd = this.getObfMethod(method.asMethodData());
+    public SrgMethod getObfMethod(MemberInfo method) {
+        SrgMethod obfd = this.getObfMethod(method.asSrgMethod());
         if (obfd != null || !method.isFullyQualified()) {
             return obfd;
         }
@@ -196,7 +196,7 @@ class TargetObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a method
      */
-    public MethodData getObfMethod(MethodData method) {
+    public SrgMethod getObfMethod(SrgMethod method) {
         if (this.initSrgs()) {
             return this.srgs.getMethodMapping(method);
         }

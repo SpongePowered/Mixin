@@ -29,7 +29,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
@@ -75,7 +75,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         }
         
         String mcpSignature = MirrorUtils.generateSignature(method);
-        ObfuscationData<MethodData> obfData = this.obf.getObfMethod(new MethodData(this.mixin.getPrimaryTargetRef() + "/" + name, mcpSignature));
+        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + name, mcpSignature));
         
         if (obfData.isEmpty()) {
             this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow method", method, shadow);
@@ -83,7 +83,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         }
         
         for (ObfuscationType type : obfData) {
-            MethodData obfMethod = obfData.get(type);
+            SrgMethod obfMethod = obfData.get(type);
             this.addMethodMapping(type, name.setObfuscatedName(obfMethod.getName()), mcpSignature, obfMethod.getDesc());
         }
     }

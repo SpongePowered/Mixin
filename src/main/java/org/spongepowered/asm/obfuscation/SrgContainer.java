@@ -44,7 +44,7 @@ public class SrgContainer {
     private final BiMap<String, String> classMap = HashBiMap.create();
     private final BiMap<String, String> fieldMap = HashBiMap.create();
     private final BiMap<String, String> packageMap = HashBiMap.create();
-    private final BiMap<MethodData, MethodData> methodMap = HashBiMap.create();
+    private final BiMap<SrgMethod, SrgMethod> methodMap = HashBiMap.create();
 
     public void readSrg(File srg) throws IOException {
         for (String line : Files.readLines(srg, Charset.defaultCharset())) {
@@ -62,14 +62,14 @@ public class SrgContainer {
             } else if (type.equals("FD")) {
                 this.fieldMap.forcePut(args[0], args[1]);
             } else if (type.equals("MD")) {
-                this.methodMap.forcePut(new MethodData(args[0], args[1]), new MethodData(args[2], args[3]));
+                this.methodMap.forcePut(new SrgMethod(args[0], args[1]), new SrgMethod(args[2], args[3]));
             } else {
                 throw new RuntimeException("Invalid SRG file: " + srg);
             }
         }
     }
 
-    public MethodData getMethodMapping(MethodData methodName) {
+    public SrgMethod getMethodMapping(SrgMethod methodName) {
         return this.methodMap.get(methodName);
     }
 

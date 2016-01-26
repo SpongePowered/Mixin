@@ -35,7 +35,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.ConstraintViolationException;
@@ -244,7 +244,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             this.obf.addFieldMapping(this.classRef, target, targetMember, obfFieldData);
         } else {
-            ObfuscationData<MethodData> obfMethodData = this.obf.getObfMethodRecursive(targetMember);
+            ObfuscationData<SrgMethod> obfMethodData = this.obf.getObfMethodRecursive(targetMember);
             if (obfMethodData.isEmpty()) {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);

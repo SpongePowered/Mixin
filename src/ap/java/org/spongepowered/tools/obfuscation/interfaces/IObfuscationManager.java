@@ -26,7 +26,7 @@ package org.spongepowered.tools.obfuscation.interfaces;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationData;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 
@@ -70,17 +70,17 @@ public interface IObfuscationManager {
      * @return ObfuscationData with remapped owner class corresponding to the
      *      original owner class
      */
-    public abstract ObfuscationData<MethodData> getObfMethodRecursive(MemberInfo method);
+    public abstract ObfuscationData<SrgMethod> getObfMethodRecursive(MemberInfo method);
 
     /**
      * Get an obfuscation mapping for a method
      */
-    public abstract ObfuscationData<MethodData> getObfMethod(MemberInfo method);
+    public abstract ObfuscationData<SrgMethod> getObfMethod(MemberInfo method);
 
     /**
      * Get an obfuscation mapping for a method
      */
-    public abstract ObfuscationData<MethodData> getObfMethod(MethodData method);
+    public abstract ObfuscationData<SrgMethod> getObfMethod(SrgMethod method);
 
     /**
      * Attempts to resolve an obfuscated field by recursively enumerating
@@ -116,7 +116,7 @@ public interface IObfuscationManager {
      * @param reference Original reference, as it appears in the annotation
      * @param obfMethodData Method data to add for this mapping
      */
-    public abstract void addMethodMapping(String className, String reference, ObfuscationData<MethodData> obfMethodData);
+    public abstract void addMethodMapping(String className, String reference, ObfuscationData<SrgMethod> obfMethodData);
 
     /**
      * Adds a method mapping to the internal refmap, generates refmap entries
@@ -128,7 +128,7 @@ public interface IObfuscationManager {
      *      supplied obfuscation data
      * @param obfMethodData Method data to add for this mapping
      */
-    public abstract void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MethodData> obfMethodData);
+    public abstract void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<SrgMethod> obfMethodData);
 
     /**
      * Adds a field mapping to the internal refmap, generates refmap entries

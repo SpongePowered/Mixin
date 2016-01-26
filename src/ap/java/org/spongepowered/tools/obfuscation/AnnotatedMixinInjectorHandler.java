@@ -36,7 +36,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -93,7 +93,7 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
             return null;
        }
         
-        ObfuscationData<MethodData> obfData = this.obf.getObfMethod(new MethodData(this.mixin.getPrimaryTargetRef() + "/" + targetMember.name, desc));
+        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + targetMember.name, desc));
         if (obfData.isEmpty()) {
             Kind error = Constants.INIT.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
             return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);

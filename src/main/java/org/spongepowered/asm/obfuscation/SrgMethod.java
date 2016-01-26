@@ -26,14 +26,14 @@ package org.spongepowered.asm.obfuscation;
 
 import com.google.common.base.Objects;
 
-public final class MethodData {
+public final class SrgMethod {
 
     private final String name;
     private final String desc;
 
-    public MethodData(String name, String sig) {
+    public SrgMethod(String name, String desc) {
         this.name = name;
-        this.desc = sig;
+        this.desc = desc;
     }
     
     public String getName() {
@@ -70,8 +70,8 @@ public final class MethodData {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof MethodData) {
-            return Objects.equal(this.name, ((MethodData)obj).name) && Objects.equal(this.desc, ((MethodData)obj).desc);
+        if (obj instanceof SrgMethod) {
+            return Objects.equal(this.name, ((SrgMethod)obj).name) && Objects.equal(this.desc, ((SrgMethod)obj).desc);
         }
         return false;
     }

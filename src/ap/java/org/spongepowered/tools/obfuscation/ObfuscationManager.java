@@ -37,7 +37,7 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
@@ -164,7 +164,7 @@ public class ObfuscationManager implements IObfuscationManager {
                         if (currentTarget.isField()) {
                             obfData.add(type, (T)MemberInfo.fromSrgField(obfMember.toString(), "").move(obfClass).toSrg());
                         } else {
-                            obfData.add(type, (T)MemberInfo.fromSrgMethod((MethodData)obfMember).move(obfClass).asMethodData());
+                            obfData.add(type, (T)MemberInfo.fromSrgMethod((SrgMethod)obfMember).move(obfClass).asSrgMethod());
                         }
                     }
                 }
@@ -186,7 +186,7 @@ public class ObfuscationManager implements IObfuscationManager {
         if (targetMember.isField()) {
             return (ObfuscationData<T>)this.getObfField(targetMember.toSrg());
         }
-        return (ObfuscationData<T>)this.getObfMethod(targetMember.asMethodData());
+        return (ObfuscationData<T>)this.getObfMethod(targetMember.asSrgMethod());
     }
 
     /* (non-Javadoc)
@@ -195,8 +195,8 @@ public class ObfuscationManager implements IObfuscationManager {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public ObfuscationData<MethodData> getObfMethodRecursive(MemberInfo targetMember) {
-        return this.<MethodData>getObfEntryRecursive(targetMember);
+    public ObfuscationData<SrgMethod> getObfMethodRecursive(MemberInfo targetMember) {
+        return this.<SrgMethod>getObfEntryRecursive(targetMember);
     }
 
     /* (non-Javadoc)
@@ -205,11 +205,11 @@ public class ObfuscationManager implements IObfuscationManager {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public ObfuscationData<MethodData> getObfMethod(MemberInfo method) {
-        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
+    public ObfuscationData<SrgMethod> getObfMethod(MemberInfo method) {
+        ObfuscationData<SrgMethod> data = new ObfuscationData<SrgMethod>();
         
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = targetEnv.getObfMethod(method);
+            SrgMethod obfMethod = targetEnv.getObfMethod(method);
             if (obfMethod != null) {
                 data.add(targetEnv.getType(), obfMethod);
             }
@@ -223,15 +223,15 @@ public class ObfuscationManager implements IObfuscationManager {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.tools.obfuscation.IObfuscationManager
-     *      #getObfMethod(net.minecraftforge.srg2source.rangeapplier.MethodData)
+     * @see org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager
+     *      #getObfMethod(org.spongepowered.asm.obfuscation.SrgMethod)
      */
     @Override
-    public ObfuscationData<MethodData> getObfMethod(MethodData method) {
-        ObfuscationData<MethodData> data = new ObfuscationData<MethodData>();
+    public ObfuscationData<SrgMethod> getObfMethod(SrgMethod method) {
+        ObfuscationData<SrgMethod> data = new ObfuscationData<SrgMethod>();
         
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = targetEnv.getObfMethod(method);
+            SrgMethod obfMethod = targetEnv.getObfMethod(method);
             if (obfMethod != null) {
                 data.add(targetEnv.getType(), obfMethod);
             }
@@ -251,11 +251,11 @@ public class ObfuscationManager implements IObfuscationManager {
      * @param method Method to remap
      * @return data 
      */
-    public ObfuscationData<MethodData> remapDescriptor(ObfuscationData<MethodData> data, MemberInfo method) {
+    public ObfuscationData<SrgMethod> remapDescriptor(ObfuscationData<SrgMethod> data, MemberInfo method) {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
             MemberInfo obfMethod = targetEnv.remapDescriptor(method);
             if (obfMethod != null) {
-                data.add(targetEnv.getType(), obfMethod.asMethodData());
+                data.add(targetEnv.getType(), obfMethod.asSrgMethod());
             }
         }
 
@@ -323,9 +323,9 @@ public class ObfuscationManager implements IObfuscationManager {
      *      org.spongepowered.tools.obfuscation.ObfuscationData)
      */
     @Override
-    public void addMethodMapping(String className, String reference, ObfuscationData<MethodData> obfMethodData) {
+    public void addMethodMapping(String className, String reference, ObfuscationData<SrgMethod> obfMethodData) {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
+            SrgMethod obfMethod = obfMethodData.get(targetEnv.getType());
             if (obfMethod != null) {
                 MemberInfo remappedReference = new MemberInfo(obfMethod);
                 targetEnv.addMapping(className, reference, remappedReference.toString());
@@ -340,9 +340,9 @@ public class ObfuscationManager implements IObfuscationManager {
      *      org.spongepowered.tools.obfuscation.ObfuscationData)
      */
     @Override
-    public void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MethodData> obfMethodData) {
+    public void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<SrgMethod> obfMethodData) {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            MethodData obfMethod = obfMethodData.get(targetEnv.getType());
+            SrgMethod obfMethod = obfMethodData.get(targetEnv.getType());
             if (obfMethod != null) {
                 MemberInfo remappedReference = context.remapUsing(obfMethod, true);
                 targetEnv.addMapping(className, reference, remappedReference.toString());

@@ -29,7 +29,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
-import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
@@ -163,26 +163,26 @@ public class MemberInfo {
     }
     
     /**
-     * Initialise a MemberInfo using the supplied MethodData object
+     * Initialise a MemberInfo using the supplied SrgMethod object
      * 
-     * @param methodData MethodData object to copy values from
+     * @param srgMethod SrgMethod object to copy values from
      */
-    public MemberInfo(MethodData methodData) {
-        this.owner = methodData.getOwner();
-        this.name = methodData.getSimpleName();
-        this.desc = methodData.getDesc();
+    public MemberInfo(SrgMethod srgMethod) {
+        this.owner = srgMethod.getOwner();
+        this.name = srgMethod.getSimpleName();
+        this.desc = srgMethod.getDesc();
         this.matchAll = false;
     }
     
     /**
-     * Initialise a remapped MemberInfo using the supplied MethodData object
+     * Initialise a remapped MemberInfo using the supplied SrgMethod object
      * 
-     * @param methodData MethodData object to copy values from
+     * @param srgMethod SrgMethod object to copy values from
      */
-    private MemberInfo(MemberInfo remapped, MethodData methodData, boolean setOwner) {
-        this.owner = setOwner ? methodData.getOwner() : remapped.owner;
-        this.name = methodData.getSimpleName();
-        this.desc = methodData.getDesc();
+    private MemberInfo(MemberInfo remapped, SrgMethod srgMethod, boolean setOwner) {
+        this.owner = setOwner ? srgMethod.getOwner() : remapped.owner;
+        this.name = srgMethod.getSimpleName();
+        this.desc = srgMethod.getDesc();
         this.matchAll = remapped.matchAll;
     }
 
@@ -237,16 +237,16 @@ public class MemberInfo {
         return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
-    public MethodData asMethodData() {
+    public SrgMethod asSrgMethod() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqualified reference to MethodData");
+            throw new RuntimeException("Cannot convert unqualified reference to SrgMethod");
         }
         
         if (this.isField()) {
-            throw new RuntimeException("Cannot convert a non-method reference to MethodData");
+            throw new RuntimeException("Cannot convert a non-method reference to SrgMethod");
         }
         
-        return new MethodData(this.owner + "/" + this.name, this.desc);
+        return new SrgMethod(this.owner + "/" + this.name, this.desc);
     }
     
     /**
@@ -410,12 +410,12 @@ public class MemberInfo {
     /**
      * Create a remapped version of this member using the supplied method data
      * 
-     * @param methodData Method data to use
+     * @param srgMethod SRG method data to use
      * @param setOwner True to set the owner as well as the name
      * @return New MethodInfo with remapped values
      */
-    public MemberInfo remapUsing(MethodData methodData, boolean setOwner) {
-        return new MemberInfo(this, methodData, setOwner);
+    public MemberInfo remapUsing(SrgMethod srgMethod, boolean setOwner) {
+        return new MemberInfo(this, srgMethod, setOwner);
     }
     
     /**
@@ -517,7 +517,7 @@ public class MemberInfo {
         return new MemberInfo(name, owner, desc, false);
     }
     
-    public static MemberInfo fromSrgMethod(MethodData methodData) {
-        return new MemberInfo(methodData);
+    public static MemberInfo fromSrgMethod(SrgMethod srgMethod) {
+        return new MemberInfo(srgMethod);
     }
 }
