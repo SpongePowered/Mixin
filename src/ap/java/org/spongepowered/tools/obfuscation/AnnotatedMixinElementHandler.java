@@ -35,6 +35,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.obfuscation.MethodData;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.ConstraintViolationException;
@@ -42,8 +43,6 @@ import org.spongepowered.asm.util.InvalidConstraintException;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 abstract class AnnotatedMixinElementHandler {
     

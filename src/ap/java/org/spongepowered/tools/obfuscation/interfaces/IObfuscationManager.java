@@ -26,10 +26,9 @@ package org.spongepowered.tools.obfuscation.interfaces;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.obfuscation.MethodData;
 import org.spongepowered.tools.obfuscation.ObfuscationData;
 import org.spongepowered.tools.obfuscation.TypeHandle;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 /**
  * Manages obfuscation things

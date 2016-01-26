@@ -29,10 +29,9 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.obfuscation.MethodData;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
 
@@ -85,7 +84,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         
         for (ObfuscationType type : obfData) {
             MethodData obfMethod = obfData.get(type);
-            this.addMethodMapping(type, name.setObfuscatedName(obfMethod.name), mcpSignature, obfMethod.sig);
+            this.addMethodMapping(type, name.setObfuscatedName(obfMethod.getName()), mcpSignature, obfMethod.getDesc());
         }
     }
 

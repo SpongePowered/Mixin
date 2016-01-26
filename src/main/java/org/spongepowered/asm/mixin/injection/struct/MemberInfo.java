@@ -29,9 +29,8 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.obfuscation.MethodData;
 import org.spongepowered.asm.util.SignaturePrinter;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 /**
  * <p>Information bundle about a member (method or field) parsed from a String
@@ -168,11 +167,10 @@ public class MemberInfo {
      * 
      * @param methodData MethodData object to copy values from
      */
-    private MemberInfo(MethodData methodData) {
-        int slashPos = methodData.name.lastIndexOf('/');
-        this.owner = methodData.name.substring(0, slashPos);
-        this.name = methodData.name.substring(slashPos + 1);
-        this.desc = methodData.sig;
+    public MemberInfo(MethodData methodData) {
+        this.owner = methodData.getOwner();
+        this.name = methodData.getSimpleName();
+        this.desc = methodData.getDesc();
         this.matchAll = false;
     }
     
@@ -182,10 +180,9 @@ public class MemberInfo {
      * @param methodData MethodData object to copy values from
      */
     private MemberInfo(MemberInfo remapped, MethodData methodData, boolean setOwner) {
-        int slashPos = methodData.name.lastIndexOf('/');
-        this.owner = setOwner ? methodData.name.substring(0, slashPos) : remapped.owner;
-        this.name = methodData.name.substring(slashPos + 1);
-        this.desc = methodData.sig;
+        this.owner = setOwner ? methodData.getOwner() : remapped.owner;
+        this.name = methodData.getSimpleName();
+        this.desc = methodData.getDesc();
         this.matchAll = remapped.matchAll;
     }
 

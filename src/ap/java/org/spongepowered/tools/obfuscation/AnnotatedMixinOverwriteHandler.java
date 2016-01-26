@@ -30,10 +30,9 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.obfuscation.MethodData;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
     
@@ -73,8 +72,7 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
 
         for (ObfuscationType type : obfData) {
             MethodData obfMethod = obfData.get(type);
-            String obfName = obfMethod.name.substring(obfMethod.name.lastIndexOf('/') + 1);
-            this.addMethodMapping(type, mcpName, obfName, mcpSignature, obfMethod.sig);
+            this.addMethodMapping(type, mcpName, obfMethod.getSimpleName(), mcpSignature, obfMethod.getDesc());
         }
         
         if (!"true".equalsIgnoreCase(this.ap.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {

@@ -28,8 +28,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.commons.Remapper;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
+import org.spongepowered.asm.util.ObfuscationUtil;
+import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
 
-public abstract class RemapperAdapter implements IRemapper {
+public abstract class RemapperAdapter implements IRemapper, IClassRemapper {
 
     protected final Logger logger = LogManager.getLogger("mixin");
     protected final Remapper remapper;
@@ -87,32 +89,7 @@ public abstract class RemapperAdapter implements IRemapper {
     
     @Override
     public String unmapDesc(String desc) {
-        StringBuilder sb = new StringBuilder();
-        StringBuilder token = null;
-
-        for (int pos = 0; pos < desc.length(); pos++) {
-            char c = desc.charAt(pos);
-            if (token != null) {
-                if (c == ';') {
-                    sb.append('L').append(this.unmap(token.toString())).append(';');
-                    token = null;
-                } else {
-                    token.append(c);
-                }
-                continue;
-            }
-            if (c == 'L') {
-                token = new StringBuilder();
-            } else {
-                sb.append(c);
-            }
-        }
-        
-        if (token != null) {
-            throw new IllegalArgumentException("Invalid descriptor '" + desc + "', missing ';'");
-        }
-        
-        return sb.toString();
+        return ObfuscationUtil.unmapDescriptor(desc, this);
     }
 
 }

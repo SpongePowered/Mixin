@@ -44,16 +44,6 @@ targetCompatibility = '1.6'
 repositories {
     mavenCentral()
     maven {
-        // for srg2source
-        name = "forge"
-        url = "http://files.minecraftforge.net/maven"
-    }
-    maven {
-        // because Srg2Source needs an eclipse dependency.
-        name = "eclipse"
-        url = "https://repo.eclipse.org/content/groups/eclipse/"
-    }
-    maven {
         name = 'minecraft'
         url = 'https://libraries.minecraft.net/'
     }
@@ -142,16 +132,13 @@ dependencies {
     compile 'com.google.code.gson:gson:2.2.4'
     compile 'commons-io:commons-io:2.4'
     compile 'commons-codec:commons-codec:1.9'
+    apCompile 'com.google.guava:guava:17.0'
     testCompile 'junit:junit:4.11'
     testCompile 'org.hamcrest:hamcrest-library:1.3'
     testCompile 'org.mockito:mockito-core:1.9.0'
     
     // maven
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
-
-    // for annotation processor
-    compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
-    apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
 
     // remapped ASM
     compile tasks.renamedASM.outputs.files
@@ -169,6 +156,7 @@ dependencies {
     agentCompile 'net.minecraft:launchwrapper:1.11'
     
     // asm bridge
+    compile 'org.ow2.asm:asm-commons:5.0.3'
     bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
     bridgeCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 }

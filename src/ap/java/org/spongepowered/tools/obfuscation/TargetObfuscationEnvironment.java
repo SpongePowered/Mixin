@@ -43,12 +43,40 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.obfuscation.SrgContainer;
+import org.spongepowered.asm.util.ObfuscationUtil;
+import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
-
 class TargetObfuscationEnvironment {
+    
+    final class RemapperProxy implements IClassRemapper {
+
+        @Override
+        public String map(String typeName) {
+            if (TargetObfuscationEnvironment.this.srgs == null) {
+                return null;
+            }
+            return TargetObfuscationEnvironment.this.srgs.getClassMapping(typeName);
+        }
+
+        @Override
+        public String unmap(String typeName) {
+            if (TargetObfuscationEnvironment.this.srgs == null) {
+                return null;
+            }
+            return TargetObfuscationEnvironment.this.srgs.getClassMapping(typeName);
+        }
+        
+    }
+    
+    /**
+     * SRG container for mcp->? mappings
+     */
+    protected SrgContainer srgs;
+    
+    private final RemapperProxy remapper = new RemapperProxy();
     
     /**
      * Type 
@@ -74,11 +102,6 @@ class TargetObfuscationEnvironment {
      * Reference mapper for reference mapping 
      */
     private final ReferenceMapper refMapper;
-    
-    /**
-     * SRG container for mcp->? mappings
-     */
-    private SrgContainer srgs;
     
     /**
      * True once we've tried to initialise the srgs, initially false so that we
@@ -175,9 +198,39 @@ class TargetObfuscationEnvironment {
      */
     public MethodData getObfMethod(MethodData method) {
         if (this.initSrgs()) {
-            return this.srgs.methodMap.get(method);
+            return this.srgs.getMethodMapping(method);
         }
         return null;
+    }
+
+    /**
+     * Remap only the owner and descriptor of the specified method
+     * 
+     * @param method method to remap
+     * @return remapped method or null if no remapping occurred
+     */
+    public MemberInfo remapDescriptor(MemberInfo method) {
+        boolean transformed = false;
+        
+        String owner = method.owner;
+        if (owner != null) {
+            String newOwner = this.remapper.map(owner);
+            if (newOwner != null) {
+                owner = newOwner;
+                transformed = true;
+            }
+        }
+        
+        String desc = method.desc;
+        if (desc != null) {
+            String newDesc = ObfuscationUtil.mapDescriptor(method.desc, this.remapper);
+            if (!newDesc.equals(method.desc)) {
+                desc = newDesc;
+                transformed = true;
+            }
+        }
+        
+        return transformed ? new MemberInfo(method.name, owner, desc, method.matchAll) : null; 
     }
 
     /**
@@ -185,7 +238,7 @@ class TargetObfuscationEnvironment {
      */
     public String getObfField(String field) {
         if (this.initSrgs()) {
-            return this.srgs.fieldMap.get(field);
+            return this.srgs.getFieldMapping(field);
         }
         return null;
     }
@@ -195,7 +248,7 @@ class TargetObfuscationEnvironment {
      */
     public String getObfClass(String className) {
         if (this.initSrgs()) {
-            return this.srgs.classMap.get(className);
+            return this.srgs.getClassMapping(className);
         }
         return null;
     }

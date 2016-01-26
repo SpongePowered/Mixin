@@ -37,10 +37,10 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.obfuscation.MethodData;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
-
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
 
 public class ObfuscationManager implements IObfuscationManager {
     
@@ -215,7 +215,11 @@ public class ObfuscationManager implements IObfuscationManager {
             }
         }
         
-        return data;
+        if (!data.isEmpty() || !Constants.INIT.equals(method.name)) {
+            return data;
+        }
+        
+        return this.remapDescriptor(data, method);
     }
 
     /* (non-Javadoc)
@@ -233,6 +237,28 @@ public class ObfuscationManager implements IObfuscationManager {
             }
         }
         
+        if (!data.isEmpty() || !Constants.INIT.equals(method.getSimpleName())) {
+            return data;
+        }
+        
+        return this.remapDescriptor(data, new MemberInfo(method));
+    }
+
+    /**
+     * Remap a method owner and descriptor only, used for remapping ctors 
+     * 
+     * @param data Output method data collection
+     * @param method Method to remap
+     * @return data 
+     */
+    public ObfuscationData<MethodData> remapDescriptor(ObfuscationData<MethodData> data, MemberInfo method) {
+        for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
+            MemberInfo obfMethod = targetEnv.remapDescriptor(method);
+            if (obfMethod != null) {
+                data.add(targetEnv.getType(), obfMethod.asMethodData());
+            }
+        }
+
         return data;
     }
 
@@ -301,10 +327,7 @@ public class ObfuscationManager implements IObfuscationManager {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
             MethodData obfMethod = obfMethodData.get(targetEnv.getType());
             if (obfMethod != null) {
-                int slashPos = obfMethod.name.lastIndexOf('/');
-                String obfName = obfMethod.name.substring(slashPos + 1);
-                String obfOwner = obfMethod.name.substring(0, slashPos); 
-                MemberInfo remappedReference = new MemberInfo(obfName, obfOwner, obfMethod.sig, false);
+                MemberInfo remappedReference = new MemberInfo(obfMethod);
                 targetEnv.addMapping(className, reference, remappedReference.toString());
             }
         }

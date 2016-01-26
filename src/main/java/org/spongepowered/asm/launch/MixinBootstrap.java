@@ -60,7 +60,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.4.16";
+    public static final String VERSION = "0.4.17";
     
     /**
      * Blackboard key where the subsystem version will be stored to indicate
