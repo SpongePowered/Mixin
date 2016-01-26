@@ -45,8 +45,11 @@ public final class SupportedOptions {
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
 
     public static final Set<String> all = ImmutableSet.<String>of(
+        SupportedOptions.TOKENS,
         SupportedOptions.REOBF_SRG_FILE,
+        SupportedOptions.REOBF_EXTRA_SRG_FILES,
         SupportedOptions.REOBF_NOTCH_FILE,
+        SupportedOptions.REOBF_EXTRA_NOTCH_FILES,
         SupportedOptions.OUT_SRG_SRG_FILE,
         SupportedOptions.OUT_NOTCH_SRG_FILE,
         SupportedOptions.OUT_REFMAP_FILE,
