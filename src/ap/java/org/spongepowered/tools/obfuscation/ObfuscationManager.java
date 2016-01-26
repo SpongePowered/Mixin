@@ -37,6 +37,7 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.obfuscation.SrgField;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -281,9 +282,9 @@ public class ObfuscationManager implements IObfuscationManager {
         ObfuscationData<String> data = new ObfuscationData<String>();
         
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
-            String obfField = targetEnv.getObfField(field);
+            SrgField obfField = targetEnv.getObfField(field);
             if (obfField != null) {
-                data.add(targetEnv.getType(), obfField);
+                data.add(targetEnv.getType(), obfField.toString());
             }
         }
         

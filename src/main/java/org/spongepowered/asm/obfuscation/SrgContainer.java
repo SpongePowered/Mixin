@@ -41,9 +41,9 @@ import joptsimple.internal.Strings;
  */
 public class SrgContainer {
 
-    private final BiMap<String, String> classMap = HashBiMap.create();
-    private final BiMap<String, String> fieldMap = HashBiMap.create();
     private final BiMap<String, String> packageMap = HashBiMap.create();
+    private final BiMap<String, String> classMap = HashBiMap.create();
+    private final BiMap<SrgField, SrgField> fieldMap = HashBiMap.create();
     private final BiMap<SrgMethod, SrgMethod> methodMap = HashBiMap.create();
 
     public void readSrg(File srg) throws IOException {
@@ -60,7 +60,7 @@ public class SrgContainer {
             } else if (type.equals("CL")) {
                 this.classMap.forcePut(args[0], args[1]);
             } else if (type.equals("FD")) {
-                this.fieldMap.forcePut(args[0], args[1]);
+                this.fieldMap.forcePut(new SrgField(args[0]), new SrgField(args[1]));
             } else if (type.equals("MD")) {
                 this.methodMap.forcePut(new SrgMethod(args[0], args[1]), new SrgMethod(args[2], args[3]));
             } else {
@@ -73,7 +73,7 @@ public class SrgContainer {
         return this.methodMap.get(methodName);
     }
 
-    public String getFieldMapping(String fieldName) {
+    public SrgField getFieldMapping(SrgField fieldName) {
         return this.fieldMap.get(fieldName);
     }
 

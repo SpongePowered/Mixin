@@ -45,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.obfuscation.SrgContainer;
+import org.spongepowered.asm.obfuscation.SrgField;
 import org.spongepowered.asm.util.ObfuscationUtil;
 import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -198,7 +199,17 @@ class TargetObfuscationEnvironment {
      */
     public SrgMethod getObfMethod(SrgMethod method) {
         if (this.initSrgs()) {
-            return this.srgs.getMethodMapping(method);
+            SrgMethod originalMethod = method.copy();
+            SrgMethod methodMapping = this.srgs.getMethodMapping(method);
+            // If no obf mapping, we can attempt to remap the owner class
+            if (methodMapping == null) {
+                methodMapping = originalMethod;
+            }
+            String remappedOwner = this.getObfClass(methodMapping.getOwner());
+            if (remappedOwner == null || remappedOwner.equals(method.getOwner()) || remappedOwner.equals(methodMapping.getOwner())) {
+                return methodMapping != originalMethod ? methodMapping : null;
+            }
+            return methodMapping.move(remappedOwner);
         }
         return null;
     }
@@ -236,9 +247,19 @@ class TargetObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a field
      */
-    public String getObfField(String field) {
+    public SrgField getObfField(String field) {
         if (this.initSrgs()) {
-            return this.srgs.getFieldMapping(field);
+            SrgField originalField = new SrgField(field);
+            SrgField fieldMapping = this.srgs.getFieldMapping(originalField);
+            // If no obf mapping, we can attempt to remap the owner class
+            if (fieldMapping == null) {
+                fieldMapping = originalField;
+            }
+            String remappedOwner = this.getObfClass(fieldMapping.getOwner());
+            if (remappedOwner == null || remappedOwner.equals(originalField.getOwner()) || remappedOwner.equals(fieldMapping.getOwner())) {
+                return fieldMapping != originalField ? fieldMapping : null;
+            }
+            return fieldMapping.move(remappedOwner);
         }
         return null;
     }

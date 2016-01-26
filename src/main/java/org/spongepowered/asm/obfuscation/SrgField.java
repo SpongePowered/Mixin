@@ -26,67 +26,61 @@ package org.spongepowered.asm.obfuscation;
 
 import com.google.common.base.Objects;
 
-public final class SrgMethod {
+public final class SrgField {
 
-    private final String name;
-    private final String desc;
+    private final String mapping;
 
-    public SrgMethod(String name, String desc) {
-        this.name = name;
-        this.desc = desc;
+    public SrgField(String mapping) {
+        this.mapping = mapping;
     }
     
     public String getName() {
-        return this.name;
-    }
-    
-    public String getSimpleName() {
-        if (this.name == null) {
+        if (this.mapping == null) {
             return null;
         }
-        int pos = this.name.lastIndexOf('/');
-        return pos > -1 ? this.name.substring(pos + 1) : this.name;
+        int pos = this.mapping.lastIndexOf('/');
+        return pos > -1 ? this.mapping.substring(pos + 1) : this.mapping;
     }
     
     public String getOwner() {
-        if (this.name == null) {
+        if (this.mapping == null) {
             return null;
         }
-        int pos = this.name.lastIndexOf('/');
-        return pos > -1 ? this.name.substring(0, pos) : null;
-    }
-    
-    public String getDesc() {
-        return this.desc;
-    }
-    
-    public SrgMethod move(String newOwner) {
-        return new SrgMethod((newOwner != null ? newOwner + "/" : "") + this.getSimpleName(), this.desc);
+        int pos = this.mapping.lastIndexOf('/');
+        return pos > -1 ? this.mapping.substring(0, pos) : null;
     }
 
-    public SrgMethod copy() {
-        return new SrgMethod(this.name, this.desc);
+    public String getMapping() {
+        return this.mapping;
+    }
+    
+    public SrgField move(String newOwner) {
+        return new SrgField((newOwner != null ? newOwner + "/" : "") + this.getName());
+    }
+
+    public SrgField copy() {
+        return new SrgField(this.mapping);
     }
     
     @Override
     public int hashCode() {
-        return Objects.hashCode(this.name, this.desc);
+        return Objects.hashCode(this.mapping);
     }
-
+    
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof SrgMethod) {
-            return Objects.equal(this.name, ((SrgMethod)obj).name) && Objects.equal(this.desc, ((SrgMethod)obj).desc);
+        if (obj instanceof SrgField) {
+            return Objects.equal(this.mapping, ((SrgField)obj).mapping);
         }
         return false;
     }
 
     @Override
     public String toString() {
-        return String.format("%s %s", this.name, this.desc);
+        return this.mapping;
     }
     
 }
