@@ -45,6 +45,7 @@ import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 
 import com.google.common.collect.ImmutableList;
@@ -197,6 +198,11 @@ public class ClassInfo extends TreeInfo {
          */
         private boolean decoratedFinal;
 
+        /**
+         * True if this member is decorated with {@link Mutable}
+         */
+        private boolean decoratedMutable;
+
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
             this.currentName = member.currentName;
@@ -254,9 +260,14 @@ public class ClassInfo extends TreeInfo {
         public boolean isDecoratedFinal() {
             return this.decoratedFinal;
         }
+        
+        public boolean isDecoratedMutable() {
+            return this.decoratedMutable;
+        }
 
-        public void setDecoratedFinal(boolean decoratedFinal) {
+        public void setDecoratedFinal(boolean decoratedFinal, boolean decoratedMutable) {
             this.decoratedFinal = decoratedFinal;
+            this.decoratedMutable = decoratedMutable;
         }
             
         public boolean matchesFlags(int flags) {

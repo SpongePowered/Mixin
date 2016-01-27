@@ -394,15 +394,22 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         for (Entry<FieldNode, Field> shadow : this.shadowFields.entrySet()) {
-            FieldNode shadowField = shadow.getKey();
-            if (!shadowField.desc.equals(fieldNode.desc) || !shadowField.name.equals(fieldNode.name)) {
+            FieldNode shadowFieldNode = shadow.getKey();
+            if (!shadowFieldNode.desc.equals(fieldNode.desc) || !shadowFieldNode.name.equals(fieldNode.name)) {
                 continue;
             }
-            if (shadow.getValue().isDecoratedFinal()) {
-                MixinTargetContext.logger.error("Write access detected to @Final field {} in {}::{}", shadow.getValue(), this.mixin, method.name);
-                if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERIFY)) {
-                    throw new InvalidMixinException(this.mixin, "Write access detected to @Final field " + shadow.getValue() + " in " + this.mixin
-                            + "::" + method.name);
+            Field shadowField = shadow.getValue();
+            if (shadowField.isDecoratedFinal()) {
+                if (shadowField.isDecoratedMutable()) {
+                    if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+                        MixinTargetContext.logger.warn("Write access to @Mutable @Final field {} in {}::{}", shadowField, this.mixin, method.name);
+                    }                    
+                } else {                    
+                    MixinTargetContext.logger.error("Write access detected to @Final field {} in {}::{}", shadowField, this.mixin, method.name);
+                    if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERIFY)) {
+                        throw new InvalidMixinException(this.mixin, "Write access detected to @Final field " + shadowField + " in " + this.mixin
+                                + "::" + method.name);
+                    }
                 }
             }
             return;

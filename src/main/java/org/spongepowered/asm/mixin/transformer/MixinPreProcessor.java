@@ -42,10 +42,11 @@ import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.RemapperChain;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -245,6 +246,7 @@ class MixinPreProcessor {
             FieldNode mixinField = iter.next();
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(mixinField, Shadow.class);
             boolean isFinal = ASMHelper.getVisibleAnnotation(mixinField, Final.class) != null;
+            boolean isMutable = ASMHelper.getVisibleAnnotation(mixinField, Mutable.class) != null;
             if (!this.validateField(context, mixinField, shadow)) {
                 iter.remove();
                 continue;
@@ -288,7 +290,7 @@ class MixinPreProcessor {
                 if (field == null) {
                     throw new InvalidMixinException(this.mixin, "Unable to locate field surrogate: " + mixinField.name + " in " + this.mixin);
                 }
-                field.setDecoratedFinal(isFinal);
+                field.setDecoratedFinal(isFinal, isMutable);
 
                 if (this.verboseLogging && MixinApplicator.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
