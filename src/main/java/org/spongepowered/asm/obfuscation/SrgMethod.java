@@ -36,6 +36,11 @@ public final class SrgMethod {
         this.desc = desc;
     }
     
+    public SrgMethod(String owner, String simpleName, String desc) {
+        this.name = SrgMethod.createName(owner, simpleName);
+        this.desc = desc;
+    }
+    
     public String getName() {
         return this.name;
     }
@@ -61,7 +66,7 @@ public final class SrgMethod {
     }
     
     public SrgMethod move(String newOwner) {
-        return new SrgMethod((newOwner != null ? newOwner + "/" : "") + this.getSimpleName(), this.desc);
+        return new SrgMethod(newOwner, this.getSimpleName(), this.desc);
     }
 
     public SrgMethod copy() {
@@ -89,4 +94,8 @@ public final class SrgMethod {
         return String.format("%s %s", this.name, this.desc);
     }
     
+    private static String createName(String owner, String simpleName) {
+        return (owner != null ? owner + "/" : "") + simpleName;
+    }
+
 }

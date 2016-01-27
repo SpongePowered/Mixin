@@ -198,18 +198,33 @@ class TargetObfuscationEnvironment {
      * Get an obfuscation mapping for a method
      */
     public SrgMethod getObfMethod(SrgMethod method) {
+        return this.getObfMethod(method, true);
+    }
+
+    /**
+     * Get an obfuscation mapping for a method
+     */
+    public SrgMethod getObfMethod(SrgMethod method, boolean srgOnly) {
         if (this.initSrgs()) {
+            boolean remapped = true;
             SrgMethod originalMethod = method.copy();
             SrgMethod methodMapping = this.srgs.getMethodMapping(method);
             // If no obf mapping, we can attempt to remap the owner class
             if (methodMapping == null) {
+                if (srgOnly) {
+                    return null;
+                }
                 methodMapping = originalMethod;
+                remapped = false;
             }
             String remappedOwner = this.getObfClass(methodMapping.getOwner());
             if (remappedOwner == null || remappedOwner.equals(method.getOwner()) || remappedOwner.equals(methodMapping.getOwner())) {
-                return methodMapping != originalMethod ? methodMapping : null;
+                return remapped ? methodMapping : null;
             }
-            return methodMapping.move(remappedOwner);
+            if (remapped) {
+                return methodMapping.move(remappedOwner);
+            }
+            return new SrgMethod(remappedOwner, methodMapping.getSimpleName(), ObfuscationUtil.mapDescriptor(methodMapping.getDesc(), this.remapper));
         }
         return null;
     }
@@ -243,16 +258,26 @@ class TargetObfuscationEnvironment {
         
         return transformed ? new MemberInfo(method.name, owner, desc, method.matchAll) : null; 
     }
-
+    
     /**
      * Get an obfuscation mapping for a field
      */
     public SrgField getObfField(String field) {
+        return this.getObfField(field, true);
+    }
+
+    /**
+     * Get an obfuscation mapping for a field
+     */
+    public SrgField getObfField(String field, boolean srgOnly) {
         if (this.initSrgs()) {
             SrgField originalField = new SrgField(field);
             SrgField fieldMapping = this.srgs.getFieldMapping(originalField);
             // If no obf mapping, we can attempt to remap the owner class
             if (fieldMapping == null) {
+                if (srgOnly) {
+                    return null;
+                }
                 fieldMapping = originalField;
             }
             String remappedOwner = this.getObfClass(fieldMapping.getOwner());
