@@ -336,7 +336,12 @@ public class MixinEnvironment implements ITokenProvider {
         /**
          * Disable refmap when required 
          */
-        DISABLE_REFMAP(Option.ENVIRONMENT, "disableRefMap");
+        DISABLE_REFMAP(Option.ENVIRONMENT, "disableRefMap"),
+        
+        /**
+         * Default compatibility level to operate at
+         */
+        DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, "compatLevel");
 
         /**
          * Prefix for mixin options
@@ -407,6 +412,16 @@ public class MixinEnvironment implements ITokenProvider {
         
         String getStringValue() {
             return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property) : null;
+        }
+
+        @SuppressWarnings("unchecked")
+        <E extends Enum<E>> E getEnumValue(E defaultValue) {
+            String value = System.getProperty(this.property, defaultValue.name());
+            try {
+                return (E) Enum.valueOf(defaultValue.getClass(), value);
+            } catch (IllegalArgumentException ex) {
+                return defaultValue;
+            }
         }
     }
     
@@ -583,7 +598,7 @@ public class MixinEnvironment implements ITokenProvider {
     /**
      * Current compatibility level
      */
-    private static CompatibilityLevel compatibility = CompatibilityLevel.JAVA_6;
+    private static CompatibilityLevel compatibility = Option.DEFAULT_COMPATIBILITY_LEVEL.<CompatibilityLevel>getEnumValue(CompatibilityLevel.JAVA_6);
     
     /**
      * Show debug header info on first environment construction

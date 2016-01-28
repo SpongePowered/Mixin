@@ -46,6 +46,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -437,19 +438,39 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param state State to validate
      */
     private void validateMixin(ValidationState state) {
+        this.validateType();
+        this.validateInner(state);
+        this.validateClassVersion(state);
+        this.validateRemappables(state);
+    }
+
+    private void validateType() {
         if (this.isInterfaceMixin && !MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces()) {
             throw new InvalidMixinException(this, "Interface mixin not supported in current enviromnment");
         }
-        
+    }
+
+    private void validateInner(ValidationState state) {
         // isInner (shouldn't) return true for static inner classes
         if (!state.classInfo.isProbablyStatic()) {
             throw new InvalidMixinException(this, "Inner class mixin must be declared static");
         }
-        
-        if (state.classNode.version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
-            throw new InvalidMixinException(this, "Unsupported mixin class version " + state.classNode.version);
-        }
+    }
 
+    private void validateClassVersion(ValidationState state) {
+        if (state.classNode.version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
+            String helpText = ".";
+            for (CompatibilityLevel level : CompatibilityLevel.values()) {
+                if (level.classVersion() >= state.classNode.version) {
+                    helpText = String.format(". Mixin requires compatibility level %s or above.", level.name()); 
+                }
+            }
+            
+            throw new InvalidMixinException(this, "Unsupported mixin class version " + state.classNode.version + helpText);
+        }
+    }
+
+    private void validateRemappables(ValidationState state) {
         // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
         if (this.targetClasses.size() > 1) {
             for (FieldNode field : state.classNode.fields) {

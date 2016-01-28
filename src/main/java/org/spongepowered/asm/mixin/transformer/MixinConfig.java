@@ -338,6 +338,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 for (String innerClass : mixin.getSyntheticInnerClasses()) {
                     this.syntheticInnerClasses.add(innerClass.replace('/', '.'));
                 }
+            } catch (InvalidMixinException ex) {
+                this.logger.error(ex.getMixin() + ": " + ex.getMessage(), ex);
+                this.removeMixin(mixin);
+                iter.remove();
             } catch (Exception ex) {
                 this.logger.error(ex.getMessage(), ex);
                 this.removeMixin(mixin);
