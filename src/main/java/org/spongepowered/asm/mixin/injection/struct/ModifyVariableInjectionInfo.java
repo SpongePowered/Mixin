@@ -24,26 +24,42 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
-public class CallbackInjectionInfo extends InjectionInfo {
+public class ModifyVariableInjectionInfo extends InjectionInfo {
 
-    protected CallbackInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
+    public ModifyVariableInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
     }
-
+    
     @Override
     protected Injector initInjector(AnnotationNode injectAnnotation) {
-        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
-        LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
+        boolean print = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "print", Boolean.FALSE).booleanValue();
+        boolean argsOnly = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "argsOnly", Boolean.FALSE).booleanValue();
+        int ordinal = ASMHelper.<Integer>getAnnotationValue(injectAnnotation, "ordinal", -1);
+        int index = ASMHelper.<Integer>getAnnotationValue(injectAnnotation, "index", -1);
         
-        return new CallbackInjector(this, cancellable, locals);
+        Set<String> names = new HashSet<String>();
+        List<String> namesList = ASMHelper.<List<String>>getAnnotationValue(injectAnnotation, "name", (List<String>)null);
+        if (namesList != null) {
+            names.addAll(namesList);
+        }
+        
+        return new ModifyVariableInjector(this, print, argsOnly, ordinal, index, names);
+    }
+    
+    @Override
+    protected String getDescription() {
+        return "Variable modifier method";
     }
     
 }

@@ -310,6 +310,8 @@ public class CallbackInjector extends Injector {
      */
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        super.sanityCheck(target, injectionPoints);
+        
         if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
         }

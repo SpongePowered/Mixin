@@ -65,6 +65,16 @@ public abstract class Injector {
      * Callback method 
      */
     protected final MethodNode methodNode;
+    
+    /**
+     * Arguments of the handler method 
+     */
+    protected final Type[] methodArgs;
+    
+    /**
+     * Return type of the handler method 
+     */
+    protected final Type returnType;
 
     /**
      * True if the callback method is static
@@ -90,6 +100,8 @@ public abstract class Injector {
     private Injector(ClassNode classNode, MethodNode methodNode) {
         this.classNode = classNode;
         this.methodNode = methodNode;
+        this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
+        this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = ASMHelper.methodIsStatic(this.methodNode);
     }
 
@@ -126,13 +138,17 @@ public abstract class Injector {
 
         for (InjectionPoint injectionPoint : injectionPoints) {
             nodes.clear();
-            if (injectionPoint.find(into.desc, insns, nodes)) {
+            if (this.findTargetNodes(into, injectionPoint, insns, nodes)) {
                 targetNodes.addAll(nodes);
             }
         }
         
         insns.dispose();
         return targetNodes;
+    }
+
+    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, ReadOnlyInsnList insns, Collection<AbstractInsnNode> nodes) {
+        return injectionPoint.find(into.desc, insns, nodes);
     }
 
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {

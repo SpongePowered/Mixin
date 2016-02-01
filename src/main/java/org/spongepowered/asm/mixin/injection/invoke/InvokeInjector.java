@@ -43,16 +43,6 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
  */
 public abstract class InvokeInjector extends Injector {
     
-    /**
-     * Arguments of the handler method 
-     */
-    protected final Type[] methodArgs;
-    
-    /**
-     * Return type of the handler method 
-     */
-    protected final Type returnType;
-    
     protected final String annotationType;
 
     /**
@@ -61,8 +51,6 @@ public abstract class InvokeInjector extends Injector {
      */
     public InvokeInjector(InjectionInfo info, String annotationType) {
         super(info);
-        this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
-        this.returnType = Type.getReturnType(this.methodNode.desc);
         this.annotationType = annotationType;
     }
 
@@ -73,6 +61,8 @@ public abstract class InvokeInjector extends Injector {
      */
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        super.sanityCheck(target, injectionPoints);
+        
         if (target.isStatic != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
         }

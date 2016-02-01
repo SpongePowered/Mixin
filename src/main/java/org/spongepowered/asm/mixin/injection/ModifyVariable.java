@@ -32,12 +32,37 @@ import java.lang.annotation.Target;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 
 /**
- * Specifies that this mixin method should inject an argument modifier to itself
- * in the target method(s) identified by {@link #method}.
+ * Specifies that this mixin method should inject a variable modifier callback
+ * to itself in the target method(s) identified by {@link #method}.
+ * 
+ * <p><tt>ModifyVariable</tt> callbacks should always take one argument of the
+ * type to capture and return the same type. For example a <tt>ModifyVariable
+ * </tt> for a local of type {@link String} should have the signature:</p>
+ * 
+ * <code>private String methodName(String variable) { ...</code>
+ * 
+ * <p>The callback receives the current value of the local variable, and should
+ * return the new value.</p>
+ * 
+ * <p>The injector has two operating modes, <em>explicit</em> and <em>implicit
+ * </em>, and can operate either on the entire LVT or on the method arguments
+ * only</p>.
+ * 
+ * <p>In <em>explicit</em> mode, the variable to capture can be specified by
+ * specifying values for the discriminator arguments {@link ordinal},
+ * {@link index} and {@link name}. The injector uses the discriminators in order
+ * to attempt to locate the variable to capture. If no local variable matches
+ * any discriminators, the capture fails.</p>
+ * 
+ * <p>If no values for the capture discrimiators are specified, the injector
+ * operates in <em>implicit</em> mode. If exactly one variable of the capture
+ * type exists in the target LVT, then capture will succeed. However, if more
+ * than one variable of the required type is encountered in the LVT then an
+ * {@link InvalidInjectionException} is thrown.</p> 
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ModifyArg {
+public @interface ModifyVariable {
     
     /**
      * String representation of a
@@ -59,30 +84,66 @@ public @interface ModifyArg {
     public At at();
     
     /**
-     * <p>Gets the argument index on the target to set. It is not necessary to
-     * set this value if there is only one argument of the modifier type in the
-     * hooked method's signature. For example if the target method accepts a
-     * boolean, an integer and a String, and the modifier method accepts and
-     * returns an integer, then the integer parameter will be automatically
-     * selected.</p>
+     * When creating a {@link ModifyVariable} callback, you may wish to first
+     * inspect the local variable table in the target method at the injection
+     * point. Set this value to <tt>true</tt> to print the local variable table
+     * and perform no injection.
      * 
-     * <p>The index is zero-based.</p>
+     * @return true to print the LVT to the console
+     */
+    public boolean print() default false;
+    
+    /**
+     * Gets the local variable ordinal by type. For example, if there are 3
+     * {@link String} arguments in the local variable table, ordinal 0 specifies
+     * the first, 1 specifies the second, etc. Use <tt>ordinal</tt> when the
+     * index within the LVT is known. Takes precedence over {@link index}.
+     * 
+     * @return variable ordinal
+     */
+    public int ordinal() default -1;
+    
+    /**
+     * Gets the absolute index of the local variable within the local variable
+     * table to capture. The local variable at the specified index must be of
+     * the same type as the capture. Takes precedence over {@link name}.
      * 
      * @return argument index to modify or -1 for automatic
      */
     public int index() default -1;
+    
+    /**
+     * Gets the name of the variable to capture. Only used if the variable
+     * cannot be located via {@link ordinal} or {@link index}.
+     * 
+     * @return possible names to capture, only useful when the LVT in the target
+     *      method is known to be complete.
+     */
+    public String[] name() default {};
 
     /**
+     * Under normal circumstances the injector will consider all local variables
+     * including method arguments and all other local variables. This involves
+     * reading (and possibly generating) the local variable table for the method
+     * which can have mixed results. Set this value to <tt>true</tt> to <i>only
+     * </i> consider method arguments.
+     * 
+     * @return true if this injector should only consider method arguments and
+     *      not all locals.
+     */
+    public boolean argsOnly() default false;
+    
+    /**
      * By default, the annotation processor will attempt to locate an
-     * obfuscation mapping for all {@link ModifyArg} methods since it is
-     * anticipated that in general the target of a {@link ModifyArg} annotation
-     * will be an obfuscated method in the target class. However since it is
-     * possible to also apply mixins to non-obfuscated targets (or non-
-     * obfuscated methods in obfuscated targets, such as methods added by Forge)
-     * it may be necessary to suppress the compiler error which would otherwise
-     * be generated. Setting this value to <em>false</em> will cause the
-     * annotation processor to skip this annotation when attempting to build the
-     * obfuscation table for the mixin.
+     * obfuscation mapping for all {@link ModifyVariable} methods since it is
+     * anticipated that in general the target of a {@link ModifyVariable}
+     * annotation will be an obfuscated method in the target class. However 
+     * since it is possible to also apply mixins to non-obfuscated targets (or
+     * non- obfuscated methods in obfuscated targets, such as methods added by
+     * Forge) it may be necessary to suppress the compiler error which would
+     * otherwise be generated. Setting this value to <em>false</em> will cause
+     * the annotation processor to skip this annotation when attempting to build
+     * the obfuscation table for the mixin.
      * 
      * @return True to instruct the annotation processor to search for
      *      obfuscation mappings for this annotation 

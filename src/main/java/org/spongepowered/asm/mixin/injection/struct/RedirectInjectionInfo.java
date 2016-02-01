@@ -40,4 +40,10 @@ public class RedirectInjectionInfo extends InjectionInfo {
     protected Injector initInjector(AnnotationNode injectAnnotation) {
         return new RedirectInjector(this);
     }
+    
+    @Override
+    protected String getDescription() {
+        return "Redirector";
+    }
+    
 }

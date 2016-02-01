@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
@@ -192,7 +193,7 @@ public abstract class InjectionInfo {
         }
 
         Integer require = ASMHelper.<Integer>getAnnotationValue(this.annotation, "require");
-        if (require != null) {
+        if (require != null && require.intValue() > -1) {
             this.requiredCallbackCount = require.intValue();
         } else if (this.group.isDefault()) {
             this.requiredCallbackCount = this.mixin.getDefaultRequiredInjections();
@@ -234,15 +235,19 @@ public abstract class InjectionInfo {
         
         if ((MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
-                    String.format("Injection validation failed: Callback method %s%s in %s expected %d invocation(s) but %d succeeded",
-                    this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount));
+                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded",
+                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount));
         } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
             throw new InjectionError(
-                    String.format("Critical injection failure: Callback method %s%s in %s failed injection check, (%d/%d) succeeded",
-                    this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded",
+                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
         }
     }
     
+    protected String getDescription() {
+        return "Callback method";
+    }
+
     @Override
     public String toString() {
         return String.format("%s->@%s::%s%s", this.mixin.toString(), this.annotationType, this.method.name, this.method.desc);
@@ -356,7 +361,7 @@ public abstract class InjectionInfo {
     public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
-            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class);
+            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class, ModifyVariable.class);
         } catch (IllegalArgumentException ex) {
             throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
                     + ex.getMessage());
@@ -372,6 +377,8 @@ public abstract class InjectionInfo {
             return new ModifyArgInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
             return new RedirectInjectionInfo(mixin, method, annotation);
+        } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
+            return new ModifyVariableInjectionInfo(mixin, method, annotation);
         }
         
         return null;

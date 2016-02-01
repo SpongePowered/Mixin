@@ -39,6 +39,7 @@ import javax.tools.Diagnostic.Kind;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.tools.MirrorUtils;
 
@@ -69,6 +70,7 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
         this.processInjectors(roundEnv, Inject.class);
         this.processInjectors(roundEnv, ModifyArg.class);
         this.processInjectors(roundEnv, Redirect.class);
+        this.processInjectors(roundEnv, ModifyVariable.class);
         this.postProcess(roundEnv);
         
         return true;
