@@ -147,7 +147,7 @@ public abstract class Injector {
         return targetNodes;
     }
 
-    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, ReadOnlyInsnList insns, Collection<AbstractInsnNode> nodes) {
+    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
         return injectionPoint.find(into.desc, insns, nodes);
     }
 

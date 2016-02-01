@@ -179,7 +179,7 @@ public abstract class InjectionInfo {
         }
         
         for (AnnotationNode at : ats) {
-            InjectionPoint injectionPoint = InjectionPoint.parse(this.mixin, at);
+            InjectionPoint injectionPoint = InjectionPoint.parse(this.mixin, this.method, this.annotation, at);
             if (injectionPoint != null) {
                 this.injectionPoints.add(injectionPoint);
             }

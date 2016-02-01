@@ -22,31 +22,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection.modify;
 
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
-import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+public class InvalidImplicitDiscriminatorException extends RuntimeException {
+    
+    private static final long serialVersionUID = 1L;
 
-public class ModifyVariableInjectionInfo extends InjectionInfo {
+    public InvalidImplicitDiscriminatorException(String message) {
+        super(message);
+    }
 
-    public ModifyVariableInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+    public InvalidImplicitDiscriminatorException(String message, Throwable cause) {
+        super(message, cause);
     }
-    
-    @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
-        boolean print = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "print", Boolean.FALSE).booleanValue();
-        return new ModifyVariableInjector(this, print, LocalVariableDiscriminator.parse(injectAnnotation));
-    }
-    
-    @Override
-    protected String getDescription() {
-        return "Variable modifier method";
-    }
-    
+
 }

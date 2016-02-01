@@ -40,6 +40,12 @@ import com.google.common.base.Strings;
  */
 public class PrettyPrinter {
     
+    public interface IPrettyPrintable {
+        
+        public abstract void print(PrettyPrinter printer);
+        
+    }
+    
     /**
      * "Horizontal rule" marker
      */
@@ -129,6 +135,13 @@ public class PrettyPrinter {
             this.add(format, element);
         }
         
+        return this;
+    }
+    
+    public PrettyPrinter add(IPrettyPrintable printable) {
+        if (printable != null) {
+            printable.print(this);
+        }
         return this;
     }
 

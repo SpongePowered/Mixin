@@ -1,0 +1,172 @@
+/*
+ * This file is part of Mixin, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) SpongePowered <https://www.spongepowered.org>
+ * Copyright (c) contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.spongepowered.asm.mixin.injection.modify;
+
+import java.util.Collection;
+import java.util.ListIterator;
+
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector.ContextualInjectionPoint;
+import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+
+/**
+ * <p>This injection point is a companion for the {@link ModifyVariable}
+ * injector which searches for LOAD operations which match the local variables
+ * described by the injector's defined discriminators.</p>
+ * 
+ * <p>This allows you consumers to specify an injection immediately before a
+ * local variable is accessed in a method. Specify an <tt>ordinal</tt> of <tt>n
+ * </tt> to match the <em>n + 1<sup>th</sup></em> access of the variable in
+ * question.</p>
+ * 
+ * <dl>
+ *   <dt>ordinal</dt>
+ *   <dd>The ordinal position of the LOAD opcode for the matching local variable
+ *   to search for, if not specified then the injection point returns <em>all
+ *   </em> opcodes for which the parent annotation's discriminators match. The
+ *   default value is <b>-1</b> which supresses ordinal checking.</dd>
+ * </dl>
+ * 
+ * <p>Example:</p>
+ * <blockquote><pre>
+ *   &#064;ModifyVariable(
+ *       method = "md",
+ *       ordinal = 1,
+ *       at = &#064;At(
+ *           value = "LOAD",
+ *           ordinal = 0
+ *       )
+ *   )</pre>
+ * </blockquote>
+ * <p>Note that if <em>value</em> is the only parameter specified, it can be
+ * omitted:</p> 
+ * <blockquote><pre>
+ *   &#064;At("LOAD")</pre>
+ * </blockquote>
+ */
+public class BeforeLoadLocal extends ContextualInjectionPoint {
+    
+    static class SearchState {
+        
+        private final int targetOrdinal;
+        private int ordinal = 0;
+        private boolean pendingCheck = false;
+        private boolean found = false;
+        private VarInsnNode varNode;
+        
+        SearchState(int targetOrdinal) {
+            this.targetOrdinal = targetOrdinal;
+        }
+
+        boolean success() {
+            return this.found;
+        }
+        
+        boolean isPendingCheck() {
+            return this.pendingCheck;
+        }
+        
+        void setPendingCheck() {
+            this.pendingCheck = true;
+        }
+        
+        void register(VarInsnNode node) {
+            this.varNode = node;
+        }
+        
+        void check(Collection<AbstractInsnNode> nodes, AbstractInsnNode insn, int local) {
+            this.pendingCheck = false;
+            if (local != this.varNode.var) {
+                return;
+            }
+            
+            if (this.targetOrdinal == -1 || this.targetOrdinal == this.ordinal) {
+                nodes.add(insn);
+                this.found = true;
+            }
+
+            this.ordinal++;
+            this.varNode = null;
+        }
+        
+    }
+
+    public static final String CODE = "LOAD";
+    
+    private final Type returnType;
+    
+    private final LocalVariableDiscriminator discriminator;
+    
+    private final int opcode;
+    
+    private final int ordinal;
+    
+    private boolean opcodeAfter;
+
+    public BeforeLoadLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator discriminator, InjectionPointData data) {
+        this(mixin, returnType, discriminator, data, Opcodes.ILOAD, false);
+    }
+    
+    protected BeforeLoadLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator discriminator, InjectionPointData data,
+            int opcode, boolean opcodeAfter) {
+        super(mixin);
+        this.returnType = returnType;
+        this.discriminator = discriminator;
+        this.opcode = data.getOpcode(returnType.getOpcode(opcode));
+        this.ordinal = data.getOrdinal();
+        this.opcodeAfter = opcodeAfter;
+    }
+
+    @Override
+    boolean find(Target target, Collection<AbstractInsnNode> nodes) {
+        SearchState state = new SearchState(this.ordinal);
+
+        ListIterator<AbstractInsnNode> iter = target.method.instructions.iterator();
+        while (iter.hasNext()) {
+            AbstractInsnNode insn = iter.next();
+            if (state.isPendingCheck()) {
+                int local = this.discriminator.findLocal(this.mixin, this.returnType, this.discriminator.isArgsOnly(), target, insn);
+                state.check(nodes, insn, local);
+            } else  if (insn instanceof VarInsnNode && insn.getOpcode() == this.opcode && (this.ordinal == -1 || !state.success())) {
+                state.register((VarInsnNode)insn);
+                if (this.opcodeAfter) {
+                    state.setPendingCheck();
+                } else {
+                    int local = this.discriminator.findLocal(this.mixin, this.returnType, this.discriminator.isArgsOnly(), target, insn);
+                    state.check(nodes, insn, local);
+                }
+            }
+        }
+
+        return state.success();
+    }
+    
+}

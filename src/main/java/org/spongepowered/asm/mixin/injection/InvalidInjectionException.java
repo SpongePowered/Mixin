@@ -28,7 +28,6 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
-
 public class InvalidInjectionException extends InvalidMixinException {
 
     private static final long serialVersionUID = 1L;
