@@ -42,7 +42,6 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
-import org.spongepowered.asm.util.PrettyPrinter.IPrettyPrintable;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
@@ -56,7 +55,7 @@ public class LocalVariableDiscriminator {
      * Discriminator context information, wraps all relevant information about
      * a target location for use when performing discrimination
      */
-    public static class Context implements IPrettyPrintable {
+    public static class Context implements org.spongepowered.asm.util.PrettyPrinter.IPrettyPrintable {
         
         /**
          * Information about a local variable in the LVT, used during
@@ -266,8 +265,8 @@ public class LocalVariableDiscriminator {
     }
     
     /**
-     * If the user specifies no values for {@link ordinal}, {@link index} or 
-     * {@link names} then we are considered to be operating in "implicit mode"
+     * If the user specifies no values for {@link #ordinal}, {@link #index} or 
+     * {@link #names} then we are considered to be operating in "implicit mode"
      * where only a single local variable of the specified type is expected to
      * exist.
      * 
