@@ -108,8 +108,6 @@ class TargetClassContext {
 
     /**
      * Apply mixins to this class
-     * 
-     * @param sessionId
      */
     public void applyMixins() {
         if (this.applied) {

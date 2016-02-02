@@ -49,10 +49,10 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
  * only</p>.
  * 
  * <p>In <em>explicit</em> mode, the variable to capture can be specified by
- * specifying values for the discriminator arguments {@link ordinal},
- * {@link index} and {@link name}. The injector uses the discriminators in order
- * to attempt to locate the variable to capture. If no local variable matches
- * any discriminators, the capture fails.</p>
+ * specifying values for the discriminator arguments {@link #ordinal},
+ * {@link #index} and {@link #name}. The injector uses the discriminators in 
+ * order to attempt to locate the variable to capture. If no local variable
+ * matches any discriminators, the capture fails.</p>
  * 
  * <p>If no values for the capture discrimiators are specified, the injector
  * operates in <em>implicit</em> mode. If exactly one variable of the capture
@@ -97,7 +97,7 @@ public @interface ModifyVariable {
      * Gets the local variable ordinal by type. For example, if there are 3
      * {@link String} arguments in the local variable table, ordinal 0 specifies
      * the first, 1 specifies the second, etc. Use <tt>ordinal</tt> when the
-     * index within the LVT is known. Takes precedence over {@link index}.
+     * index within the LVT is known. Takes precedence over {@link #index}.
      * 
      * @return variable ordinal
      */
@@ -106,7 +106,7 @@ public @interface ModifyVariable {
     /**
      * Gets the absolute index of the local variable within the local variable
      * table to capture. The local variable at the specified index must be of
-     * the same type as the capture. Takes precedence over {@link name}.
+     * the same type as the capture. Takes precedence over {@link #name}.
      * 
      * @return argument index to modify or -1 for automatic
      */
@@ -114,7 +114,7 @@ public @interface ModifyVariable {
     
     /**
      * Gets the name of the variable to capture. Only used if the variable
-     * cannot be located via {@link ordinal} or {@link index}.
+     * cannot be located via {@link #ordinal} or {@link #index}.
      * 
      * @return possible names to capture, only useful when the LVT in the target
      *      method is known to be complete.
