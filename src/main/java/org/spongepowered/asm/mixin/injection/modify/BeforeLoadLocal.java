@@ -74,12 +74,35 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 public class BeforeLoadLocal extends ContextualInjectionPoint {
     
+    /**
+     * Keeps track of state within {@link #find}
+     */
     static class SearchState {
         
+        /**
+         * The target ordinal from the injection point 
+         */
         private final int targetOrdinal;
+        
+        /**
+         * The current ordinal 
+         */
         private int ordinal = 0;
+        
+        /**
+         * Flag to defer a {@link check} to the next opcode, to honour the after
+         * semantics of {@link AfterStoreLocal}. 
+         */
         private boolean pendingCheck = false;
+        
+        /**
+         * True if one or more opcodes was matched 
+         */
         private boolean found = false;
+        
+        /**
+         * Var node, captured for when deferring processing to the next opcode 
+         */
         private VarInsnNode varNode;
         
         SearchState(int targetOrdinal) {
@@ -121,14 +144,31 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
 
     public static final String CODE = "LOAD";
     
+    /**
+     * Return type of the handler, also the type of the local variable we're
+     * interested in
+     */
     private final Type returnType;
     
+    /**
+     * Discriminator, parsed from parent annotation
+     */
     private final LocalVariableDiscriminator discriminator;
     
+    /**
+     * Target opcode, inflected from return type
+     */
     private final int opcode;
     
+    /**
+     * Target ordinal 
+     */
     private final int ordinal;
     
+    /**
+     * True if this injection point should capture the opcode after a matching
+     * opcode, used by {@link AfterStoreLocal}.
+     */
     private boolean opcodeAfter;
 
     public BeforeLoadLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator discriminator, InjectionPointData data) {

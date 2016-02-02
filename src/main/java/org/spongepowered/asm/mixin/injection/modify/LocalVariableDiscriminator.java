@@ -45,14 +45,38 @@ import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.PrettyPrinter.IPrettyPrintable;
 import org.spongepowered.asm.util.SignaturePrinter;
 
+/**
+ * Encapsulates logic for identifying a local variable in a target method using
+ * 3 criteria: <em>ordinal</em>, <em>index</em> and <em>name</em>. This is used
+ * by the {@link ModifyVariableInjector} and its associated injection points.
+ */
 public class LocalVariableDiscriminator {
     
+    /**
+     * Discriminator context information, wraps all relevant information about
+     * a target location for use when performing discrimination
+     */
     public static class Context implements IPrettyPrintable {
         
+        /**
+         * Information about a local variable in the LVT, used during
+         * discrimination
+         */
         public class Local {
             
+            /**
+             * Ordinal value of this local variable type 
+             */
             int ord = 0;
+            
+            /**
+             * Local variable name 
+             */
             String name;
+            
+            /**
+             * Local variable type 
+             */
             Type type;
 
             public Local(String name, Type type) {
@@ -67,12 +91,36 @@ public class LocalVariableDiscriminator {
             
         }
         
+        /**
+         * Target method for this context
+         */
         final Target target;
+        
+        /**
+         * The return type of the handler in question, also the type of the
+         * local variable that we care about 
+         */
         final Type returnType;
+        
+        /**
+         * Injection point 
+         */
         final AbstractInsnNode node;
+        
+        /**
+         * Base argument index, for static methods this is 0, for instance
+         * methods this is 1
+         */
         final int baseArgIndex;
+        
+        /**
+         * Enumerated locals in this context
+         */
         final Local[] locals;
         
+        /**
+         * True if the handler (and target) are static 
+         */
         private final boolean isStatic;
 
         public Context(MixinTargetContext mixin, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
@@ -181,22 +229,38 @@ public class LocalVariableDiscriminator {
         this.names = Collections.<String>unmodifiableSet(names);
     }
     
+    /**
+     * True if this discriminator will examine only the target method args and
+     * won't consider the rest of the LVT at the target location
+     */
     public boolean isArgsOnly() {
         return this.argsOnly;
     }
     
+    /**
+     * Get the local variable ordinal (nth variable of type)
+     */
     public int getOrdinal() {
         return this.ordinal;
     }
     
+    /**
+     * Get the local variable absolute index
+     */
     public int getIndex() {
         return this.index;
     }
     
+    /**
+     * Get valid names for consideration
+     */
     public Set<String> getNames() {
         return this.names;
     }
 
+    /**
+     * Returns true if names is not empty
+     */
     public boolean hasNames() {
         return !this.names.isEmpty();
     }

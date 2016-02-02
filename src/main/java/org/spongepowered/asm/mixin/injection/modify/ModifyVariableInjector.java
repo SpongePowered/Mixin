@@ -36,6 +36,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -45,12 +46,20 @@ import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
- * A bytecode injector which allows a single argument of a chosen method call to
- * be altered.
+ * A bytecode injector which allows a single local variable in the target method
+ * to be captured and altered. See also {@link LocalVariableDiscriminator} and
+ * {@link ModifyVariable}.
  */
 public class ModifyVariableInjector extends Injector {
         
+    /**
+     * Target context information
+     */
     static class Context extends LocalVariableDiscriminator.Context {
+        
+        /**
+         * Instructions to inject 
+         */
         final InsnList insns = new InsnList();
 
         public Context(ClassNode targetClass, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
@@ -59,6 +68,9 @@ public class ModifyVariableInjector extends Injector {
         
     }
     
+    /**
+     * Specialised injection point which uses a target-aware search pattern
+     */
     abstract static class ContextualInjectionPoint extends InjectionPoint {
         
         protected final MixinTargetContext mixin;
@@ -173,6 +185,12 @@ public class ModifyVariableInjector extends Injector {
         printer.print(System.err);
     }
     
+    /**
+     * Perform the injection
+     * 
+     * @param context target context
+     * @param local local variable to capture
+     */
     private void inject(final Context context, final int local) {
         if (!this.isStatic) {
             context.insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
