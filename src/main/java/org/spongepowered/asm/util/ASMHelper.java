@@ -900,46 +900,30 @@ public class ASMHelper {
     }
     
     /**
-     * @param obfType
      * @param returnType
      * @param args
      */
-    public static String generateDescriptor(/*int obfType, */Object returnType, Object... args)
-    {
+    public static String generateDescriptor(Object returnType, Object... args) {
         StringBuilder sb = new StringBuilder().append('(');
 
-        for (Object arg : args)
-        {
+        for (Object arg : args) {
             sb.append(ASMHelper.toDescriptor(/*obfType, */arg));
         }
 
-        return sb.append(')').append(returnType != null ? ASMHelper.toDescriptor(/*obfType, */returnType) : "V").toString();
+        return sb.append(')').append(returnType != null ? ASMHelper.toDescriptor(returnType) : "V").toString();
     }
 
     /**
-     * @param obfType
      * @param arg
      */
-    private static String toDescriptor(/*int obfType, */Object arg)
-    {
-//        if (arg instanceof Obf)
-//        {
-//            return ((Obf)arg).getDescriptor(obfType);
-//        }
-//        else 
-            if (arg instanceof String)
-        {
+    private static String toDescriptor(Object arg) {
+        if (arg instanceof String) {
             return (String)arg;
-        }
-        else if (arg instanceof Type)
-        {
+        } else if (arg instanceof Type) {
             return arg.toString();
-        }
-        else if (arg instanceof Class)
-        {
+        } else if (arg instanceof Class) {
             return Type.getDescriptor((Class<?>)arg).toString();
         }
-
         return arg == null ? "" : arg.toString();
     }
 
