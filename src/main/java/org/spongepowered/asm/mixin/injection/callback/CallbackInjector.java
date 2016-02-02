@@ -260,7 +260,7 @@ public class CallbackInjector extends Injector {
                         return false; // No @Coerce specified, types must match
                     }
 
-                    boolean canCoerce = CallbackInjector.canCoerce(inTypes[arg], myTypes[arg]);
+                    boolean canCoerce = Injector.canCoerce(inTypes[arg], myTypes[arg]);
                     if (!canCoerce) {
                         return false; // Can't coerce source type to local type, give up
                     }
@@ -313,14 +313,14 @@ public class CallbackInjector extends Injector {
         super.sanityCheck(target, injectionPoints);
         
         if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
 
-        if (Injector.CTOR.equals(target.method.name)) {
+        if (Constants.CTOR.equals(target.method.name)) {
             for (InjectionPoint injectionPoint : injectionPoints) {
                 if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
                     throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
-                            + " targetting a ctor in " + this.classNode.name + ". Only RETURN allowed for a ctor target");
+                            + " targetting a ctor in " + this + ". Only RETURN allowed for a ctor target");
                 }
             }
         }
@@ -434,8 +434,8 @@ public class CallbackInjector extends Injector {
         int position = callback.target.method.instructions.indexOf(callback.node);
         List<String> expected = CallbackInjector.summariseLocals(this.methodNode.desc, callback.target.arguments.length + 1);
         List<String> found = CallbackInjector.summariseLocals(callback.getDescriptorWithAllLocals(), callback.frameSize);
-        String message = String.format("LVT in %s::%s has incompatible changes at opcode %d in callback %s%s.\nExpected: %s\n   Found: %s",
-                this.classNode.name, callback.target.method.name, position, this.methodNode.name, this.methodNode.desc, expected, found);
+        String message = String.format("LVT in %s has incompatible changes at opcode %d in callback %s.\nExpected: %s\n   Found: %s",
+                callback.target, position, this, expected, found);
         return message;
     }
 
@@ -455,7 +455,7 @@ public class CallbackInjector extends Injector {
         insns.add(new TypeInsnNode(Opcodes.NEW, errorClass));
         insns.add(new InsnNode(Opcodes.DUP));
         insns.add(new LdcInsnNode(message));
-        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, Constants.INIT, "(Ljava/lang/String;)V", false));
+        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, Constants.CTOR, "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
         return method;
     }
@@ -552,10 +552,10 @@ public class CallbackInjector extends Injector {
         if (callback.isAtReturn) {
             callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar), true, !store);
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
+                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
         } else {
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Injector.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(), false));
         }
     }
 
@@ -655,22 +655,6 @@ public class CallbackInjector extends Injector {
             }
         }
         return list;
-    }
-    
-    public static boolean canCoerce(Type from, Type to) {
-        return CallbackInjector.canCoerce(from.getDescriptor(), to.getDescriptor());
-    }
-    
-    public static boolean canCoerce(String from, String to) {
-        if (from.length() > 1 || to.length() > 1) {
-            return false;
-        }
-        
-        return CallbackInjector.canCoerce(from.charAt(0), to.charAt(0));
-    }
-
-    public static boolean canCoerce(char from, char to) {
-        return to == 'I' && "IBSCZ".indexOf(from) > -1;
     }
 
 }

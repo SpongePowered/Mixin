@@ -87,7 +87,7 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
             if (this.mixin.getPrimaryTarget().isImaginary()) {
                 this.ap.printMessage(Kind.WARNING, type + " target requires method signature because enclosing type information is unavailable",
                         method, inject);
-            } else if (!Constants.INIT.equals(targetMember.name)) {
+            } else if (!Constants.CTOR.equals(targetMember.name)) {
                 this.ap.printMessage(Kind.WARNING, "Unable to determine signature for " + type + " target method", method, inject);
             }
             return null;
@@ -95,7 +95,7 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         
         ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + targetMember.name, desc));
         if (obfData.isEmpty()) {
-            Kind error = Constants.INIT.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
+            Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
             return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);
         }
         

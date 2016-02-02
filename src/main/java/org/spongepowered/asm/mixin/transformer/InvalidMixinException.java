@@ -24,7 +24,9 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-public class InvalidMixinException extends RuntimeException {
+import org.spongepowered.asm.mixin.MixinException;
+
+public class InvalidMixinException extends MixinException {
 
     private static final long serialVersionUID = 1L;
     

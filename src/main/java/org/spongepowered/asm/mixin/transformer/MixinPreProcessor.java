@@ -225,7 +225,7 @@ class MixinPreProcessor {
             method.renameTo(target.name);
         }
         
-        if (Constants.INIT.equals(target.name)) {
+        if (Constants.CTOR.equals(target.name)) {
             throw new InvalidMixinException(this.mixin, "Nice try! Cannot alias a constructor!");
         }
         

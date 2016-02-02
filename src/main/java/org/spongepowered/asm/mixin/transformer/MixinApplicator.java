@@ -520,7 +520,7 @@ public class MixinApplicator {
         
         // Patch the initialiser into the target class ctors
         for (MethodNode method : this.targetClass.methods) {
-            if (Constants.INIT.equals(method.name)) {
+            if (Constants.CTOR.equals(method.name)) {
                 method.maxStack = Math.max(method.maxStack, ctor.maxStack);
                 this.injectInitialiser(mixin, method, initialiser);
             }
@@ -537,7 +537,7 @@ public class MixinApplicator {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
-            if (Constants.INIT.equals(mixinMethod.name) && MixinApplicator.hasLineNumbers(mixinMethod)) {
+            if (Constants.CTOR.equals(mixinMethod.name) && MixinApplicator.hasLineNumbers(mixinMethod)) {
                 if (ctor == null) {
                     ctor = mixinMethod;
                 } else {
@@ -569,7 +569,7 @@ public class MixinApplicator {
                 line = ((LineNumberNode)insn).line;
                 lineNumberIsValid = true;
             } else if (insn instanceof MethodInsnNode) {
-                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
+                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
                     superIndex = ctor.instructions.indexOf(insn);
                     start = line;
                 }
@@ -681,7 +681,7 @@ public class MixinApplicator {
         
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
-            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.INIT.equals(((MethodInsnNode)insn).name)) {
+            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name)) {
                 for (AbstractInsnNode node : initialiser) {
                     if (node instanceof LabelNode) {
                         continue;

@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
+import org.spongepowered.asm.mixin.MixinException;
 
 /**
  * Mixin transformer module which runs CheckClassAdapter on the post-mixin
@@ -33,7 +34,7 @@ import org.spongepowered.asm.lib.util.CheckClassAdapter;
  */
 public class MixinTransformerModuleCheckClass implements IMixinTransformerModule {
     
-    public static class ValidationFailedException extends RuntimeException {
+    public static class ValidationFailedException extends MixinException {
 
         private static final long serialVersionUID = 1L;
 

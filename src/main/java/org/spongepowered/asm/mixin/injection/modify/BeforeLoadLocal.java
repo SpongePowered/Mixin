@@ -193,14 +193,14 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
             if (state.isPendingCheck()) {
-                int local = this.discriminator.findLocal(this.mixin, this.returnType, this.discriminator.isArgsOnly(), target, insn);
+                int local = this.discriminator.findLocal(this.returnType, this.discriminator.isArgsOnly(), target, insn);
                 state.check(nodes, insn, local);
             } else  if (insn instanceof VarInsnNode && insn.getOpcode() == this.opcode && (this.ordinal == -1 || !state.success())) {
                 state.register((VarInsnNode)insn);
                 if (this.opcodeAfter) {
                     state.setPendingCheck();
                 } else {
-                    int local = this.discriminator.findLocal(this.mixin, this.returnType, this.discriminator.isArgsOnly(), target, insn);
+                    int local = this.discriminator.findLocal(this.returnType, this.discriminator.isArgsOnly(), target, insn);
                     state.check(nodes, insn, local);
                 }
             }

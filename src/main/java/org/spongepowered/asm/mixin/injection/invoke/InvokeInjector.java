@@ -64,7 +64,7 @@ public abstract class InvokeInjector extends Injector {
         super.sanityCheck(target, injectionPoints);
         
         if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
     }
 
@@ -77,7 +77,7 @@ public abstract class InvokeInjector extends Injector {
     protected void inject(Target target, AbstractInsnNode node) {
         if (!(node instanceof MethodInsnNode)) {
             throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting a non-method insn in " + target
-                    + " in " + this.classNode.name + "/" + this.methodNode.name);
+                    + " in " + this);
         }
         
         this.inject(target, (MethodInsnNode)node);

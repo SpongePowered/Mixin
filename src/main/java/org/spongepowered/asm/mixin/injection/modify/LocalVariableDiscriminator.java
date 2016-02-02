@@ -34,11 +34,9 @@ import java.util.Set;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.LocalVariableNode;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator.Context.Local;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -122,23 +120,19 @@ public class LocalVariableDiscriminator {
          */
         private final boolean isStatic;
 
-        public Context(MixinTargetContext mixin, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
-            this(mixin.getTargetClass(), returnType, argsOnly, target, node);
-        }
-        
-        public Context(ClassNode targetClass, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+        public Context(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
             this.isStatic = ASMHelper.methodIsStatic(target.method);
             this.returnType = returnType;
             this.target = target;
             this.node = node;
             this.baseArgIndex = this.isStatic ? 0 : 1;
-            this.locals = this.initLocals(targetClass, target, argsOnly, node);
+            this.locals = this.initLocals(target, argsOnly, node);
             this.initOrdinals();
         }
 
-        private Local[] initLocals(ClassNode targetClass, Target target, boolean argsOnly, AbstractInsnNode node) {
+        private Local[] initLocals(Target target, boolean argsOnly, AbstractInsnNode node) {
             if (!argsOnly) {
-                LocalVariableNode[] locals = Locals.getLocalsAt(targetClass, target.method, node);
+                LocalVariableNode[] locals = Locals.getLocalsAt(target.classNode, target.method, node);
                 if (locals != null) {
                     Local[] lvt = new Local[locals.length];
                     for (int l = 0; l < locals.length; l++) {
@@ -152,7 +146,7 @@ public class LocalVariableDiscriminator {
             
             Local[] lvt = new Local[this.baseArgIndex + target.arguments.length];
             if (!this.isStatic) {
-                lvt[0] = new Local("this", Type.getType(targetClass.name));
+                lvt[0] = new Local("this", Type.getType(target.classNode.name));
             }
             for (int local = this.baseArgIndex; local < lvt.length; local++) {
                 Type arg = target.arguments[local - this.baseArgIndex];
@@ -277,9 +271,9 @@ public class LocalVariableDiscriminator {
         return this.ordinal < 0 && this.index < context.baseArgIndex && this.names.isEmpty();
     }
 
-    public int findLocal(MixinTargetContext mixin, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+    public int findLocal(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
         try {
-            return this.findLocal(new Context(mixin, returnType, argsOnly, target, node));
+            return this.findLocal(new Context(returnType, argsOnly, target, node));
         } catch (InvalidImplicitDiscriminatorException ex) {
             return -1;
         }

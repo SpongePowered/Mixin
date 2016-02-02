@@ -24,7 +24,9 @@
  */
 package org.spongepowered.asm.mixin.injection.modify;
 
-public class InvalidImplicitDiscriminatorException extends RuntimeException {
+import org.spongepowered.asm.mixin.MixinException;
+
+public class InvalidImplicitDiscriminatorException extends MixinException {
     
     private static final long serialVersionUID = 1L;
 

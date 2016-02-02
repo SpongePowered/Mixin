@@ -34,6 +34,7 @@ import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * Class loader that is used to load fake mixin classes so that they can be
@@ -115,10 +116,10 @@ class MixinAgentClassLoader extends ClassLoader {
                 Type.getInternalName(Object.class), null);
 
         // create init method
-        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+        MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, Constants.CTOR, "()V", null, null);
         mv.visitCode();
         mv.visitVarInsn(Opcodes.ALOAD, 0);
-        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), "<init>", "()V", false);
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, Type.getInternalName(Object.class), Constants.CTOR, "()V", false);
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(1, 1);
         mv.visitEnd();

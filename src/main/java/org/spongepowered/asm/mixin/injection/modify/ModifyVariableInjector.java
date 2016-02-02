@@ -30,7 +30,6 @@ import java.util.List;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
@@ -62,8 +61,8 @@ public class ModifyVariableInjector extends Injector {
          */
         final InsnList insns = new InsnList();
 
-        public Context(ClassNode targetClass, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
-            super(targetClass, returnType, argsOnly, target, node);
+        public Context(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+            super(returnType, argsOnly, target, node);
         }
         
     }
@@ -126,16 +125,16 @@ public class ModifyVariableInjector extends Injector {
         super.sanityCheck(target, injectionPoints);
         
         if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' of variable modifier method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' of variable modifier method does not match target in " + this);
         }
         
         int ordinal = this.discriminator.getOrdinal();
         if (ordinal < -1) {
-            throw new InvalidInjectionException(this.info, "Invalid ordinal " + ordinal + " specified in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "Invalid ordinal " + ordinal + " specified in " + this);
         }
         
         if (this.discriminator.getIndex() == 0 && !this.isStatic) {
-            throw new InvalidInjectionException(this.info, "Invalid index 0 specified in non-static variable modifier " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "Invalid index 0 specified in non-static variable modifier " + this);
         }
     }
     
@@ -144,7 +143,7 @@ public class ModifyVariableInjector extends Injector {
      */
     @Override
     protected void inject(Target target, AbstractInsnNode node) {
-        Context context = new Context(this.classNode, this.returnType, this.discriminator.isArgsOnly(), target, node);
+        Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node);
         
         if (this.print) {
             this.printLocals(context);
@@ -156,7 +155,7 @@ public class ModifyVariableInjector extends Injector {
                 this.inject(context, local);
             }
         } catch (InvalidImplicitDiscriminatorException ex) {
-            throw new InvalidInjectionException(this.info, "Implicit variable modifier injection failed in " + this.methodNode.name, ex);
+            throw new InvalidInjectionException(this.info, "Implicit variable modifier injection failed in " + this, ex);
         }
         
         target.insns.insertBefore(node, context.insns);

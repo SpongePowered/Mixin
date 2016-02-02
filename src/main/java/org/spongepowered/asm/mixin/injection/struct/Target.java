@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -35,6 +36,8 @@ import org.spongepowered.asm.util.ASMHelper;
  * rather than passing a bunch of values around.
  */
 public class Target {
+
+    public final ClassNode classNode;
 
     /**
      * Target method
@@ -91,7 +94,8 @@ public class Target {
      * 
      * @param method target method
      */
-    public Target(MethodNode method) {
+    public Target(ClassNode classNode, MethodNode method) {
+        this.classNode = classNode;
         this.method = method;
         this.insns = method.instructions;
         this.isStatic = ASMHelper.methodIsStatic(method);
@@ -266,6 +270,6 @@ public class Target {
     
     @Override
     public String toString() {
-        return this.method.name + this.method.desc;
+        return String.format("%s::%s%s", this.classNode.name, this.method.name, this.method.desc);
     }
 }

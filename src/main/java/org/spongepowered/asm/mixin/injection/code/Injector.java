@@ -38,6 +38,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
@@ -48,8 +49,6 @@ import com.google.common.base.Joiner;
  * Base class for bytecode injectors
  */
 public abstract class Injector {
-    
-    protected static final String CTOR = "<init>";
 
     /**
      * Injection info
@@ -104,6 +103,11 @@ public abstract class Injector {
         this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = ASMHelper.methodIsStatic(this.methodNode);
     }
+    
+    @Override
+    public String toString() {
+        return String.format("%s::%s", this.classNode.name, this.methodNode.name);
+    }
 
     /**
      * Inject into the specified method at the specified injection points
@@ -152,7 +156,9 @@ public abstract class Injector {
     }
 
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
-        // stub for subclasses
+        if (target.classNode != this.classNode) {
+            throw new InvalidInjectionException(this.info, "Target class does not match injector class in " + this);
+        }
     }
 
     protected abstract void inject(Target target, AbstractInsnNode node);
@@ -183,4 +189,21 @@ public abstract class Injector {
     protected static String printArgs(Type[] args) {
         return "(" + Joiner.on("").join(args) + ")";
     }
+    
+    public static boolean canCoerce(Type from, Type to) {
+        return Injector.canCoerce(from.getDescriptor(), to.getDescriptor());
+    }
+    
+    public static boolean canCoerce(String from, String to) {
+        if (from.length() > 1 || to.length() > 1) {
+            return false;
+        }
+        
+        return Injector.canCoerce(from.charAt(0), to.charAt(0));
+    }
+
+    public static boolean canCoerce(char from, char to) {
+        return to == 'I' && "IBSCZ".indexOf(from) > -1;
+    }
+
 }

@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.Mixin;
  */
 public abstract class Constants {
 
-    public static final String INIT = "<init>";
+    public static final String CTOR = "<init>";
     public static final String CLINIT = "<clinit>";
     public static final String IMAGINARY_SUPER = "super$";
     public static final String DEBUG_OUTPUT_PATH = ".mixin.out";

@@ -47,6 +47,7 @@ import org.spongepowered.asm.lib.tree.analysis.BasicValue;
 import org.spongepowered.asm.lib.tree.analysis.Frame;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinVerifier;
 
 /**
@@ -125,7 +126,15 @@ public class Locals {
             node = Locals.nextNode(method.instructions, node);
         }
             
-        List<FrameData> frames = ClassInfo.forName(classNode.name).findMethod(method).getFrames();
+        ClassInfo classInfo = ClassInfo.forName(classNode.name);
+        if (classInfo == null) {
+            throw new LVTGeneratorException("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
+        }
+        Method methodInfo = classInfo.findMethod(method);
+        if (methodInfo == null) {
+            throw new LVTGeneratorException("Could not locate method metadata for " + method.name + " generating LVT in " + classNode.name);
+        }
+        List<FrameData> frames = methodInfo.getFrames();
 
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
         int local = 0, index = 0;
@@ -176,7 +185,7 @@ public class Locals {
                                 frame[framePos] = null; // TOP
                             }
                         } else {
-                            throw new RuntimeException("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
+                            throw new LVTGeneratorException("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
@@ -184,7 +193,7 @@ public class Locals {
                             frame[framePos] = null;
                         }
                     } else {
-                        throw new RuntimeException("Invalid value " + localType + " in locals array at position " + localPos
+                        throw new LVTGeneratorException("Invalid value " + localType + " in locals array at position " + localPos
                                 + " in " + classNode.name + "." + method.name + method.desc);
                     }
                 }

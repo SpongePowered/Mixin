@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.launch;
 
-
 public class MixinInitialisationError extends Error {
 
     private static final long serialVersionUID = 1L;

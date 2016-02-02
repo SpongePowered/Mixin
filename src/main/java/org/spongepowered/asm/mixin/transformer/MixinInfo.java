@@ -48,6 +48,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.MixinException;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
@@ -358,7 +359,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
     private void checkTarget(String targetClassName, ClassInfo targetInfo, boolean checkPublic) throws InvalidMixinException {
         if (targetInfo == null) {
-            throw new RuntimeException("@Mixin target " + targetClassName + " was not found " + this);
+            throw new MixinException("@Mixin target " + targetClassName + " was not found " + this);
         }
         boolean targetIsInterface = targetInfo.isInterface();
         if (targetIsInterface != this.isInterfaceMixin) {

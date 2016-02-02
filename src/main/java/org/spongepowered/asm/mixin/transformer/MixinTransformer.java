@@ -49,6 +49,7 @@ import org.spongepowered.asm.mixin.MixinApplyError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.MixinException;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
@@ -293,7 +294,7 @@ public class MixinTransformer extends TreeTransformer {
         
         Object globalMixinTransformer = environment.getActiveTransformer();
         if (globalMixinTransformer instanceof IClassTransformer) {
-            throw new RuntimeException("Terminating MixinTransformer instance " + this);
+            throw new MixinException("Terminating MixinTransformer instance " + this);
         }
         
         // I am a leaf on the wind
@@ -391,7 +392,7 @@ public class MixinTransformer extends TreeTransformer {
                 this.init(environment);
             } catch (Exception ex) {
                 this.lock.pop();
-                throw new RuntimeException(ex);
+                throw new MixinException(ex);
             }
         }
         
@@ -425,7 +426,7 @@ public class MixinTransformer extends TreeTransformer {
             if (mixins != null) {
                 // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
                 if (locked) {
-                    this.logger.warn("Re-entrance detected, this will cause serious problems.", new RuntimeException());
+                    this.logger.warn("Re-entrance detected, this will cause serious problems.", new MixinException());
                     throw new MixinApplyError("Re-entrance error.");
                 }
 

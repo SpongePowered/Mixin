@@ -524,7 +524,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private void processImaginarySuper(MethodNode method, FieldInsnNode fieldInsn) {
         if (fieldInsn.getOpcode() != Opcodes.GETFIELD) {
-            if (Constants.INIT.equals(method.name)) {
+            if (Constants.CTOR.equals(method.name)) {
                 throw new InvalidMixinException(this, "Illegal imaginary super declaration: field " + fieldInsn.name
                         + " must not specify an initialiser");
             }
@@ -581,7 +581,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     private void updateBinding(MethodNode method, MemberRef methodRef, Traversal traversal) {
-        if (Constants.INIT.equals(method.name) || methodRef.getOwner().equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
+        if (Constants.CTOR.equals(method.name) || methodRef.getOwner().equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
             return;
         }
         
@@ -713,7 +713,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         String targetName = method.name + method.desc;
         Target target = this.targetMethods.get(targetName);
         if (target == null) {
-            target = new Target(method);
+            target = new Target(this.targetClass, method);
             this.targetMethods.put(targetName, target);
         }
         return target;

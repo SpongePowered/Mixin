@@ -28,6 +28,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.MixinException;
 import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -219,7 +220,7 @@ public class MemberInfo {
      */
     public String toSrg() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqualified reference to SRG mapping");
+            throw new MixinException("Cannot convert unqualified reference to SRG mapping");
         }
         
         if (this.desc.startsWith("(")) {
@@ -239,11 +240,11 @@ public class MemberInfo {
     
     public SrgMethod asSrgMethod() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqualified reference to SrgMethod");
+            throw new MixinException("Cannot convert unqualified reference to SrgMethod");
         }
         
         if (this.isField()) {
-            throw new RuntimeException("Cannot convert a non-method reference to SrgMethod");
+            throw new MixinException("Cannot convert a non-method reference to SrgMethod");
         }
         
         return new SrgMethod(this.owner + "/" + this.name, this.desc);

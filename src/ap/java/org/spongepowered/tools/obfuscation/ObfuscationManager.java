@@ -216,7 +216,7 @@ public class ObfuscationManager implements IObfuscationManager {
             }
         }
         
-        if (!data.isEmpty() || !Constants.INIT.equals(method.name)) {
+        if (!data.isEmpty() || !Constants.CTOR.equals(method.name)) {
             return data;
         }
         
@@ -238,7 +238,7 @@ public class ObfuscationManager implements IObfuscationManager {
             }
         }
         
-        if (!data.isEmpty() || !Constants.INIT.equals(method.getSimpleName())) {
+        if (!data.isEmpty() || !Constants.CTOR.equals(method.getSimpleName())) {
             return data;
         }
         

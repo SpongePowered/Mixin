@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
+import org.spongepowered.asm.mixin.MixinException;
+
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.io.Files;
@@ -64,7 +66,7 @@ public class SrgContainer {
             } else if (type.equals("MD")) {
                 this.methodMap.forcePut(new SrgMethod(args[0], args[1]), new SrgMethod(args[2], args[3]));
             } else {
-                throw new RuntimeException("Invalid SRG file: " + srg);
+                throw new MixinException("Invalid SRG file: " + srg);
             }
         }
     }

@@ -680,12 +680,12 @@ public class MixinEnvironment implements ITokenProvider {
         // Sanity check
         Object version = this.getVersion();
         if (version == null || !MixinBootstrap.VERSION.equals(version)) {
-            throw new RuntimeException("Environment conflict, mismatched versions or you didn't call MixinBootstrap.init()");
+            throw new MixinException("Environment conflict, mismatched versions or you didn't call MixinBootstrap.init()");
         }
         
         // Also sanity check
         if (this.getClass().getClassLoader() != Launch.class.getClassLoader()) {
-            throw new RuntimeException("Attempted to init the mixin environment in the wrong classloader");
+            throw new MixinException("Attempted to init the mixin environment in the wrong classloader");
         }
         
         this.options = new boolean[Option.values().length];

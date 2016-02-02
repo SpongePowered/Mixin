@@ -24,11 +24,13 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import org.spongepowered.asm.mixin.MixinException;
+
 /**
  * An exception that occurs when a mixin reloads and does something it is
  * normally allowed to do but isn't due to reloading restrictions.
  */
-public class MixinReloadException extends RuntimeException {
+public class MixinReloadException extends MixinException {
     private static final long serialVersionUID = 1L;
 
     private final MixinInfo mixinInfo;
