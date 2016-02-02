@@ -43,4 +43,10 @@ public class ModifyArgInjectionInfo extends InjectionInfo {
         
         return new ModifyArgInjector(this, index);
     }
+    
+    @Override
+    protected String getDescription() {
+        return "Argument modifier method";
+    }
+    
 }

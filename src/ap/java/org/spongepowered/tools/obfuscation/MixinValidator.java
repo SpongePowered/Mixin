@@ -67,9 +67,7 @@ public abstract class MixinValidator implements IMixinValidator {
     /**
      * ctor
      * 
-     * @param processingEnv Processing environment
-     * @param messager Messager to use
-     * @param options Option provider
+     * @param ap Processing environment
      * @param pass Validation pass being performed
      */
     public MixinValidator(IMixinAnnotationProcessor ap, ValidationPass pass) {

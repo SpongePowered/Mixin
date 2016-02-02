@@ -147,9 +147,10 @@ public @interface Inject {
      * specified is not achieved then an {@link InjectionError} is thrown at
      * application time. Use this option with care.</p>
      * 
-     * @return Minimum required number of injected callbacks, default 0
+     * @return Minimum required number of injected callbacks, default specified
+     *      by the containing config
      */
-    public int require() default 0;
+    public int require() default -1;
     
     /**
      * Like {@link #require()} but only enabled if the
