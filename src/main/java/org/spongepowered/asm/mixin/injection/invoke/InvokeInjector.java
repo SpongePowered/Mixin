@@ -80,7 +80,7 @@ public abstract class InvokeInjector extends Injector {
                     + " in " + this);
         }
         
-        this.inject(target, (MethodInsnNode)node);
+        this.injectAtInvoke(target, (MethodInsnNode)node);
     }
     
     /**
@@ -89,7 +89,7 @@ public abstract class InvokeInjector extends Injector {
      * @param target Target to inject into
      * @param node Discovered instruction node 
      */
-    protected abstract void inject(Target target, MethodInsnNode node);
+    protected abstract void injectAtInvoke(Target target, MethodInsnNode node);
 
     /**
      * @param args handler arguments

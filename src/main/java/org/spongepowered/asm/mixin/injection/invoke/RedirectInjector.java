@@ -26,8 +26,12 @@ package org.spongepowered.asm.mixin.injection.invoke;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -38,11 +42,12 @@ import com.google.common.collect.ObjectArrays;
 import com.google.common.primitives.Ints;
 
 /**
- * <p>A bytecode injector which allows a method call to be redirected to the
- * annotated handler method. The handler method signature must match the hooked
- * method precisely <b>but</b> prepended with an arg of the owning object's type
- * to accept the object instance the method was going to be invoked on. For
- * example when hooking the following call:</p>
+ * <p>A bytecode injector which allows a method call or field access to be
+ * redirected to the annotated handler method. For method redirects, the handler
+ * method signature must match the hooked method precisely <b>but</b> prepended
+ * with an arg of the owning object's type to accept the object instance the
+ * method was going to be invoked on. For example when hooking the following
+ * call:</p>
  * 
  * <blockquote><pre>
  *   int abc = 0;
@@ -62,6 +67,9 @@ import com.google.common.primitives.Ints;
  * <p>For obvious reasons this does not apply for static methods, for static
  * methods it is sufficient that the signature simply match the hooked method.
  * </p> 
+ * 
+ * <p>For field redirections, see the details in {@link Redirect} for the
+ * required signature of the handler method.</p>
  */
 public class RedirectInjector extends InvokeInjector {
 
@@ -71,12 +79,33 @@ public class RedirectInjector extends InvokeInjector {
     public RedirectInjector(InjectionInfo info) {
         super(info, "@Redirect");
     }
-    
-    /**
-     * Do the injection
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
+     *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,
+     *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    protected void inject(Target target, MethodInsnNode node) {
+    protected void inject(Target target, AbstractInsnNode node) {
+        if (node instanceof MethodInsnNode) {
+            this.injectAtInvoke(target, (MethodInsnNode)node);
+            return;
+        }
+        
+        if (node instanceof FieldInsnNode) {
+            this.injectAtFieldAccess(target, (FieldInsnNode)node);
+            return;
+        }
+        
+        throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
+                + target + " in " + this);
+    }
+
+    /**
+     * Redirect a method invocation
+     */
+    @Override
+    protected void injectAtInvoke(Target target, MethodInsnNode node) {
         boolean injectTargetParams = false;
         boolean targetIsStatic = node.getOpcode() == Opcodes.INVOKESTATIC;
         Type ownerType = Type.getType("L" + node.owner + ";");
@@ -90,8 +119,8 @@ public class RedirectInjector extends InvokeInjector {
             if (alternateDesc.equals(this.methodNode.desc)) {
                 injectTargetParams = true;
             } else {
-                throw new InvalidInjectionException(this.info, "@Redirect handler method " + this.methodNode.name + " has an invalid signature "
-                        + ", expected " + desc + " found " + this.methodNode.desc);
+                throw new InvalidInjectionException(this.info, this.annotationType + " handler method " + this
+                        + " has an invalid signature, expected " + desc + " found " + this.methodNode.desc);
             }
         }
         
@@ -112,4 +141,87 @@ public class RedirectInjector extends InvokeInjector {
         target.addToLocals(extraLocals);
         target.addToStack(extraStack);
     }
+
+    /**
+     * Redirect a field get or set operation
+     */
+    private void injectAtFieldAccess(Target target, FieldInsnNode node) {
+        boolean staticField = node.getOpcode() == Opcodes.GETSTATIC || node.getOpcode() == Opcodes.PUTSTATIC;
+        Type ownerType = Type.getType("L" + node.owner + ";");
+        Type fieldType = Type.getType(node.desc);
+
+        InsnList insns = new InsnList();
+        int extraStack = 0;
+        if (node.getOpcode() == Opcodes.GETSTATIC || node.getOpcode() == Opcodes.GETFIELD) {
+            extraStack = this.injectAtGetField(insns, target, node, staticField, ownerType, fieldType);
+        } else if (node.getOpcode() == Opcodes.PUTSTATIC || node.getOpcode() == Opcodes.PUTFIELD) {
+            extraStack = this.injectAtPutField(insns, target, node, staticField, ownerType, fieldType);
+        } else {
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + node.getOpcode() + " on FieldInsnNode for " + this.info);
+        }
+        
+        target.insns.insertBefore(node, insns);
+        target.insns.remove(node);
+        target.addToStack(extraStack);
+    }
+
+    /**
+     * Inject opcodes to redirect a field getter. The injection will vary based
+     * on the staticness of the field and the handler thus there are four
+     * possible scenarios based on the possible combinations of static on the
+     * handler and the field itself.
+     */
+    private int injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+        String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
+        this.checkDescriptor(handlerDesc, "getter");
+
+        if (!this.isStatic) {
+            insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            if (!staticField) {
+                insns.add(new InsnNode(Opcodes.SWAP));
+            }
+        }
+        
+        this.invokeHandler(insns);
+        return this.isStatic ? 0 : 1;
+    }
+
+    /**
+     * Inject opcodes to redirect a field setter. The injection will vary based
+     * on the staticness of the field and the handler thus there are four
+     * possible scenarios based on the possible combinations of static on the
+     * handler and the field itself.
+     */
+    private int injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+        String handlerDesc = staticField ? ASMHelper.generateDescriptor(null, fieldType) : ASMHelper.generateDescriptor(null, owner, fieldType);
+        this.checkDescriptor(handlerDesc, "setter");
+
+        if (!this.isStatic) {
+            if (staticField) {
+                insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                insns.add(new InsnNode(Opcodes.SWAP));
+            } else {
+                int marshallVar = target.allocateLocals(fieldType.getSize());
+                insns.add(new VarInsnNode(fieldType.getOpcode(Opcodes.ISTORE), marshallVar));
+                insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                insns.add(new InsnNode(Opcodes.SWAP));
+                insns.add(new VarInsnNode(fieldType.getOpcode(Opcodes.ILOAD), marshallVar));
+            }
+        }
+        
+        this.invokeHandler(insns);
+        return !this.isStatic && !staticField ? 1 : 0;
+    }
+
+    /**
+     * Check that the handler descriptor matches the calculated descriptor for
+     * the field access being redirected.
+     */
+    private void checkDescriptor(String handlerDesc, String type) {
+        if (!this.methodNode.desc.equals(handlerDesc)) {
+            throw new InvalidInjectionException(this.info, this.annotationType + " field " + type + " " + this
+                    + " has an invalid signature. Expected " + handlerDesc + " but found " + this.methodNode.desc);
+        }
+    }
+
 }
