@@ -104,8 +104,10 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
  *   </tr>
  * </table>
  * 
- * <p>Field redirectors do not support capture of enclosing method arguments.
- * </p>
+ * <p>It is also possible to capture the arguments of the target method in
+ * addition to the arguments being passed to the method call (for example in
+ * the code above this would be the <em>someInt</em> and <em>someString</em>
+ * arguments) by appending the arguments to the method signature.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

@@ -33,11 +33,13 @@ import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.primitives.Ints;
 
@@ -151,18 +153,16 @@ public class RedirectInjector extends InvokeInjector {
         Type fieldType = Type.getType(node.desc);
 
         InsnList insns = new InsnList();
-        int extraStack = 0;
         if (node.getOpcode() == Opcodes.GETSTATIC || node.getOpcode() == Opcodes.GETFIELD) {
-            extraStack = this.injectAtGetField(insns, target, node, staticField, ownerType, fieldType);
+            this.injectAtGetField(insns, target, node, staticField, ownerType, fieldType);
         } else if (node.getOpcode() == Opcodes.PUTSTATIC || node.getOpcode() == Opcodes.PUTFIELD) {
-            extraStack = this.injectAtPutField(insns, target, node, staticField, ownerType, fieldType);
+            this.injectAtPutField(insns, target, node, staticField, ownerType, fieldType);
         } else {
             throw new InvalidInjectionException(this.info, "Unspported opcode " + node.getOpcode() + " on FieldInsnNode for " + this.info);
         }
         
         target.insns.insertBefore(node, insns);
         target.insns.remove(node);
-        target.addToStack(extraStack);
     }
 
     /**
@@ -171,9 +171,9 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private int injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+    private void injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
         String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
-        this.checkDescriptor(handlerDesc, "getter");
+        boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -182,8 +182,13 @@ public class RedirectInjector extends InvokeInjector {
             }
         }
         
+        if (withArgs) {
+            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+        }
+        
         this.invokeHandler(insns);
-        return this.isStatic ? 0 : 1;
+        target.addToStack(this.isStatic ? 0 : 1);
     }
 
     /**
@@ -192,9 +197,9 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private int injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+    private void injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
         String handlerDesc = staticField ? ASMHelper.generateDescriptor(null, fieldType) : ASMHelper.generateDescriptor(null, owner, fieldType);
-        this.checkDescriptor(handlerDesc, "setter");
+        boolean withArgs = this.checkDescriptor(handlerDesc, target, "setter");
 
         if (!this.isStatic) {
             if (staticField) {
@@ -209,19 +214,34 @@ public class RedirectInjector extends InvokeInjector {
             }
         }
         
+        if (withArgs) {
+            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+        }
+        
         this.invokeHandler(insns);
-        return !this.isStatic && !staticField ? 1 : 0;
+        target.addToStack(!this.isStatic && !staticField ? 1 : 0);
     }
 
     /**
      * Check that the handler descriptor matches the calculated descriptor for
      * the field access being redirected.
      */
-    private void checkDescriptor(String handlerDesc, String type) {
-        if (!this.methodNode.desc.equals(handlerDesc)) {
-            throw new InvalidInjectionException(this.info, this.annotationType + " field " + type + " " + this
-                    + " has an invalid signature. Expected " + handlerDesc + " but found " + this.methodNode.desc);
+    private boolean checkDescriptor(String desc, Target target, String type) {
+        if (this.methodNode.desc.equals(desc)) {
+            return false;
         }
+        
+        int pos = desc.indexOf(')');
+        String alternateDesc = String.format("%s%s%s", desc.substring(0, pos), Joiner.on("").join(target.arguments), desc.substring(pos));
+        if (this.methodNode.desc.equals(alternateDesc)) {
+            return true;
+        }
+        
+        System.err.printf("%s\n", alternateDesc);
+        
+        throw new InvalidInjectionException(this.info, this.annotationType + " field " + type + " " + this
+                + " has an invalid signature. Expected " + desc + " but found " + this.methodNode.desc);
     }
 
 }
