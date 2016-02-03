@@ -33,7 +33,9 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 
 /**
  * <p>Specifies that this mixin method should redirect the specified
- * {@link #method} call to the method decorated with this annotation.</p>
+ * method call or field access to the method decorated with this annotation.</p>
+ * 
+ * <h4>Method Redirect Mode</h4>
  * 
  * <p>The handler method signature must match the hooked method precisely
  * <b>but</b> prepended with an arg of the owning object's type to accept the
@@ -70,6 +72,42 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
  *      <pre>public boolean barProxy(Foo someObject, int abc, int def,
  *   int someInt, String someString)</pre>
  * </blockquote>
+ * 
+ * <h4>Field Access Redirect Mode</h4>
+ * 
+ * <p>The handler method signature varies depending on whether the redirector is
+ * handling a field <b>write</b> (<tt>PUTFIELD</tt>, <tt>PUTSTATIC</tt>) or a
+ * field <b>read</b> (<tt>GETFIELD</tt>, <tt>GETSTATIC</tt>).</p>
+ * 
+ * <table width="100%">
+ *   <tr>
+ *     <th>Operation (OPCODE)</th>
+ *     <th>Handler signature</th>
+ *   </tr>
+ *   <tr>
+ *     <td>Read static field (<tt>GETSTATIC</tt>)</td>
+ *     <td><code>private <b>FieldType</b> getFieldValue()</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Read instance field (<tt>GETFIELD</tt>)</td>
+ *     <td><code>private <b>FieldType</b> getFieldValue(<b>OwnerType</b>
+ *     owner)</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Write static field (<tt>PUTSTATIC</tt>)</td>
+ *     <td><code>private void setFieldValue(<b>FieldType</b> value)</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Write instance field (<tt>PUTFIELD</tt>)</td>
+ *     <td><code>private void getFieldValue(<b>OwnerType</b>
+ *     owner, <b>FieldType</b> value)</code></td>
+ *   </tr>
+ * </table>
+ * 
+ * <p>It is also possible to capture the arguments of the target method in
+ * addition to the arguments being passed to the method call (for example in
+ * the code above this would be the <em>someInt</em> and <em>someString</em>
+ * arguments) by appending the arguments to the method signature.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

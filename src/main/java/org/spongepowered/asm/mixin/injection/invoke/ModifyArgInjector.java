@@ -86,7 +86,7 @@ public class ModifyArgInjector extends InvokeInjector {
      * Do the injection
      */
     @Override
-    protected void inject(Target target, MethodInsnNode node) {
+    protected void injectAtInvoke(Target target, MethodInsnNode node) {
         Type[] args = Type.getArgumentTypes(node.desc);
         int argIndex = this.findArgIndex(target, args);
         InsnList insns = new InsnList();
