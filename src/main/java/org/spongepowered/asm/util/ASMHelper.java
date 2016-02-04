@@ -362,32 +362,36 @@ public class ASMHelper {
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
-        System.err.printf("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
-        if (node instanceof LabelNode) {
-            System.err.printf("[%s]", ((LabelNode)node).getLabel());
-        } else if (node instanceof JumpInsnNode) {
-            System.err.printf("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
-        } else if (node instanceof VarInsnNode) {
-            System.err.printf("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
-        } else if (node instanceof MethodInsnNode) {
-            MethodInsnNode mth = (MethodInsnNode)node;
-            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
-        } else if (node instanceof FieldInsnNode) {
-            FieldInsnNode fld = (FieldInsnNode)node;
-            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
-        } else if (node instanceof LineNumberNode) {
-            LineNumberNode ln = (LineNumberNode)node;
-            System.err.printf("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
-        } else if (node instanceof LdcInsnNode) {
-            System.err.print(((LdcInsnNode)node).cst);
-        } else if (node instanceof IntInsnNode) {
-            System.err.print(((IntInsnNode)node).operand);
-        } else {
-            System.err.printf("[%s] ", ASMHelper.getOpcodeName(node));
-        }
-        System.err.print("\n");
+        System.err.printf("%s\n", ASMHelper.getNodeDescriptionForDebug(node));
     }
 
+    public static String getNodeDescriptionForDebug(AbstractInsnNode node) {
+        String out = String.format("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
+        if (node instanceof LabelNode) {
+            out += String.format("[%s]", ((LabelNode)node).getLabel());
+        } else if (node instanceof JumpInsnNode) {
+            out += String.format("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
+        } else if (node instanceof VarInsnNode) {
+            out += String.format("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
+        } else if (node instanceof MethodInsnNode) {
+            MethodInsnNode mth = (MethodInsnNode)node;
+            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
+        } else if (node instanceof FieldInsnNode) {
+            FieldInsnNode fld = (FieldInsnNode)node;
+            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+        } else if (node instanceof LineNumberNode) {
+            LineNumberNode ln = (LineNumberNode)node;
+            out += String.format("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
+        } else if (node instanceof LdcInsnNode) {
+            out += (((LdcInsnNode)node).cst);
+        } else if (node instanceof IntInsnNode) {
+            out += (((IntInsnNode)node).operand);
+        } else {
+            out += String.format("[%s] ", ASMHelper.getOpcodeName(node));
+        }
+        return out;
+    }
+    
     /**
      * Uses reflection to find an approximate constant name match for the
      * supplied node's opcode

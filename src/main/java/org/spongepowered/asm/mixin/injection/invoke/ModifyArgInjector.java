@@ -32,6 +32,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -86,8 +87,9 @@ public class ModifyArgInjector extends InvokeInjector {
      * Do the injection
      */
     @Override
-    protected void injectAtInvoke(Target target, MethodInsnNode node) {
-        Type[] args = Type.getArgumentTypes(node.desc);
+    protected void injectAtInvoke(Target target, InjectionNode node) {
+        MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
+        Type[] args = Type.getArgumentTypes(methodNode.desc);
         int argIndex = this.findArgIndex(target, args);
         InsnList insns = new InsnList();
         int extraLocals = 0;
@@ -98,7 +100,7 @@ public class ModifyArgInjector extends InvokeInjector {
             extraLocals = this.injectMultiArgHandler(target, args, argIndex, insns);
         }
         
-        target.insns.insertBefore(node, insns);
+        target.insns.insertBefore(methodNode, insns);
         target.addToLocals(extraLocals);
         target.addToStack(2 - (extraLocals - 1));
     }

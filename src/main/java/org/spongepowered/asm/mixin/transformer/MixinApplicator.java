@@ -710,7 +710,7 @@ public class MixinApplicator {
      * @param mixin
      */
     protected void applyInjections(MixinTargetContext mixin) {
-        List<InjectionInfo> injected = new ArrayList<InjectionInfo>();
+        List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
         
         for (MethodNode method : this.targetClass.methods) {
             InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
@@ -719,14 +719,18 @@ public class MixinApplicator {
             }
             
             if (injectInfo.isValid()) {
-                injectInfo.inject();
-                injected.add(injectInfo);
+                injectInfo.prepare();
+                injectors.add(injectInfo);
             }
             
             method.visibleAnnotations.remove(injectInfo.getAnnotation());
         }
         
-        for (InjectionInfo injectInfo : injected) {
+        for (InjectionInfo injectInfo : injectors) {
+            injectInfo.inject();
+        }
+        
+        for (InjectionInfo injectInfo : injectors) {
             injectInfo.postInject();
         }
     }

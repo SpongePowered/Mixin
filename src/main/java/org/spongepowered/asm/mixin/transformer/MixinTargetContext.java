@@ -166,6 +166,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public String toString() {
         return this.mixin.toString();
     }
+    
+    /**
+     * Get the environment of the owning mixin config
+     * 
+     * @return mixin parent environment
+     */
+    public MixinEnvironment getEnvironment() {
+        return this.mixin.getParent().getEnvironment();
+    }
 
     /**
      * Get the mixin tree

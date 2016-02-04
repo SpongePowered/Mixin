@@ -32,6 +32,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.code.Injector;
@@ -74,13 +75,13 @@ public abstract class InvokeInjector extends Injector {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    protected void inject(Target target, AbstractInsnNode node) {
-        if (!(node instanceof MethodInsnNode)) {
+    protected void inject(Target target, InjectionNode node) {
+        if (!(node.getCurrentTarget() instanceof MethodInsnNode)) {
             throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting a non-method insn in " + target
                     + " in " + this);
         }
         
-        this.injectAtInvoke(target, (MethodInsnNode)node);
+        this.injectAtInvoke(target, node);
     }
     
     /**
@@ -89,15 +90,15 @@ public abstract class InvokeInjector extends Injector {
      * @param target Target to inject into
      * @param node Discovered instruction node 
      */
-    protected abstract void injectAtInvoke(Target target, MethodInsnNode node);
+    protected abstract void injectAtInvoke(Target target, InjectionNode node);
 
     /**
      * @param args handler arguments
      * @param insns InsnList to inject insns into
      * @param argMap Mapping of args to local variables
      */
-    protected void invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap) {
-        this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
+    protected AbstractInsnNode invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap) {
+        return this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
     }
     
     /**
@@ -107,12 +108,12 @@ public abstract class InvokeInjector extends Injector {
      * @param startArg Starting arg to consume
      * @param endArg Ending arg to consume
      */
-    protected void invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap, int startArg, int endArg) {
+    protected AbstractInsnNode invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap, int startArg, int endArg) {
         if (!this.isStatic) {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
         this.pushArgs(args, insns, argMap, startArg, endArg);
-        this.invokeHandler(insns);
+        return this.invokeHandler(insns);
     }
 
     /**

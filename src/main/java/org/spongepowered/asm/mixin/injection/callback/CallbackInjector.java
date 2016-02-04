@@ -27,13 +27,12 @@ package org.spongepowered.asm.mixin.injection.callback;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionError;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.Surrogate;
@@ -148,10 +147,10 @@ public class CallbackInjector extends Injector {
          */
         private boolean captureArgs = true;
 
-        Callback(MethodNode handler, Target target, final AbstractInsnNode node, final LocalVariableNode[] locals, boolean captureLocals) {
+        Callback(MethodNode handler, Target target, final InjectionNode node, final LocalVariableNode[] locals, boolean captureLocals) {
             this.handler = handler;
             this.target = target;
-            this.node = node;
+            this.node = node.getCurrentTarget();
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
             this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
@@ -277,8 +276,6 @@ public class CallbackInjector extends Injector {
         }
     }
     
-    private final Logger logger = LogManager.getLogger("mixin");
-    
     /**
      * True if cancellable 
      */
@@ -332,11 +329,19 @@ public class CallbackInjector extends Injector {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    protected void inject(Target target, AbstractInsnNode node) {
+    protected void inject(Target target, InjectionNode node) {
         LocalVariableNode[] locals = null;
 
+        if (node.isReplaced()) {
+            System.err.printf("Injector target was replaced!!!\n");
+            System.err.printf("ORIGINAL: ");
+            ASMHelper.printNode(node.getOriginalTarget());
+            System.err.printf(" CURRENT: ");
+            ASMHelper.printNode(node.getCurrentTarget());
+        }
+        
         if (this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) {
-            locals = Locals.getLocalsAt(this.classNode, target.method, node);
+            locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
         }
 
         this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
@@ -379,14 +384,14 @@ public class CallbackInjector extends Injector {
                     
                     switch (this.localCapture) {
                         case CAPTURE_FAILEXCEPTION:
-                            this.logger.error("Injection error: {}", message);
+                            Injector.logger.error("Injection error: {}", message);
                             callbackMethod = this.generateErrorMethod(callback, "org/spongepowered/asm/mixin/injection/InjectionError", message);
                             break;
                         case CAPTURE_FAILSOFT:
-                            this.logger.warn("Injection warning: {}", message);
+                            Injector.logger.warn("Injection warning: {}", message);
                             return;
                         default:
-                            this.logger.error("Critical injection failure: {}", message);
+                            Injector.logger.error("Critical injection failure: {}", message);
                             throw new InjectionError(message);
                     }
                 }

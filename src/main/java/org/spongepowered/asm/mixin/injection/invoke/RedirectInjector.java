@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
+import java.util.List;
+
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
@@ -32,6 +34,8 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
@@ -75,44 +79,89 @@ import com.google.common.primitives.Ints;
  */
 public class RedirectInjector extends InvokeInjector {
 
+    private final int priority;
+    
+    private final boolean isFinal;
+    
     /**
      * @param info Injection info
      */
     public RedirectInjector(InjectionInfo info) {
         super(info, "@Redirect");
+        this.priority = info.getContext().getPriority();
+        this.isFinal = ASMHelper.getVisibleAnnotation(this.methodNode, Final.class) != null;
+    }
+    
+    @Override
+    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn) {
+        InjectionNode node = target.injectionNodes.get(insn);
+        
+        if (node != null ) {
+            boolean isRedirect = node.getDecoration("redir:ect") == Boolean.TRUE;
+            RedirectInjector redirector = node.getDecoration("redir:owner");
+            Boolean isFinal = node.getDecoration("redir:final");
+            Integer priority = node.getDecoration("redir:priority");
+            
+            if (isRedirect && redirector != this) {
+                if (priority >= this.priority) {
+                    Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
+                            this.annotationType, this.info, this.priority, node.getDecoration("redir:name"), node.getDecoration("redir:priority"));
+                    return;
+                } else if (isFinal != null && isFinal.booleanValue()) {
+                    throw new InvalidInjectionException(this.info, this.annotationType + " conflict: " + this
+                            + " failed because target was already remapped by " + node.getDecoration("redir:name"));
+                }
+            }
+        }
+        
+        node = target.injectionNodes.add(insn);
+        node.decorate("redir:ect", Boolean.TRUE);
+        node.decorate("redir:owner", this);
+        node.decorate("redir:priority", Integer.valueOf(this.priority));
+        node.decorate("redir:final", Boolean.valueOf(this.isFinal));
+        node.decorate("redir:name", this.info.toString());
+        node.decorate("redir:desc", this.methodNode.desc);
+        
+        myNodes.add(node);
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
-     *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,
-     *      org.objectweb.asm.tree.AbstractInsnNode)
-     */
     @Override
-    protected void inject(Target target, AbstractInsnNode node) {
-        if (node instanceof MethodInsnNode) {
-            this.injectAtInvoke(target, (MethodInsnNode)node);
+    protected void inject(Target target, InjectionNode node) {
+        if (node.getDecoration("redir:owner") != this) {
+            Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
+                    this.annotationType, this.info, this.priority, node.getDecoration("redir:name"), node.getDecoration("redir:priority"));
+            return;
+        }
+            
+        if (node.isReplaced()) {
+            throw new UnsupportedOperationException("Redirector target failure for " + this.info);
+        }
+        
+        if (node.getCurrentTarget() instanceof MethodInsnNode) {
+            this.injectAtInvoke(target, node);
             return;
         }
         
-        if (node instanceof FieldInsnNode) {
-            this.injectAtFieldAccess(target, (FieldInsnNode)node);
+        if (node.getCurrentTarget() instanceof FieldInsnNode) {
+            this.injectAtFieldAccess(target, node);
             return;
         }
         
         throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
                 + target + " in " + this);
     }
-
+    
     /**
      * Redirect a method invocation
      */
     @Override
-    protected void injectAtInvoke(Target target, MethodInsnNode node) {
+    protected void injectAtInvoke(Target target, InjectionNode node) {
+        MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
         boolean injectTargetParams = false;
-        boolean targetIsStatic = node.getOpcode() == Opcodes.INVOKESTATIC;
-        Type ownerType = Type.getType("L" + node.owner + ";");
-        Type returnType = Type.getReturnType(node.desc);
-        Type[] args = Type.getArgumentTypes(node.desc);
+        boolean targetIsStatic = methodNode.getOpcode() == Opcodes.INVOKESTATIC;
+        Type ownerType = Type.getType("L" + methodNode.owner + ";");
+        Type returnType = Type.getReturnType(methodNode.desc);
+        Type[] args = Type.getArgumentTypes(methodNode.desc);
         Type[] stackVars = targetIsStatic ? args : ObjectArrays.concat(ownerType, args);
         
         String desc = Injector.printArgs(stackVars) + returnType;
@@ -136,10 +185,8 @@ public class RedirectInjector extends InvokeInjector {
             extraStack += argSize;
             argMap = Ints.concat(argMap, target.argIndices);
         }
-        this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
-        
-        target.insns.insertBefore(node, insns);
-        target.insns.remove(node);
+        AbstractInsnNode insn = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
+        target.replaceNode(methodNode, insn, insns);
         target.addToLocals(extraLocals);
         target.addToStack(extraStack);
     }
@@ -147,22 +194,23 @@ public class RedirectInjector extends InvokeInjector {
     /**
      * Redirect a field get or set operation
      */
-    private void injectAtFieldAccess(Target target, FieldInsnNode node) {
-        boolean staticField = node.getOpcode() == Opcodes.GETSTATIC || node.getOpcode() == Opcodes.PUTSTATIC;
-        Type ownerType = Type.getType("L" + node.owner + ";");
-        Type fieldType = Type.getType(node.desc);
+    private void injectAtFieldAccess(Target target, InjectionNode node) {
+        FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
+        boolean staticField = fieldNode.getOpcode() == Opcodes.GETSTATIC || fieldNode.getOpcode() == Opcodes.PUTSTATIC;
+        Type ownerType = Type.getType("L" + fieldNode.owner + ";");
+        Type fieldType = Type.getType(fieldNode.desc);
 
+        AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
-        if (node.getOpcode() == Opcodes.GETSTATIC || node.getOpcode() == Opcodes.GETFIELD) {
-            this.injectAtGetField(insns, target, node, staticField, ownerType, fieldType);
-        } else if (node.getOpcode() == Opcodes.PUTSTATIC || node.getOpcode() == Opcodes.PUTFIELD) {
-            this.injectAtPutField(insns, target, node, staticField, ownerType, fieldType);
+        if (fieldNode.getOpcode() == Opcodes.GETSTATIC || fieldNode.getOpcode() == Opcodes.GETFIELD) {
+            invoke = this.injectAtGetField(insns, target, fieldNode, staticField, ownerType, fieldType);
+        } else if (fieldNode.getOpcode() == Opcodes.PUTSTATIC || fieldNode.getOpcode() == Opcodes.PUTFIELD) {
+            invoke = this.injectAtPutField(insns, target, fieldNode, staticField, ownerType, fieldType);
         } else {
-            throw new InvalidInjectionException(this.info, "Unspported opcode " + node.getOpcode() + " on FieldInsnNode for " + this.info);
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + fieldNode.getOpcode() + " on FieldInsnNode for " + this.info);
         }
         
-        target.insns.insertBefore(node, insns);
-        target.insns.remove(node);
+        target.replaceNode(fieldNode, invoke, insns);
     }
 
     /**
@@ -171,7 +219,7 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private void injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+    private AbstractInsnNode injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
         String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
@@ -187,8 +235,8 @@ public class RedirectInjector extends InvokeInjector {
             target.addToStack(ASMHelper.getArgsSize(target.arguments));
         }
         
-        this.invokeHandler(insns);
         target.addToStack(this.isStatic ? 0 : 1);
+        return this.invokeHandler(insns);
     }
 
     /**
@@ -197,7 +245,7 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private void injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
+    private AbstractInsnNode injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
         String handlerDesc = staticField ? ASMHelper.generateDescriptor(null, fieldType) : ASMHelper.generateDescriptor(null, owner, fieldType);
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "setter");
 
@@ -219,8 +267,8 @@ public class RedirectInjector extends InvokeInjector {
             target.addToStack(ASMHelper.getArgsSize(target.arguments));
         }
         
-        this.invokeHandler(insns);
         target.addToStack(!this.isStatic && !staticField ? 1 : 0);
+        return this.invokeHandler(insns);
     }
 
     /**

@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -142,8 +143,12 @@ public class ModifyVariableInjector extends Injector {
      * Do the injection
      */
     @Override
-    protected void inject(Target target, AbstractInsnNode node) {
-        Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node);
+    protected void inject(Target target, InjectionNode node) {
+        if (node.isReplaced()) {
+            throw new InvalidInjectionException(this.info, "Variable modifier target for " + this + " was removed by another injector");
+        }
+        
+        Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
         
         if (this.print) {
             this.printLocals(context);
@@ -158,7 +163,7 @@ public class ModifyVariableInjector extends Injector {
             throw new InvalidInjectionException(this.info, "Implicit variable modifier injection failed in " + this, ex);
         }
         
-        target.insns.insertBefore(node, context.insns);
+        target.insns.insertBefore(context.node, context.insns);
         target.addToStack(this.isStatic ? 1 : 2);
     }
 

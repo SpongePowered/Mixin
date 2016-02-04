@@ -28,7 +28,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
@@ -38,6 +41,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionError;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
@@ -91,6 +95,11 @@ public abstract class InjectionInfo {
      */
     protected final List<InjectionPoint> injectionPoints = new ArrayList<InjectionPoint>();
     
+    /**
+     * Map of lists of nodes enumerated by calling {@link #prepare}
+     */
+    protected final Map<Target, List<InjectionNode>> targetNodes = new LinkedHashMap<Target, List<InjectionNode>>();
+
     /**
      * Bytecode injector
      */
@@ -216,12 +225,21 @@ public abstract class InjectionInfo {
     }
     
     /**
-     * Perform the injection
+     * Discover injection points
      */
-    public void inject() {
+    public void prepare() {
         while (this.targets.size() > 0) {
             Target target = this.mixin.getTargetMethod(this.targets.removeFirst());
-            this.injector.injectInto(target, this.injectionPoints);
+            this.targetNodes.put(target, this.injector.find(target, this.injectionPoints));
+        }
+    }
+    
+    /**
+     * Perform injections
+     */
+    public void inject() {
+        for (Entry<Target, List<InjectionNode>> entry : this.targetNodes.entrySet()) {
+            this.injector.inject(entry.getKey(), entry.getValue());
         }
     }
     
