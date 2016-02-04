@@ -375,6 +375,10 @@ public class MixinApplicator {
     protected boolean isAlreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
         AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
         if (merged == null) {
+            if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+                this.logger.warn("Overwrite prohibited for @Final method {} in {}. Skipping method.", method.name, mixin);
+                return true;
+            }
             return false;
         }
     
