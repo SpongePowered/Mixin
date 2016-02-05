@@ -332,14 +332,6 @@ public class CallbackInjector extends Injector {
     protected void inject(Target target, InjectionNode node) {
         LocalVariableNode[] locals = null;
 
-        if (node.isReplaced()) {
-            System.err.printf("Injector target was replaced!!!\n");
-            System.err.printf("ORIGINAL: ");
-            ASMHelper.printNode(node.getOriginalTarget());
-            System.err.printf(" CURRENT: ");
-            ASMHelper.printNode(node.getCurrentTarget());
-        }
-        
         if (this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) {
             locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
         }
