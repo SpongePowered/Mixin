@@ -356,7 +356,7 @@ public class CallbackInjector extends Injector {
         MethodNode callbackMethod = this.methodNode;
 
         if (!callback.checkDescriptor(this.methodNode.desc)) {
-            if (this.info.getTargets().size() != 0) {
+            if (this.info.getTargets().size() > 1) {
                 return; // Look for a match in other targets before failing
             }
 
@@ -418,7 +418,7 @@ public class CallbackInjector extends Injector {
         this.injectCancellationCode(callback);
         
         callback.inject();
-        this.info.getTargets().clear();
+        this.info.notifyInjected(callback.target);
     }
 
     /**

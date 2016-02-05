@@ -228,8 +228,9 @@ public abstract class InjectionInfo {
      * Discover injection points
      */
     public void prepare() {
-        while (this.targets.size() > 0) {
-            Target target = this.mixin.getTargetMethod(this.targets.removeFirst());
+        this.targetNodes.clear();
+        for (MethodNode targetMethod : this.targets) {
+            Target target = this.mixin.getTargetMethod(targetMethod);
             this.targetNodes.put(target, this.injector.find(target, this.injectionPoints));
         }
     }
@@ -241,6 +242,7 @@ public abstract class InjectionInfo {
         for (Entry<Target, List<InjectionNode>> entry : this.targetNodes.entrySet()) {
             this.injector.inject(entry.getKey(), entry.getValue());
         }
+        this.targets.clear();
     }
     
     /**
@@ -261,6 +263,11 @@ public abstract class InjectionInfo {
                     this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
         }
     }
+    
+    public void notifyInjected(Target target) {
+//        this.targets.remove(target.method);
+    }
+
     
     protected String getDescription() {
         return "Callback method";
@@ -401,4 +408,5 @@ public abstract class InjectionInfo {
         
         return null;
     }
+    
 }
