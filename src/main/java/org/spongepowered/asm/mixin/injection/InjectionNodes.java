@@ -99,15 +99,17 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * 
          * @param target new node
          */
-        public void replace(AbstractInsnNode target) {
+        public InjectionNode replace(AbstractInsnNode target) {
             this.currentTarget = target;
+            return this;
         }
         
         /**
          * Remove the node
          */
-        public void remove() {
+        public InjectionNode remove() {
             this.currentTarget = null;
+            return this;
         }
         
         /**
@@ -142,11 +144,12 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * @param key meta key
          * @param value meta value
          */
-        public <K, V> void decorate(K key, V value) {
+        public <K, V> InjectionNode decorate(K key, V value) {
             if (this.decorations == null) {
                 this.decorations = new HashMap<Object, Object>();
             }
             this.decorations.put(key, value);
+            return this;
         }
         
         /**

@@ -78,18 +78,46 @@ import com.google.common.primitives.Ints;
  * required signature of the handler method.</p>
  */
 public class RedirectInjector extends InvokeInjector {
+    
+    /**
+     * Meta decoration object for redirector target nodes
+     */
+    class Meta {
+        
+        public static final String KEY = "redirector";
 
-    private final int priority;
+        final int priority;
+        
+        final boolean isFinal;
+        
+        final String name;
+        
+        final String desc;
+        
+        public Meta(int priority, boolean isFinal, String name, String desc) {
+            this.priority = priority;
+            this.isFinal = isFinal;
+            this.name = name;
+            this.desc = desc;
+        }
+
+        RedirectInjector getOwner() {
+            return RedirectInjector.this;
+        }
+        
+    }
     
-    private final boolean isFinal;
-    
+    private Meta meta;
+
     /**
      * @param info Injection info
      */
     public RedirectInjector(InjectionInfo info) {
         super(info, "@Redirect");
-        this.priority = info.getContext().getPriority();
-        this.isFinal = ASMHelper.getVisibleAnnotation(this.methodNode, Final.class) != null;
+        
+        int priority = info.getContext().getPriority();
+        boolean isFinal = ASMHelper.getVisibleAnnotation(this.methodNode, Final.class) != null;
+        this.meta = new Meta(priority, isFinal, this.info.toString(), this.methodNode.desc);
     }
     
     @Override
@@ -97,39 +125,29 @@ public class RedirectInjector extends InvokeInjector {
         InjectionNode node = target.injectionNodes.get(insn);
         
         if (node != null ) {
-            boolean isRedirect = node.getDecoration("redir:ect") == Boolean.TRUE;
-            RedirectInjector redirector = node.getDecoration("redir:owner");
-            Boolean isFinal = node.getDecoration("redir:final");
-            Integer priority = node.getDecoration("redir:priority");
+            Meta other = node.getDecoration(Meta.KEY);
             
-            if (isRedirect && redirector != this) {
-                if (priority >= this.priority) {
+            if (other != null && other.getOwner() != this) {
+                if (other.priority >= this.meta.priority) {
                     Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
-                            this.annotationType, this.info, this.priority, node.getDecoration("redir:name"), node.getDecoration("redir:priority"));
+                            this.annotationType, this.info, this.meta.priority, other.name, other.priority);
                     return;
-                } else if (isFinal != null && isFinal.booleanValue()) {
+                } else if (other.isFinal) {
                     throw new InvalidInjectionException(this.info, this.annotationType + " conflict: " + this
-                            + " failed because target was already remapped by " + node.getDecoration("redir:name"));
+                            + " failed because target was already remapped by " + other.name);
                 }
             }
         }
         
-        node = target.injectionNodes.add(insn);
-        node.decorate("redir:ect", Boolean.TRUE);
-        node.decorate("redir:owner", this);
-        node.decorate("redir:priority", Integer.valueOf(this.priority));
-        node.decorate("redir:final", Boolean.valueOf(this.isFinal));
-        node.decorate("redir:name", this.info.toString());
-        node.decorate("redir:desc", this.methodNode.desc);
-        
-        myNodes.add(node);
+        myNodes.add(target.injectionNodes.add(insn).decorate(Meta.KEY, this.meta));
     }
 
     @Override
     protected void inject(Target target, InjectionNode node) {
-        if (node.getDecoration("redir:owner") != this) {
+        Meta other = node.getDecoration(Meta.KEY);
+        if (other.getOwner() != this) {
             Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
-                    this.annotationType, this.info, this.priority, node.getDecoration("redir:name"), node.getDecoration("redir:priority"));
+                    this.annotationType, this.info, this.meta.priority, other.name, other.priority);
             return;
         }
             
