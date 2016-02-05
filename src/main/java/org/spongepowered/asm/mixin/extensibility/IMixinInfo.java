@@ -29,6 +29,9 @@ import java.util.List;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 
+/**
+ * Interface for MixinInfo, used in extensibility API
+ */
 public interface IMixinInfo {
     
     /**

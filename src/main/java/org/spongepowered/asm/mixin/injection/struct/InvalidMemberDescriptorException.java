@@ -26,6 +26,9 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.mixin.MixinException;
 
+/**
+ * Thrown when a {@link MemberInfo} fails basic syntax validation
+ */
 public class InvalidMemberDescriptorException extends MixinException {
 
     private static final long serialVersionUID = 1L;

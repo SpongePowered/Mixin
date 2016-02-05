@@ -30,6 +30,10 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
+/**
+ * Wrapper for Annotation Processor messages, used to enable messages to be
+ * easily queued and manipulated
+ */
 public class Message {
 
     private Diagnostic.Kind kind;

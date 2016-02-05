@@ -44,6 +44,10 @@ import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 
+/**
+ * Base class for module for {@link AnnotatedMixin} which handle different
+ * aspects of mixin target classes 
+ */
 abstract class AnnotatedMixinElementHandler {
     
     /**

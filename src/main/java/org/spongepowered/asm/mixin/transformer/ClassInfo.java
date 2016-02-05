@@ -156,6 +156,9 @@ public class ClassInfo extends TreeInfo {
      */
     abstract static class Member {
 
+        /**
+         * Member type
+         */
         static enum Type {
             METHOD,
             FIELD

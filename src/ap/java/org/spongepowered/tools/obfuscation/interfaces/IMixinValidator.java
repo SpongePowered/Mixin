@@ -37,6 +37,9 @@ import org.spongepowered.tools.obfuscation.TypeHandle;
  */
 public interface IMixinValidator {
     
+    /**
+     * Validation pass
+     */
     public enum ValidationPass {
         EARLY,
         LATE

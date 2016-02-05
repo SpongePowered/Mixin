@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,12 +149,12 @@ public abstract class InjectionPoint {
             super(points);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
             boolean found = false;
 
-            @SuppressWarnings("unchecked")
-            ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
+            ArrayList<AbstractInsnNode>[] allNodes = (ArrayList<AbstractInsnNode>[]) Array.newInstance(ArrayList.class, this.components.length);
 
             for (int i = 0; i < this.components.length; i++) {
                 allNodes[i] = new ArrayList<AbstractInsnNode>();

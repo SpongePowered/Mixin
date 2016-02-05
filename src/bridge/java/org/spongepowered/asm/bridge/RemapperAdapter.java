@@ -31,6 +31,9 @@ import org.spongepowered.asm.mixin.extensibility.IRemapper;
 import org.spongepowered.asm.util.ObfuscationUtil;
 import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
 
+/**
+ * Base impl of remapper
+ */
 public abstract class RemapperAdapter implements IRemapper, IClassRemapper {
 
     protected final Logger logger = LogManager.getLogger("mixin");

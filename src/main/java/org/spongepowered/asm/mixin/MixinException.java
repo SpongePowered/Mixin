@@ -24,6 +24,9 @@
  */
 package org.spongepowered.asm.mixin;
 
+/**
+ * Base class for all mixin processor exceptions
+ */
 public class MixinException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;

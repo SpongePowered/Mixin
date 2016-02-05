@@ -30,6 +30,9 @@ import java.lang.reflect.Method;
 import org.objectweb.asm.commons.Remapper;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
 
+/**
+ * Remapper adapter which remaps using FML's deobfuscating remapper
+ */
 public class RemapperAdapterFML extends RemapperAdapter {
     
     private final Method mdUnmap;

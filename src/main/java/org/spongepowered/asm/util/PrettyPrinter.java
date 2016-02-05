@@ -40,8 +40,16 @@ import com.google.common.base.Strings;
  */
 public class PrettyPrinter {
     
+    /**
+     * Interface for object which supports printing to pretty printer
+     */
     public interface IPrettyPrintable {
         
+        /**
+         * Append this objec to specified pretty printer
+         * 
+         * @param printer printer to append to
+         */
         public abstract void print(PrettyPrinter printer);
         
     }

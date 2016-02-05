@@ -31,14 +31,43 @@ import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+/**
+ * Obfuscation types supported by the annotation processor
+ */
 enum ObfuscationType {
     
+    /**
+     * "SEARGE" mappings, these are unique mappings used by MCP and derived
+     * projects 
+     */
     SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.REOBF_EXTRA_SRG_FILES, SupportedOptions.OUT_SRG_SRG_FILE),
+    
+    /**
+     * "NOTCH" mappings, internal to minecraft only 
+     */
     NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.REOBF_EXTRA_NOTCH_FILES, SupportedOptions.OUT_NOTCH_SRG_FILE);
     
+    /**
+     * Refmap key for this mapping type
+     */
     private final String key;
+    
+    /**
+     * The name of the Annotation Processor argument which contains the file
+     * name to read the SRGs for this obfuscation type from 
+     */
     private final String srgFileArgName;
+    
+    /**
+     * The name of the Annotation Processor argument which contains the file
+     * name to read the extra SRGs for this obfuscation type from 
+     */
     private final String extraSrgFilesArgName;
+    
+    /**
+     * The name of the Annotation Processor argument which contains the file
+     * name to write generated SRG mappings to 
+     */
     private final String outSrgFileArgName;
     
     private ObfuscationType(String displayName, String srgFileArgName, String extraSrgFilesArgName, String outSrgFileArgName) {

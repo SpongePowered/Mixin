@@ -24,6 +24,9 @@
  */
 package org.spongepowered.asm.launch;
 
+/**
+ * Error raised when mixin subsystem initialisation fails
+ */
 public class MixinInitialisationError extends Error {
 
     private static final long serialVersionUID = 1L;

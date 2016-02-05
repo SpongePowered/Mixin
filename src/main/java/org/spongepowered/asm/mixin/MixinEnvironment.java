@@ -545,6 +545,9 @@ public class MixinEnvironment implements ITokenProvider {
 
     }
     
+    /**
+     * Temporary
+     */
     static class MixinLogger {
 
         static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
@@ -555,11 +558,13 @@ public class MixinEnvironment implements ITokenProvider {
             log.addAppender(appender);
         }
 
+        /**
+         * Temporary
+         */
         static class MixinAppender extends AbstractAppender {
 
             protected MixinAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
                 super(name, filter, layout);
-                // TODO Auto-generated constructor stub
             }
 
             @Override

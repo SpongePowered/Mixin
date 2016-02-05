@@ -26,6 +26,10 @@ package org.spongepowered.asm.util;
 
 import org.spongepowered.asm.mixin.MixinException;
 
+/**
+ * Exception thrown when something goes horribly wrong whilst <s>summoning the
+ * antichrist</s> generating the LVT for a target method.
+ */
 public class LVTGeneratorException extends MixinException {
 
     private static final long serialVersionUID = 1L;

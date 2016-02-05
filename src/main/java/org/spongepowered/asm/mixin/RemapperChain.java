@@ -29,6 +29,10 @@ import java.util.List;
 
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
 
+/**
+ * Mixin environment remapper chain. Contains all remappers for the current
+ * environment to facilitate remapping via all registered remappers.
+ */
 public class RemapperChain implements IRemapper {
     
     private final List<IRemapper> remappers = new ArrayList<IRemapper>();

@@ -33,6 +33,9 @@ import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
+/**
+ * A module for {@link AnnotatedMixin} which handles shadowed fields and methods
+ */
 class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
 
     AnnotatedMixinShadowHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {

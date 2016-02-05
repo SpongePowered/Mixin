@@ -37,6 +37,9 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
 
+/**
+ * Base class for mixin annotation processor modules
+ */
 public abstract class MixinProcessor extends AbstractProcessor {
     
     /**

@@ -50,8 +50,18 @@ import org.spongepowered.asm.util.ObfuscationUtil;
 import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
+/**
+ * Stores information relevant to a particular target obfuscation environment.
+ * 
+ * <p>We classify different types of possible obfuscation (eg. "searge", "notch"
+ * ) as <em>obfuscation environments</em> and store related information such as 
+ * the input SRG mappings, generated refmap, generated SRGs, here.</p>
+ */
 class TargetObfuscationEnvironment {
     
+    /**
+     * Remapping proxy for remapping descriptors
+     */
     final class RemapperProxy implements IClassRemapper {
 
         @Override

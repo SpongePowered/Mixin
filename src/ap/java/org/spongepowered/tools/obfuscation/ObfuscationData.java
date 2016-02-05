@@ -28,6 +28,23 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.spongepowered.asm.obfuscation.SrgMethod;
+
+/**
+ * Return value struct for various obfuscation queries performed by the mixin
+ * annotation processor.
+ * 
+ * <p>When obfuscation queries are performed by the AP, the returned data are
+ * encapsulated in an <tt>ObfuscationData</tt> object which contains a mapping
+ * of the different obfuscation types to the respective remapped value of the
+ * original entry for that environment.</p>
+ * 
+ * <p>The returned data are iterable over the keys, consumers should call
+ * {@link #get} to retrieve the remapped entries for each key.</p>
+ * 
+ * @param <T> Contained type of the data, usually {@link String} for field
+ *      and type obfuscations, and {@link SrgMethod} for methods.
+ */
 public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     
     private final Map<ObfuscationType, T> data = new HashMap<ObfuscationType, T>();

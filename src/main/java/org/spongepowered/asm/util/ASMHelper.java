@@ -41,6 +41,9 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
+/**
+ * Utility methods for working with ASM
+ */
 public class ASMHelper {
 
     private static final int[] intConstants = new int[]

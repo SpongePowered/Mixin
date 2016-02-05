@@ -24,6 +24,9 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
+/**
+ * Thrown when an injector group fails an injection check
+ */
 public class InjectionValidationException extends Exception {
     
     private static final long serialVersionUID = 1L;

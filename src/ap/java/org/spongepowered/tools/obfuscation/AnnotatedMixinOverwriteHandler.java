@@ -34,6 +34,9 @@ import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
+/**
+ * A module for {@link AnnotatedMixin} which handles method overwrites
+ */
 class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
     
     AnnotatedMixinOverwriteHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {

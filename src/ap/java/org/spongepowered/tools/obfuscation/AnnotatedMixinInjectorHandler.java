@@ -42,6 +42,9 @@ import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.struct.Message;
 
+/**
+ * A module for {@link AnnotatedMixin} whic handles injectors
+ */
 class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
 
     AnnotatedMixinInjectorHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {

@@ -24,8 +24,14 @@
  */
 package org.spongepowered.asm.util;
 
+/**
+ * Utility methods for obfuscation tasks
+ */
 public abstract class ObfuscationUtil {
     
+    /**
+     * Interface for remapper proxies
+     */
     public interface IClassRemapper {
 
         /**

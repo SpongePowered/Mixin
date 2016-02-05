@@ -75,6 +75,10 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     
     private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
 
+    /**
+     * Detected compiler argument, specifies the behaviour of some operations
+     * for compatibility purposes.
+     */
     static enum CompilerEnvironment {
         /**
          * Default environment

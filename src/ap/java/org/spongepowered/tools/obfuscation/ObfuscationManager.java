@@ -43,6 +43,9 @@ import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 
+/**
+ * Obfuscation Manager for mixin Annotation Processor
+ */
 public class ObfuscationManager implements IObfuscationManager {
     
     /**

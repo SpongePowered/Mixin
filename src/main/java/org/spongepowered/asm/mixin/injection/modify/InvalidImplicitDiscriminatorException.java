@@ -26,6 +26,10 @@ package org.spongepowered.asm.mixin.injection.modify;
 
 import org.spongepowered.asm.mixin.MixinException;
 
+/**
+ * Thrown when an <em>implicit</em> discriminator (no args) fails to identify
+ * a unique candidate.
+ */
 public class InvalidImplicitDiscriminatorException extends MixinException {
     
     private static final long serialVersionUID = 1L;

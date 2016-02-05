@@ -26,6 +26,9 @@ package org.spongepowered.asm.obfuscation;
 
 import com.google.common.base.Objects;
 
+/**
+ * Stores information about an SRG field mapping during AP runs
+ */
 public final class SrgField {
 
     private final String mapping;

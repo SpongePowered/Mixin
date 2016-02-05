@@ -28,6 +28,10 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
+/**
+ * Thrown when an injector fails a state check, for example if an injector
+ * handler signature is invalid, an invalid opcode is targetted, etc.
+ */
 public class InvalidInjectionException extends InvalidMixinException {
 
     private static final long serialVersionUID = 1L;

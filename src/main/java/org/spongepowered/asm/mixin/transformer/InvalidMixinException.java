@@ -26,6 +26,9 @@ package org.spongepowered.asm.mixin.transformer;
 
 import org.spongepowered.asm.mixin.MixinException;
 
+/**
+ * Thrown by the mixin validator when a mixin fails a pre-flight check
+ */
 public class InvalidMixinException extends MixinException {
 
     private static final long serialVersionUID = 1L;

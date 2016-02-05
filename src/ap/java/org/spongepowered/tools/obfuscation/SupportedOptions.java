@@ -28,6 +28,10 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
+/**
+ * Supported options for the annotation processor. Not an enum mainly so that
+ * the string tokens can be inlined.
+ */
 public final class SupportedOptions {
     
     public static final String TOKENS                    = "tokens";
