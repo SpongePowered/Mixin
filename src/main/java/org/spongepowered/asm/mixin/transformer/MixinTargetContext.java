@@ -54,6 +54,7 @@ import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
+import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -86,6 +87,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      */
     private final ClassNode targetClass;
+    
+    /**
+     * Session ID from context
+     */
+    private final String sessionId;
     
     /**
      * Target ClassInfo
@@ -154,6 +160,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.targetClassInfo = ClassInfo.forName(this.targetClass.name);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.targetClass.superName);
+        this.sessionId = context.getSessionId();
         this.requireVersion(classNode.version);
     }
     
@@ -180,10 +187,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.mergedMethods.add(method);
         this.targetClassInfo.addMethod(method);
         
-//        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
-//                "mixin", this.getClassName(),
-//                "priority", this.getPriority(),
-//                "sessionId", this.sessionId);
+        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
+                "mixin", this.getClassName(),
+                "priority", this.getPriority(),
+                "sessionId", this.sessionId);
     }
     
     /* (non-Javadoc)
