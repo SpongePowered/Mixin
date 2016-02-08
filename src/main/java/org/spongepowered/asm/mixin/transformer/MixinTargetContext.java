@@ -49,6 +49,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionError;
 import org.spongepowered.asm.mixin.injection.InjectionValidationException;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
@@ -112,6 +113,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     protected final InjectorGroupInfo.Map injectorGroups = new InjectorGroupInfo.Map();
 
+    /**
+     * Injectors for this target 
+     */
+    protected final List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
+
+    
     /**
      * True if this mixin inherits from a mixin at any point in its hierarchy 
      */
@@ -870,6 +877,43 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         this.mixin.postApply(transformedName, targetClass);
+    }
+
+    /**
+     * Scans the target class for injector methods and prepares discovered
+     * injectors
+     */
+    public void prepareInjections() {
+        this.injectors.clear();
+        
+        for (MethodNode method : this.targetClass.methods) {
+            InjectionInfo injectInfo = InjectionInfo.parse(this, method);
+            if (injectInfo == null) {
+                continue;
+            }
+            
+            if (injectInfo.isValid()) {
+                injectInfo.prepare();
+                this.injectors.add(injectInfo);
+            }
+            
+            method.visibleAnnotations.remove(injectInfo.getAnnotation());
+        }
+    }
+
+    /**
+     * Apply injectors discovered in the {@link #prepareInjections()} pass
+     */
+    public void applyInjections() {
+        for (InjectionInfo injectInfo : this.injectors) {
+            injectInfo.inject();
+        }
+        
+        for (InjectionInfo injectInfo : this.injectors) {
+            injectInfo.postInject();
+        }
+        
+        this.injectors.clear();
     }
 
 }

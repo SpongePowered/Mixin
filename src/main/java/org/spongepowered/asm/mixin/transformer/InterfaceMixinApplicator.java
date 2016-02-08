@@ -86,11 +86,11 @@ public class InterfaceMixinApplicator extends MixinApplicator {
     
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.MixinApplicator
-     *      #applyInjections(
+     *      #prepareInjections(
      *      org.spongepowered.asm.mixin.transformer.MixinTargetContext)
      */
     @Override
-    protected void applyInjections(MixinTargetContext mixin) {
+    protected void prepareInjections(MixinTargetContext mixin) {
         // disabled for interface mixins
         for (MethodNode method : this.targetClass.methods) {
             try {
@@ -103,6 +103,16 @@ public class InterfaceMixinApplicator extends MixinApplicator {
                 throw new InvalidMixinException(mixin, description + " is not supported");
             }
         }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.MixinApplicator
+     *      #applyInjections(
+     *      org.spongepowered.asm.mixin.transformer.MixinTargetContext)
+     */
+    @Override
+    protected void applyInjections(MixinTargetContext mixin) {
+        // Do nothing
     }
 
 }

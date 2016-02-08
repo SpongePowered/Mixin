@@ -51,8 +51,6 @@ import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.util.ASMHelper;
@@ -66,6 +64,26 @@ import org.spongepowered.asm.util.InvalidConstraintException;
  * Applies mixins to a target class
  */
 public class MixinApplicator {
+    
+    /**
+     * Passes the mixin applicator applies to each mixin
+     */
+    enum ApplicatorPass {
+        /**
+         * Main pass, mix in methods, fields, interfaces etc
+         */
+        MAIN,
+        
+        /**
+         * Enumerate injectors and scan for injection points 
+         */
+        PREINJECT,
+        
+        /**
+         * Apply injectors from previous pass 
+         */
+        INJECT
+    }
     
     /**
      * Internal struct for representing a range
@@ -185,9 +203,36 @@ public class MixinApplicator {
      * Apply supplied mixins to the target class
      */
     void apply(SortedSet<MixinInfo> mixins) {
+        List<MixinTargetContext> mixinContexts = new ArrayList<MixinTargetContext>();
+        
         for (MixinInfo mixin : mixins) {
             this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
-            this.applyMixin(mixin.createContextFor(this.targetClass));
+            mixinContexts.add(mixin.createContextFor(this.targetClass));
+        }
+        
+        MixinTargetContext current = null;
+        
+        try {
+            for (MixinTargetContext context : mixinContexts) {
+                current = context;
+                context.preApply(this.targetName, this.targetClass);
+            }
+            
+            for (ApplicatorPass pass : ApplicatorPass.values()) {
+                for (MixinTargetContext context : mixinContexts) {
+                    current = context;
+                    this.applyMixin(context, pass);
+                }
+            }
+            
+            for (MixinTargetContext context : mixinContexts) {
+                current = context;
+                context.postApply(this.targetName, this.targetClass);
+            }
+        } catch (InvalidMixinException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(current, "Unexpecteded error whilst applying the mixin class", ex);
         }
     }
 
@@ -196,23 +241,28 @@ public class MixinApplicator {
      * 
      * @param mixin Mixin to apply
      */
-    protected final void applyMixin(MixinTargetContext mixin) {
-        try {
-            mixin.preApply(this.targetName, this.targetClass);
-            
-            this.applyInterfaces(mixin);
-            this.applyAttributes(mixin);
-            this.applyAnnotations(mixin);
-            this.applyFields(mixin);
-            this.applyMethods(mixin);
-            this.applyInitialisers(mixin);
-            this.applyInjections(mixin);
-            
-            mixin.postApply(this.targetName, this.targetClass);
-        } catch (InvalidMixinException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new InvalidMixinException(mixin, "Unexpecteded error whilst applying the mixin class", ex);
+    protected final void applyMixin(MixinTargetContext mixin, ApplicatorPass pass) {
+        switch (pass) {
+            case MAIN:
+                this.applyInterfaces(mixin);
+                this.applyAttributes(mixin);
+                this.applyAnnotations(mixin);
+                this.applyFields(mixin);
+                this.applyMethods(mixin);
+                this.applyInitialisers(mixin);
+                break;
+                
+            case PREINJECT:
+                this.prepareInjections(mixin);
+                break;
+                
+            case INJECT:
+                this.applyInjections(mixin);
+                break;
+                
+            default:
+                // wat?
+                throw new IllegalStateException("Invalid pass specified " + pass);
         }
     }
 
@@ -705,34 +755,21 @@ public class MixinApplicator {
     }
 
     /**
-     * Process {@link Inject} annotations and inject callbacks to annotated
-     * methods
-     * @param mixin
+     * Scan for injector methods and injection points
+     * 
+     * @param mixin Mixin being scanned
+     */
+    protected void prepareInjections(MixinTargetContext mixin) {
+        mixin.prepareInjections();
+    }
+    
+    /**
+     * Apply all injectors discovered in the previous pass
+     * 
+     * @param mixin Mixin being applied
      */
     protected void applyInjections(MixinTargetContext mixin) {
-        List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
-        
-        for (MethodNode method : this.targetClass.methods) {
-            InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
-            if (injectInfo == null) {
-                continue;
-            }
-            
-            if (injectInfo.isValid()) {
-                injectInfo.prepare();
-                injectors.add(injectInfo);
-            }
-            
-            method.visibleAnnotations.remove(injectInfo.getAnnotation());
-        }
-        
-        for (InjectionInfo injectInfo : injectors) {
-            injectInfo.inject();
-        }
-        
-        for (InjectionInfo injectInfo : injectors) {
-            injectInfo.postInject();
-        }
+        mixin.applyInjections();
     }
 
     /**
