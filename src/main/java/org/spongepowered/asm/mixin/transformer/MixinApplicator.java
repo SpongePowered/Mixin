@@ -214,20 +214,17 @@ public class MixinApplicator {
         
         try {
             for (MixinTargetContext context : mixinContexts) {
-                current = context;
-                context.preApply(this.targetName, this.targetClass);
+                (current = context).preApply(this.targetName, this.targetClass);
             }
             
             for (ApplicatorPass pass : ApplicatorPass.values()) {
                 for (MixinTargetContext context : mixinContexts) {
-                    current = context;
-                    this.applyMixin(context, pass);
+                    this.applyMixin(current = context, pass);
                 }
             }
             
             for (MixinTargetContext context : mixinContexts) {
-                current = context;
-                context.postApply(this.targetName, this.targetClass);
+                (current = context).postApply(this.targetName, this.targetClass);
             }
         } catch (InvalidMixinException ex) {
             throw ex;
