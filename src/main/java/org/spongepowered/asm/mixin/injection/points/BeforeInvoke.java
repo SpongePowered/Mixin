@@ -71,9 +71,9 @@ public class BeforeInvoke extends InjectionPoint {
     protected final MemberInfo target;
 
     /**
-     * This strategy can be used to identify a particular invokation if the same
+     * This strategy can be used to identify a particular invocation if the same
      * method is invoked at multiple points, if this value is -1 then the
-     * strategy returns <em>all</em> invokations of the method.
+     * strategy returns <em>all</em> invocations of the method.
      */
     protected final int ordinal;
 

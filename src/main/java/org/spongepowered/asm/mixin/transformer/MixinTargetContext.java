@@ -290,7 +290,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Handles "re-parenting" the method supplied, changes all references to the
      * mixin class to refer to the target class (for field accesses and method
-     * invokations) and also handles fixing up the targets of INVOKESPECIAL
+     * invocations) and also handles fixing up the targets of INVOKESPECIAL
      * opcodes for mixins with detached targets.
      * 
      * @param method Method to transform
@@ -520,7 +520,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
 
     /**
-     * Handle "imaginary super" invokations, these are invokations in
+     * Handle "imaginary super" invocations, these are invocations in
      * non-derived mixins for accessing methods known to exist in a supermixin
      * which is not directly inherited by this mixix. The method can only call
      * its <b>own</b> super-implmentation and the methd must also be tagged with

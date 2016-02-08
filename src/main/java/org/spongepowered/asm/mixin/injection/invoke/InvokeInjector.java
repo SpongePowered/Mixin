@@ -96,6 +96,7 @@ public abstract class InvokeInjector extends Injector {
      * @param args handler arguments
      * @param insns InsnList to inject insns into
      * @param argMap Mapping of args to local variables
+     * @return injected insn node
      */
     protected AbstractInsnNode invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap) {
         return this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
@@ -107,6 +108,7 @@ public abstract class InvokeInjector extends Injector {
      * @param argMap Mapping of args to local variables
      * @param startArg Starting arg to consume
      * @param endArg Ending arg to consume
+     * @return injected insn node
      */
     protected AbstractInsnNode invokeHandlerWithArgs(Type[] args, InsnList insns, int[] argMap, int startArg, int endArg) {
         if (!this.isStatic) {

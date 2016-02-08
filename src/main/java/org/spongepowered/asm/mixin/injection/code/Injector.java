@@ -195,6 +195,7 @@ public abstract class Injector {
      * Invoke the handler method
      * 
      * @param insns Instruction list to inject into
+     * @return injected insn node
      */
     protected AbstractInsnNode invokeHandler(InsnList insns) {
         return this.invokeHandler(insns, this.methodNode);
@@ -206,7 +207,7 @@ public abstract class Injector {
      * @param insns Instruction list to inject into
      * @param handler Actual method to invoke (may be different if using a
      *      surrogate)
-     * @return 
+     * @return injected insn node
      */
     protected AbstractInsnNode invokeHandler(InsnList insns, MethodNode handler) {
         boolean isPrivate = (handler.access & Opcodes.ACC_PRIVATE) != 0;
