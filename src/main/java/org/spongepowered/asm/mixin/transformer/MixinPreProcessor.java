@@ -153,7 +153,7 @@ class MixinPreProcessor {
         // stub
     }
 
-    MixinTargetContext createContextFor(ClassNode target) {
+    MixinTargetContext createContextFor(TargetClassContext target) {
         MixinTargetContext context = new MixinTargetContext(this.mixin, this.classNode, target);
         this.attach(context);
         return context;

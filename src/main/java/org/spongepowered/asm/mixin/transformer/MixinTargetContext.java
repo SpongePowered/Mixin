@@ -103,6 +103,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private final Map<FieldNode, Field> shadowFields = new LinkedHashMap<FieldNode, Field>();
 
     /**
+     * List of methods successfully merged from this mixin
+     */
+    private final List<MethodNode> mergedMethods = new ArrayList<MethodNode>();
+
+    /**
      * Information about methods in the target class, used to keep track of
      * transformations we apply
      */
@@ -142,11 +147,11 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param classNode Mixin classnode
      * @param target target class
      */
-    MixinTargetContext(MixinInfo mixin, ClassNode classNode, ClassNode target) {
+    MixinTargetContext(MixinInfo mixin, ClassNode classNode, TargetClassContext context) {
         this.mixin = mixin;
         this.classNode = classNode;
-        this.targetClass = target;
-        this.targetClassInfo = ClassInfo.forName(target.name);
+        this.targetClass = context.getClassNode();
+        this.targetClassInfo = ClassInfo.forName(this.targetClass.name);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.targetClass.superName);
         this.requireVersion(classNode.version);
@@ -164,6 +169,21 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     void addShadowField(FieldNode fieldNode, Field fieldInfo) {
         this.shadowFields.put(fieldNode, fieldInfo);
+    }
+    
+    /**
+     * Callback from the applicator which notifies us that a method was merged
+     * 
+     * @param method
+     */
+    void addMergedMethod(MethodNode method) {
+        this.mergedMethods.add(method);
+        this.targetClassInfo.addMethod(method);
+        
+//        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
+//                "mixin", this.getClassName(),
+//                "priority", this.getPriority(),
+//                "sessionId", this.sessionId);
     }
     
     /* (non-Javadoc)
@@ -886,7 +906,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public void prepareInjections() {
         this.injectors.clear();
         
-        for (MethodNode method : this.targetClass.methods) {
+        for (MethodNode method : this.mergedMethods) {
             InjectionInfo injectInfo = InjectionInfo.parse(this, method);
             if (injectInfo == null) {
                 continue;

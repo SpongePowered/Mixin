@@ -177,11 +177,9 @@ public class MixinApplicator {
     protected final Logger logger = LogManager.getLogger("mixin");
     
     /**
-     * Session ID, used as a check when parsing {@link MixinMerged} annotations
-     * to prevent them being applied at compile time by people trying to
-     * circumvent mixin application
+     * Target class context 
      */
-    protected final String sessionId;
+    protected final TargetClassContext context;
     
     /**
      * Target class name
@@ -194,7 +192,7 @@ public class MixinApplicator {
     protected final ClassNode targetClass;
     
     MixinApplicator(TargetClassContext context) {
-        this.sessionId = context.getSessionId();
+        this.context = context;
         this.targetName = context.getName();
         this.targetClass = context.getClassNode();
     }
@@ -207,7 +205,7 @@ public class MixinApplicator {
         
         for (MixinInfo mixin : mixins) {
             this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
-            mixinContexts.add(mixin.createContextFor(this.targetClass));
+            mixinContexts.add(mixin.createContextFor(this.context));
         }
         
         MixinTargetContext current = null;
@@ -400,12 +398,7 @@ public class MixinApplicator {
         }
         
         this.targetClass.methods.add(method);
-        mixin.getTargetClassInfo().addMethod(method);
-        
-        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
-                "mixin", mixin.getClassName(),
-                "priority", mixin.getPriority(),
-                "sessionId", this.sessionId);
+        mixin.addMergedMethod(method);
     }
 
     /**
@@ -431,7 +424,7 @@ public class MixinApplicator {
     
         String sessionId = ASMHelper.<String>getAnnotationValue(merged, "sessionId");
         
-        if (!this.sessionId.equals(sessionId)) {
+        if (!this.context.getSessionId().equals(sessionId)) {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
         }
 
