@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -161,6 +163,14 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     protected TargetMap initTargetMap() {
         TargetMap targets = TargetMap.create(System.getProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY));
         System.setProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY, targets.getSessionId());
+        String targetsFileName = this.getOption(SupportedOptions.DEPENDENCY_TARGETS_FILE);
+        if (targetsFileName != null) {
+            try {
+                targets.readImports(new File(targetsFileName));
+            } catch (IOException ex) {
+                this.printMessage(Kind.WARNING, "Could not read from specified imports file: " + targetsFileName);
+            }
+        }
         return targets;
     }
 

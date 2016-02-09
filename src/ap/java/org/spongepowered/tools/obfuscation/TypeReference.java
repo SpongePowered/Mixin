@@ -57,6 +57,15 @@ public class TypeReference implements Serializable, Comparable<TypeReference> {
     }
     
     /**
+     * Create a type reference with no handle
+     * 
+     * @param name Name of the type
+     */
+    TypeReference(String name) {
+        this.name = name;
+    }
+    
+    /**
      * Get the class name (internal format)
      */
     public String getName() {

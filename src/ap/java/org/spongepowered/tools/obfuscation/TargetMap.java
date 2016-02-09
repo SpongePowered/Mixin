@@ -30,6 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +39,8 @@ import java.util.List;
 import java.util.Set;
 
 import javax.lang.model.element.TypeElement;
+
+import com.google.common.io.Files;
 
 /**
  * Serialisable map of classes to their associated mixins, used so that we can
@@ -112,6 +115,16 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
      * @param target Target class
      * @param mixin Mixin class
      */
+    public void addMixin(String target, String mixin) {
+        this.addMixin(new TypeReference(target), new TypeReference(mixin));
+    }
+    
+    /**
+     * Register the specified mixin against the specified target
+     * 
+     * @param target Target class
+     * @param mixin Mixin class
+     */
     public void addMixin(TypeReference target, TypeReference mixin) {
         Set<TypeReference> mixins = this.getMixinsFor(target);
         mixins.add(mixin);
@@ -160,6 +173,25 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
             this.put(target, mixins);
         }
         return mixins;
+    }
+    
+    /**
+     * Read upstream library mixins from a file
+     * 
+     * @param file File to read from
+     * @throws IOException if an error occurs whilst reading the file
+     */
+    public void readImports(File file) throws IOException {
+        if (!file.isFile()) {
+            return;
+        }
+        
+        for (String line : Files.readLines(file, Charset.defaultCharset())) {
+            String[] parts = line.split("\t");
+            if (parts.length == 2) {
+                this.addMixin(parts[1], parts[0]);
+            }
+        }
     }
 
     /**
@@ -246,4 +278,5 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
         return new File(tempDir, String.format("mixin-targetdb-%s.tmp", sessionId));
     }
+
 }

@@ -47,6 +47,7 @@ public final class SupportedOptions {
     public static final String DISABLE_OVERWRITE_CHECKER = "disableOverwriteChecker";
     public static final String OVERWRITE_ERROR_LEVEL     = "overwriteErrorLevel";
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
+    public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
 
     public static final Set<String> all = ImmutableSet.<String>of(
         SupportedOptions.TOKENS,
@@ -61,7 +62,8 @@ public final class SupportedOptions {
         SupportedOptions.DISABLE_TARGET_EXPORT,
         SupportedOptions.DISABLE_OVERWRITE_CHECKER,
         SupportedOptions.OVERWRITE_ERROR_LEVEL,
-        SupportedOptions.DEFAULT_OBFUSCATION_ENV
+        SupportedOptions.DEFAULT_OBFUSCATION_ENV,
+        SupportedOptions.DEPENDENCY_TARGETS_FILE
     );
     
     private SupportedOptions() {}
