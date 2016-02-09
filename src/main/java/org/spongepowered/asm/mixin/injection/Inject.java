@@ -43,6 +43,15 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 public @interface Inject {
     
     /**
+     * The identifier for this injector, can be retrieved via the
+     * {@link CallbackInfo#getId} accessor. If not specified, the ID defaults to
+     * the target method name.
+     * 
+     * @return the injector id to use
+     */
+    public String id() default "";
+    
+    /**
      * String representation of a
      * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
      * MemberInfo} which identifies the target method.
@@ -111,7 +120,6 @@ public @interface Inject {
      * @return the desired local capture behaviour for this injector
      */
     public LocalCapture locals() default LocalCapture.NO_CAPTURE;
-
 
     /**
      * By default, the annotation processor will attempt to locate an

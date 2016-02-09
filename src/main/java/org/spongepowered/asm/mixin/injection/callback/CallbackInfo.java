@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.callback;
 
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.mixin.injection.Inject;
 
 /**
  * CallbackInfo instances are passed to callbacks in order to provide
@@ -65,11 +66,13 @@ public class CallbackInfo implements Cancellable {
     }
 
     /**
-     * Get the method name where this callback originated
+     * Get the ID of the injector which defined this callback. This defaults to
+     * the method name but can be overridden by specifying the {@link Inject#id}
+     * parameter on the injector
      * 
-     * @return the name of the calling method
+     * @return the injector ID
      */
-    public String getName() {
+    public String getId() {
         return this.name;
     }
 

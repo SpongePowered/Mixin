@@ -46,6 +46,8 @@ import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
+import com.google.common.base.Strings;
+
 /**
  * This class is responsible for generating the bytecode for injected callbacks
  */
@@ -287,6 +289,11 @@ public class CallbackInjector extends Injector {
     private final LocalCapture localCapture;
     
     /**
+     * ID to return from callbackinfo 
+     */
+    private final String identifier;
+    
+    /**
      * Make a new CallbackInjector with the supplied args
      * 
      * @param info information about this injector
@@ -294,10 +301,11 @@ public class CallbackInjector extends Injector {
      *      be cancellable
      * @param localCapture Local variable capture behaviour
      */
-    public CallbackInjector(InjectionInfo info, boolean cancellable, LocalCapture localCapture) {
+    public CallbackInjector(InjectionInfo info, boolean cancellable, LocalCapture localCapture, String identifier) {
         super(info);
         this.cancellable = cancellable;
         this.localCapture = localCapture;
+        this.identifier = identifier;
     }
 
     /* (non-Javadoc)
@@ -543,7 +551,7 @@ public class CallbackInjector extends Injector {
      *      invoke
      */
     protected void invokeCallbackInfoCtor(final Callback callback, boolean store) {
-        callback.add(new LdcInsnNode(callback.target.method.name), true, !store);
+        callback.add(new LdcInsnNode(this.getIdentifier(callback)), true, !store);
         callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, !store);
 
         if (callback.isAtReturn) {
@@ -580,6 +588,18 @@ public class CallbackInjector extends Injector {
         
         // Call the callback!
         this.invokeHandler(callback, callbackMethod);
+    }
+
+    /**
+     * Get the identifier to use for the specified callback. If an id was
+     * specified by the end user on the annotation then use the value specified,
+     * otherwise defaults to the target method name.
+     * 
+     * @param callback Callback being injected
+     * @return Identifier to use
+     */
+    private String getIdentifier(Callback callback) {
+        return Strings.isNullOrEmpty(this.identifier) ? callback.target.method.name : this.identifier;
     }
 
     /**
