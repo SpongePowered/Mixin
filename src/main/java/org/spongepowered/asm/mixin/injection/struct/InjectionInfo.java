@@ -37,6 +37,7 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -371,14 +372,31 @@ public abstract class InjectionInfo {
                     continue;
                 }
                 
-                AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
-                if (merged != null) {
-                    throw new InvalidInjectionException(this, "Cannot inject into a mixin method");
-                }
-
+                this.checkTarget(target);
+                
                 this.targets.add(target);
                 ordinal++;
             }
+        }
+    }
+
+    private void checkTarget(MethodNode target) {
+        AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
+        if (merged == null) {
+            return;
+        }
+        
+        String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
+        int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
+        
+        if (priority >= this.mixin.getPriority() && !owner.equals(this.mixin.getClassName())) {
+            throw new InvalidInjectionException(this, this + " cannot inject into " + this.classNode.name + "::" + target.name + target.desc
+                    + " merged by " + owner + " with priority " + priority);
+        }
+        
+        if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+            throw new InvalidInjectionException(this, this + " cannot inject into @Final method " + this.classNode.name + "::" + target.name
+                    + target.desc + " merged by " + owner);
         }
     }
     
