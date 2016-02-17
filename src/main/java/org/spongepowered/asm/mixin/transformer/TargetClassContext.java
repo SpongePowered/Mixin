@@ -24,14 +24,29 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
+import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 
 /**
  * Struct for containing target class information during mixin application
  */
 class TargetClassContext {
+    
+    /**
+     * Mutable integer
+     */
+    static class Counter {
+        public int value;
+    }
 
     /**
      * Transformer session ID
@@ -41,7 +56,7 @@ class TargetClassContext {
     /**
      * Target class name 
      */
-    private final String name;
+    private final String className;
     
     /**
      * Target class as tree 
@@ -59,16 +74,27 @@ class TargetClassContext {
     private final SortedSet<MixinInfo> mixins;
     
     /**
+     * Injector Method descriptor to ID map 
+     */
+    private final Map<String, Counter> injectorMethodIndices = new HashMap<String, Counter>();
+
+    /**
+     * Do not remap injector handler methods (debug option)
+     */
+    private final boolean disableHandlerRemap;
+
+    /**
      * True once mixins have been applied to this class 
      */
     private boolean applied;
 
     TargetClassContext(String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
         this.sessionId = sessionId;
-        this.name = name;
+        this.className = name;
         this.classNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
         this.mixins = mixins;
+        this.disableHandlerRemap = MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_DISABLE_HANDLER_REMAP);
     }
     
     /**
@@ -79,10 +105,17 @@ class TargetClassContext {
     }
     
     /**
-     * Get the class name
+     * Get the internal class name
      */
     public String getName() {
-        return this.name;
+        return this.classNode.name;
+    }
+    
+    /**
+     * Get the class name
+     */
+    public String getClassName() {
+        return this.className;
     }
 
     /**
@@ -91,7 +124,14 @@ class TargetClassContext {
     public ClassNode getClassNode() {
         return this.classNode;
     }
-    
+
+    /**
+     * Get the class methods (from the tree)
+     */
+    public List<MethodNode> getMethods() {
+        return this.classNode.methods;
+    }
+
     /**
      * Get the target class metadata
      */
@@ -106,12 +146,28 @@ class TargetClassContext {
         return this.mixins;
     }
 
+    public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
+        if (this.disableHandlerRemap) {
+            return method.name;
+        }
+        
+        String descriptor = String.format("%s%s", method.name, method.desc);
+        Counter id = this.injectorMethodIndices.get(descriptor);
+        if (id == null) {
+            id = new Counter();
+            this.injectorMethodIndices.put(descriptor, id);
+        } else if (!surrogate) {
+            id.value++;
+        }
+        return String.format("%s$%s$%d", InjectionInfo.getInjectorPrefix(annotation), method.name, id.value);
+    }
+
     /**
      * Apply mixins to this class
      */
     public void applyMixins() {
         if (this.applied) {
-            throw new IllegalStateException("Mixins already applied to target class " + this.name);
+            throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
         MixinApplicator applicator = this.createApplicator();

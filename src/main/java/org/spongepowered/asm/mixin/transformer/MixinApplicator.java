@@ -193,7 +193,7 @@ public class MixinApplicator {
     
     MixinApplicator(TargetClassContext context) {
         this.context = context;
-        this.targetName = context.getName();
+        this.targetName = context.getClassName();
         this.targetClass = context.getClassNode();
     }
     
@@ -427,7 +427,15 @@ public class MixinApplicator {
         if (!this.context.getSessionId().equals(sessionId)) {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
         }
-
+        
+        if (MixinApplicator.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
+                && MixinApplicator.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
+            if (mixin.getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+                this.logger.warn("Synthetic bridge method clash for {} in {}", method.name, mixin);
+            }
+            return true;
+        }
+        
         String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
         int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
         

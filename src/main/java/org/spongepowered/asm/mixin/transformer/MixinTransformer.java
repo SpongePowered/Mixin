@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -481,11 +482,17 @@ public class MixinTransformer extends TreeTransformer {
     private void init(MixinEnvironment environment) {
         this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
         this.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
+        long startTime = System.currentTimeMillis();
         
         this.addConfigs(environment);
         this.addModules(environment);
         this.initConfigs();
         this.currentEnvironment = environment;
+        
+        double elapsedTime = (System.currentTimeMillis() - startTime) * 0.001D;
+        if (elapsedTime > 0.25D) {
+            this.logger.log(this.verboseLoggingLevel, "Mixin preparation completed in {} sec", new DecimalFormat("###0.000").format(elapsedTime));
+        }
     }
 
     /**
@@ -501,7 +508,7 @@ public class MixinTransformer extends TreeTransformer {
                 try {
                     MixinConfig config = MixinConfig.create(configFile, environment);
                     if (config != null) {
-                        this.logger.log(this.verboseLoggingLevel, "Adding mixin config {}", config);
+                        this.logger.log(this.verboseLoggingLevel, "Adding config {}", config);
                         this.pendingConfigs.add(config);
                     }
                 } catch (Exception ex) {
@@ -538,6 +545,7 @@ public class MixinTransformer extends TreeTransformer {
     private void initConfigs() {
         for (MixinConfig config : this.pendingConfigs) {
             try {
+                this.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getClasses().size());
                 config.initialise(this.hotSwapper);
             } catch (Exception ex) {
                 this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
@@ -564,7 +572,7 @@ public class MixinTransformer extends TreeTransformer {
             try {
                 config.postInitialise(this.hotSwapper);
             } catch (Exception ex) {
-                this.logger.error("Error encountered during mixin config postInit setp'" + config.getName() + "': " + ex.getMessage(), ex);
+                this.logger.error("Error encountered during mixin config postInit step'" + config.getName() + "': " + ex.getMessage(), ex);
             }
         }
         
@@ -717,7 +725,7 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     private byte[] writeClass(TargetClassContext context) {
-        return this.writeClass(context.getName(), context.getClassNode());
+        return this.writeClass(context.getClassName(), context.getClassNode());
     }
     
     private byte[] writeClass(String transformedName, ClassNode targetClass) {

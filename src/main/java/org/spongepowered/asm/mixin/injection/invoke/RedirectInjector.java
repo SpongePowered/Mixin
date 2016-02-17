@@ -304,8 +304,6 @@ public class RedirectInjector extends InvokeInjector {
             return true;
         }
         
-        System.err.printf("%s\n", alternateDesc);
-        
         throw new InvalidInjectionException(this.info, this.annotationType + " field " + type + " " + this
                 + " has an invalid signature. Expected " + desc + " but found " + this.methodNode.desc);
     }

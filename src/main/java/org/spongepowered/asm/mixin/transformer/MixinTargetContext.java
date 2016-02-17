@@ -86,7 +86,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * 
      */
-    private final ClassNode targetClass;
+    private final TargetClassContext targetClass;
     
     /**
      * Session ID from context
@@ -122,13 +122,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
     /**
      * Injector groups 
      */
-    protected final InjectorGroupInfo.Map injectorGroups = new InjectorGroupInfo.Map();
+    private final InjectorGroupInfo.Map injectorGroups = new InjectorGroupInfo.Map();
 
     /**
      * Injectors for this target 
      */
-    protected final List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
-
+    private final List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
     
     /**
      * True if this mixin inherits from a mixin at any point in its hierarchy 
@@ -146,6 +145,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.classVersion();
 
+
     /**
      * ctor
      * 
@@ -156,10 +156,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
     MixinTargetContext(MixinInfo mixin, ClassNode classNode, TargetClassContext context) {
         this.mixin = mixin;
         this.classNode = classNode;
-        this.targetClass = context.getClassNode();
-        this.targetClassInfo = ClassInfo.forName(this.targetClass.name);
+        this.targetClass = context;
+        this.targetClassInfo = ClassInfo.forName(this.targetClass.getName());
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
-        this.detachedSuper = !this.classNode.superName.equals(this.targetClass.superName);
+        this.detachedSuper = !this.classNode.superName.equals(this.targetClass.getClassNode().superName);
         this.sessionId = context.getSessionId();
         this.requireVersion(classNode.version);
     }
@@ -244,7 +244,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      *      mixins)
      */
     public String getTargetClassRef() {
-        return this.targetClass.name;
+        return this.targetClass.getName();
     }
     
     /**
@@ -253,7 +253,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @return the target class
      */
     public ClassNode getTargetClass() {
-        return this.targetClass;
+        return this.targetClass.getClassNode();
     }
     
     /**
@@ -366,7 +366,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
             ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
-                        + "valid method was found in superclasses of " + this.targetClass.name);
+                        + "valid method was found in superclasses of " + this.targetClass.getName());
             }
         }
     }
@@ -383,7 +383,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.transformDescriptor(methodRef);
         
         if (methodRef.getOwner().equals(this.getClassRef())) {
-            methodRef.setOwner(this.targetClass.name);
+            methodRef.setOwner(this.targetClass.getName());
         } else if ((this.detachedSuper || this.inheritsFromMixin)) {
             if (methodRef.getOpcode() == Opcodes.INVOKESPECIAL) {
                 this.updateStaticBinding(method, methodRef);
@@ -416,18 +416,18 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.transformDescriptor(fieldRef);
         
         if (fieldRef.getOwner().equals(this.getClassRef())) {
-            fieldRef.setOwner(this.targetClass.name);
+            fieldRef.setOwner(this.targetClass.getName());
         } else {
             ClassInfo fieldOwner = ClassInfo.forName(fieldRef.getOwner());
             if (fieldOwner.isMixin()) {
                 ClassInfo actualOwner = this.targetClassInfo.findCorrespondingType(fieldOwner);
-                fieldRef.setOwner(actualOwner != null ? actualOwner.getName() : this.targetClass.name);
+                fieldRef.setOwner(actualOwner != null ? actualOwner.getName() : this.targetClass.getName());
             }
         }
     }
 
     private void checkFinal(MethodNode method, Iterator<AbstractInsnNode> iter, FieldInsnNode fieldNode) {
-        if (!fieldNode.owner.equals(this.targetClass.name)) {
+        if (!fieldNode.owner.equals(this.targetClass.getName())) {
             return;
         }
         
@@ -471,7 +471,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private void transformTypeNode(MethodNode method, Iterator<AbstractInsnNode> iter, TypeInsnNode typeInsn, AbstractInsnNode lastNode) {
         if (typeInsn.getOpcode() == Opcodes.CHECKCAST
-                && typeInsn.desc.equals(this.targetClass.name)
+                && typeInsn.desc.equals(this.targetClass.getName())
                 && lastNode.getOpcode() == Opcodes.ALOAD
                 && ((VarInsnNode)lastNode).var == 0) {
             iter.remove();
@@ -479,7 +479,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         if (typeInsn.desc.equals(this.getClassRef())) {
-            typeInsn.desc = this.targetClass.name;
+            typeInsn.desc = this.targetClass.getName();
         }
         
         this.transformDescriptor(typeInsn);
@@ -624,7 +624,9 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     private void updateBinding(MethodNode method, MemberRef methodRef, Traversal traversal) {
-        if (Constants.CTOR.equals(method.name) || methodRef.getOwner().equals(this.targetClass.name) || this.targetClass.name.startsWith("<")) {
+        if (Constants.CTOR.equals(method.name)
+                || methodRef.getOwner().equals(this.targetClass.getName())
+                || this.targetClass.getName().startsWith("<")) {
             return;
         }
         
@@ -749,14 +751,14 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @return new or existing target handle for the supplied method
      */
     public Target getTargetMethod(MethodNode method) {
-        if (!this.targetClass.methods.contains(method)) {
+        if (!this.targetClass.getMethods().contains(method)) {
             throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
         }
         
         String targetName = method.name + method.desc;
         Target target = this.targetMethods.get(targetName);
         if (target == null) {
-            target = new Target(this.targetClass, method);
+            target = new Target(this.targetClass.getClassNode(), method);
             this.targetMethods.put(targetName, target);
         }
         return target;
@@ -904,6 +906,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         this.mixin.postApply(transformedName, targetClass);
+    }
+
+    public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
+        return this.targetClass.getHandlerName(annotation, method, surrogate);
     }
 
     /**

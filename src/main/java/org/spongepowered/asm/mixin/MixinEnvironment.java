@@ -292,6 +292,16 @@ public class MixinEnvironment implements ITokenProvider {
         DEBUG_INJECTORS(Option.DEBUG_ALL, "countInjections"),
         
         /**
+         * Disable the injector handler remapper
+         */
+        DEBUG_DISABLE_HANDLER_REMAP(Option.DEBUG_ALL, "disableHandlerRename") {
+            @Override
+            boolean getBooleanValue() {
+                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
+            }
+        },
+
+        /**
          * Dumps the bytecode for the target class to disk when mixin
          * application fails
          */

@@ -47,6 +47,8 @@ import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.RemapperChain;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.Surrogate;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -188,13 +190,21 @@ class MixinPreProcessor {
                 continue;
             }
             
-            if (this.processMethod(context, mixinMethod, Shadow.class, true, true)) {
+            if (this.processInjectorMethod(context, mixinMethod)) {
+                continue;
+            }
+            
+            if (this.processMemberMethod(context, mixinMethod, Shadow.class, true, true)) {
                 iter.remove();
                 context.addShadowMethod(mixinMethod);
                 continue;
             }
 
-            this.processMethod(context, mixinMethod, Overwrite.class, false, false);
+            if (this.processMemberMethod(context, mixinMethod, Overwrite.class, false, false)) {
+                continue;
+            }
+            
+            this.processMethod(mixinMethod);
         }
     }
 
@@ -202,14 +212,28 @@ class MixinPreProcessor {
         return true;
     }
 
-    protected boolean processMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
+    protected boolean processInjectorMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(context, mixinMethod);
+        boolean surrogate = ASMHelper.getVisibleAnnotation(mixinMethod, Surrogate.class) != null;
+        if (annotation == null && !surrogate) {
+            return false;
+        }
+        
+        String handlerName = context.getHandlerName(annotation, mixinMethod, surrogate);
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+        method.renameTo(handlerName);
+        mixinMethod.name = handlerName;
+        return true;
+    }
+    
+    protected boolean processMemberMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
             boolean mustExist, boolean mustBePrivate) {
         AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, annotationType);
         if (annotation == null) {
             return false;
         }
         
-        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_PRIVATE);
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
         MethodNode target = MixinPreProcessor.findMethod(context.getTargetClass(), mixinMethod, annotation);
         
         if (target == null) {
@@ -239,6 +263,19 @@ class MixinPreProcessor {
         }
         
         return true;
+    }
+
+    protected void processMethod(MethodNode mixinMethod) {
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
+        if (method == null) {
+            return;
+        }
+        
+        Method parentMethod = this.mixin.getClassInfo().findMethodInHierarchy(mixinMethod, false);
+        if (parentMethod != null && parentMethod.isRenamed()) {
+            mixinMethod.name = parentMethod.getName();
+            method.renameTo(parentMethod.getName());
+        }
     }
 
     protected void attachFields(MixinTargetContext context) {
@@ -344,13 +381,13 @@ class MixinPreProcessor {
                 AbstractInsnNode insn = iter.next();
                 if (insn instanceof MethodInsnNode) {
                     MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    Method method = this.mixin.getClassInfo().findMethodInHierarchy(methodNode, true, ClassInfo.INCLUDE_PRIVATE);
+                    Method method = ClassInfo.forName(methodNode.owner).findMethodInHierarchy(methodNode, true, ClassInfo.INCLUDE_PRIVATE);
                     if (method != null && method.isRenamed()) {
                         methodNode.name = method.getName();
                     }
                 } else if (insn instanceof FieldInsnNode) {
                     FieldInsnNode fieldNode = (FieldInsnNode)insn;
-                    Field field = this.mixin.getClassInfo().findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);
+                    Field field = ClassInfo.forName(fieldNode.owner).findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);
                     if (field != null && field.isRenamed()) {
                         fieldNode.name = field.getName();
                     }

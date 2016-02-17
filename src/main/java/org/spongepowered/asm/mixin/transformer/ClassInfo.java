@@ -60,6 +60,7 @@ public class ClassInfo extends TreeInfo {
 
     public static final int INCLUDE_PRIVATE = 0x0002;
     public static final int INCLUDE_STATIC = 0x0008;
+    public static final int INCLUDE_ALL = ClassInfo.INCLUDE_PRIVATE | ClassInfo.INCLUDE_STATIC;
 
     /**
      * <p>To all intents and purposes, the "real" class hierarchy and the mixin

@@ -400,15 +400,8 @@ public abstract class InjectionInfo {
         }
     }
     
-    @SuppressWarnings("unchecked")
     public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
-        AnnotationNode annotation = null;
-        try {
-            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class, ModifyVariable.class);
-        } catch (IllegalArgumentException ex) {
-            throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
-                    + ex.getMessage());
-        }
+        AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(mixin, method);
         
         if (annotation == null) {
             return null;
@@ -426,5 +419,30 @@ public abstract class InjectionInfo {
         
         return null;
     }
-    
+
+    @SuppressWarnings("unchecked")
+    public static AnnotationNode getInjectorAnnotation(MixinTargetContext mixin, MethodNode method) {
+        AnnotationNode annotation = null;
+        try {
+            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class, ModifyVariable.class);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
+                    + ex.getMessage());
+        }
+        return annotation;
+    }
+
+    public static String getInjectorPrefix(AnnotationNode annotation) {
+        if (annotation != null) {
+            if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
+                return "modify";
+            } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
+                return "redirect";
+            } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
+                return "localvar";
+            }
+        }
+        return "handler";
+    }
+
 }
