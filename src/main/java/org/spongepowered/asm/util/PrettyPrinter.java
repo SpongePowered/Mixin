@@ -27,6 +27,7 @@ package org.spongepowered.asm.util;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -232,7 +233,7 @@ public class PrettyPrinter {
         }
         return this;
     }
-
+    
     public PrettyPrinter addWrapped(String format, Object... args) {
         return this.addWrapped(this.wrapWidth, format, args);
     }
@@ -321,6 +322,20 @@ public class PrettyPrinter {
             this.kvFormat = PrettyPrinter.makeKvFormat(width);
         }
         this.recalcWidth = true;
+        return this;
+    }
+
+    /**
+     * Add all values of the specified map to this printer as key/value pairs
+     * 
+     * @param map Map with entries to add
+     * @return fluent
+     */
+    public PrettyPrinter add(Map<?, ?> map) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            String key = entry.getKey() == null ? "null" : entry.getKey().toString();
+            this.kv(key, entry.getValue());
+        }
         return this;
     }
 
