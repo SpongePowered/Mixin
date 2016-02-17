@@ -24,7 +24,7 @@
       <property name="max" value="150"/>
     </module>
     <module name="LineLength">
-      <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@\(\)\?\:]|//)"/>
+      <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@\(\)\?\.\:]|//)"/>
     </module>
     <module name="EmptyBlock">
       <property name="option" value="TEXT"/>

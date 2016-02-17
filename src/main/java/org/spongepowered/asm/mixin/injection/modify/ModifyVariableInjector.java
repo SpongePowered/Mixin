@@ -174,19 +174,20 @@ public class ModifyVariableInjector extends Injector {
         SignaturePrinter handlerSig = new SignaturePrinter(this.methodNode.name, this.returnType, this.methodArgs, new String[] { "var" });
         handlerSig.setModifiers(this.methodNode);
 
-        PrettyPrinter printer = new PrettyPrinter();
-        printer.add("%20s : %s", "Target Class", this.classNode.name.replace('/', '.'));
-        printer.add("%20s : %s", "Target Method", context.target.method.name);
-        printer.add("%20s : %s", "Callback Name", this.methodNode.name);
-        printer.add("%20s : %s", "Capture Type", SignaturePrinter.getTypeName(this.returnType, false));
-        printer.add("%20s : %s %s", "Instruction", context.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(context.node.getOpcode())).hr();
-        printer.add("%20s : %s", "Match mode", this.discriminator.isImplicit(context) ? "IMPLICIT (match single)" : "EXPLICIT (match by criteria)");
-        printer.add("%20s : %s", "Match ordinal", this.discriminator.getOrdinal() < 0 ? "any" : this.discriminator.getOrdinal());
-        printer.add("%20s : %s", "Match index", this.discriminator.getIndex() < context.baseArgIndex ? "any" : this.discriminator.getIndex());
-        printer.add("%20s : %s", "Match name(s)", this.discriminator.hasNames() ? this.discriminator.getNames() : "any");
-        printer.add("%20s : %s", "Args only", this.discriminator.isArgsOnly()).hr();
-        printer.add(context);
-        printer.print(System.err);
+        new PrettyPrinter()
+            .kvWidth(20)
+            .kv("Target Class", this.classNode.name.replace('/', '.'))
+            .kv("Target Method", context.target.method.name)
+            .kv("Callback Name", this.methodNode.name)
+            .kv("Capture Type", SignaturePrinter.getTypeName(this.returnType, false))
+            .kv("Instruction", "%s %s", context.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(context.node.getOpcode())).hr()
+            .kv("Match mode", this.discriminator.isImplicit(context) ? "IMPLICIT (match single)" : "EXPLICIT (match by criteria)")
+            .kv("Match ordinal", this.discriminator.getOrdinal() < 0 ? "any" : this.discriminator.getOrdinal())
+            .kv("Match index", this.discriminator.getIndex() < context.baseArgIndex ? "any" : this.discriminator.getIndex())
+            .kv("Match name(s)", this.discriminator.hasNames() ? this.discriminator.getNames() : "any")
+            .kv("Args only", this.discriminator.isArgsOnly()).hr()
+            .add(context)
+            .print(System.err);
     }
     
     /**

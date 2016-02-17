@@ -477,12 +477,12 @@ public class CallbackInjector extends Injector {
         handlerSig.setModifiers(this.methodNode);
         
         PrettyPrinter printer = new PrettyPrinter();
-        printer.add("%20s : %s", "Target Class", this.classNode.name.replace('/', '.'));
-        printer.add("%20s : %s", "Target Method", methodSig);
-        printer.add("%20s : %d", "Target Max LOCALS", callback.target.getMaxLocals());
-        printer.add("%20s : %d", "Initial Frame Size", callback.frameSize);
-        printer.add("%20s : %s", "Callback Name", this.methodNode.name);
-        printer.add("%20s : %s %s", "Instruction", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
+        printer.kv("Target Class", this.classNode.name.replace('/', '.'));
+        printer.kv("Target Method", methodSig);
+        printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
+        printer.kv("Initial Frame Size", callback.frameSize);
+        printer.kv("Callback Name", this.methodNode.name);
+        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
             printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");

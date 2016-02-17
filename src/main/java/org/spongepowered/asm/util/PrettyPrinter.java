@@ -55,29 +55,109 @@ public class PrettyPrinter {
     }
     
     /**
-     * "Horizontal rule" marker
+     * Interface for objects which need their width calculated prior to printing
      */
-    private static final char HR = '\253';
+    interface IVariableWidthEntry {
+        
+        public abstract int getWidth();
+        
+    }
+    
+    /**
+     * Interface for objects which control their own output format
+     */
+    interface ISpecialEntry {
+        
+    }
+    
+    /**
+     * A key/value pair for convenient printing
+     */
+    class KeyValue implements PrettyPrinter.IVariableWidthEntry {
+        
+        private final String key;
+        
+        private final Object value;
+        
+        public KeyValue(String key, Object value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(PrettyPrinter.this.kvFormat, this.key, this.value);
+        }
+
+        @Override
+        public int getWidth() {
+            return this.toString().length();
+        }
+        
+    }
+    
+    /**
+     * Horizontal rule
+     */
+    class HorizontalRule implements PrettyPrinter.ISpecialEntry {
+        
+        private final char[] hrChars;
+
+        public HorizontalRule(char... hrChars) {
+            this.hrChars = hrChars;
+        }
+        
+        @Override
+        public String toString() {
+            return Strings.repeat(new String(this.hrChars), PrettyPrinter.this.width + 2);
+        }
+        
+    }
+    
+    /**
+     * Centred text
+     */
+    class CentredText {
+        
+        private final Object centred;
+
+        public CentredText(Object centred) {
+            this.centred = centred;
+        }
+        
+        @Override
+        public String toString() {
+            String text = this.centred.toString();
+            return String.format("%" + (((PrettyPrinter.this.width - (text.length())) / 2) + text.length()) + "s", text);
+        }
+        
+    }
+    
+    private final HorizontalRule horizontalRule = new HorizontalRule('*');
 
     /**
-     * If specified as the first character on a line, centres the line
+     * Content lines
      */
-    private static final char CENTRE = '\252';
+    private final List<Object> lines = new ArrayList<Object>();
+    
+    private boolean recalcWidth = false;
     
     /**
      * Box with (adapts to contents)
      */
-    private int width = 100;
+    protected int width = 100;
     
     /**
      *  Wrap width used when an explicit wrap width is not specified
      */
-    private int wrapWidth = 80;
+    protected int wrapWidth = 80;
     
     /**
-     * Content lines
+     * Key/value key width
      */
-    private final List<String> lines = new ArrayList<String>();
+    protected int kvKeyWidth = 10;
+    
+    protected String kvFormat = PrettyPrinter.makeKvFormat(this.kvKeyWidth); 
     
     public PrettyPrinter() {
         this(100);
@@ -206,6 +286,45 @@ public class PrettyPrinter {
     }
     
     /**
+     * Add a formatted key/value pair to the output
+     * 
+     * @param key Key
+     * @param format Value format
+     * @param args Value args
+     * @return fluent interface
+     */
+    public PrettyPrinter kv(String key, String format, Object... args) {
+        return this.kv(key, String.format(format, args));
+    }
+    
+    /**
+     * Add a key/value pair to the output
+     * 
+     * @param key Key
+     * @param value Value
+     * @return fluent interface
+     */
+    public PrettyPrinter kv(String key, Object value) {
+        this.lines.add(new KeyValue(key, value));
+        return this.kvWidth(key.length());
+    }
+    
+    /**
+     * Set the minimum key display width
+     * 
+     * @param width width to set
+     * @return fluent
+     */
+    public PrettyPrinter kvWidth(int width) {
+        if (width > this.kvKeyWidth) {
+            this.kvKeyWidth = width;
+            this.kvFormat = PrettyPrinter.makeKvFormat(width);
+        }
+        this.recalcWidth = true;
+        return this;
+    }
+
+    /**
      * Adds a horizontal rule to the output
      * 
      * @return fluent interface
@@ -222,7 +341,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter hr(char ruleChar) {
-        this.lines.add("" + PrettyPrinter.HR + ruleChar);
+        this.lines.add(new HorizontalRule(ruleChar));
         return this;
     }
     
@@ -233,7 +352,10 @@ public class PrettyPrinter {
      */
     public PrettyPrinter centre() {
         if (!this.lines.isEmpty()) {
-            this.lines.add(PrettyPrinter.CENTRE + this.lines.remove(this.lines.size() - 1));
+            Object lastLine = this.lines.get(this.lines.size() - 1);
+            if (lastLine instanceof String) {
+                this.lines.add(new CentredText(this.lines.remove(this.lines.size() - 1)));
+            }
         }
         return this;
     }
@@ -244,26 +366,26 @@ public class PrettyPrinter {
      * @param stream stream to print to
      */
     public void print(PrintStream stream) {
-        this.printHr(stream, '*');
-        for (String line : this.lines) {
-            int len = line.length();
-            if (len > 1 && line.charAt(0) == PrettyPrinter.HR) {
-                this.printHr(stream, line.charAt(1));
+        this.updateWidth();
+        this.printSpecial(stream, this.horizontalRule);
+        for (Object line : this.lines) {
+            if (line instanceof ISpecialEntry) {
+                this.printSpecial(stream, (ISpecialEntry)line);
             } else {
-                if (len > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
-                    String text = line.substring(1);
-                    line = String.format("%" + (((this.width - (text.length())) / 2) + text.length()) + "s", text);
-                }
-                stream.printf("/* %-" + this.width + "s */\n", line);
+                this.printString(stream, line.toString());
             }
         }
-        this.printHr(stream, '*');
+        this.printSpecial(stream, this.horizontalRule);
     }
 
-    private void printHr(PrintStream stream, char... hrChars) {
-        stream.printf("/*%s*/\n", Strings.repeat(new String(hrChars), this.width + 2));
+    private void printSpecial(PrintStream stream, ISpecialEntry line) {
+        stream.printf("/*%s*/\n", line.toString());
     }
-    
+
+    private void printString(PrintStream stream, String string) {
+        stream.printf("/* %-" + this.width + "s */\n", string);
+    }
+
     public void log(Logger logger) {
         this.log(logger, Level.INFO);
     }
@@ -275,23 +397,39 @@ public class PrettyPrinter {
      * @param level log level
      */
     public void log(Logger logger, Level level) {
-        this.logHr(logger, level, '*');
-        for (String line : this.lines) {
-            int len = line.length();
-            if (len > 1 && line.charAt(0) == PrettyPrinter.HR) {
-                this.logHr(logger, level, line.charAt(1));
+        this.updateWidth();
+        this.logSpecial(logger, level, this.horizontalRule);
+        for (Object line : this.lines) {
+            if (line instanceof ISpecialEntry) {
+                this.logSpecial(logger, level, (ISpecialEntry)line);
             } else {
-                if (len > 0 && line.charAt(0) == PrettyPrinter.CENTRE) {
-                    String text = line.substring(1);
-                    line = String.format("%" + (((this.width - (text.length())) / 2) + text.length()) + "s", text);
-                }
-                logger.log(level, String.format("/* %-" + this.width + "s */", line));
+                this.logString(logger, level, line.toString());
             }
         }
-        this.logHr(logger, level, '*');
+        this.logSpecial(logger, level, this.horizontalRule);
+    }
+
+    private void logSpecial(Logger logger, Level level, ISpecialEntry line) {
+        logger.log(level, "/*{}*/\n", line.toString());
+    }
+
+    private void logString(Logger logger, Level level, String line) {
+        logger.log(level, String.format("/* %-" + this.width + "s */", line));
     }
     
-    private void logHr(Logger logger, Level level, char... hrChars) {
-        logger.log(level, String.format("/*%s*/", Strings.repeat(new String(hrChars), this.width + 2)));
+    private void updateWidth() {
+        if (this.recalcWidth) {
+            this.recalcWidth = false;
+            for (Object line : this.lines) {
+                if (line instanceof IVariableWidthEntry) {
+                    this.width = Math.max(this.width, ((IVariableWidthEntry)line).getWidth());
+                }
+            }
+        }
     }
+
+    private static String makeKvFormat(int keyWidth) {
+        return String.format("%%%ds : %%s", keyWidth);
+    }
+
 }

@@ -169,7 +169,7 @@ public class LocalVariableDiscriminator {
 
         @Override
         public void print(PrettyPrinter printer) {
-            printer.add("%5s  %7s  %20s  %-50s  %s", "INDEX", "ORDINAL", "TYPE", "NAME", "CANDIDATE");
+            printer.add("%5s  %7s  %30s  %-50s  %s", "INDEX", "ORDINAL", "TYPE", "NAME", "CANDIDATE");
             for (int l = this.baseArgIndex; l < this.locals.length; l++) {
                 Local local = this.locals[l];
                 if (local != null) {
@@ -177,11 +177,11 @@ public class LocalVariableDiscriminator {
                     String localName = local.name;
                     int ordinal = local.ord;
                     String candidate = this.returnType.equals(localType) ? "YES" : "-";
-                    printer.add("[%3d]    [%3d]  %20s  %-50s  %s", l, ordinal, SignaturePrinter.getTypeName(localType, false), localName, candidate);
+                    printer.add("[%3d]    [%3d]  %30s  %-50s  %s", l, ordinal, SignaturePrinter.getTypeName(localType, false), localName, candidate);
                 } else if (l > 0) {
                     Local prevLocal = this.locals[l - 1];
                     boolean isTop = prevLocal != null && prevLocal.type != null && prevLocal.type.getSize() > 1;
-                    printer.add("[%3d]           %20s", l, isTop ? "<top>" : "-");
+                    printer.add("[%3d]           %30s", l, isTop ? "<top>" : "-");
                 }
             }
         }

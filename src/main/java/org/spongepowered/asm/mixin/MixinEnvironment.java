@@ -722,17 +722,17 @@ public class MixinEnvironment implements ITokenProvider {
         if (this.getOption(Option.DEBUG_VERBOSE)) {
             PrettyPrinter printer = new PrettyPrinter(32);
             printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
-            printer.add("%28s : %s", "Code source", codeSource);
-            printer.add("%28s : %s", "Internal Version", version);
-            printer.add("%28s : %s", "Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
+            printer.kv("Code source", codeSource);
+            printer.kv("Internal Version", version);
+            printer.kv("Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
             for (Option option : Option.values()) {
                 StringBuilder indent = new StringBuilder();
                 for (int i = 0; i < option.depth; i++) {
                     indent.append("- ");
                 }
-                printer.add("%28s : %s<%s>", option.property, indent, option);
+                printer.kv(option.property, "%s<%s>", indent, option);
             }
-            printer.hr().add("%28s : %s", "Detected Side", side);
+            printer.hr().kv("Detected Side", side);
             printer.print(System.err);
         }
     }
