@@ -234,6 +234,34 @@ public class PrettyPrinter {
         return this;
     }
     
+    /**
+     * Print a formatted representation of the specified throwable with the
+     * default indent (4)
+     * 
+     * @param th Throwable to print
+     * @return fluent interface
+     */
+    public PrettyPrinter add(Throwable th) {
+        return this.add(th, 4);
+    }
+    
+    /**
+     * Print a formatted representation of the specified throwable with the
+     * specified indent
+     * 
+     * @param th Throwable to print
+     * @param indent Indent size for stacktrace lines
+     * @return fluent interface
+     */
+    public PrettyPrinter add(Throwable th, int indent) {
+        String margin = Strings.repeat(" ", indent);
+        this.add("%s: %s", th.getClass().getName(), th.getMessage());
+        for (StackTraceElement st : th.getStackTrace()) {
+            this.add("%s%s", margin, st);
+        }
+        return this;
+    }
+    
     public PrettyPrinter addWrapped(String format, Object... args) {
         return this.addWrapped(this.wrapWidth, format, args);
     }
@@ -446,5 +474,13 @@ public class PrettyPrinter {
     private static String makeKvFormat(int keyWidth) {
         return String.format("%%%ds : %%s", keyWidth);
     }
+    
+    public static void dumpStack() {
+        new PrettyPrinter().add(new Exception("Stack trace")).print(System.err);
+    }
 
+    public static void print(Throwable th) {
+        new PrettyPrinter().add(th).print(System.err);
+    }
+    
 }
