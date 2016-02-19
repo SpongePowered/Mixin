@@ -106,6 +106,10 @@ public class TargetValidator extends MixinValidator {
             return false;
         }
         
+        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
+            return true;
+        }
+        
         TypeElement targetElement = (TypeElement)((DeclaredType)targetType).asElement();
         TypeMirror targetSuper = targetElement.getSuperclass();
         if (targetSuper.getKind() == TypeKind.NONE) {
