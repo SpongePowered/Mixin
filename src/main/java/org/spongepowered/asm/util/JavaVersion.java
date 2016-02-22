@@ -49,7 +49,7 @@ public abstract class JavaVersion {
         if (matcher.find()) {
             return Double.parseDouble(matcher.group());
         } else {
-            matcher = Pattern.compile("[0-9]+"); // Java 9 and later
+            matcher = Pattern.compile("[0-9]+").matcher(version); // Java 9 and later
             if (matcher.find()) {
                 return Double.parseDouble(matcher.group());
             }
