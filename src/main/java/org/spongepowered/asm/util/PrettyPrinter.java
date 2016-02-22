@@ -136,6 +136,251 @@ public class PrettyPrinter {
         
     }
     
+    /**
+     * Table column alignment
+     */
+    public static enum Alignment {
+        LEFT,
+        RIGHT
+    }
+    
+    /**
+     * Table information, added to output in order to print header
+     */
+    static class Table implements PrettyPrinter.IVariableWidthEntry {
+        
+        final List<Column> columns = new ArrayList<Column>();
+        
+        final List<Row> rows = new ArrayList<Row>();
+        
+        String format = "%s";
+        
+        int colSpacing = 2;
+        
+        boolean addHeader = true;
+        
+        void headerAdded() {
+            this.addHeader = false;
+        }
+
+        void setColSpacing(int spacing) {
+            this.colSpacing = Math.max(0, spacing);
+            this.updateFormat();
+        }
+
+        Table grow(int size) {
+            while (this.columns.size() < size) {
+                this.columns.add(new Column(this));
+            }
+            this.updateFormat();
+            return this;
+        }
+        
+        Column add(Column column) {
+            this.columns.add(column);
+            return column;
+        }
+        
+        Row add(Row row) {
+            this.rows.add(row);
+            return row;
+        }
+        
+        Column addColumn(String title) {
+            return this.add(new Column(this, title));
+        }
+        
+        Column addColumn(Alignment align, int size, String title) {
+            return this.add(new Column(this, align, size, title));
+        }
+        
+        Row addRow(Object... args) {
+            return this.add(new Row(this, args));
+        }
+
+        void updateFormat() {
+            String spacing = Strings.repeat(" ", this.colSpacing);
+            StringBuilder format = new StringBuilder();
+            boolean addSpacing = false;
+            for (Column column : this.columns) {
+                if (addSpacing) {
+                    format.append(spacing);
+                }
+                addSpacing = true;
+                format.append(column.getFormat());
+            }
+            this.format = format.toString();
+        }
+        
+        String getFormat() {
+            return this.format;
+        }
+
+        Object[] getTitles() {
+            List<Object> titles = new ArrayList<Object>();
+            for (Column column : this.columns) {
+                titles.add(column.getTitle());
+            }
+            return titles.toArray();
+        }
+        
+        @Override
+        public String toString() {
+            boolean nonEmpty = false;
+            String[] titles = new String[this.columns.size()];
+            for (int col = 0; col < this.columns.size(); col++) {
+                titles[col] = this.columns.get(col).toString();
+                nonEmpty |= !titles[col].isEmpty();
+            }
+            return nonEmpty ? String.format(this.format, titles) : null;
+        }
+        
+        @Override
+        public int getWidth() {
+            String str = this.toString();
+            return str != null ? str.length() : 0;
+        }
+        
+    }
+    
+    /**
+     * Table column, internal
+     */
+    static class Column {
+        
+        private final Table table;
+        
+        private Alignment align = Alignment.LEFT;
+        
+        private int minWidth = 1;
+        
+        private int maxWidth = Integer.MAX_VALUE;
+        
+        private int size = 0;
+        
+        private String title = "";
+        
+        private String format = "%s";
+
+        Column(Table table) {
+            this.table = table;
+        }
+        
+        Column(Table table, String title) {
+            this(table);
+            this.title = title;
+            this.minWidth = title.length();
+            this.updateFormat();
+        }
+
+        Column(Table table, Alignment align, int size, String title) {
+            this(table, title);
+            this.align = align;
+            this.size = size;
+        }
+
+        void setAlignment(Alignment align) {
+            this.align = align;
+            this.updateFormat();
+        }
+        
+        void setWidth(int width) {
+            if (width > this.size) {
+                this.size = width;
+                this.updateFormat();
+            }
+        }
+        
+        void setMinWidth(int width) {
+            if (width > this.minWidth) {
+                this.minWidth = width;
+                this.updateFormat();
+            }
+        }
+        
+        void setMaxWidth(int width) {
+            this.size = Math.min(this.size, this.maxWidth);
+            this.maxWidth = Math.max(1, width);
+            this.updateFormat();
+        }
+        
+        void setTitle(String title) {
+            this.title = title;
+            this.setWidth(title.length());
+        }
+
+        private void updateFormat() {
+            int width = Math.min(this.maxWidth, this.size == 0 ? this.minWidth : this.size);
+            this.format = "%" + (this.align == Alignment.RIGHT ? "" : "-") + width + "s";
+            this.table.updateFormat();
+        }
+        
+        int getMaxWidth() {
+            return this.maxWidth;
+        }
+        
+        String getTitle() {
+            return this.title;
+        }
+        
+        String getFormat() {
+            return this.format;
+        }
+        
+        @Override
+        public String toString() {
+            if (this.title.length() > this.maxWidth) {
+                return this.title.substring(0, this.maxWidth);
+            }
+            
+            return this.title;
+        }
+        
+    }
+    
+    /**
+     * Table row, internal
+     */
+    static class Row implements PrettyPrinter.IVariableWidthEntry {
+        
+        final Table table;
+        
+        final String[] args;
+
+        public Row(Table table, Object... args) {
+            this.table = table.grow(args.length);
+            this.args = new String[args.length];
+            for (int i = 0; i < args.length; i++) {
+                this.args[i] = args[i].toString();
+                this.table.columns.get(i).setMinWidth(this.args[i].length());
+            }
+        }
+        
+        @Override
+        public String toString() {
+            Object[] args = new Object[this.table.columns.size()];
+            for (int col = 0; col < args.length; col++) {
+                Column column = this.table.columns.get(col);
+                if (col >= this.args.length) {
+                    args[col] = "";
+                } else {
+                    args[col] = (this.args[col].length() > column.getMaxWidth()) ? this.args[col].substring(0, column.getMaxWidth()) : this.args[col];
+                }
+            }
+            
+            return String.format(this.table.format, args);
+        }
+        
+        @Override
+        public int getWidth() {
+            return this.toString().length();
+        }
+        
+    }
+    
+    /**
+     * Horizontal rule
+     */
     private final HorizontalRule horizontalRule = new HorizontalRule('*');
 
     /**
@@ -143,6 +388,15 @@ public class PrettyPrinter {
      */
     private final List<Object> lines = new ArrayList<Object>();
     
+    /**
+     * Table 
+     */
+    private Table table;
+    
+    /**
+     * True when a variable-width entry is added whose width must be calculated
+     * on print
+     */
     private boolean recalcWidth = false;
     
     /**
@@ -189,14 +443,131 @@ public class PrettyPrinter {
     public int wrapTo() {
         return this.wrapWidth;
     }
+    
+    /**
+     * Begin a new table with no header and adaptive column widths
+     * 
+     * @return fluent interface
+     */
+    public PrettyPrinter table() {
+        this.table = new Table();
+        return this;
+    }
+    
+    /**
+     * Begin a new table with the specified headers and adaptive column widths
+     * 
+     * @param titles Column titles
+     * @return fluent interface
+     */
+    public PrettyPrinter table(String... titles) {
+        this.table = new Table();
+        for (String title : titles) {
+            this.table.addColumn(title);
+        }
+        return this;
+    }
 
+    /**
+     * Begin a new table with the specified format. The format is specified as a
+     * sequence of values with {@link String}s defining column titles,
+     * {@link Integer}s defining column widths, and {@link Alignment}s defining
+     * column alignments. Widths and alignment specifiers should follow the
+     * relevant column title. Specify a <em>negative</em> value to specify the
+     * <em>maximum</em> width for a column (values will be truncated).
+     * 
+     * <p>For example, to specify a table with two columns of width 10:</p>
+     * 
+     * <code>printer.table("Column 1", 10, "Column 2", 10);</code>
+     * 
+     * <p>A table with a column 30 characters wide and a right-aligned column 20
+     * characters wide:</p>
+     * 
+     * <code>printer.table("Column 1", 30, "Column 2", 20, Alignment.RIGHT);
+     * </code>
+     * 
+     * @param format
+     * @return fluent interface
+     */
+    public PrettyPrinter table(Object... format) {
+        this.table = new Table();
+        Column column = null;
+        for (Object entry : format) {
+            if (entry instanceof String) {
+                column = this.table.addColumn((String)entry);
+            } else if (entry instanceof Integer && column != null) {
+                int width = ((Integer)entry).intValue();
+                if (width > 0) {
+                    column.setWidth(width);
+                } else if (width < 0) {
+                    column.setMaxWidth(-width);
+                }
+            } else if (entry instanceof Alignment && column != null) {
+                column.setAlignment((Alignment)entry);
+            } else if (entry != null) {
+                column = this.table.addColumn(entry.toString());
+            }
+        }
+        return this;
+    }
+    
+    /**
+     * Set the column spacing for the current table. Default = 2
+     * 
+     * @param spacing Column spacing in characters
+     * @return fluent interface
+     */
+    public PrettyPrinter spacing(int spacing) {
+        if (this.table == null) {
+            this.table = new Table();
+        }
+        this.table.setColSpacing(spacing);
+        return this;
+    }
+    
+    /**
+     * Print the current table header. The table header is automatically printed
+     * before the first row if not explicitly specified by calling this method.
+     * 
+     * @return fluent interface
+     */
+    public PrettyPrinter th() {
+        return this.th(false);
+    }
+
+    private PrettyPrinter th(boolean onlyIfNeeded) {
+        if (this.table == null) {
+            this.table = new Table();
+        }
+        if (!onlyIfNeeded || this.table.addHeader) {
+            this.table.headerAdded();
+            this.addLine(this.table);
+        }
+        return this;
+    }
+    
+    /**
+     * Print a table row with the specified values. If more columns are
+     * specified than exist in the table, then the table is automatically
+     * expanded.
+     * 
+     * @param args column values
+     * @return fluent interface
+     */
+    public PrettyPrinter tr(Object... args) {
+        this.th(true);
+        this.addLine(this.table.addRow(args));
+        this.recalcWidth = true;
+        return this;
+    }
+    
     /**
      * Adds a blank line to the output
      * 
      * @return fluent interface
      */
     public PrettyPrinter add() {
-        this.lines.add("");
+        this.addLine("");
         return this;
     }
     
@@ -207,7 +578,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter add(String string) {
-        this.lines.add(string);
+        this.addLine(string);
         this.width = Math.max(this.width, string.length());
         return this;
     }
@@ -222,7 +593,7 @@ public class PrettyPrinter {
      */
     public PrettyPrinter add(String format, Object... args) {
         String line = String.format(format, args);
-        this.lines.add(line);
+        this.addLine(line);
         this.width = Math.max(this.width, line.length());
         return this;
     }
@@ -275,7 +646,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter addWithIndices(Collection<?> c) {
-        return this.addIndexed(c.toArray(new Object[0]));
+        return this.addIndexed(c.toArray());
     }
     
     /**
@@ -396,7 +767,7 @@ public class PrettyPrinter {
         
         try {
             for (String wrappedLine : this.getWrapped(width, line, indent)) {
-                this.lines.add(wrappedLine);
+                this.addLine(wrappedLine);
             }
         } catch (Exception ex) {
             this.add(line);
@@ -444,7 +815,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter kv(String key, Object value) {
-        this.lines.add(new KeyValue(key, value));
+        this.addLine(new KeyValue(key, value));
         return this.kvWidth(key.length());
     }
     
@@ -494,7 +865,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter hr(char ruleChar) {
-        this.lines.add(new HorizontalRule(ruleChar));
+        this.addLine(new HorizontalRule(ruleChar));
         return this;
     }
     
@@ -507,10 +878,18 @@ public class PrettyPrinter {
         if (!this.lines.isEmpty()) {
             Object lastLine = this.lines.get(this.lines.size() - 1);
             if (lastLine instanceof String) {
-                this.lines.add(new CentredText(this.lines.remove(this.lines.size() - 1)));
+                this.addLine(new CentredText(this.lines.remove(this.lines.size() - 1)));
             }
         }
         return this;
+    }
+    
+    private void addLine(Object line) {
+        if (line == null) {
+            return;
+        }
+        this.lines.add(line);
+        this.recalcWidth |= line instanceof PrettyPrinter.IVariableWidthEntry;
     }
     
     /**
@@ -689,7 +1068,9 @@ public class PrettyPrinter {
     }
 
     private void printString(PrintStream stream, String string) {
-        stream.printf("/* %-" + this.width + "s */\n", string);
+        if (string != null) {
+            stream.printf("/* %-" + this.width + "s */\n", string);
+        }
     }
 
     /**
@@ -728,7 +1109,9 @@ public class PrettyPrinter {
     }
 
     private void logString(Logger logger, Level level, String line) {
-        logger.log(level, String.format("/* %-" + this.width + "s */", line));
+        if (line != null) {
+            logger.log(level, String.format("/* %-" + this.width + "s */", line));
+        }
     }
     
     private void updateWidth() {
