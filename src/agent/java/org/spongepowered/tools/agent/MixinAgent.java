@@ -204,6 +204,7 @@ public class MixinAgent implements IHotSwap {
      * @param instrumentation Instance to use to transform the mixins
      */
     public static void premain(String arg, Instrumentation instrumentation) {
+        System.setProperty("mixin.hotSwap", "true");
         MixinAgent.init(instrumentation);
     }
 
