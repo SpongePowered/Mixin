@@ -45,9 +45,14 @@ public abstract class JavaVersion {
 
     private static double resolveCurrentVersion() {
         String version = System.getProperty("java.version");
-        Matcher matcher = Pattern.compile("[0-9]+\\.[0-9]+").matcher(version);
+        Matcher matcher = Pattern.compile("[0-9]+\\.[0-9]+").matcher(version); // Java 8 and earlier
         if (matcher.find()) {
             return Double.parseDouble(matcher.group());
+        } else {
+            matcher = Pattern.compile("[0-9]+"); // Java 9 and later
+            if (matcher.find()) {
+                return Double.parseDouble(matcher.group());
+            }
         }
         return 1.6;
     }
