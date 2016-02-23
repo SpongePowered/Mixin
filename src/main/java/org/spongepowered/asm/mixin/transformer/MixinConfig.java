@@ -466,6 +466,15 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
 
     /**
+     * Get the number of mixins in this config, for debug logging
+     * 
+     * @return total enumerated mixins in set
+     */
+    int getMixinCount() {
+        return this.mixins.size();
+    }
+
+    /**
      * Get the list of mixin classes we will be applying
      */
     public List<String> getClasses() {
