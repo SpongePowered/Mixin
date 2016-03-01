@@ -1119,7 +1119,7 @@ public class PrettyPrinter {
             this.recalcWidth = false;
             for (Object line : this.lines) {
                 if (line instanceof IVariableWidthEntry) {
-                    this.width = Math.max(this.width, ((IVariableWidthEntry)line).getWidth());
+                    this.width = Math.min(4096, Math.max(this.width, ((IVariableWidthEntry)line).getWidth()));
                 }
             }
         }

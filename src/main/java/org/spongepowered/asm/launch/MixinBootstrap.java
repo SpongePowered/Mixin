@@ -133,6 +133,11 @@ public abstract class MixinBootstrap {
         
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
+            
+            String command = System.getProperty("sun.java.command");
+            if (command != null && command.contains("GradleStart")) {
+                System.setProperty("mixin.env.disableRefMap", "true");
+            }
 
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
