@@ -447,12 +447,16 @@ public class MixinTargetContext implements IReferenceMapperContext {
                     if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
                         MixinTargetContext.logger.warn("Write access to @Mutable @Final field {} in {}::{}", shadowField, this.mixin, method.name);
                     }                    
-                } else {                    
-                    MixinTargetContext.logger.error("Write access detected to @Final field {} in {}::{}", shadowField, this.mixin, method.name);
-                    if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERIFY)) {
-                        throw new InvalidMixinException(this.mixin, "Write access detected to @Final field " + shadowField + " in " + this.mixin
-                                + "::" + method.name);
-                    }
+                } else {
+                    if (Constants.CTOR.equals(method.name) || Constants.CLINIT.equals(method.name)) {
+                        MixinTargetContext.logger.warn("@Final field {} in {} should be final", shadowField, this.mixin);
+                    } else {
+                        MixinTargetContext.logger.error("Write access detected to @Final field {} in {}::{}", shadowField, this.mixin, method.name);
+                        if (this.mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERIFY)) {
+                            throw new InvalidMixinException(this.mixin, "Write access detected to @Final field " + shadowField + " in " + this.mixin
+                                    + "::" + method.name);
+                        }
+                    }                    
                 }
             }
             return;
