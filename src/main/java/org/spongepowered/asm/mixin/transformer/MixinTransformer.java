@@ -545,8 +545,8 @@ public class MixinTransformer extends TreeTransformer {
     private void initConfigs() {
         for (MixinConfig config : this.pendingConfigs) {
             try {
-                this.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getMixinCount());
                 config.initialise(this.hotSwapper);
+                this.logger.log(this.verboseLoggingLevel, "Prepared {} ({})", config, config.getMixinCount());
             } catch (Exception ex) {
                 this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
             }
