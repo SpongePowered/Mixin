@@ -486,12 +486,14 @@ public class MixinTransformer extends TreeTransformer {
         
         this.addConfigs(environment);
         this.addModules(environment);
-        this.initConfigs();
+        int totalMixins = this.initConfigs();
         this.currentEnvironment = environment;
         
         double elapsedTime = (System.currentTimeMillis() - startTime) * 0.001D;
         if (elapsedTime > 0.25D) {
-            this.logger.log(this.verboseLoggingLevel, "Mixin preparation completed in {} sec", new DecimalFormat("###0.000").format(elapsedTime));
+            String elapsed = new DecimalFormat("###0.000").format(elapsedTime);
+            String perMixinTime = new DecimalFormat("###0.0").format((elapsedTime / totalMixins) * 1000.0);
+            this.logger.log(this.verboseLoggingLevel, "Prepared {} mixins in {} sec ({} msec avg.)", totalMixins, elapsed, perMixinTime);
         }
     }
 
@@ -541,12 +543,17 @@ public class MixinTransformer extends TreeTransformer {
 
     /**
      * Initialise mixin configs
+     * 
+     * @return total number of mixins initialised
      */
-    private void initConfigs() {
+    private int initConfigs() {
+        int totalMixins = 0;
+        
         for (MixinConfig config : this.pendingConfigs) {
             try {
+                this.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getDeclaredMixinCount());
                 config.initialise(this.hotSwapper);
-                this.logger.log(this.verboseLoggingLevel, "Prepared {} ({})", config, config.getMixinCount());
+                totalMixins += config.getMixinCount();
             } catch (Exception ex) {
                 this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
             }
@@ -579,6 +586,8 @@ public class MixinTransformer extends TreeTransformer {
         this.configs.addAll(this.pendingConfigs);
         Collections.sort(this.configs);
         this.pendingConfigs.clear();
+        
+        return totalMixins;
     }
 
     /**

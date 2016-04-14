@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -464,9 +465,18 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         String defaultGroup = this.injectorOptions.defaultGroup;
         return defaultGroup != null && !defaultGroup.isEmpty() ? defaultGroup : "default";
     }
-
+    
     /**
      * Get the number of mixins in this config, for debug logging
+     * 
+     * @return total enumerated mixins in set
+     */
+    int getDeclaredMixinCount() {
+        return MixinConfig.getCollectionSize(this.mixinClasses, this.mixinClassesClient, this.mixinClassesServer);
+    }
+
+    /**
+     * Get the number of mixins actually initialised, for debug logging
      * 
      * @return total enumerated mixins in set
      */
@@ -646,6 +656,16 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             ex.printStackTrace();
             throw new IllegalArgumentException(String.format("The specified configuration file '%s' was invalid or could not be read", configFile));
         }
+    }
+
+    private static int getCollectionSize(Collection<?>... collections) {
+        int total = 0;
+        for (Collection<?> collection : collections) {
+            if (collection != null) {
+                total += collection.size();
+            }
+        }
+        return total;
     }
 
 }
