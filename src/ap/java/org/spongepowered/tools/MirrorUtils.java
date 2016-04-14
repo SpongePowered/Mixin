@@ -41,11 +41,15 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 
 /**
  * Convenience functions for mirror
  */
 public abstract class MirrorUtils {
+
+    private static final String OBJECT_SIG = "java.lang.Object";
+    private static final String OBJECT_REF = "java/lang/Object";
 
     // No instances for you
     private MirrorUtils() {}
@@ -150,6 +154,61 @@ public abstract class MirrorUtils {
         
         return parent.getClass().getSimpleName();
     }
+    
+    public static String getJavaSignature(Element element) {
+        if (element instanceof ExecutableElement) {
+            ExecutableElement method = (ExecutableElement)element;
+            StringBuilder desc = new StringBuilder().append("(");
+            boolean extra = false;
+            for (VariableElement arg : method.getParameters()) {
+                if (extra) {
+                    desc.append(',');
+                }
+                desc.append(MirrorUtils.getTypeName(arg.asType()));
+                extra = true;
+            }
+            desc.append(')').append(method.getReturnType().toString());
+            return desc.toString();
+        }
+        return MirrorUtils.getTypeName(element.asType());
+    }
+
+    public static String stripGenerics(String type) {
+        StringBuilder sb = new StringBuilder();
+        for (int pos = 0, depth = 0; pos < type.length(); pos++) {
+            char c = type.charAt(pos);
+            if (c == '<') {
+                depth++;
+            }
+            if (depth == 0) {
+                sb.append(c);
+            } else if (c == '>') {
+                depth--;
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String getTypeName(TypeMirror type) {
+        switch (type.getKind()) {
+            case ARRAY:    return MirrorUtils.getTypeName(((ArrayType)type).getComponentType()) + "[]";
+            case DECLARED: return MirrorUtils.getTypeName((DeclaredType)type);
+            case TYPEVAR:  return MirrorUtils.getTypeName(MirrorUtils.getUpperBound(type));
+            case ERROR:    return MirrorUtils.OBJECT_SIG;
+            default:       return type.toString();
+        }
+    }
+
+    public static String getTypeName(DeclaredType type) {
+        if (type == null) {
+            return MirrorUtils.OBJECT_SIG;
+        }
+        return MirrorUtils.getTypeName((TypeElement)type.asElement());
+    }
+
+    private static String getTypeName(TypeElement elem) {
+        return MirrorUtils.getInternalName(elem).replace('/', '.').replace('$', '.');
+    }
 
     public static String generateSignature(ExecutableElement method) {
         StringBuilder signature = new StringBuilder();
@@ -164,11 +223,12 @@ public abstract class MirrorUtils {
     public static String getInternalName(VariableElement var) {
         return MirrorUtils.getInternalName(var.asType());
     }
-
+    
     public static String getInternalName(TypeMirror type) {
         switch (type.getKind()) {
             case ARRAY:    return "[" + MirrorUtils.getInternalName(((ArrayType)type).getComponentType());
             case DECLARED: return "L" + MirrorUtils.getInternalName((DeclaredType)type) + ";";
+            case TYPEVAR:  return "L" + MirrorUtils.getInternalName(MirrorUtils.getUpperBound(type)) + ";";
             case BOOLEAN:  return "Z";
             case BYTE:     return "B";
             case CHAR:     return "C";
@@ -179,14 +239,28 @@ public abstract class MirrorUtils {
             case SHORT:    return "S";
             case VOID:     return "V";
             // TODO figure out a better way to not crash when we get here
-            case ERROR:    return "Ljava/lang/Object;";
+            case ERROR:    return "L" + MirrorUtils.OBJECT_REF + ";";
             default:
         }
 
         throw new IllegalArgumentException("Unable to parse type symbol " + type + " with " + type.getKind() + " to equivalent bytecode type");
     }
     
+    private static DeclaredType getUpperBound(TypeMirror type) {
+        if (type instanceof TypeVariable) {
+            try {
+                return (DeclaredType)((TypeVariable)type).getUpperBound();
+            } catch (Exception ex) {
+                throw new IllegalArgumentException("Unable to compute upper bound of type symbol " + type);
+            }
+        }
+        return null;
+    }
+
     public static String getInternalName(DeclaredType type) {
+        if (type == null) {
+            return MirrorUtils.OBJECT_REF;
+        }
         return MirrorUtils.getInternalName((TypeElement)type.asElement());
     }
 

@@ -322,7 +322,7 @@ abstract class AnnotatedMixinElementHandler {
      * warnings where appropriate
      */
     protected final void validateTargetMethod(ExecutableElement method, AnnotationMirror annotation, AliasedElementName name, String type) {
-        String signature = TypeHandle.getElementSignature(method);
+        String signature = MirrorUtils.getJavaSignature(method);
 
         for (TypeHandle target : this.mixin.getTargets()) {
             if (target.isImaginary()) {
