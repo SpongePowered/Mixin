@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.audit.ClassAlreadyLoadedException;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
@@ -363,13 +364,22 @@ public class MixinTransformer extends TreeTransformer {
         for (MixinConfig config : this.configs) {
             unhandled.addAll(config.getUnhandledTargets());
         }
-        
-        for (String nextClass : unhandled) {
+
+        Logger auditLogger = LogManager.getLogger("mixin/audit");
+
+        for (String target : unhandled) {
             try {
-                this.logger.info("Force-loading class {}", nextClass);
-                Class.forName(nextClass, true, Launch.classLoader);
+                auditLogger.info("Force-loading class {}", target);
+                Class.forName(target, true, Launch.classLoader);
             } catch (ClassNotFoundException ex) {
-                throw new Error("Could not force-load " + nextClass);
+                auditLogger.error("Could not force-load " + target, ex);
+            }
+        }
+        
+        for (MixinConfig config : this.configs) {
+            for (String target : config.getUnhandledTargets()) {
+                ClassAlreadyLoadedException ex = new ClassAlreadyLoadedException(target + " was already classloaded");
+                auditLogger.error("Could not force-load " + target, ex);
             }
         }
     }
