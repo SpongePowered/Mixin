@@ -286,7 +286,8 @@ public class TypeHandle {
         try {
             String elementName = elem.getSimpleName().toString();
             String elementType = MirrorUtils.getJavaSignature(elem);
-            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType));
+            String rawElementType = MirrorUtils.stripGenerics(elementType);
+            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
         } catch (NullPointerException ex) {
             return false;
         }
