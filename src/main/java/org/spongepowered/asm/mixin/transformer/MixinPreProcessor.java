@@ -346,24 +346,26 @@ class MixinPreProcessor {
         if (MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)
                 && !MixinApplicator.hasFlag(field, Opcodes.ACC_PRIVATE)
                 && !MixinApplicator.hasFlag(field, Opcodes.ACC_SYNTHETIC)) {
-            throw new InvalidMixinException(context, String.format("Mixin classes cannot contain visible static methods or fields, found %s",
-                    field.name));
+            throw new InvalidMixinException(context, String.format("Mixin %s contains non-private static field %s:%s",
+                    context, field.name, field.desc));
         }
 
         // Shadow fields can't have prefixes, it's meaningless for them anyway
         String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
         if (field.name.startsWith(prefix)) {
-            throw new InvalidMixinException(context, String.format("Shadow field %s in %s has a shadow prefix. This is not allowed.",
-                    field.name, context));
+            throw new InvalidMixinException(context, String.format("@Shadow field %s.%s has a shadow prefix. This is not allowed.",
+                    context, field.name));
         }
         
         // Imaginary super fields get stripped from the class, but first we validate them
         if (Constants.IMAGINARY_SUPER.equals(field.name)) {
             if (field.access != Opcodes.ACC_PRIVATE) {
-                throw new InvalidMixinException(this.mixin, "Imaginary super field " + field.name + " must be private and non-final");
+                throw new InvalidMixinException(this.mixin, "Imaginary super field " + context + "." + field.name
+                        + " must be private and non-final");
             }
             if (!field.desc.equals("L" + this.mixin.getClassRef() + ";")) {
-                throw new InvalidMixinException(this.mixin, "Imaginary super field " + field.name + " must have the same type as the parent mixin");
+                throw new InvalidMixinException(this.mixin, "Imaginary super field " + context + "." + field.name
+                        + " must have the same type as the parent mixin");
             }
             return false;
         }

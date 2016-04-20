@@ -56,7 +56,8 @@ class InterfaceMixinPreProcessor extends MixinPreProcessor {
     protected void prepareMethod(MethodNode mixinMethod, Method method) {
         // I have no idea how the hell you'd compile this, but we make sure anyway!
         if (!MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
-            throw new InvalidMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in " + this.mixin);
+            throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "
+                    + this.mixin);
         }
         
         super.prepareMethod(mixinMethod, method);
@@ -72,7 +73,7 @@ class InterfaceMixinPreProcessor extends MixinPreProcessor {
     @Override
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         if (!MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)) {
-            throw new InvalidMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
+            throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
                     + this.mixin);
         }
         

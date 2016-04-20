@@ -96,11 +96,11 @@ public class InterfaceMixinApplicator extends MixinApplicator {
             try {
                 InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
                 if (injectInfo != null) {
-                    throw new InvalidMixinException(mixin, injectInfo + " is not supported");
+                    throw new InvalidInterfaceMixinException(mixin, injectInfo + " is not supported on interface mixin method " + method.name);
                 }
             } catch (InvalidInjectionException ex) {
                 String description = ex.getInjectionInfo() != null ? ex.getInjectionInfo().toString() : "Injection";
-                throw new InvalidMixinException(mixin, description + " is not supported");
+                throw new InvalidInterfaceMixinException(mixin, description + " is not supported in interface mixin");
             }
         }
     }

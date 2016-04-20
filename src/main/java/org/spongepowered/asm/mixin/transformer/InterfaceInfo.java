@@ -174,7 +174,7 @@ public class InterfaceInfo extends TreeInfo {
         Type iface = ASMHelper.<Type>getAnnotationValue(node, "iface");
         
         if (prefix == null || iface == null) {
-            throw new InvalidMixinException(mixin, String.format("@Interface annotation on is missing a required parameter"));
+            throw new InvalidMixinException(mixin, String.format("@Interface annotation on %s is missing a required parameter", mixin));
         }
         
         return new InterfaceInfo(mixin, prefix, iface);

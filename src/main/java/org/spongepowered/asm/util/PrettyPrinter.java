@@ -683,9 +683,21 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter add(Throwable th, int indent) {
-        String margin = Strings.repeat(" ", indent);
         this.add("%s: %s", th.getClass().getName(), th.getMessage());
-        for (StackTraceElement st : th.getStackTrace()) {
+        return this.add(th.getStackTrace(), indent);
+    }
+    
+    /**
+     * Print a formatted representation of the specified stack trace with the
+     * specified indent
+     * 
+     * @param stackTrace stack trace to print
+     * @param indent Indent size for stacktrace lines
+     * @return fluent interface
+     */
+    public PrettyPrinter add(StackTraceElement[] stackTrace, int indent) {
+        String margin = Strings.repeat(" ", indent);
+        for (StackTraceElement st : stackTrace) {
             this.add("%s%s", margin, st);
         }
         return this;

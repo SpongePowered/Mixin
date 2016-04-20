@@ -227,7 +227,8 @@ public class MixinApplicator {
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new InvalidMixinException(current, "Unexpecteded error whilst applying the mixin class", ex);
+            throw new InvalidMixinException(current, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst applying the mixin class: "
+                    + ex.getMessage(), ex);
         }
     }
 
@@ -358,7 +359,7 @@ public class MixinApplicator {
                         && !MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
                         && !isOverwrite) {
                     throw new InvalidMixinException(mixin, 
-                            String.format("Mixin classes cannot contain visible static methods or fields, found %s", mixinMethod.name));
+                            String.format("Mixin %s contains non-private static method %s%s", mixin, mixinMethod.name, mixinMethod.desc));
                 }
                 
                 this.mergeMethod(mixin, mixinMethod, isOverwrite);
@@ -394,7 +395,8 @@ public class MixinApplicator {
                 this.targetClass.methods.remove(target);
             }
         } else if (isOverwrite) {
-            throw new InvalidMixinException(mixin, String.format("Overwrite target %s was not located in the target class", method.name));
+            throw new InvalidMixinException(mixin, String.format("Overwrite target \"%s\" was not located in target class %s",
+                    method.name, mixin.getTargetClassRef()));
         }
         
         this.targetClass.methods.add(method);
@@ -470,20 +472,22 @@ public class MixinApplicator {
         
         if (isOverwrite) {
             throw new InvalidMixinException(mixin, "@Intrinsic is not compatible with @Overwrite, remove one of these annotations on "
-                    + method.name);
+                    + method.name + " in " + mixin);
         }
         
+        String methodName = method.name + method.desc;
         if (MixinApplicator.hasFlag(method, Opcodes.ACC_STATIC)) {
-            throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + method.name);
+            throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
         
         AnnotationNode renamed = ASMHelper.getVisibleAnnotation(method, MixinRenamed.class);
         if (renamed == null || !ASMHelper.getAnnotationValue(renamed, "isInterfaceMember", false)) {
-            throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on " + method.name);
+            throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
+                    + methodName + " in " + mixin);
         }
         
         if (!ASMHelper.getAnnotationValue(intrinsic, "displace", false)) {
-            this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {}", method.name);
+            this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {} for {}", methodName, mixin.getTargetClassRef());
             return true;
         }
         
@@ -715,7 +719,7 @@ public class MixinApplicator {
         if (last != null) {
             if (last.getOpcode() != Opcodes.PUTFIELD) {
                 throw new InvalidMixinException(mixin, "Could not parse initialiser, expected 0xB5, found 0x"
-                        + Integer.toHexString(last.getOpcode()));
+                        + Integer.toHexString(last.getOpcode()) + " in " + mixin);
             }
         }
         
@@ -739,7 +743,7 @@ public class MixinApplicator {
                         continue;
                     }
                     if (node instanceof JumpInsnNode) {
-                        throw new InvalidMixinException(mixin, "Unsupported opcode in initialiser");
+                        throw new InvalidMixinException(mixin, "Unsupported JUMP opcode in initialiser in " + mixin);
                     }
                     AbstractInsnNode imACloneNow = node.clone(labels);
                     ctor.instructions.insert(insn, imACloneNow);

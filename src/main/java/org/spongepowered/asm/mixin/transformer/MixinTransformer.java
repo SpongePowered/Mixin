@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.MixinPrepareError;
 import org.spongepowered.asm.mixin.audit.ClassAlreadyLoadedException;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
@@ -61,6 +62,7 @@ import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.PrettyPrinter;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -451,20 +453,14 @@ public class MixinTransformer extends TreeTransformer {
                     TargetClassContext context = new TargetClassContext(this.sessionId, transformedName, targetClassNode, mixins);
                     basicClass = this.applyMixins(context);
                 } catch (InvalidMixinException th) {
-                    if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
-                        this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
-                    }
-
-                    this.handleMixinErrorState(transformedName, th);
+                    this.dumpClassOnFailure(transformedName, basicClass, environment);
+                    this.handleMixinApplyError(transformedName, th, environment);
                 }
             }
 
             return basicClass;
         } catch (Exception ex) {
-            if (environment.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
-                this.dumpClass(transformedName.replace('.', '/') + ".target", basicClass);
-            }
-
+            this.dumpClassOnFailure(transformedName, basicClass, environment);
             throw new MixinTransformerError("An unexpected critical error was encountered", ex);
         } finally {
             this.lock.pop();
@@ -496,7 +492,7 @@ public class MixinTransformer extends TreeTransformer {
         
         this.addConfigs(environment);
         this.addModules(environment);
-        int totalMixins = this.initConfigs();
+        int totalMixins = this.initConfigs(environment);
         this.currentEnvironment = environment;
         
         double elapsedTime = (System.currentTimeMillis() - startTime) * 0.001D;
@@ -554,9 +550,10 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Initialise mixin configs
      * 
+     * @param environment Environment
      * @return total number of mixins initialised
      */
-    private int initConfigs() {
+    private int initConfigs(MixinEnvironment environment) {
         int totalMixins = 0;
         
         for (MixinConfig config : this.pendingConfigs) {
@@ -564,6 +561,8 @@ public class MixinTransformer extends TreeTransformer {
                 this.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getDeclaredMixinCount());
                 config.initialise(this.hotSwapper);
                 totalMixins += config.getMixinCount();
+            } catch (InvalidMixinException ex) {
+                this.handleMixinPrepareError(config, ex, environment);
             } catch (Exception ex) {
                 this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
             }
@@ -588,6 +587,8 @@ public class MixinTransformer extends TreeTransformer {
         for (MixinConfig config : this.pendingConfigs) {
             try {
                 config.postInitialise(this.hotSwapper);
+            } catch (InvalidMixinException ex) {
+                this.handleMixinPrepareError(config, ex, environment);
             } catch (Exception ex) {
                 this.logger.error("Error encountered during mixin config postInit step'" + config.getName() + "': " + ex.getMessage(), ex);
             }
@@ -686,32 +687,58 @@ public class MixinTransformer extends TreeTransformer {
         }
     }
 
-    private void handleMixinErrorState(String targetClassName, InvalidMixinException th) throws MixinApplyError {
+    private void handleMixinPrepareError(MixinConfig config, InvalidMixinException ex, MixinEnvironment environment) throws MixinPrepareError {
+        this.handleMixinError(config.getName(), ex, environment, "prepare");
+    }
+    
+    private void handleMixinApplyError(String targetClass, InvalidMixinException ex, MixinEnvironment environment) throws MixinApplyError {
+        this.handleMixinError(targetClass, ex, environment, "apply");
+    }
+
+    private void handleMixinError(String context, InvalidMixinException ex, MixinEnvironment environment, String operation) throws Error {
         this.errorState = true;
         
-        MixinInfo mixin = th.getMixin();
+        MixinInfo mixin = ex.getMixin();
         MixinConfig config = mixin.getParent();
+        Phase phase = mixin.getPhase();
         ErrorAction action = config.isRequired() ? ErrorAction.ERROR : ErrorAction.WARN;
         
-        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
-            th.printStackTrace();
+        if (environment.getOption(Option.DEBUG_VERBOSE)) {
+            new PrettyPrinter()
+                .add("Invalid Mixin").centre()
+                .hr('-')
+                .kvWidth(10)
+                .kv("Action", operation.toUpperCase())
+                .kv("Mixin", mixin.getClassName())
+                .kv("Config", mixin.getParent().getName())
+                .kv("Phase", phase)
+                .hr('-')
+                .add("    %s", ex.getClass().getName())
+                .hr('-')
+                .addWrapped("    %s", ex.getMessage())
+                .hr('-')
+                .add(ex.getStackTrace(), 8)
+                .trace(action.logLevel);
         }
         
-        for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
-            ErrorAction newAction = handler.onError(targetClassName, th, mixin, action);
-            if (newAction != null) {
-                action = newAction;
+        if (context != null) {
+            for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
+                ErrorAction newAction = handler.onError(context, ex, mixin, action);
+                if (newAction != null) {
+                    action = newAction;
+                }
             }
         }
         
-        this.logger.log(action.logLevel, String.format("Mixin failed applying %s -> %s: %s %s", mixin, targetClassName,
-                th.getClass().getName(), th.getMessage()), th);
+        String ext = context != null ? String.format(" -> %s", context) : "";
+        this.logger.log(action.logLevel, String.format("Mixin %s failed %s%s: %s %s", operation, mixin, ext,
+                ex.getClass().getName(), ex.getMessage()), ex);
         
         this.errorState = false;
 
         if (action == ErrorAction.ERROR) {
-            throw new MixinApplyError(String.format("Mixin [%s] from phase [%s] in config [%s] FAILED", mixin, mixin.getPhase(),
-                    config), th);
+            throw new MixinApplyError(String.format("Mixin [%s] from phase [%s] in config [%s] FAILED %s", mixin, phase,
+                    config, operation.toUpperCase()), ex);
         }
     }
 
@@ -764,6 +791,12 @@ public class MixinTransformer extends TreeTransformer {
         }
         
         return bytes;
+    }
+
+    private void dumpClassOnFailure(String className, byte[] bytes, MixinEnvironment env) {
+        if (env.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
+            this.dumpClass(className.replace('.', '/') + ".target", bytes);
+        }
     }
 
     private File dumpClass(String fileName, byte[] bytes) {
