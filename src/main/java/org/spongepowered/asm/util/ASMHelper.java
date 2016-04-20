@@ -934,4 +934,12 @@ public class ASMHelper {
         return arg == null ? "" : arg.toString();
     }
 
+    public static String getSimpleName(AnnotationNode annotation) {
+        return ASMHelper.getSimpleName(annotation.desc);
+    }
+
+    public static String getSimpleName(String desc) {
+        return desc.substring(desc.lastIndexOf('/') + 1).replace(";", "");
+    }
+
 }

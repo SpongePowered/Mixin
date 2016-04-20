@@ -373,7 +373,7 @@ public abstract class InjectionPoint {
      */
     public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
             List<String> args, String target, int ordinal, int opcode) {
-        InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
+        InjectionPointData data = new InjectionPointData(mixin, method, parent, at, args, target, ordinal, opcode);
         InjectionPoint point = null;
 
         if (BeforeFieldAccess.CODE.equals(at)) {

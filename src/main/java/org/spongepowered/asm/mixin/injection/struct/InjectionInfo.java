@@ -63,8 +63,6 @@ public abstract class InjectionInfo {
     
     protected final AnnotationNode annotation;
     
-    protected final String annotationType;
-    
     /**
      * Class
      */
@@ -142,7 +140,6 @@ public abstract class InjectionInfo {
         this.mixin = mixin;
         this.method = method;
         this.annotation = annotation;
-        this.annotationType = annotation.desc.substring(annotation.desc.lastIndexOf('/') + 1).replace(";", "");
         this.classNode = mixin.getTargetClass();
         this.isStatic = ASMHelper.methodIsStatic(method);
         this.readAnnotation();
@@ -157,7 +154,7 @@ public abstract class InjectionInfo {
             return;
         }
         
-        String type = "@" + this.annotation.desc.substring(this.annotation.desc.lastIndexOf('/') + 1, this.annotation.desc.length() - 1);
+        String type = "@" + ASMHelper.getSimpleName(this.annotation);
         
         String method = ASMHelper.<String>getAnnotationValue(this.annotation, "method");
         if (method == null) {
@@ -175,7 +172,13 @@ public abstract class InjectionInfo {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
         
-        MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
+        MemberInfo targetMember;
+        try {
+            targetMember = MemberInfo.parseAndValidate(method, this.mixin);
+        } catch (InvalidMemberDescriptorException ex) {
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
+                    + method + "\"");
+        }
         
         if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
@@ -276,7 +279,7 @@ public abstract class InjectionInfo {
 
     @Override
     public String toString() {
-        return String.format("%s->@%s::%s%s", this.mixin.toString(), this.annotationType, this.method.name, this.method.desc);
+        return InjectionInfo.describeInjector(this.mixin, this.annotation, this.method);
     }
     
     /**
@@ -443,6 +446,10 @@ public abstract class InjectionInfo {
             }
         }
         return "handler";
+    }
+
+    static String describeInjector(MixinTargetContext mixin, AnnotationNode annotation, MethodNode method) {
+        return String.format("%s->@%s::%s%s", mixin.toString(), ASMHelper.getSimpleName(annotation), method.name, method.desc);
     }
 
 }

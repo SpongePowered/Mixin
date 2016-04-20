@@ -28,8 +28,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.injection.InvalidInjectionPointException;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
  * Data read from an {@link org.spongepowered.asm.mixin.injection.At} annotation
@@ -45,8 +48,23 @@ public class InjectionPointData {
     /**
      * Mixin 
      */
-    private final IReferenceMapperContext mixin;
+    private final MixinTargetContext mixin;
     
+    /**
+     * Injector callback
+     */
+    private MethodNode method;
+
+    /**
+     * Parent annotation
+     */
+    private AnnotationNode parent;
+
+    /**
+     * At arg 
+     */
+    private String at;
+
     /**
      * Target 
      */
@@ -62,8 +80,12 @@ public class InjectionPointData {
      */
     private final int opcode;
 
-    public InjectionPointData(IReferenceMapperContext mixin, List<String> args, String target,  int ordinal, int opcode) {
+    public InjectionPointData(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
+            int ordinal, int opcode) {
         this.mixin = mixin;
+        this.method = method;
+        this.parent = parent;
+        this.at = at;
         this.target = target;
         this.ordinal = Math.max(-1, ordinal);
         this.opcode = opcode;
@@ -87,6 +109,18 @@ public class InjectionPointData {
             }
         }
     }
+    
+    public MixinTargetContext getMixin() {
+        return this.mixin;
+    }
+    
+    public MethodNode getMethod() {
+        return this.method;
+    }
+    
+    public AnnotationNode getParent() {
+        return this.parent;
+    }
 
     public String get(String key, String defaultValue) {
         String value = this.args.get(key);
@@ -102,7 +136,12 @@ public class InjectionPointData {
     }
 
     public MemberInfo get(String key) {
-        return MemberInfo.parseAndValidate(this.get(key, ""), this.mixin);
+        try {
+            return MemberInfo.parseAndValidate(this.get(key, ""), this.mixin);
+        } catch (InvalidMemberDescriptorException ex) {
+            throw new InvalidInjectionPointException(this.mixin, "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
+                    this.at, key, this.target, InjectionInfo.describeInjector(this.mixin, this.parent, this.method));
+        }
     }
     
     private int parseInt(String string, int defaultValue) {
@@ -122,7 +161,12 @@ public class InjectionPointData {
     }
     
     public MemberInfo getTarget() {
-        return MemberInfo.parseAndValidate(this.target, this.mixin);
+        try {
+            return MemberInfo.parseAndValidate(this.target, this.mixin);
+        } catch (InvalidMemberDescriptorException ex) {
+            throw new InvalidInjectionPointException(this.mixin, "Failed parsing @At(\"%s\") descriptor \"%s\" on %s",
+                    this.at, this.target, InjectionInfo.describeInjector(this.mixin, this.parent, this.method));
+        }
     }
     
     public int getOrdinal() {
