@@ -48,6 +48,12 @@ import javax.lang.model.type.TypeVariable;
  */
 public abstract class MirrorUtils {
 
+    /**
+     * Number of times to recurse into TypeMirrors when trying to determine the
+     * upper bound of a TYPEVAR 
+     */
+    private static final int MAX_GENERIC_RECURSION_DEPTH = 5;
+    
     private static final String OBJECT_SIG = "java.lang.Object";
     private static final String OBJECT_REF = "java/lang/Object";
 
@@ -247,9 +253,31 @@ public abstract class MirrorUtils {
     }
     
     private static DeclaredType getUpperBound(TypeMirror type) {
+        try {
+            return MirrorUtils.getUpperBound0(type, MirrorUtils.MAX_GENERIC_RECURSION_DEPTH);
+        } catch (IllegalStateException ex) {
+            throw new IllegalArgumentException("Type symbol \"" + type + "\" is too complex", ex);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Unable to compute upper bound of type symbol " + type, ex);
+        }
+    }
+
+    private static DeclaredType getUpperBound0(TypeMirror type, int depth) {
+        if (depth == 0) {
+            throw new IllegalStateException("Generic symbol \"" + type + "\" is too complex, exceeded "
+                    + MirrorUtils.MAX_GENERIC_RECURSION_DEPTH + " iterations attempting to determine upper bound");
+        }
+        if (type instanceof DeclaredType) {
+            return (DeclaredType)type;
+        }
         if (type instanceof TypeVariable) {
             try {
-                return (DeclaredType)((TypeVariable)type).getUpperBound();
+                TypeMirror upper = ((TypeVariable)type).getUpperBound();
+                return MirrorUtils.getUpperBound0(upper, --depth);
+            } catch (IllegalStateException ex) {
+                throw ex;
+            } catch (IllegalArgumentException ex) {
+                throw ex;
             } catch (Exception ex) {
                 throw new IllegalArgumentException("Unable to compute upper bound of type symbol " + type);
             }
