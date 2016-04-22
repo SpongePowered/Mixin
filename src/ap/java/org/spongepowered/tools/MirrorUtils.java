@@ -213,7 +213,7 @@ public abstract class MirrorUtils {
     }
 
     private static String getTypeName(TypeElement elem) {
-        return MirrorUtils.getInternalName(elem).replace('/', '.').replace('$', '.');
+        return MirrorUtils.getInternalName(elem).replace('/', '.');
     }
 
     public static String generateSignature(ExecutableElement method) {
