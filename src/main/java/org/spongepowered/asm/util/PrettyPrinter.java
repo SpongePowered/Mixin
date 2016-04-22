@@ -232,7 +232,7 @@ public class PrettyPrinter {
                 titles[col] = this.columns.get(col).toString();
                 nonEmpty |= !titles[col].isEmpty();
             }
-            return nonEmpty ? String.format(this.format, titles) : null;
+            return nonEmpty ? String.format(this.format, (Object[])titles) : null;
         }
         
         @Override
