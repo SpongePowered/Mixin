@@ -73,6 +73,73 @@ import net.minecraft.launchwrapper.Launch;
 public class MixinTransformer extends TreeTransformer {
     
     /**
+     * Phase during which an error occurred, delegates to functionality in
+     * available handler
+     */
+    static enum ErrorPhase {
+        /**
+         * Error during initialisation of a MixinConfig
+         */
+        PREPARE {
+            @Override
+            ErrorAction onError(IMixinErrorHandler handler, String context, InvalidMixinException ex, MixinInfo mixin, ErrorAction action) {
+                try {
+                    return handler.onPrepareError(mixin.getParent(), ex, mixin, action);
+                } catch (AbstractMethodError ame) {
+                    // Catch if error handler is pre-0.5.4
+                    return action;
+                }
+            }
+            
+            @Override
+            protected String getContext(MixinInfo mixin, String context) {
+                return String.format("preparing %s in %s", mixin.getName(), context);
+            }
+        },
+        /**
+         * Error during application of a mixin to a target class
+         */
+        APPLY {
+            @Override
+            ErrorAction onError(IMixinErrorHandler handler, String context, InvalidMixinException ex, MixinInfo mixin, ErrorAction action) {
+                try {
+                    return handler.onApplyError(context, ex, mixin, action);
+                } catch (AbstractMethodError ame) {
+                    // Catch if error handler is pre-0.5.4
+                    return action;
+                }
+            }
+            
+            @Override
+            protected String getContext(MixinInfo mixin, String context) {
+                return String.format("%s -> %s", mixin, context);
+            }
+        };
+        
+        /**
+         * Human-readable name
+         */
+        private final String text;
+        
+        private ErrorPhase() {
+            this.text = this.name().toLowerCase();
+        }
+        
+        abstract ErrorAction onError(IMixinErrorHandler handler, String context, InvalidMixinException ex, MixinInfo mixin, ErrorAction action);
+
+        protected abstract String getContext(MixinInfo mixin, String context);
+
+        public String getLogMessage(String context, InvalidMixinException ex, MixinInfo mixin) {
+            return String.format("Mixin %s failed %s: %s %s", this.text, this.getContext(mixin, context), ex.getClass().getName(), ex.getMessage());
+        }
+
+        public String getErrorMessage(MixinInfo mixin, MixinConfig config, Phase phase) {
+            return String.format("Mixin [%s] from phase [%s] in config [%s] FAILED during %s", mixin, phase, config, this.name());
+        }
+        
+    }
+    
+    /**
      * Proxy transformer for the mixin transformer. These transformers are used
      * to allow the mixin transformer to be re-registered in the transformer
      * chain at a later stage in startup without having to fully re-initialise
@@ -688,14 +755,14 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     private void handleMixinPrepareError(MixinConfig config, InvalidMixinException ex, MixinEnvironment environment) throws MixinPrepareError {
-        this.handleMixinError(config.getName(), ex, environment, "prepare");
+        this.handleMixinError(config.getName(), ex, environment, ErrorPhase.PREPARE);
     }
     
     private void handleMixinApplyError(String targetClass, InvalidMixinException ex, MixinEnvironment environment) throws MixinApplyError {
-        this.handleMixinError(targetClass, ex, environment, "apply");
+        this.handleMixinError(targetClass, ex, environment, ErrorPhase.APPLY);
     }
 
-    private void handleMixinError(String context, InvalidMixinException ex, MixinEnvironment environment, String operation) throws Error {
+    private void handleMixinError(String context, InvalidMixinException ex, MixinEnvironment environment, ErrorPhase errorPhase) throws Error {
         this.errorState = true;
         
         MixinInfo mixin = ex.getMixin();
@@ -708,9 +775,9 @@ public class MixinTransformer extends TreeTransformer {
                 .add("Invalid Mixin").centre()
                 .hr('-')
                 .kvWidth(10)
-                .kv("Action", operation.toUpperCase())
+                .kv("Action", errorPhase.name())
                 .kv("Mixin", mixin.getClassName())
-                .kv("Config", mixin.getParent().getName())
+                .kv("Config", config.getName())
                 .kv("Phase", phase)
                 .hr('-')
                 .add("    %s", ex.getClass().getName())
@@ -720,25 +787,20 @@ public class MixinTransformer extends TreeTransformer {
                 .add(ex.getStackTrace(), 8)
                 .trace(action.logLevel);
         }
-        
-        if (context != null) {
-            for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
-                ErrorAction newAction = handler.onError(context, ex, mixin, action);
-                if (newAction != null) {
-                    action = newAction;
-                }
+    
+        for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {
+            ErrorAction newAction = errorPhase.onError(handler, context, ex, mixin, action);
+            if (newAction != null) {
+                action = newAction;
             }
         }
         
-        String ext = context != null ? String.format(" -> %s", context) : "";
-        this.logger.log(action.logLevel, String.format("Mixin %s failed %s%s: %s %s", operation, mixin, ext,
-                ex.getClass().getName(), ex.getMessage()), ex);
+        this.logger.log(action.logLevel, errorPhase.getLogMessage(context, ex, mixin), ex);
         
         this.errorState = false;
 
         if (action == ErrorAction.ERROR) {
-            throw new MixinApplyError(String.format("Mixin [%s] from phase [%s] in config [%s] FAILED %s", mixin, phase,
-                    config, operation.toUpperCase()), ex);
+            throw new MixinApplyError(errorPhase.getErrorMessage(mixin, config, phase), ex);
         }
     }
 

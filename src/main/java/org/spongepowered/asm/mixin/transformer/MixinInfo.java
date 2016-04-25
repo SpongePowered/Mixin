@@ -262,21 +262,26 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param suppressPlugin 
      * @throws ClassNotFoundException 
      */
-    MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin)
-            throws ClassNotFoundException {
+    MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin) {
         this.parent = parent;
         this.name = mixinName;
         this.className = parent.getMixinPackage() + mixinName;
         this.plugin = plugin;
         this.phase = MixinEnvironment.getCurrentEnvironment().getPhase();
         
+        ClassNode classNode = null;
+        
         // Read the class bytes and transform
-        byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
-        this.uninitialisedState = new ValidationState(mixinBytes);
-        this.info = this.uninitialisedState.classInfo;
-        this.isInterfaceMixin = this.info.isInterface();
+        try {
+            byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
+            this.uninitialisedState = new ValidationState(mixinBytes);
+            this.info = this.uninitialisedState.classInfo;
+            classNode = this.uninitialisedState.getClassNode(0);
+            this.isInterfaceMixin = this.info.isInterface();
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, ex);
+        }
 
-        ClassNode classNode = this.uninitialisedState.getClassNode(0);
         this.priority = this.readPriority(classNode);
         this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
         this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
@@ -310,6 +315,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @return
      */
     protected List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
+        if (classNode == null) {
+            return Collections.<ClassInfo>emptyList();
+        }
+        
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
@@ -379,6 +388,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @return
      */
     protected int readPriority(ClassNode classNode) {
+        if (classNode == null) {
+            return this.parent.getDefaultMixinPriority();
+        }
+        
         AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));

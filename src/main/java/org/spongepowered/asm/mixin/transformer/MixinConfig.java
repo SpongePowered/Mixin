@@ -373,8 +373,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 continue;
             }
             
+            MixinInfo mixin = null;
+            
             try {
-                MixinInfo mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
+                mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
                 if (mixin.getTargetClasses().size() > 0) {
                     MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
@@ -387,7 +389,15 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                     }
                     this.mixins.add(mixin);
                 }
+            } catch (InvalidMixinException ex) {
+                if (this.required) {
+                    throw ex;
+                }
+                this.logger.error(ex.getMessage(), ex);
             } catch (Exception ex) {
+                if (this.required) {
+                    throw new InvalidMixinException(mixin, "Error initialising mixin " + mixin + " - " + ex.getClass() + ": " + ex.getMessage(), ex);
+                }
                 this.logger.error(ex.getMessage(), ex);
             }
         }
