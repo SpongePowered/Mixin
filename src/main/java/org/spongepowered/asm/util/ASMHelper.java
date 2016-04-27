@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.util;
 
+import static com.google.common.base.Preconditions.*;
 import static org.spongepowered.asm.lib.ClassWriter.*;
 
 import java.io.PrintWriter;
@@ -41,14 +42,61 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
 
+import com.google.common.primitives.Ints;
+
 /**
  * Utility methods for working with ASM
  */
 public class ASMHelper {
 
-    private static final int[] intConstants = new int[]
-            {Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5};
+    public static final int[] CONSTANTS_INT = {
+        Opcodes.ICONST_M1, Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5
+    };
 
+    public static final int[] CONSTANTS_FLOAT = {
+        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2
+    };
+    
+    public static final int[] CONSTANTS_DOUBLE = {
+        Opcodes.DCONST_0, Opcodes.DCONST_1
+    };
+    
+    public static final int[] CONSTANTS_LONG = {
+        Opcodes.LCONST_0, Opcodes.LCONST_1
+    };
+    
+    public static final int[] CONSTANTS_ALL = {
+        Opcodes.ACONST_NULL,
+        Opcodes.ICONST_M1,
+        Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
+        Opcodes.LCONST_0, Opcodes.LCONST_1,
+        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2, 
+        Opcodes.DCONST_0, Opcodes.DCONST_1,
+        Opcodes.BIPUSH, // 15
+        Opcodes.SIPUSH, // 16
+        Opcodes.LDC,    // 17
+    };
+    
+    private static final Object[] CONSTANTS_VALUES = {
+        null,
+        Integer.valueOf(-1),
+        Integer.valueOf(0), Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3), Integer.valueOf(4), Integer.valueOf(5),
+        Long.valueOf(0L), Long.valueOf(1L),
+        Float.valueOf(0.0F), Float.valueOf(1.0F), Float.valueOf(2.0F), 
+        Double.valueOf(0.0), Double.valueOf(1.0)
+    };
+    
+    private static final String[] CONSTANTS_TYPES = {
+            null,
+            "I",
+            "I", "I", "I", "I", "I", "I",
+            "J", "J",
+            "F", "F", "F", 
+            "D", "D",
+            "I", //"B",
+            "I", //"S"
+    };
+    
     /**
      * Generate a new method "boolean name()", which returns a constant value.
      *
@@ -282,7 +330,7 @@ public class ASMHelper {
         if (c == -1) {
             return new InsnNode(Opcodes.ICONST_M1);
         } else if (c >= 0 && c <= 5) {
-            return new InsnNode(intConstants[c]);
+            return new InsnNode(ASMHelper.CONSTANTS_INT[c + 1]);
         } else if (c >= Byte.MIN_VALUE && c <= Byte.MAX_VALUE) {
             return new IntInsnNode(Opcodes.BIPUSH, c);
         } else if (c >= Short.MIN_VALUE && c <= Short.MAX_VALUE) {
@@ -741,6 +789,7 @@ public class ASMHelper {
      */
     @SuppressWarnings("unchecked")
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
+        checkNotNull(annotationClass, "annotationClass cannot be null");
         T value = ASMHelper.getAnnotationValue(annotation, key);
         if (value == null) {
             try {
@@ -914,7 +963,7 @@ public class ASMHelper {
         StringBuilder sb = new StringBuilder().append('(');
 
         for (Object arg : args) {
-            sb.append(ASMHelper.toDescriptor(/*obfType, */arg));
+            sb.append(ASMHelper.toDescriptor(arg));
         }
 
         return sb.append(')').append(returnType != null ? ASMHelper.toDescriptor(returnType) : "V").toString();
@@ -942,4 +991,52 @@ public class ASMHelper {
         return desc.substring(desc.lastIndexOf('/') + 1).replace(";", "");
     }
 
+    public static boolean isConstant(AbstractInsnNode insn) {
+        if (insn == null) {
+            return false;
+        }
+        return Ints.contains(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+    }
+
+    public static Object getConstant(AbstractInsnNode insn) {
+        if (insn == null) {
+            return null;
+        } else if (insn instanceof LdcInsnNode) {
+            return ((LdcInsnNode)insn).cst;
+        } else if (insn instanceof IntInsnNode) {
+            int value = ((IntInsnNode)insn).operand;
+            if (insn.getOpcode() == Opcodes.BIPUSH || insn.getOpcode() == Opcodes.SIPUSH) {
+                return Integer.valueOf(value);
+            }
+            throw new IllegalArgumentException("IntInsnNode with invalid opcode " + insn.getOpcode() + " in getConstant");
+        }
+        
+        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : ASMHelper.CONSTANTS_VALUES[index];
+    }
+
+    public static Type getConstantType(AbstractInsnNode insn) {
+        if (insn == null) {
+            return null;
+        } else if (insn instanceof LdcInsnNode) {
+            Object cst = ((LdcInsnNode)insn).cst;
+            if (cst instanceof Integer) {
+                return Type.getType("I");
+            } else if (cst instanceof Float) {
+                return Type.getType("F");
+            } else if (cst instanceof Long) {
+                return Type.getType("J");
+            } else if (cst instanceof Double) {
+                return Type.getType("D");
+            } else if (cst instanceof String) {
+                return Type.getType(Constants.STRING);
+            } else if (cst instanceof Type) {
+                return Type.getType(Constants.CLASS);
+            }
+            throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
+        }
+        
+        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : Type.getType(ASMHelper.CONSTANTS_TYPES[index]);
+    }
 }

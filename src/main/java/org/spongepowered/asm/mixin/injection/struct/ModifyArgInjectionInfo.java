@@ -42,7 +42,7 @@ public class ModifyArgInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         int index = ASMHelper.<Integer>getAnnotationValue(injectAnnotation, "index", -1);
         
         return new ModifyArgInjector(this, index);

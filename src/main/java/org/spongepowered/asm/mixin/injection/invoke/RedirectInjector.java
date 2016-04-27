@@ -107,13 +107,17 @@ public class RedirectInjector extends InvokeInjector {
         
     }
     
-    private Meta meta;
+    protected Meta meta;
 
     /**
      * @param info Injection info
      */
     public RedirectInjector(InjectionInfo info) {
-        super(info, "@Redirect");
+        this(info, "@Redirect");
+    }
+    
+    protected RedirectInjector(InjectionInfo info, String annotationType) {
+        super(info, annotationType);
         
         int priority = info.getContext().getPriority();
         boolean isFinal = ASMHelper.getVisibleAnnotation(this.methodNode, Final.class) != null;
@@ -144,10 +148,7 @@ public class RedirectInjector extends InvokeInjector {
 
     @Override
     protected void inject(Target target, InjectionNode node) {
-        Meta other = node.getDecoration(Meta.KEY);
-        if (other.getOwner() != this) {
-            Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
-                    this.annotationType, this.info, this.meta.priority, other.name, other.priority);
+        if (!this.preInject(node)) {
             return;
         }
             
@@ -168,19 +169,29 @@ public class RedirectInjector extends InvokeInjector {
         throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
                 + target + " in " + this);
     }
+
+    protected boolean preInject(InjectionNode node) {
+        Meta other = node.getDecoration(Meta.KEY);
+        if (other.getOwner() != this) {
+            Injector.logger.warn("{} conflict. Skipping {} with priority {}, already redirected by {} with priority {}",
+                    this.annotationType, this.info, this.meta.priority, other.name, other.priority);
+            return false;
+        }
+        return true;
+    }
     
     /**
      * Redirect a method invocation
      */
     @Override
     protected void injectAtInvoke(Target target, InjectionNode node) {
-        MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
+        final MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
+        final boolean targetIsStatic = methodNode.getOpcode() == Opcodes.INVOKESTATIC;
+        final Type ownerType = Type.getType("L" + methodNode.owner + ";");
+        final Type returnType = Type.getReturnType(methodNode.desc);
+        final Type[] args = Type.getArgumentTypes(methodNode.desc);
+        final Type[] stackVars = targetIsStatic ? args : ObjectArrays.concat(ownerType, args);
         boolean injectTargetParams = false;
-        boolean targetIsStatic = methodNode.getOpcode() == Opcodes.INVOKESTATIC;
-        Type ownerType = Type.getType("L" + methodNode.owner + ";");
-        Type returnType = Type.getReturnType(methodNode.desc);
-        Type[] args = Type.getArgumentTypes(methodNode.desc);
-        Type[] stackVars = targetIsStatic ? args : ObjectArrays.concat(ownerType, args);
         
         String desc = Injector.printArgs(stackVars) + returnType;
         if (!desc.equals(this.methodNode.desc)) {
@@ -213,19 +224,20 @@ public class RedirectInjector extends InvokeInjector {
      * Redirect a field get or set operation
      */
     private void injectAtFieldAccess(Target target, InjectionNode node) {
-        FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
-        boolean staticField = fieldNode.getOpcode() == Opcodes.GETSTATIC || fieldNode.getOpcode() == Opcodes.PUTSTATIC;
-        Type ownerType = Type.getType("L" + fieldNode.owner + ";");
-        Type fieldType = Type.getType(fieldNode.desc);
+        final FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
+        final int opCode = fieldNode.getOpcode();
+        final boolean staticField = opCode == Opcodes.GETSTATIC || opCode == Opcodes.PUTSTATIC;
+        final Type ownerType = Type.getType("L" + fieldNode.owner + ";");
+        final Type fieldType = Type.getType(fieldNode.desc);
 
         AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
-        if (fieldNode.getOpcode() == Opcodes.GETSTATIC || fieldNode.getOpcode() == Opcodes.GETFIELD) {
+        if (opCode == Opcodes.GETSTATIC || opCode == Opcodes.GETFIELD) {
             invoke = this.injectAtGetField(insns, target, fieldNode, staticField, ownerType, fieldType);
-        } else if (fieldNode.getOpcode() == Opcodes.PUTSTATIC || fieldNode.getOpcode() == Opcodes.PUTFIELD) {
+        } else if (opCode == Opcodes.PUTSTATIC || opCode == Opcodes.PUTFIELD) {
             invoke = this.injectAtPutField(insns, target, fieldNode, staticField, ownerType, fieldType);
         } else {
-            throw new InvalidInjectionException(this.info, "Unspported opcode " + fieldNode.getOpcode() + " on FieldInsnNode for " + this.info);
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + opCode + " on FieldInsnNode for " + this.info);
         }
         
         target.replaceNode(fieldNode, invoke, insns);
@@ -238,8 +250,8 @@ public class RedirectInjector extends InvokeInjector {
      * handler and the field itself.
      */
     private AbstractInsnNode injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
-        String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
-        boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
+        final String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
+        final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -293,7 +305,7 @@ public class RedirectInjector extends InvokeInjector {
      * Check that the handler descriptor matches the calculated descriptor for
      * the field access being redirected.
      */
-    private boolean checkDescriptor(String desc, Target target, String type) {
+    protected boolean checkDescriptor(String desc, Target target, String type) {
         if (this.methodNode.desc.equals(desc)) {
             return false;
         }
@@ -304,7 +316,7 @@ public class RedirectInjector extends InvokeInjector {
             return true;
         }
         
-        throw new InvalidInjectionException(this.info, this.annotationType + " field " + type + " " + this
+        throw new InvalidInjectionException(this.info, this.annotationType + " method " + type + " " + this
                 + " has an invalid signature. Expected " + desc + " but found " + this.methodNode.desc);
     }
 

@@ -40,7 +40,7 @@ public class RedirectInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         return new RedirectInjector(this);
     }
     

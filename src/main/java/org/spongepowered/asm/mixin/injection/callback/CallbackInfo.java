@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection.callback;
 
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * CallbackInfo instances are passed to callbacks in order to provide
@@ -34,9 +35,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
  * return from a method prematurely. 
  */
 public class CallbackInfo implements Cancellable {
-
-    protected static final String STRING = "Ljava/lang/String;";
-    protected static final String OBJECT = "Ljava/lang/Object;";
 
     /**
      * Method name being injected into, this is useful if a single callback is
@@ -122,14 +120,14 @@ public class CallbackInfo implements Cancellable {
         }
 
         if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
-            return String.format("(%sZ%s)V", CallbackInfo.STRING, CallbackInfo.OBJECT);
+            return String.format("(%sZ%s)V", Constants.STRING, Constants.OBJECT);
         }
 
-        return String.format("(%sZ%s)V", CallbackInfo.STRING, returnType.getDescriptor());
+        return String.format("(%sZ%s)V", Constants.STRING, returnType.getDescriptor());
     }
 
     static String getConstructorDescriptor() {
-        return String.format("(%sZ)V", CallbackInfo.STRING);
+        return String.format("(%sZ)V", Constants.STRING);
     }
 
     static String getIsCancelledMethodName() {

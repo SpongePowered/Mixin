@@ -38,5 +38,9 @@ public abstract class Constants {
     public static final String MIXIN_PACKAGE = Mixin.class.getPackage().getName();
     public static final String MIXIN_PACKAGE_REF = Constants.MIXIN_PACKAGE.replace('.', '/');
 
+    public static final String STRING = "Ljava/lang/String;";
+    public static final String OBJECT = "Ljava/lang/Object;";
+    public static final String CLASS = "Ljava/lang/Class;";
+    
     private Constants() {}
 }

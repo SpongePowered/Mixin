@@ -316,6 +316,20 @@ public class Target implements Comparable<Target> {
     }
     
     /**
+     * Wrap instruction in this target with the specified instructions and mark
+     * the node as replaced with the specified champion node from the list.
+     * 
+     * @param location Instruction to replace
+     * @param champion Instruction which notionally replaces the original insn
+     * @param before Instructions to actually insert (must contain champion)
+     */
+    public void wrapNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList before, InsnList after) {
+        this.insns.insertBefore(location, before);
+        this.insns.insert(location, after);
+        this.injectionNodes.replace(location, champion);
+    }
+
+    /**
      * Replace an instruction in this target with the specified instructions and
      * mark the original node as removed
      * 

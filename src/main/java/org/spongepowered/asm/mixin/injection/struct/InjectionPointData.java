@@ -98,6 +98,9 @@ public class InjectionPointData {
     }
 
     private void parseArgs(List<String> args) {
+        if (args == null) {
+            return;
+        }
         for (String arg : args) {
             if (arg != null) {
                 int eqPos = arg.indexOf('=');

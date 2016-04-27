@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.callback;
 
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * For callbacks with a non-void return type, a CallbackInfoReturnable is passed
@@ -133,7 +134,7 @@ public class CallbackInfoReturnable<R> extends CallbackInfo {
 
     static String getReturnDescriptor(Type returnType) {
         if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
-            return String.format("()%s", CallbackInfo.OBJECT);
+            return String.format("()%s", Constants.OBJECT);
         }
 
         return String.format("()%s", returnType.getDescriptor());

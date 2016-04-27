@@ -47,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
@@ -148,56 +149,61 @@ public abstract class InjectionInfo {
     /**
      * Parse the info from the supplied annotation
      */
-    @SuppressWarnings("unchecked")
     protected void readAnnotation() {
         if (this.annotation == null) {
             return;
         }
         
         String type = "@" + ASMHelper.getSimpleName(this.annotation);
-        
+        List<AnnotationNode> injectionPoints = this.readInjectionPoints(type);
+        this.findMethods(this.parseTarget(type), type);
+        this.parseInjectionPoints(injectionPoints);
+        this.parseRequirements();
+        this.injector = this.parseInjector(this.annotation);
+    }
+
+    protected MemberInfo parseTarget(String type) {
         String method = ASMHelper.<String>getAnnotationValue(this.annotation, "method");
         if (method == null) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
         }
         
-        List<AnnotationNode> ats = null;
-        Object atValue = ASMHelper.getAnnotationValue(this.annotation, "at");
-        if (atValue instanceof List) {
-            ats = (List<AnnotationNode>)atValue;
-        } else if (atValue instanceof AnnotationNode) {
-            ats = new ArrayList<AnnotationNode>();
-            ats.add((AnnotationNode)atValue);
-        } else {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
-        }
-        
-        MemberInfo targetMember;
         try {
-            targetMember = MemberInfo.parseAndValidate(method, this.mixin);
+            MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
+            if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
+                throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
+                        + targetMember.owner + "', which is not supported");
+            }
+            return targetMember;
         } catch (InvalidMemberDescriptorException ex) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
                     + method + "\"");
         }
-        
-        if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
-                    + targetMember.owner + "', which is not supported");
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<AnnotationNode> readInjectionPoints(String type) {
+        Object atValue = ASMHelper.getAnnotationValue(this.annotation, "at");
+        if (atValue instanceof List) {
+            return (List<AnnotationNode>)atValue;
+        } else if (atValue instanceof AnnotationNode) {
+            List<AnnotationNode> ats = new ArrayList<AnnotationNode>();
+            ats.add((AnnotationNode)atValue);
+            return ats;
         }
-        
-        this.findMethods(targetMember);
-        
-        if (this.targets.size() == 0) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find '" + targetMember.name + "'");
-        }
-        
+        throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
+    }
+
+    protected void parseInjectionPoints(List<AnnotationNode> ats) {
         for (AnnotationNode at : ats) {
             InjectionPoint injectionPoint = InjectionPoint.parse(this.mixin, this.method, this.annotation, at);
             if (injectionPoint != null) {
                 this.injectionPoints.add(injectionPoint);
             }
         }
-        
+    }
+
+    protected void parseRequirements() {
         this.group = this.mixin.getInjectorGroups().parseGroup(this.method, this.mixin.getDefaultInjectorGroup()).add(this);
         
         Integer expect = ASMHelper.<Integer>getAnnotationValue(this.annotation, "expect");
@@ -211,12 +217,10 @@ public abstract class InjectionInfo {
         } else if (this.group.isDefault()) {
             this.requiredCallbackCount = this.mixin.getDefaultRequiredInjections();
         }
-        
-        this.injector = this.initInjector(this.annotation);
     }
 
     // stub
-    protected abstract Injector initInjector(AnnotationNode injectAnnotation);
+    protected abstract Injector parseInjector(AnnotationNode injectAnnotation);
     
     /**
      * Get whether there is enough valid information in this info to actually
@@ -364,14 +368,16 @@ public abstract class InjectionInfo {
      * Finds methods in the target class which match searchFor
      * 
      * @param searchFor member info to search for
+     * @param type annotation type
      */
-    private void findMethods(MemberInfo searchFor) {
+    private void findMethods(MemberInfo searchFor, String type) {
         this.targets.clear();
         int ordinal = 0;
         
         for (MethodNode target : this.classNode.methods) {
             if (searchFor.matches(target.name, target.desc, ordinal)) {
-                if (searchFor.matchAll && ASMHelper.methodIsStatic(target) != this.isStatic) {
+                boolean isMixinMethod = ASMHelper.getVisibleAnnotation(target, MixinMerged.class) != null;
+                if (searchFor.matchAll && (ASMHelper.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
                     continue;
                 }
                 
@@ -380,6 +386,10 @@ public abstract class InjectionInfo {
                 this.targets.add(target);
                 ordinal++;
             }
+        }
+        
+        if (this.targets.size() == 0) {
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find '" + searchFor.name + "'");
         }
     }
 
@@ -418,6 +428,8 @@ public abstract class InjectionInfo {
             return new RedirectInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
             return new ModifyVariableInjectionInfo(mixin, method, annotation);
+        } else if (annotation.desc.endsWith(ModifyConstant.class.getSimpleName() + ";")) {
+            return new ModifyConstantInjectionInfo(mixin, method, annotation);
         }
         
         return null;
@@ -427,7 +439,13 @@ public abstract class InjectionInfo {
     public static AnnotationNode getInjectorAnnotation(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
-            annotation = ASMHelper.getSingleVisibleAnnotation(method, Inject.class, ModifyArg.class, Redirect.class, ModifyVariable.class);
+            annotation = ASMHelper.getSingleVisibleAnnotation(method,
+                Inject.class,
+                ModifyArg.class,
+                Redirect.class,
+                ModifyVariable.class,
+                ModifyConstant.class
+            );
         } catch (IllegalArgumentException ex) {
             throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
                     + ex.getMessage());
@@ -443,6 +461,8 @@ public abstract class InjectionInfo {
                 return "redirect";
             } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
                 return "localvar";
+            } else if (annotation.desc.endsWith(ModifyConstant.class.getSimpleName() + ";")) {
+                return "constant";
             }
         }
         return "handler";

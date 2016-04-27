@@ -43,7 +43,7 @@ public class ModifyVariableInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         boolean print = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "print", Boolean.FALSE).booleanValue();
         return new ModifyVariableInjector(this, print, LocalVariableDiscriminator.parse(injectAnnotation));
     }
