@@ -833,8 +833,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @return shadow fields in the mixin
      */
-    public Collection<FieldNode> getShadowFields() {
-        return this.shadowFields.keySet();
+    public Set<Entry<FieldNode, Field>> getShadowFields() {
+        return this.shadowFields.entrySet();
     }
     
     /**

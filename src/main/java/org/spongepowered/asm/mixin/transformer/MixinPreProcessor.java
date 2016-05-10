@@ -345,7 +345,8 @@ class MixinPreProcessor {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
         if (MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)
                 && !MixinApplicator.hasFlag(field, Opcodes.ACC_PRIVATE)
-                && !MixinApplicator.hasFlag(field, Opcodes.ACC_SYNTHETIC)) {
+                && !MixinApplicator.hasFlag(field, Opcodes.ACC_SYNTHETIC)
+                && shadow == null) {
             throw new InvalidMixinException(context, String.format("Mixin %s contains non-private static field %s:%s",
                     context, field.name, field.desc));
         }

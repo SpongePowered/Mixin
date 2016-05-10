@@ -767,6 +767,12 @@ public class MixinTransformer extends TreeTransformer {
         this.errorState = true;
         
         MixinInfo mixin = ex.getMixin();
+        
+        if (mixin == null) {
+            this.logger.error("InvalidMixinException has no mixin!", ex);
+            throw ex;
+        }
+        
         MixinConfig config = mixin.getParent();
         Phase phase = mixin.getPhase();
         ErrorAction action = config.isRequired() ? ErrorAction.ERROR : ErrorAction.WARN;

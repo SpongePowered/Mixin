@@ -24,10 +24,13 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.Map.Entry;
+
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 
 /**
  * Applicator for interface mixins, mainly just disables things which aren't
@@ -67,7 +70,8 @@ public class InterfaceMixinApplicator extends MixinApplicator {
     @Override
     protected void applyFields(MixinTargetContext mixin) {
         // shadow fields have no meaning for interfaces, just spam the dev with messages
-        for (FieldNode shadow : mixin.getShadowFields()) {
+        for (Entry<FieldNode, Field> entry : mixin.getShadowFields()) {
+            FieldNode shadow = entry.getKey();
             this.logger.error("Ignoring redundant @Shadow field {}:{} in {}", shadow.name, shadow.desc, mixin);
         }
         

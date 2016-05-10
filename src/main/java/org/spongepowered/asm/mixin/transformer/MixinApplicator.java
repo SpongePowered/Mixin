@@ -30,6 +30,7 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
 
 import org.apache.logging.log4j.LogManager;
@@ -51,6 +52,7 @@ import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.util.ASMHelper;
@@ -307,15 +309,21 @@ public class MixinApplicator {
      * @param mixin
      */
     protected void applyFields(MixinTargetContext mixin) {
-        this.mergeShadowFieldAnnotations(mixin);
+        this.mergeShadowFields(mixin);
         this.mergeNewFields(mixin);
     }
 
-    protected void mergeShadowFieldAnnotations(MixinTargetContext mixin) {
-        for (FieldNode shadow : mixin.getShadowFields()) {
+    protected void mergeShadowFields(MixinTargetContext mixin) {
+        for (Entry<FieldNode, Field> entry : mixin.getShadowFields()) {
+            FieldNode shadow = entry.getKey();
             FieldNode target = this.findTargetField(shadow);
             if (target != null) {
                 this.mergeAnnotations(shadow, target);
+                
+                // Strip the FINAL flag from @Mutable non-private fields
+                if (entry.getValue().isDecoratedMutable() && !MixinApplicator.hasFlag(target, Opcodes.ACC_PRIVATE)) {
+                    target.access &= ~Opcodes.ACC_FINAL;
+                }
             }
         }
     }
