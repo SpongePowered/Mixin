@@ -270,6 +270,17 @@ class TargetObfuscationEnvironment {
     }
     
     /**
+     * Remap a single descriptor in the context of this environment
+     * 
+     * @param desc descriptor to remap
+     * @return remapped descriptor, may return the original descriptor if no
+     *      remapping occurred
+     */
+    public String remapDescriptor(String desc) {
+        return ObfuscationUtil.mapDescriptor(desc, this.remapper);
+    }
+    
+    /**
      * Get an obfuscation mapping for a field
      */
     public SrgField getObfField(String field) {

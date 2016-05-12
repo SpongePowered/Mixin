@@ -365,9 +365,8 @@ public class ObfuscationManager implements IObfuscationManager {
         for (TargetObfuscationEnvironment targetEnv : this.targetEnvironments) {
             String obfField = obfFieldData.get(targetEnv.getType());
             if (obfField != null) {
-                MemberInfo remappedReference = MemberInfo.fromSrgField(obfField, context.desc);
-                String remapped = remappedReference.toString();
-                targetEnv.addMapping(className, reference, remapped);
+                MemberInfo remappedReference = MemberInfo.fromSrgField(obfField, targetEnv.remapDescriptor(context.desc));
+                targetEnv.addMapping(className, reference, remappedReference.toString());
             }
         }
     }
