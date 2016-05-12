@@ -77,4 +77,17 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
         return this.data.keySet().iterator();
     }
     
+    @Override
+    public String toString() {
+        return String.format("ObfuscationData[%sDEFAULT=%s]", this.listValues(), this.defaultValue);
+    }
+
+    private String listValues() {
+        StringBuilder sb = new StringBuilder();
+        for (ObfuscationType type : this.data.keySet()) {
+            sb.append(type.name()).append('=').append(this.data.get(type)).append(',');
+        }
+        return sb.toString();
+    }
+    
 }
