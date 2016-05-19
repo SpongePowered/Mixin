@@ -27,6 +27,31 @@ package org.spongepowered.asm.util;
 import static com.google.common.base.Preconditions.*;
 import static org.spongepowered.asm.lib.ClassWriter.*;
 
+import com.google.common.primitives.Ints;
+import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.MethodVisitor;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.lib.tree.FieldNode;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.lib.tree.IntInsnNode;
+import org.spongepowered.asm.lib.tree.JumpInsnNode;
+import org.spongepowered.asm.lib.tree.LabelNode;
+import org.spongepowered.asm.lib.tree.LdcInsnNode;
+import org.spongepowered.asm.lib.tree.LineNumberNode;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.lib.util.CheckClassAdapter;
+import org.spongepowered.asm.lib.util.TraceClassVisitor;
+
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -34,15 +59,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.*;
-import org.spongepowered.asm.lib.util.CheckClassAdapter;
-
-import com.google.common.primitives.Ints;
 
 /**
  * Utility methods for working with ASM
@@ -374,6 +390,32 @@ public class ASMHelper {
     }
 
     /**
+     * Runs textifier on the specified class node and dumps the output to the
+     * specified output stream
+     * 
+     * @param classNode class to textify
+     * @param out output stream
+     */
+    public static void textify(ClassNode classNode, OutputStream out) {
+        classNode.accept(new TraceClassVisitor(new PrintWriter(out)));
+    }
+
+    /**
+     * Runs textifier on the specified method node and dumps the output to the
+     * specified output stream
+     * 
+     * @param methodNode method to textify
+     * @param out output stream
+     */
+    public static void textify(MethodNode methodNode, OutputStream out) {
+        TraceClassVisitor trace = new TraceClassVisitor(new PrintWriter(out));
+        MethodVisitor mv = trace.visitMethod(methodNode.access, methodNode.name, methodNode.desc, methodNode.signature,
+                methodNode.exceptions.toArray(new String[0]));
+        methodNode.accept(mv);
+        trace.visitEnd();
+    }
+
+    /**
      * Dumps the output of CheckClassAdapter.verify to System.out
      *
      * @param classNode the classNode to verify
@@ -392,6 +434,19 @@ public class ASMHelper {
     public static void dumpClass(byte[] bytes) {
         ClassReader cr = new ClassReader(bytes);
         CheckClassAdapter.verify(cr, true, new PrintWriter(System.out));
+    }
+    
+    /**
+     * Prints a representation of a method's instructions to stderr
+     * 
+     * @param method Method to print
+     */
+    public static void printMethodWithOpcodeIndices(MethodNode method) {
+        System.err.printf("%s%s\n", method.name, method.desc);
+        int i = 0;
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            System.err.printf("[%4d] %s\n", i++, ASMHelper.getNodeDescriptionForDebug(iter.next()));
+        }
     }
 
     /**

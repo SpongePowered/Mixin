@@ -699,7 +699,7 @@ public class MixinTransformer extends TreeTransformer {
             }
         }
         
-        return this.writeClass(transformedName, passThroughClass);
+        return this.writeClass(transformedName, passThroughClass, false);
     }
 
     /**
@@ -717,7 +717,7 @@ public class MixinTransformer extends TreeTransformer {
         } catch (ValidationFailedException ex) {
             this.logger.info(ex.getMessage());
             // If verify is enabled and failed, write out the bytecode to allow us to inspect it
-            if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
+            if (context.isExportForced() || MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
                 this.writeClass(context);
             }
         }
@@ -840,18 +840,18 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     private byte[] writeClass(TargetClassContext context) {
-        return this.writeClass(context.getClassName(), context.getClassNode());
+        return this.writeClass(context.getClassName(), context.getClassNode(), context.isExportForced());
     }
     
-    private byte[] writeClass(String transformedName, ClassNode targetClass) {
+    private byte[] writeClass(String transformedName, ClassNode targetClass, boolean forceExport) {
         // Collapse tree to bytes
         byte[] bytes = this.writeClass(targetClass);
         
         // Export transformed class for debugging purposes
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
-        if (environment.getOption(Option.DEBUG_EXPORT)) {
+        if (forceExport || environment.getOption(Option.DEBUG_EXPORT)) {
             String filter = environment.getOptionValue(Option.DEBUG_EXPORT_FILTER);
-            if (filter == null || this.applyFilter(filter, transformedName)) {
+            if (forceExport || filter == null || this.applyFilter(filter, transformedName)) {
                 File outputFile = this.dumpClass(transformedName.replace('.', '/'), bytes);
                 if (this.decompiler != null) {
                     this.decompiler.decompile(outputFile);

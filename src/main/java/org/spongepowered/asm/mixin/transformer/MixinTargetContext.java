@@ -26,7 +26,6 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -112,12 +111,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * List of methods successfully merged from this mixin
      */
     private final List<MethodNode> mergedMethods = new ArrayList<MethodNode>();
-
-    /**
-     * Information about methods in the target class, used to keep track of
-     * transformations we apply
-     */
-    private final Map<String, Target> targetMethods = new HashMap<String, Target>();
 
     /**
      * Injector groups 
@@ -755,17 +748,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @return new or existing target handle for the supplied method
      */
     public Target getTargetMethod(MethodNode method) {
-        if (!this.targetClass.getMethods().contains(method)) {
-            throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
-        }
-        
-        String targetName = method.name + method.desc;
-        Target target = this.targetMethods.get(targetName);
-        if (target == null) {
-            target = new Target(this.targetClass.getClassNode(), method);
-            this.targetMethods.put(targetName, target);
-        }
-        return target;
+        return this.targetClass.getTargetMethod(method);
     }
     
     /**

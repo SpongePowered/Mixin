@@ -24,17 +24,20 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Debug;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.util.ASMHelper;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 
 /**
  * Struct for containing target class information during mixin application
@@ -79,6 +82,12 @@ class TargetClassContext {
     private final Map<String, Counter> injectorMethodIndices = new HashMap<String, Counter>();
 
     /**
+     * Information about methods in the target class, used to keep track of
+     * transformations we apply
+     */
+    private final Map<String, Target> targetMethods = new HashMap<String, Target>();
+
+    /**
      * Do not remap injector handler methods (debug option)
      */
     private final boolean disableHandlerRemap;
@@ -87,6 +96,12 @@ class TargetClassContext {
      * True once mixins have been applied to this class 
      */
     private boolean applied;
+    
+    /**
+     * True if this class is decorated with an {@link Debug} annotation which
+     * instructs an export 
+     */
+    private boolean forceExport;
 
     TargetClassContext(String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
         this.sessionId = sessionId;
@@ -95,6 +110,14 @@ class TargetClassContext {
         this.classInfo = ClassInfo.fromClassNode(classNode);
         this.mixins = mixins;
         this.disableHandlerRemap = MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_DISABLE_HANDLER_REMAP);
+    }
+    
+    public boolean isApplied() {
+        return this.applied;
+    }
+    
+    public boolean isExportForced() {
+        return this.forceExport;
     }
     
     /**
@@ -145,6 +168,26 @@ class TargetClassContext {
     public SortedSet<MixinInfo> getMixins() {
         return this.mixins;
     }
+    
+    /**
+     * Get a target method handle from the target class
+     * 
+     * @param method method to get a target handle for
+     * @return new or existing target handle for the supplied method
+     */
+    public Target getTargetMethod(MethodNode method) {
+        if (!this.classNode.methods.contains(method)) {
+            throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
+        }
+        
+        String targetName = method.name + method.desc;
+        Target target = this.targetMethods.get(targetName);
+        if (target == null) {
+            target = new Target(this.classNode, method);
+            this.targetMethods.put(targetName, target);
+        }
+        return target;
+    }
 
     public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
         if (this.disableHandlerRemap) {
@@ -179,6 +222,31 @@ class TargetClassContext {
             return new InterfaceMixinApplicator(this);
         }
         return new MixinApplicator(this);
+    }
+
+
+    /**
+     * Process {@link Debug) annotations on the class after application
+     */
+    public void processDebugTasks() {
+        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+            return;
+        }
+
+        AnnotationNode classDebugAnnotation = ASMHelper.getVisibleAnnotation(this.classNode, Debug.class);
+        if (classDebugAnnotation != null) {
+            this.forceExport = Boolean.TRUE.equals(ASMHelper.getAnnotationValue(classDebugAnnotation, "export"));
+            if (Boolean.TRUE.equals(ASMHelper.getAnnotationValue(classDebugAnnotation, "print"))) {
+                ASMHelper.textify(this.classNode, System.err);
+            }
+        }
+        
+        for (MethodNode method : this.classNode.methods) {
+            AnnotationNode methodDebugAnnotation = ASMHelper.getVisibleAnnotation(method, Debug.class);
+            if (methodDebugAnnotation != null && Boolean.TRUE.equals(ASMHelper.getAnnotationValue(methodDebugAnnotation, "print"))) {
+                ASMHelper.textify(method, System.err);
+            }
+        }
     }
     
 }

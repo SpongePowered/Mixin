@@ -232,6 +232,8 @@ public class MixinApplicator {
             throw new InvalidMixinException(current, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst applying the mixin class: "
                     + ex.getMessage(), ex);
         }
+        
+        this.context.processDebugTasks();
     }
 
     /**
@@ -875,7 +877,7 @@ public class MixinApplicator {
             }
             
             for (AnnotationNode annotation : from) {
-                if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
+                if (!this.isMergeableAnnotation(annotation)) {
                     continue;
                 }
                 
@@ -893,6 +895,13 @@ public class MixinApplicator {
         }
         
         return to;
+    }
+
+    private boolean isMergeableAnnotation(AnnotationNode annotation) {
+        if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
+            return annotation.desc.endsWith("Debug;");
+        }
+        return true;
     }
 
     /**
