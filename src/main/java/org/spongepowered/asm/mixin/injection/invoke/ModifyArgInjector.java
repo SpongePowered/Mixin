@@ -83,6 +83,17 @@ public class ModifyArgInjector extends InvokeInjector {
         }
     }
     
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.invoke.InvokeInjector
+     *      #checkTarget(org.spongepowered.asm.mixin.injection.struct.Target)
+     */
+    @Override
+    protected void checkTarget(Target target) {
+        if (!this.isStatic && target.isStatic) {
+            throw new InvalidInjectionException(this.info, "non-static callback method " + this + " targets a static method which is not supported");
+        }
+    }
+    
     /**
      * Do the injection
      */

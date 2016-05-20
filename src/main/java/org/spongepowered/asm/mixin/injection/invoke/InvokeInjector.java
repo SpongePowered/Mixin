@@ -63,7 +63,15 @@ public abstract class InvokeInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
-        
+        this.checkTarget(target);
+    }
+
+    /**
+     * Sanity checks on target
+     * 
+     * @param target target
+     */
+    protected void checkTarget(Target target) {
         if (target.isStatic != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
