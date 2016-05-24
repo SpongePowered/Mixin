@@ -40,7 +40,7 @@ import net.minecraft.launchwrapper.Launch;
  * pre-0.6 versions is maintained via the methods on {@link MixinEnvironment}
  * delegating to the methods here.
  */
-public class Mixins {
+public final class Mixins {
     
     /**
      * Logger 
@@ -56,6 +56,8 @@ public class Mixins {
      * Error handlers for environment
      */
     private static final Set<String> errorHandlers = new LinkedHashSet<String>();
+    
+    private Mixins() {}
     
     /**
      * Add a mixin configuration resource
