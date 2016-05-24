@@ -22,24 +22,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin;
+package org.spongepowered.asm.util.throwables;
 
 /**
- * Error to throw for required mixins when mixing of the mixin fails
+ * Exception thrown when a constraint declaration is invalid
  */
-public class MixinApplyError extends Error {
+public class InvalidConstraintException extends IllegalArgumentException {
 
     private static final long serialVersionUID = 1L;
 
-    public MixinApplyError(String message) {
-        super(message);
+    public InvalidConstraintException() {
     }
 
-    public MixinApplyError(Throwable cause) {
+    public InvalidConstraintException(String s) {
+        super(s);
+    }
+
+    public InvalidConstraintException(Throwable cause) {
         super(cause);
     }
 
-    public MixinApplyError(String message, Throwable cause) {
+    public InvalidConstraintException(String message, Throwable cause) {
         super(message, cause);
     }
 

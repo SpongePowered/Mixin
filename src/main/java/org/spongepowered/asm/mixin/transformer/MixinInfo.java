@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
@@ -48,12 +48,13 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-import org.spongepowered.asm.mixin.MixinException;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Function;
@@ -67,60 +68,105 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * Runtime information bundle about a mixin
  */
 class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
+    
+    /**
+     * ClassNode for a MixinInfo
+     */
+    public class MixinClassNode extends ClassNode {
+        
+        public MixinClassNode(MixinInfo mixin) {
+            this(Opcodes.ASM5);
+        }
+
+        public MixinClassNode(int api) {
+            super(api);
+        }
+
+        public MixinInfo getMixin() {
+            return MixinInfo.this;
+        }
+        
+    }
 
     /**
-     * State that can be reloaded.
+     * Mixin preparation/parse/validation state
      */
-    private class ValidationState {
+    class State {
         
         /**
          * Mixin bytes (read once, generate tree on demand)
          */
-        byte[] mixinBytes;
-
-        /**
-         * All interfaces implemented by this mixin, including soft
-         * implementations
-         */
-        final Set<String> interfaces = new HashSet<String>();
-
-        /**
-         * Interfaces soft-implemented using {@link Implements}
-         */
-        final List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
-
-        /**
-         * Synthetic inner classes
-         */
-        final Set<String> syntheticInnerClasses = new HashSet<String>();
+        private byte[] mixinBytes;
 
         /**
          * Mixin ClassInfo
          */
-        final ClassInfo classInfo;
+        private final ClassInfo classInfo;
 
         /**
          * True if the superclass of the mixin is <b>not</b> the direct
          * superclass of one or more targets
          */
-        boolean detachedSuper;
+        private boolean detachedSuper;
+
+        /**
+         * All interfaces implemented by this mixin, including soft
+         * implementations
+         */
+        protected final Set<String> interfaces = new HashSet<String>();
+
+        /**
+         * Interfaces soft-implemented using {@link Implements}
+         */
+        protected final List<InterfaceInfo> softImplements = new ArrayList<InterfaceInfo>();
+
+        /**
+         * Synthetic inner classes
+         */
+        protected final Set<String> syntheticInnerClasses = new HashSet<String>();
 
         /**
          * Initial ClassNode created for mixin validation, not used for actual
          * application
          */
-        ClassNode classNode;
+        protected ClassNode classNode;
 
-        ValidationState(byte[] mixinBytes, ClassInfo classInfo) {
-            this.mixinBytes = mixinBytes;
-            this.classNode = this.getClassNode(0);
-            this.classInfo = classInfo;
+        State(byte[] mixinBytes) {
+            this(mixinBytes, null);
         }
 
-        ValidationState(byte[] mixinBytes) {
+        State(byte[] mixinBytes, ClassInfo classInfo) {
             this.mixinBytes = mixinBytes;
-            this.classNode = this.getClassNode(0);
-            this.classInfo = ClassInfo.fromClassNode(this.classNode);
+            this.classNode = this.createClassNode(0);
+            this.classInfo = classInfo != null ? classInfo : ClassInfo.fromClassNode(this.classNode);
+        }
+
+        ClassInfo getClassInfo() {
+            return this.classInfo;
+        }
+
+        byte[] getClassBytes() {
+            return this.mixinBytes;
+        }
+        
+        ClassNode getClassNode() {
+            return this.classNode;
+        }
+
+        boolean isDetachedSuper() {
+            return this.detachedSuper;
+        }
+
+        List<? extends InterfaceInfo> getSoftImplements() {
+            return this.softImplements;
+        }
+        
+        Set<String> getSyntheticInnerClasses() {
+            return this.syntheticInnerClasses;
+        }
+
+        Set<String> getInterfaces() {
+            return this.interfaces;
         }
 
         /**
@@ -129,23 +175,147 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * @param flags Flags passed into classReader
          * @return Tree representing the bytecode
          */
-        ClassNode getClassNode(int flags) {
+        ClassNode createClassNode(int flags) {
             MixinClassNode classNode = new MixinClassNode(MixinInfo.this);
             ClassReader classReader = new ClassReader(this.mixinBytes);
             classReader.accept(classNode, flags);
             return classNode;
         }
+
+        /**
+         * Performs pre-flight checks on the mixin
+         * 
+         * @param type Mixin Type
+         * @param targetClasses Mixin's target classes
+         */
+        void validate(SubType type, List<ClassInfo> targetClasses) {
+            type.validate(this, targetClasses);
+
+            this.detachedSuper = type.isDetachedSuper();
+
+            // Pre-flight checks
+            this.validateInner();
+            this.validateClassVersion();
+            this.validateRemappables(targetClasses);
+
+            // Read information from the mixin
+            this.readImplementations();
+            this.readInnerClasses();
+            
+            // Takeoff validation
+            this.validateChanges(type, targetClasses);
+            
+            // Null out the validation classnode
+            this.classNode = null;            
+        }
+
+        private void validateInner() {
+            // isInner (shouldn't) return true for static inner classes
+            if (!this.classInfo.isProbablyStatic()) {
+                throw new InvalidMixinException(MixinInfo.this, "Inner class mixin must be declared static");
+            }
+        }
+
+        private void validateClassVersion() {
+            if (this.classNode.version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
+                String helpText = ".";
+                for (CompatibilityLevel level : CompatibilityLevel.values()) {
+                    if (level.classVersion() >= this.classNode.version) {
+                        helpText = String.format(". Mixin requires compatibility level %s or above.", level.name()); 
+                    }
+                }
+                
+                throw new InvalidMixinException(MixinInfo.this, "Unsupported mixin class version " + this.classNode.version + helpText);
+            }
+        }
+
+        private void validateRemappables(List<ClassInfo> targetClasses) {
+            // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
+            if (targetClasses.size() > 1) {
+                for (FieldNode field : this.classNode.fields) {
+                    this.validateRemappable(Shadow.class, field.name, ASMHelper.getVisibleAnnotation(field, Shadow.class));
+                }
+                
+                for (MethodNode method : this.classNode.methods) {
+                    this.validateRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
+                    AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
+                    if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
+                        throw new InvalidMixinException(MixinInfo.this, "Found @Overwrite annotation on " + method.name + " in " + this);
+                    }
+                }
+            }
+        }
+        
+        private void validateRemappable(Class<Shadow> annotationClass, String name, AnnotationNode annotation) {
+            if (annotation != null && ASMHelper.getAnnotationValue(annotation, "remap", Boolean.TRUE)) {
+                throw new InvalidMixinException(MixinInfo.this, "Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name
+                        + " in " + this);
+            }
+        }
+        
+        /**
+         * Read and process any {@link Implements} annotations on the mixin
+         */
+        void readImplementations() {
+            this.interfaces.addAll(this.classNode.interfaces);
+            
+            AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(this.classNode, Implements.class);
+            if (implementsAnnotation == null) {
+                return;
+            }
+            
+            List<AnnotationNode> interfaces = ASMHelper.getAnnotationValue(implementsAnnotation);
+            if (interfaces == null) {
+                return;
+            }
+            
+            for (AnnotationNode interfaceNode : interfaces) {
+                InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(MixinInfo.this, interfaceNode);
+                this.softImplements.add(interfaceInfo);
+                this.interfaces.add(interfaceInfo.getInternalName());
+                // only add interface if its initial initialisation
+                if (!(this instanceof Reloaded)) {
+                    this.classInfo.addInterface(interfaceInfo.getInternalName());
+                }
+            }
+        }
+
+        /**
+         * Read inner class definitions for the class and locate any synthetic
+         * inner classes so that we can add them to the passthrough set in our
+         * parent config.
+         */
+        void readInnerClasses() {
+            for (InnerClassNode inner : this.classNode.innerClasses) {
+                ClassInfo innerClass = ClassInfo.forName(inner.name);
+                if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
+                    if ((inner.outerName != null && inner.outerName.equals(this.classInfo.getName()))
+                            || inner.name.startsWith(this.classNode.name + "$")) {
+                        this.syntheticInnerClasses.add(inner.name);
+                    } else {
+                        throw new InvalidMixinException(MixinInfo.this, "Unhandled synthetic inner class found: " + inner.name);
+                    }
+                }
+            }
+        }
+        
+        protected void validateChanges(SubType type, List<ClassInfo> targetClasses) {
+            type.createPreProcessor(this.classNode).prepare();
+        }
     }
 
-    private class ReloadedState extends ValidationState {
+    /**
+     * State use when hotswap reloading a mixin
+     */
+    class Reloaded extends State {
         
         /**
          * The previous validation state to compare the changes to
          */
-        private final ValidationState previous;
+        private final State previous;
 
-        ReloadedState(ValidationState previous, byte[] mixinBytes) {
-            super(mixinBytes, previous.classInfo);
+        Reloaded(State previous, byte[] mixinBytes) {
+            super(mixinBytes, previous.getClassInfo());
             this.previous = previous;
         }
 
@@ -153,7 +323,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * Validates that the changes are allowed to be made, these restrictions
          * only exits while reloading mixins.
          */
-        void validateChanges() {
+        @Override
+        protected void validateChanges(SubType type, List<ClassInfo> targetClasses) {
             if (!this.syntheticInnerClasses.equals(this.previous.syntheticInnerClasses)) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change inner classes");
             }
@@ -164,7 +335,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change soft interfaces");
             }
             List<ClassInfo> targets = MixinInfo.this.readTargetClasses(this.classNode, true);
-            if (!new HashSet<ClassInfo>(targets).equals(new HashSet<ClassInfo>(MixinInfo.this.getTargets0()))) {
+            if (!new HashSet<ClassInfo>(targets).equals(new HashSet<ClassInfo>(targetClasses))) {
                 throw new MixinReloadException(MixinInfo.this, "Cannot change target classes");
             }
             int priority = MixinInfo.this.readPriority(this.classNode);
@@ -173,7 +344,142 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             }
         }
     }
+    
+    /**
+     * Mixin sub-type, eg. standard mixin, interface mixin, accessor
+     */
+    abstract static class SubType {
+        
+        /**
+         * Outer
+         */
+        protected final MixinInfo mixin;
+        
+        /**
+         * String representation of annotation type, for use in messages
+         */
+        protected final String annotationType;
+        
+        /**
+         * Target of this mixin subtype must be an interface, false for a class 
+         */
+        protected final boolean targetMustBeInterface;
+        
+        /**
+         * Detached super, parsed out during validation
+         */
+        protected boolean detached;
+        
+        SubType(MixinInfo info, String annotationType, boolean targetMustBeInterface) {
+            this.mixin = info;
+            this.annotationType = annotationType;
+            this.targetMustBeInterface = targetMustBeInterface;
+        }
+        
+        /**
+         * Get whether this mixin is detached super, must call {@link #validate}
+         * first
+         * 
+         * @return
+         */
+        boolean isDetachedSuper() {
+            return this.detached;
+        }
+        
+        /**
+         * Validate a single target before adding
+         * 
+         * @param targetName
+         * @param targetInfo
+         */
+        void validateTarget(String targetName, ClassInfo targetInfo) {
+            boolean targetIsInterface = targetInfo.isInterface();
+            if (targetIsInterface != this.targetMustBeInterface) {
+                String not = targetIsInterface ? "" : "not ";
+                throw new InvalidMixinException(this.mixin, this.annotationType + " target type mismatch: " + targetName
+                        + " is " + not + "an interface in " + this);
+            }
+        }
+        
+        abstract void validate(State state, List<ClassInfo> targetClasses);
 
+        abstract MixinPreProcessorStandard createPreProcessor(ClassNode classNode);
+
+        /**
+         * A standard mixin
+         */
+        static class Standard extends SubType {
+            
+            Standard(MixinInfo info) {
+                super(info, "@Mixin", false);
+            }
+            
+            @Override
+            void validate(State state, List<ClassInfo> targetClasses) {
+                ClassNode classNode = state.getClassNode();
+                
+                for (ClassInfo targetClass : targetClasses) {
+                    if (classNode.superName.equals(targetClass.getSuperName())) {
+                        continue;
+                    }
+                    
+                    if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.SUPER)) {
+                        ClassInfo superClass = ClassInfo.forName(classNode.superName);
+                        if (superClass.isMixin()) {
+                            // If superclass is a mixin, check for hierarchy derp
+                            for (ClassInfo superTarget : superClass.getTargets()) {
+                                if (targetClasses.contains(superTarget)) {
+                                    throw new InvalidMixinException(this.mixin, "Illegal hierarchy detected. Derived mixin " + this
+                                            + " targets the same class " + superTarget.getClassName() + " as its superclass "
+                                            + superClass.getClassName());
+                                }
+                            }
+                        }
+                        
+                        throw new InvalidMixinException(this.mixin, "Super class '" + classNode.superName.replace('/', '.') + "' of "
+                                + this.mixin.getName() + " was not found in the hierarchy of target class '" + targetClass + "'");
+                    }
+                    
+                    this.detached = true;
+                }
+            }
+
+            @Override
+            MixinPreProcessorStandard createPreProcessor(ClassNode classNode) {
+                return new MixinPreProcessorStandard(this.mixin, classNode);
+            }
+        }
+        
+        /**
+         * An interface mixin
+         */
+        static class Interface extends SubType {
+            
+            Interface(MixinInfo info) {
+                super(info, "@Mixin", true);
+            }
+            
+            @Override
+            void validate(State state, List<ClassInfo> targetClasses) {
+                if (!MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces()) {
+                    throw new InvalidMixinException(this.mixin, "Interface mixin not supported in current enviromnment");
+                }
+                
+                ClassNode classNode = state.getClassNode();
+                
+                if (!"java/lang/Object".equals(classNode.superName)) {
+                    throw new InvalidMixinException(this.mixin, "Super class of " + this + " is invalid, found " 
+                            + classNode.superName.replace('/', '.'));
+                }
+            }
+            
+            @Override
+            MixinPreProcessorStandard createPreProcessor(ClassNode classNode) {
+                return new MixinPreProcessorInterface(this.mixin, classNode);
+            }
+        }
+    }
+    
     /**
      * Global order of mixin infos, used to determine ordering between mixins
      * with equivalent priority
@@ -238,19 +544,19 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient ClassInfo info;
     
     /**
-     * True if this is an interface mixin rather than a regular mixin
+     * Mixin type 
      */
-    private final transient boolean isInterfaceMixin;
+    private final transient SubType type;
 
     /**
      * Holds state that currently is not fully initialised or validated
      */
-    private transient ValidationState uninitialisedState;
+    private transient State pendingState;
 
     /**
      * Holds the current validated state
      */
-    private transient ValidationState validationState;
+    private transient State state;
     
     /**
      * Internal ctor, called by {@link MixinConfig}
@@ -269,41 +575,50 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.plugin = plugin;
         this.phase = MixinEnvironment.getCurrentEnvironment().getPhase();
         
-        ClassNode classNode = null;
-        
         // Read the class bytes and transform
         try {
-            byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
-            this.uninitialisedState = new ValidationState(mixinBytes);
-            this.info = this.uninitialisedState.classInfo;
-            classNode = this.uninitialisedState.getClassNode(0);
-            this.isInterfaceMixin = this.info.isInterface();
+            this.pendingState = new State(this.loadMixinClass(this.className, runTransformers));
+            this.info = this.pendingState.getClassInfo();
+            this.type = this.initType();
         } catch (Exception ex) {
             throw new InvalidMixinException(this, ex);
         }
-
-        this.priority = this.readPriority(classNode);
-        this.targetClasses = this.readTargetClasses(classNode, suppressPlugin);
-        this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
+        
+        // Read the class bytes and transform
+        try {
+            this.priority = this.readPriority(this.pendingState.getClassNode());
+            this.targetClasses = this.readTargetClasses(this.pendingState.getClassNode(), suppressPlugin);
+            this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, ex);
+        }
     }
     
+    /**
+     * Initialise the mixin subtype handler
+     * 
+     * @return subtype
+     */
+    private SubType initType() {
+        if (this.info.isInterface()) {
+            return new SubType.Interface(this);
+        }
+        return new SubType.Standard(this);
+    }
+
+    /**
+     * Run validation pass
+     */
     void validate() {
+        if (this.pendingState == null) {
+            throw new IllegalStateException("No pending validation state for " + this);
+        }
+        
         try {
-            ClassNode classNode = this.uninitialisedState.classNode;
-            this.uninitialisedState.detachedSuper = this.validateTargetClasses(classNode);
-            this.validateMixin(this.uninitialisedState);
-            this.readImplementations(this.uninitialisedState);
-            this.readInnerClasses(this.uninitialisedState);
-            if (this.uninitialisedState instanceof ReloadedState) {
-                ((ReloadedState) this.uninitialisedState).validateChanges();
-            } else {
-                this.createPreProcessor(classNode).prepare();
-            }
-            this.uninitialisedState.classNode = null;
-            // the state is now fully initialised and validated
-            this.validationState = this.uninitialisedState;
+            this.pendingState.validate(this.type, this.targetClasses);
+            this.state = this.pendingState;
         } finally {
-            this.uninitialisedState = null;
+            this.pendingState = null;
         }
     }
 
@@ -325,13 +640,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         List<ClassInfo> targets = new ArrayList<ClassInfo>();
-        List<Type> publicTargets = ASMHelper.getAnnotationValue(mixin, "value");
+        List<org.spongepowered.asm.lib.Type> publicTargets = ASMHelper.getAnnotationValue(mixin, "value");
         List<String> privateTargets = ASMHelper.getAnnotationValue(mixin, "targets");
 
         if (publicTargets != null) {
-            this.readTargets(targets, Lists.transform(publicTargets, new Function<Type, String>() {
+            this.readTargets(targets, Lists.transform(publicTargets, new Function<org.spongepowered.asm.lib.Type, String>() {
                 @Override
-                public String apply(Type input) {
+                public String apply(org.spongepowered.asm.lib.Type input) {
                     return input.getClassName();
                 }
             }), suppressPlugin, false);
@@ -352,12 +667,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Reads a target list into the outTargets list
      */
-    private void readTargets(List<ClassInfo> outTargets, List<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
-        for (String targetClassName : inTargets) {
-            targetClassName = targetClassName.replace('/', '.');
-            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetClassName, this.className)) {
-                ClassInfo targetInfo = ClassInfo.forName(targetClassName);
-                this.checkTarget(targetClassName, targetInfo, checkPublic);
+    private void readTargets(Collection<ClassInfo> outTargets, Collection<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
+        for (String targetName : inTargets) {
+            targetName = targetName.replace('/', '.');
+            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetName, this.className)) {
+                ClassInfo targetInfo = this.getTarget(targetName, checkPublic);
                 if (!outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
                     targetInfo.addMixin(this);
@@ -366,19 +680,17 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
     }
 
-    private void checkTarget(String targetClassName, ClassInfo targetInfo, boolean checkPublic) throws InvalidMixinException {
+    private ClassInfo getTarget(String targetName, boolean checkPublic) throws InvalidMixinException {
+        ClassInfo targetInfo = ClassInfo.forName(targetName);
         if (targetInfo == null) {
-            throw new MixinException("@Mixin target " + targetClassName + " was not found " + this);
+            throw new InvalidMixinException(this, "@Mixin target " + targetName + " was not found " + this);
         }
-        boolean targetIsInterface = targetInfo.isInterface();
-        if (targetIsInterface != this.isInterfaceMixin) {
-            String not = targetIsInterface ? "" : "not ";
-            throw new InvalidMixinException(this, "@Mixin target type mismatch: " + targetClassName + " is " + not + "an interface in " + this);
-        }
+        this.type.validateTarget(targetName, targetInfo);
         if (checkPublic && targetInfo.isPublic()) {
-            throw new InvalidMixinException(this, "@Mixin target " + targetClassName + " is public in " + this
+            throw new InvalidMixinException(this, "@Mixin target " + targetName + " is public in " + this
                     + " and must be specified in value");
         }
+        return targetInfo;
     }
 
     /**
@@ -401,170 +713,17 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         return priority == null ? this.parent.getDefaultMixinPriority() : priority.intValue();
     }
 
-    private boolean validateTargetClasses(ClassNode classNode) {
-        if (this.isInterfaceMixin) {
-            return this.validateInterfaceMixinTargets(classNode);
-        }
-        return this.validateClassMixinTargets(classNode);
-    }
-
-    private boolean validateInterfaceMixinTargets(ClassNode classNode) {
-        if (!"java/lang/Object".equals(classNode.superName)) {
-            throw new InvalidMixinException(this, "Super class of " + this + " is invalid, found " + classNode.superName.replace('/', '.'));
-        }
-        
-        return false;
-    }
-
-    private boolean validateClassMixinTargets(ClassNode classNode) {
-        boolean detached = false;
-        
-        for (ClassInfo targetClass : this.targetClasses) {
-            if (classNode.superName.equals(targetClass.getSuperName())) {
-                continue;
-            }
-            
-            if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.SUPER)) {
-                ClassInfo superClass = ClassInfo.forName(classNode.superName);
-                if (superClass.isMixin()) {
-                    // If superclass is a mixin, check for hierarchy derp
-                    for (ClassInfo superTarget : superClass.getTargets()) {
-                        if (this.targetClasses.contains(superTarget)) {
-                            throw new InvalidMixinException(this, "Illegal hierarchy detected. Derived mixin " + this + " targets the same class "
-                                    + superTarget.getClassName() + " as its superclass " + superClass.getClassName());
-                        }
-                    }
-                }
-                
-                throw new InvalidMixinException(this, "Super class '" + classNode.superName.replace('/', '.') + "' of " + this.name
-                        + " was not found in the hierarchy of target class '" + targetClass + "'");
-            }
-            
-            detached = true;
-        }
-        
-        return detached;
-    }
-
-    /**
-     * Performs pre-flight checks on the mixin
-     * 
-     * @param state State to validate
-     */
-    private void validateMixin(ValidationState state) {
-        this.validateType();
-        this.validateInner(state);
-        this.validateClassVersion(state);
-        this.validateRemappables(state);
-    }
-
-    private void validateType() {
-        if (this.isInterfaceMixin && !MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces()) {
-            throw new InvalidMixinException(this, "Interface mixin not supported in current enviromnment");
-        }
-    }
-
-    private void validateInner(ValidationState state) {
-        // isInner (shouldn't) return true for static inner classes
-        if (!state.classInfo.isProbablyStatic()) {
-            throw new InvalidMixinException(this, "Inner class mixin must be declared static");
-        }
-    }
-
-    private void validateClassVersion(ValidationState state) {
-        if (state.classNode.version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
-            String helpText = ".";
-            for (CompatibilityLevel level : CompatibilityLevel.values()) {
-                if (level.classVersion() >= state.classNode.version) {
-                    helpText = String.format(". Mixin requires compatibility level %s or above.", level.name()); 
-                }
-            }
-            
-            throw new InvalidMixinException(this, "Unsupported mixin class version " + state.classNode.version + helpText);
-        }
-    }
-
-    private void validateRemappables(ValidationState state) {
-        // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
-        if (this.targetClasses.size() > 1) {
-            for (FieldNode field : state.classNode.fields) {
-                this.checkRemappable(Shadow.class, field.name, ASMHelper.getVisibleAnnotation(field, Shadow.class));
-            }
-            
-            for (MethodNode method : state.classNode.methods) {
-                this.checkRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
-                AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
-                if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
-                    throw new InvalidMixinException(this, "Found @Overwrite annotation on " + method.name + " in " + this);
-                }
-            }
-        }
-    }
-
-    private void checkRemappable(Class<Shadow> annotationClass, String name, AnnotationNode annotation) {
-        if (annotation != null && ASMHelper.getAnnotationValue(annotation, "remap", Boolean.TRUE)) {
-            throw new InvalidMixinException(this, "Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name
-                    + " in " + this);
-        }
-    }
-    
-    /**
-     * Read and process any {@link Implements} annotations on the mixin
-     */
-    private void readImplementations(ValidationState state) {
-        state.interfaces.addAll(state.classNode.interfaces);
-        
-        AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(state.classNode, Implements.class);
-        if (implementsAnnotation == null) {
-            return;
-        }
-        
-        List<AnnotationNode> interfaces = ASMHelper.getAnnotationValue(implementsAnnotation);
-        if (interfaces == null) {
-            return;
-        }
-        
-        for (AnnotationNode interfaceNode : interfaces) {
-            InterfaceInfo interfaceInfo = InterfaceInfo.fromAnnotation(this, interfaceNode);
-            state.softImplements.add(interfaceInfo);
-            state.interfaces.add(interfaceInfo.getInternalName());
-            // only add interface if its initial initialisation
-            if (!(state instanceof ReloadedState)) {
-                state.classInfo.addInterface(interfaceInfo.getInternalName());
-            }
-        }
-    }
-
-    /**
-     * Read inner class definitions for the class and locate any synthetic inner
-     * classes so that we can add them to the passthrough set in our parent
-     * config.
-     */
-    private void readInnerClasses(ValidationState state) {
-        for (InnerClassNode inner : state.classNode.innerClasses) {
-            ClassInfo innerClass = ClassInfo.forName(inner.name);
-            if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
-                if ((inner.outerName != null && inner.outerName.equals(state.classInfo.getName()))
-                        || inner.name.startsWith(state.classNode.name + "$")) {
-                    state.syntheticInnerClasses.add(inner.name);
-                } else {
-                    throw new InvalidMixinException(this, "Unhandled synthetic inner class found: " + inner.name);
-                }
-            }
-        }
-    }
-
     /**
      * Current state, either the validated state or the uninitialised state if
      * the mixin is initialising for the first time. Should never return null.
      */
-    private ValidationState getCurrentState() {
-        if (this.validationState == null) {
-            return this.uninitialisedState;
-        }
-        return this.validationState;
+    private State getState() {
+        return this.state != null ? this.state : this.pendingState;
     }
 
+    /**
+     * Get the ClassInfo for the mixin class
+     */
     ClassInfo getClassInfo() {
         return this.info;
     }
@@ -580,10 +739,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Get the parent config which declares this mixin
      */
-    public MixinConfig getParent() {
+    MixinConfig getParent() {
         return this.parent;
     }
     
+    /**
+     * Get the mixin priority
+     */
+    @Override
+    public int getPriority() {
+        return this.priority;
+    }
+
     /**
      * Get the simple name of the mixin
      */
@@ -613,7 +780,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     @Override
     public byte[] getClassBytes() {
-        return this.getCurrentState().mixinBytes;
+        return this.getState().getClassBytes();
     }
     
     /**
@@ -622,7 +789,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     @Override
     public boolean isDetachedSuper() {
-        return this.getCurrentState().detachedSuper;
+        return this.getState().isDetachedSuper();
     }
 
     /**
@@ -639,21 +806,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     public Phase getPhase() {
         return this.phase;
     }
-    
-    /**
-     * Get whether this is an interface mixin or not
-     */
-    @Override
-    public boolean isInterfaceMixin() {
-        return this.isInterfaceMixin;
-    }
 
     /**
      * Get a new tree for the class bytecode
      */
     @Override
     public ClassNode getClassNode(int flags) {
-        return this.getCurrentState().getClassNode(flags);
+        return this.getState().createClassNode(flags);
     }
     
     /**
@@ -668,36 +827,21 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Get the soft implementations for this mixin
      */
     List<InterfaceInfo> getSoftImplements() {
-        return Collections.unmodifiableList(this.getCurrentState().softImplements);
+        return Collections.unmodifiableList(this.getState().getSoftImplements());
     }
 
     /**
      * Get the synthetic inner classes for this mixin
      */
-    public Set<String> getSyntheticInnerClasses() {
-        return Collections.unmodifiableSet(this.getCurrentState().syntheticInnerClasses);
+    Set<String> getSyntheticInnerClasses() {
+        return Collections.unmodifiableSet(this.getState().getSyntheticInnerClasses());
     }
     
     /**
      * Get the target class list for this mixin
      */
-    public List<ClassInfo> getTargets() {
-        return Collections.unmodifiableList(this.getTargets0());
-    }
-
-    /**
-     * Internal method to avoid synthetic bridge generation
-     */
-    protected List<ClassInfo> getTargets0() {
-        return this.targetClasses;
-    }
-    
-    /**
-     * Get the mixin priority
-     */
-    @Override
-    public int getPriority() {
-        return this.priority;
+    List<ClassInfo> getTargets() {
+        return Collections.unmodifiableList(this.targetClasses);
     }
 
     /**
@@ -705,8 +849,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * 
      * @return mixin interfaces
      */
-    public Set<String> getInterfaces() {
-        return this.getCurrentState().interfaces;
+    Set<String> getInterfaces() {
+        return this.getState().getInterfaces();
     }
 
     /**
@@ -715,21 +859,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param target
      * @return new context
      */
-    public MixinTargetContext createContextFor(TargetClassContext target) {
+    MixinTargetContext createContextFor(TargetClassContext target) {
         ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
-        return this.createPreProcessor(classNode).prepare().createContextFor(target);
-    }
-
-    /**
-     * Create a preprocessor based on this mixin's type
-     * 
-     * @return new preprocessor
-     */
-    private MixinPreProcessor createPreProcessor(ClassNode classNode) {
-        if (this.isInterfaceMixin) {
-            return new InterfaceMixinPreProcessor(this, classNode);
-        }
-        return new MixinPreProcessor(this, classNode);
+        return this.type.createPreProcessor(classNode).prepare().createContextFor(target);
     }
 
     /**
@@ -766,10 +898,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param mixinBytes New bytecode
      */
     void reloadMixin(byte[] mixinBytes) {
-        if (this.uninitialisedState != null) {
+        if (this.pendingState != null) {
             throw new IllegalStateException("Cannot reload mixin while it is initialising");
         }
-        this.uninitialisedState = new ReloadedState(this.validationState, mixinBytes);
+        this.pendingState = new Reloaded(this.state, mixinBytes);
         this.validate();
     }
 

@@ -22,11 +22,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
+package org.spongepowered.asm.mixin.injection.throwables;
 
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
 /**
  * Thrown when an injector fails a state check, for example if an injector
@@ -34,12 +34,12 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 public class InvalidInjectionException extends InvalidMixinException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
     
     private final InjectionInfo info;
 
-    public InvalidInjectionException(MixinTargetContext mixin, String message) {
-        super(mixin, message);
+    public InvalidInjectionException(IReferenceMapperContext context, String message) {
+        super(context, message);
         this.info = null;
     }
 
@@ -48,8 +48,8 @@ public class InvalidInjectionException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidInjectionException(MixinTargetContext mixin, Throwable cause) {
-        super(mixin, cause);
+    public InvalidInjectionException(IReferenceMapperContext context, Throwable cause) {
+        super(context, cause);
         this.info = null;
     }
 
@@ -58,8 +58,8 @@ public class InvalidInjectionException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidInjectionException(MixinTargetContext mixin, String message, Throwable cause) {
-        super(mixin, message, cause);
+    public InvalidInjectionException(IReferenceMapperContext context, String message, Throwable cause) {
+        super(context, message, cause);
         this.info = null;
     }
 

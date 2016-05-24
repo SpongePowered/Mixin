@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +50,9 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.JavaVersion;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -69,7 +70,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * The mixin environment manages global state information for the mixin
  * subsystem.
  */
-public class MixinEnvironment implements ITokenProvider {
+public final class MixinEnvironment implements ITokenProvider {
     
     /**
      * Environment phase, deliberately not implemented as an enum
@@ -440,9 +441,9 @@ public class MixinEnvironment implements ITokenProvider {
      */
     public static enum CompatibilityLevel {
         
-        JAVA_6(Opcodes.V1_6, false),
+        JAVA_6(6, Opcodes.V1_6, false),
         
-        JAVA_7(Opcodes.V1_7, false) {
+        JAVA_7(7, Opcodes.V1_7, false) {
 
             @Override
             boolean isSupported() {
@@ -451,7 +452,7 @@ public class MixinEnvironment implements ITokenProvider {
             
         },
         
-        JAVA_8(Opcodes.V1_8, true) {
+        JAVA_8(8, Opcodes.V1_8, true) {
 
             @Override
             boolean isSupported() {
@@ -460,15 +461,25 @@ public class MixinEnvironment implements ITokenProvider {
             
         };
         
+        private final int ver;
+        
         private final int classVersion;
         
         private final boolean supportsMethodsInInterfaces;
         
-        private CompatibilityLevel(int classVersion, boolean resolveMethodsInInterfaces) {
+        private CompatibilityLevel maxCompatibleLevel;
+        
+        private CompatibilityLevel(int ver, int classVersion, boolean resolveMethodsInInterfaces) {
+            this.ver = ver;
             this.classVersion = classVersion;
             this.supportsMethodsInInterfaces = resolveMethodsInInterfaces;
         }
         
+        @SuppressWarnings("unused")
+        private void setMaxCompatibleLevel(CompatibilityLevel maxCompatibleLevel) {
+            this.maxCompatibleLevel = maxCompatibleLevel;
+        }
+
         boolean isSupported() {
             return true;
         }
@@ -482,7 +493,22 @@ public class MixinEnvironment implements ITokenProvider {
         }
         
         public boolean isAtLeast(CompatibilityLevel level) {
-            return this.ordinal() >= level.ordinal(); 
+            return this.ver >= level.ver; 
+        }
+        
+        public boolean canElevateTo(CompatibilityLevel level) {
+            if (level == null || this.maxCompatibleLevel == null) {
+                return true;
+            }
+            return level.ver <= this.maxCompatibleLevel.ver;
+        }
+        
+        public boolean canSupport(CompatibilityLevel level) {
+            if (level == null) {
+                return true;
+            }
+            
+            return level.canElevateTo(this);
         }
         
     }
@@ -640,10 +666,7 @@ public class MixinEnvironment implements ITokenProvider {
      */
     private final boolean[] options;
     
-    /**
-     * Error handlers for environment
-     */
-    private final Set<String> errorHandlers = new LinkedHashSet<String>();
+//    private final Map<String, MixinConfig> configs;
     
     /**
      * List of token provider classes
@@ -758,7 +781,9 @@ public class MixinEnvironment implements ITokenProvider {
      * Get mixin configurations from the blackboard
      * 
      * @return list of registered mixin configs
+     * @deprecated no replacement
      */
+    @Deprecated
     public List<String> getMixinConfigs() {
         List<String> mixinConfigs = Blackboard.<List<String>>get(this.configsKey);
         if (mixinConfigs == null) {
@@ -773,23 +798,31 @@ public class MixinEnvironment implements ITokenProvider {
      * 
      * @param config Name of configuration resource to add
      * @return fluent interface
+     * @deprecated use Mixins::addConfiguration instead
      */
+    @Deprecated
     public MixinEnvironment addConfiguration(String config) {
+        Mixins.addConfiguration(config, this);
+        return this;
+    }
+
+    void registerConfig(String config) {
         List<String> configs = this.getMixinConfigs();
         if (!configs.contains(config)) {
             configs.add(config);
         }
-        return this;
     }
-    
+
     /**
      * Add a new error handler class to this environment
      * 
      * @param handlerName Handler class to add
      * @return fluent interface
+     * @deprecated use Mixins::registerErrorHandlerClass
      */
+    @Deprecated
     public MixinEnvironment registerErrorHandlerClass(String handlerName) {
-        this.errorHandlers.add(handlerName);
+        Mixins.registerErrorHandlerClass(handlerName);
         return this;
     }
     
@@ -858,9 +891,11 @@ public class MixinEnvironment implements ITokenProvider {
      * Get all registered error handlers for this environment
      * 
      * @return set of error handler class names
+     * @deprecated use Mixins::getErrorHandlerClasses
      */
+    @Deprecated
     public Set<String> getErrorHandlerClasses() {
-        return Collections.<String>unmodifiableSet(this.errorHandlers);
+        return Mixins.getErrorHandlerClasses();
     }
 
     /**
@@ -1160,7 +1195,9 @@ public class MixinEnvironment implements ITokenProvider {
      * 
      * @param level Level to set, ignored if less than the current level
      * @throws IllegalArgumentException if the specified level is not supported
+     * @deprecated set compatibility level in configuration
      */
+    @Deprecated
     public static void setCompatibilityLevel(CompatibilityLevel level) throws IllegalArgumentException {
         if (level != MixinEnvironment.compatibility && level.isAtLeast(MixinEnvironment.compatibility)) {
             if (!level.isSupported()) {

@@ -28,8 +28,9 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.MixinException;
-import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
 

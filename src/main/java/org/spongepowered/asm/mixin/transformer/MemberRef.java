@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**

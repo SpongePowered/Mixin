@@ -22,28 +22,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.throwables;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 
 /**
- * ClassNode for a MixinInfo
+ * Exception thrown for bad states when parsing/loading interface mixins
  */
-public class MixinClassNode extends ClassNode {
-    
-    private final MixinInfo mixin;
+public class InvalidInterfaceMixinException extends InvalidMixinException {
 
-    public MixinClassNode(MixinInfo mixin) {
-        this(Opcodes.ASM5, mixin);
+    private static final long serialVersionUID = 2L;
+
+    public InvalidInterfaceMixinException(IMixinInfo mixin, String message) {
+        super(mixin, message);
     }
 
-    public MixinClassNode(int api, MixinInfo mixin) {
-        super(api);
-        this.mixin = mixin;
+    public InvalidInterfaceMixinException(IReferenceMapperContext context, String message) {
+        super(context, message);
     }
 
-    public MixinInfo getMixin() {
-        return this.mixin;
+    public InvalidInterfaceMixinException(IMixinInfo mixin, Throwable cause) {
+        super(mixin, cause);
     }
+
+    public InvalidInterfaceMixinException(IReferenceMapperContext context, Throwable cause) {
+        super(context, cause);
+    }
+
+    public InvalidInterfaceMixinException(IMixinInfo mixin, String message, Throwable cause) {
+        super(mixin, message, cause);
+    }
+
+    public InvalidInterfaceMixinException(IReferenceMapperContext context, String message, Throwable cause) {
+        super(context, message, cause);
+    }
+
 }

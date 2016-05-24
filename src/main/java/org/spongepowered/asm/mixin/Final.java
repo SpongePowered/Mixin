@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.transformer.InvalidMixinException;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
 /**
  * This annotation has two uses:

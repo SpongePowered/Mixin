@@ -22,32 +22,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
-
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+package org.spongepowered.asm.mixin.throwables;
 
 /**
- * Thrown when an injection point cannot be parsed due to invalid data
+ * Base class for all mixin processor exceptions
  */
-public class InvalidInjectionPointException extends InvalidInjectionException {
+public class MixinException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
-    
-    public InvalidInjectionPointException(MixinTargetContext mixin, String format, Object... args) {
-        super(mixin, String.format(format, args));
-    }
-    
-    public InvalidInjectionPointException(InjectionInfo info, String format, Object... args) {
-        super(info, String.format(format, args));
-    }
-    
-    public InvalidInjectionPointException(MixinTargetContext mixin, Throwable cause, String format, Object... args) {
-        super(mixin, String.format(format, args), cause);
+
+    public MixinException() {
     }
 
-    public InvalidInjectionPointException(InjectionInfo info, Throwable cause, String format, Object... args) {
-        super(info, String.format(format, args), cause);
+    public MixinException(String message) {
+        super(message);
     }
-    
+
+    public MixinException(Throwable cause) {
+        super(cause);
+    }
+
+    public MixinException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

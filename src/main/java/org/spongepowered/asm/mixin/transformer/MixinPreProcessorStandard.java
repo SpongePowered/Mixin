@@ -45,13 +45,14 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.RemapperChain;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -74,7 +75,7 @@ import org.spongepowered.asm.util.Constants;
  * target-context-sensitive pass on the other hand can only operate on private
  * class members for obvious reasons.</p>  
  */
-class MixinPreProcessor {
+class MixinPreProcessorStandard {
     
     /**
      * Logger
@@ -95,7 +96,7 @@ class MixinPreProcessor {
     
     private boolean prepared, attached;
 
-    MixinPreProcessor(MixinInfo mixin, ClassNode classNode) {
+    MixinPreProcessorStandard(MixinInfo mixin, ClassNode classNode) {
         this.mixin = mixin;
         this.classNode = classNode;
         this.verboseLogging = mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERBOSE);
@@ -106,7 +107,7 @@ class MixinPreProcessor {
      * 
      * @return Prepared classnode
      */
-    MixinPreProcessor prepare() {
+    MixinPreProcessorStandard prepare() {
         if (!this.prepared) {
             this.prepared = true;
             
@@ -234,13 +235,13 @@ class MixinPreProcessor {
         }
         
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-        MethodNode target = MixinPreProcessor.findMethod(context.getTargetClass(), mixinMethod, annotation);
+        MethodNode target = MixinPreProcessorStandard.findMethod(context.getTargetClass(), mixinMethod, annotation);
         
         if (target == null) {
             if (!mustExist) {
                 return false;
             }
-            target = MixinPreProcessor.findRemappedMethod(context.getTargetClass(), mixinMethod);
+            target = MixinPreProcessorStandard.findRemappedMethod(context.getTargetClass(), mixinMethod);
             if (target == null) {
                 throw new InvalidMixinException(this.mixin, annotationType.getSimpleName() + " method " + mixinMethod.name
                         + " was not located in the target class");
@@ -292,12 +293,12 @@ class MixinPreProcessor {
             context.transformDescriptor(mixinField);
             
             Field field = this.mixin.getClassInfo().findField(mixinField);
-            FieldNode target = MixinPreProcessor.findField(context.getTargetClass(), mixinField, shadow);
+            FieldNode target = MixinPreProcessorStandard.findField(context.getTargetClass(), mixinField, shadow);
             if (target == null) {
                 if (shadow == null) {
                     continue;
                 }
-                target = MixinPreProcessor.findRemappedField(context.getTargetClass(), mixinField);
+                target = MixinPreProcessorStandard.findRemappedField(context.getTargetClass(), mixinField);
                 if (target == null) {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
                     throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
@@ -329,11 +330,11 @@ class MixinPreProcessor {
                 }
                 field.setDecoratedFinal(isFinal, isMutable);
 
-                if (this.verboseLogging && MixinApplicator.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
+                if (this.verboseLogging && MixinApplicatorStandard.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
                         ? "@Shadow field {}::{} is decorated with @Final but target is not final"
                         : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
-                    MixinPreProcessor.logger.warn(message, this.mixin, mixinField.name);
+                    MixinPreProcessorStandard.logger.warn(message, this.mixin, mixinField.name);
                 }
 
                 context.addShadowField(mixinField, field);
@@ -343,9 +344,9 @@ class MixinPreProcessor {
 
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-        if (MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)
-                && !MixinApplicator.hasFlag(field, Opcodes.ACC_PRIVATE)
-                && !MixinApplicator.hasFlag(field, Opcodes.ACC_SYNTHETIC)
+        if (MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_STATIC)
+                && !MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_PRIVATE)
+                && !MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_SYNTHETIC)
                 && shadow == null) {
             throw new InvalidMixinException(context, String.format("Mixin %s contains non-private static field %s:%s",
                     context, field.name, field.desc));
@@ -409,7 +410,7 @@ class MixinPreProcessor {
             }
         }
         
-        return MixinPreProcessor.findMethodRecursive(classNode, aliases, method.desc);
+        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, method.desc);
     }
 
     protected static MethodNode findRemappedMethod(ClassNode classNode, MethodNode method) {
@@ -422,7 +423,7 @@ class MixinPreProcessor {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(remappedName);
         
-        return MixinPreProcessor.findMethodRecursive(classNode, aliases, method.desc);
+        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, method.desc);
     }
     
     private static MethodNode findMethodRecursive(ClassNode classNode, Deque<String> aliases, String desc) {
@@ -437,7 +438,7 @@ class MixinPreProcessor {
             }
         }
 
-        return MixinPreProcessor.findMethodRecursive(classNode, aliases, desc);
+        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, desc);
     }
 
     protected static FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
@@ -450,7 +451,7 @@ class MixinPreProcessor {
             }
         }
         
-        return MixinPreProcessor.findFieldRecursive(classNode, aliases, field.desc);
+        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, field.desc);
     }
 
     protected static FieldNode findRemappedField(ClassNode classNode, FieldNode field) {
@@ -462,7 +463,7 @@ class MixinPreProcessor {
       
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(remappedName);
-        return MixinPreProcessor.findFieldRecursive(classNode, aliases, field.desc);
+        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, field.desc);
     }
     
     /**
@@ -484,6 +485,6 @@ class MixinPreProcessor {
             }
         }
 
-        return MixinPreProcessor.findFieldRecursive(classNode, aliases, desc);
+        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, desc);
     }
 }

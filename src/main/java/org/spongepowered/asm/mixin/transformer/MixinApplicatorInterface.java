@@ -28,22 +28,23 @@ import java.util.Map.Entry;
 
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinException;
 
 /**
  * Applicator for interface mixins, mainly just disables things which aren't
  * supported for interface mixins
  */
-public class InterfaceMixinApplicator extends MixinApplicator {
+public class MixinApplicatorInterface extends MixinApplicatorStandard {
 
     /**
      * ctor
      * 
      * @param context applier context
      */
-    InterfaceMixinApplicator(TargetClassContext context) {
+    MixinApplicatorInterface(TargetClassContext context) {
         super(context);
     }
     

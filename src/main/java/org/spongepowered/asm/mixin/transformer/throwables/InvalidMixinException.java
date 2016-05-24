@@ -22,28 +22,50 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util;
+package org.spongepowered.asm.mixin.transformer.throwables;
+
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Exception thrown when a constraint declaration is invalid
+ * Thrown by the mixin validator when a mixin fails a pre-flight check
  */
-public class InvalidConstraintException extends IllegalArgumentException {
+public class InvalidMixinException extends MixinException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
+    
+    private final IMixinInfo mixin;
 
-    public InvalidConstraintException() {
+    public InvalidMixinException(IMixinInfo mixin, String message) {
+        super(message);
+        this.mixin = mixin;
+    }
+    
+    public InvalidMixinException(IReferenceMapperContext context, String message) {
+        this(context.getMixin(), message);
     }
 
-    public InvalidConstraintException(String s) {
-        super(s);
-    }
-
-    public InvalidConstraintException(Throwable cause) {
+    public InvalidMixinException(IMixinInfo mixin, Throwable cause) {
         super(cause);
+        this.mixin = mixin;
     }
 
-    public InvalidConstraintException(String message, Throwable cause) {
+    public InvalidMixinException(IReferenceMapperContext context, Throwable cause) {
+        this(context.getMixin(), cause);
+    }
+    
+    public InvalidMixinException(IMixinInfo mixin, String message, Throwable cause) {
         super(message, cause);
+        this.mixin = mixin;
     }
-
+    
+    public InvalidMixinException(IReferenceMapperContext context, String message, Throwable cause) {
+        super(message, cause);
+        this.mixin = context.getMixin();
+    }
+    
+    public IMixinInfo getMixin() {
+        return this.mixin;
+    }
 }

@@ -22,12 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.verify;
 
 import java.util.List;
 
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.analysis.SimpleVerifier;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**
  * Verifier which handles class info lookups via {@link ClassInfo}

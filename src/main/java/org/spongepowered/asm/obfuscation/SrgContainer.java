@@ -28,7 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;

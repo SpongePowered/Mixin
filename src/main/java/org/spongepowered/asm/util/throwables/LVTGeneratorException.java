@@ -22,27 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin;
+package org.spongepowered.asm.util.throwables;
+
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Base class for all mixin processor exceptions
+ * Exception thrown when something goes horribly wrong whilst <s>summoning the
+ * antichrist</s> generating the LVT for a target method.
  */
-public class MixinException extends RuntimeException {
+public class LVTGeneratorException extends MixinException {
 
     private static final long serialVersionUID = 1L;
 
-    public MixinException() {
-    }
-
-    public MixinException(String message) {
+    public LVTGeneratorException(String message) {
         super(message);
     }
 
-    public MixinException(Throwable cause) {
-        super(cause);
-    }
-
-    public MixinException(String message, Throwable cause) {
+    public LVTGeneratorException(String message, Throwable cause) {
         super(message, cause);
     }
 

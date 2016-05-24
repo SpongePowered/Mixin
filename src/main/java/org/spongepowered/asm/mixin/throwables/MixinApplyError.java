@@ -22,24 +22,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
+package org.spongepowered.asm.mixin.throwables;
 
 /**
- * Thrown when an injector group fails an injection check
+ * Error to throw for required mixins when mixing of the mixin fails
  */
-public class InjectionValidationException extends Exception {
-    
+public class MixinApplyError extends Error {
+
     private static final long serialVersionUID = 1L;
-    
-    private final InjectorGroupInfo group;
-    
-    public InjectionValidationException(InjectorGroupInfo group, String message) {
+
+    public MixinApplyError(String message) {
         super(message);
-        this.group = group;
     }
-    
-    public InjectorGroupInfo getGroup() {
-        return this.group;
+
+    public MixinApplyError(Throwable cause) {
+        super(cause);
     }
-    
+
+    public MixinApplyError(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

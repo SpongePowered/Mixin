@@ -22,32 +22,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-/**
- * 
- */
-package org.spongepowered.asm.mixin.audit;
+package org.spongepowered.asm.mixin.transformer.throwables;
 
-import org.spongepowered.asm.mixin.MixinException;
-
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Exception raised when a class was loaded before mixins were able to be
- * applied.
+ * An exception that occurs when a mixin reloads and does something it is
+ * normally allowed to do but isn't due to reloading restrictions.
  */
-public class ClassAlreadyLoadedException extends MixinException {
-
-    private static final long serialVersionUID = 1L;
+public class MixinReloadException extends MixinException {
     
-    public ClassAlreadyLoadedException(String message) {
+    private static final long serialVersionUID = 2L;
+
+    private final IMixinInfo mixinInfo;
+
+    public MixinReloadException(IMixinInfo mixinInfo, String message) {
         super(message);
+        this.mixinInfo = mixinInfo;
     }
 
-    public ClassAlreadyLoadedException(Throwable cause) {
-        super(cause);
+    public IMixinInfo getMixinInfo() {
+        return this.mixinInfo;
     }
-
-    public ClassAlreadyLoadedException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
+    
 }

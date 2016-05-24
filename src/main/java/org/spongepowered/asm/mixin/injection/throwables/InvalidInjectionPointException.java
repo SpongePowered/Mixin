@@ -22,24 +22,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util;
+package org.spongepowered.asm.mixin.injection.throwables;
 
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 
 /**
- * Exception thrown when something goes horribly wrong whilst <s>summoning the
- * antichrist</s> generating the LVT for a target method.
+ * Thrown when an injection point cannot be parsed due to invalid data
  */
-public class LVTGeneratorException extends MixinException {
+public class InvalidInjectionPointException extends InvalidInjectionException {
 
-    private static final long serialVersionUID = 1L;
-
-    public LVTGeneratorException(String message) {
-        super(message);
+    private static final long serialVersionUID = 2L;
+    
+    public InvalidInjectionPointException(IReferenceMapperContext context, String format, Object... args) {
+        super(context, String.format(format, args));
+    }
+    
+    public InvalidInjectionPointException(InjectionInfo info, String format, Object... args) {
+        super(info, String.format(format, args));
+    }
+    
+    public InvalidInjectionPointException(IReferenceMapperContext context, Throwable cause, String format, Object... args) {
+        super(context, String.format(format, args), cause);
     }
 
-    public LVTGeneratorException(String message, Throwable cause) {
-        super(message, cause);
+    public InvalidInjectionPointException(InjectionInfo info, Throwable cause, String format, Object... args) {
+        super(info, String.format(format, args), cause);
     }
-
+    
 }

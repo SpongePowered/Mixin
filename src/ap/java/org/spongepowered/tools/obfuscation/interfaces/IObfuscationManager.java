@@ -25,7 +25,7 @@
 package org.spongepowered.tools.obfuscation.interfaces;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationData;
 import org.spongepowered.tools.obfuscation.TypeHandle;

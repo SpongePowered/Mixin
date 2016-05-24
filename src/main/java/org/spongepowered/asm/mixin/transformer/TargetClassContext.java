@@ -213,15 +213,15 @@ class TargetClassContext {
             throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
-        MixinApplicator applicator = this.createApplicator();
+        MixinApplicatorStandard applicator = this.createApplicator();
         applicator.apply(this.mixins);
     }
 
-    private MixinApplicator createApplicator() {
+    private MixinApplicatorStandard createApplicator() {
         if (this.classInfo.isInterface()) {
-            return new InterfaceMixinApplicator(this);
+            return new MixinApplicatorInterface(this);
         }
-        return new MixinApplicator(this);
+        return new MixinApplicatorStandard(this);
     }
 
 

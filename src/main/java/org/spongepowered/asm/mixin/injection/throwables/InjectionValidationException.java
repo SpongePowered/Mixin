@@ -22,25 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.injection.throwables;
 
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 
 /**
- * An exception that occurs when a mixin reloads and does something it is
- * normally allowed to do but isn't due to reloading restrictions.
+ * Thrown when an injector group fails an injection check
  */
-public class MixinReloadException extends MixinException {
+public class InjectionValidationException extends Exception {
+    
     private static final long serialVersionUID = 1L;
-
-    private final MixinInfo mixinInfo;
-
-    public MixinReloadException(MixinInfo mixinInfo, String message) {
+    
+    private final InjectorGroupInfo group;
+    
+    public InjectionValidationException(InjectorGroupInfo group, String message) {
         super(message);
-        this.mixinInfo = mixinInfo;
+        this.group = group;
     }
-
-    public MixinInfo getMixinInfo() {
-        return this.mixinInfo;
+    
+    public InjectorGroupInfo getGroup() {
+        return this.group;
     }
+    
 }

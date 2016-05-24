@@ -26,7 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
  * Mixin transformer module which runs CheckClassAdapter on the post-mixin

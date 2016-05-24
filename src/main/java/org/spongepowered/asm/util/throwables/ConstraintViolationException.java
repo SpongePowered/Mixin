@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util;
+package org.spongepowered.asm.util.throwables;
 
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 

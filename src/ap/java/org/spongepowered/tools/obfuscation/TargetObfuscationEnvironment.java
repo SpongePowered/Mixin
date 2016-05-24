@@ -42,7 +42,7 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
+import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.obfuscation.SrgContainer;
 import org.spongepowered.asm.obfuscation.SrgField;

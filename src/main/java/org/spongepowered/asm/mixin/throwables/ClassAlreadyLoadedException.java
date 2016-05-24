@@ -22,50 +22,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
-
-import org.spongepowered.asm.mixin.MixinException;
+/**
+ * 
+ */
+package org.spongepowered.asm.mixin.throwables;
 
 /**
- * Thrown by the mixin validator when a mixin fails a pre-flight check
+ * Exception raised when a class was loaded before mixins were able to be
+ * applied.
  */
-public class InvalidMixinException extends MixinException {
+public class ClassAlreadyLoadedException extends MixinException {
 
     private static final long serialVersionUID = 1L;
     
-    private final MixinInfo mixin;
-
-    public InvalidMixinException(MixinInfo mixin, String message) {
+    public ClassAlreadyLoadedException(String message) {
         super(message);
-        this.mixin = mixin;
-    }
-    
-    public InvalidMixinException(MixinTargetContext mixin, String message) {
-        super(message);
-        this.mixin = mixin.getInfo();
     }
 
-    public InvalidMixinException(MixinInfo mixin, Throwable message) {
-        super(message);
-        this.mixin = mixin;
+    public ClassAlreadyLoadedException(Throwable cause) {
+        super(cause);
     }
 
-    public InvalidMixinException(MixinTargetContext mixin, Throwable message) {
-        super(message);
-        this.mixin = mixin.getInfo();
-    }
-    
-    public InvalidMixinException(MixinInfo mixin, String message, Throwable cause) {
+    public ClassAlreadyLoadedException(String message, Throwable cause) {
         super(message, cause);
-        this.mixin = mixin;
     }
-    
-    public InvalidMixinException(MixinTargetContext mixin, String message, Throwable cause) {
-        super(message, cause);
-        this.mixin = mixin.getInfo();
-    }
-    
-    public MixinInfo getMixin() {
-        return this.mixin;
-    }
+
 }

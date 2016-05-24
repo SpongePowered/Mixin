@@ -42,10 +42,13 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
         super(uri);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void prepare() {
         String compatibilityLevel = this.attributes.get(MixinLaunchAgentDefault.MFATT_COMPATIBILITY);
         if (compatibilityLevel != null) {
+            MixinLaunchAgentAbstract.logger.warn("{} Setting mixin compatibility level via manifest is deprecated, "
+                    + "use 'compatibilityLevel' key in config instead", this.container);
             MixinTweaker.setCompatibilityLevel(compatibilityLevel);
         }
         

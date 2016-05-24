@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
  * Thrown when a {@link MemberInfo} fails basic syntax validation

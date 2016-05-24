@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.Mixins;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
@@ -213,6 +214,7 @@ public class MixinTweaker implements ITweaker {
      * 
      * @param level compatibility level as a string
      */
+    @Deprecated
     static void setCompatibilityLevel(String level) {
         try {
             CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase());
@@ -234,13 +236,14 @@ public class MixinTweaker implements ITweaker {
     static void addConfig(String config) {
         if (config.endsWith(".json")) {
             MixinTweaker.logger.debug("Registering mixin config: {}", config);
-            MixinEnvironment.getDefaultEnvironment().addConfiguration(config);
+            Mixins.addConfiguration(config);
         } else if (config.contains(".json@")) {
             int pos = config.indexOf(".json@");
             String phaseName = config.substring(pos + 6);
             config = config.substring(0, pos + 5);
             Phase phase = Phase.forName(phaseName);
             if (phase != null) {
+                MixinTweaker.logger.warn("Setting config phase via manifest is deprecated: {}. Specify target in config instead", config);
                 MixinTweaker.logger.debug("Registering mixin config: {}", config);
                 MixinEnvironment.getEnvironment(phase).addConfiguration(config);
             }

@@ -49,6 +49,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
 import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 

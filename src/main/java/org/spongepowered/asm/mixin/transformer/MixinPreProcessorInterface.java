@@ -30,12 +30,13 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinException;
 
 /**
  * Bytecode preprocessor for interface mixins, simply performs some additional
  * verification for things which are unsupported in interfaces
  */
-class InterfaceMixinPreProcessor extends MixinPreProcessor {
+class MixinPreProcessorInterface extends MixinPreProcessorStandard {
     
     /**
      * Ctor
@@ -43,7 +44,7 @@ class InterfaceMixinPreProcessor extends MixinPreProcessor {
      * @param mixin Mixin info
      * @param classNode Mixin classnode
      */
-    InterfaceMixinPreProcessor(MixinInfo mixin, ClassNode classNode) {
+    MixinPreProcessorInterface(MixinInfo mixin, ClassNode classNode) {
         super(mixin, classNode);
     }
 
@@ -55,7 +56,7 @@ class InterfaceMixinPreProcessor extends MixinPreProcessor {
     @Override
     protected void prepareMethod(MethodNode mixinMethod, Method method) {
         // I have no idea how the hell you'd compile this, but we make sure anyway!
-        if (!MixinApplicator.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
+        if (!MixinApplicatorStandard.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "
                     + this.mixin);
         }
@@ -72,7 +73,7 @@ class InterfaceMixinPreProcessor extends MixinPreProcessor {
      */
     @Override
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
-        if (!MixinApplicator.hasFlag(field, Opcodes.ACC_STATIC)) {
+        if (!MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_STATIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
                     + this.mixin);
         }

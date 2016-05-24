@@ -48,7 +48,8 @@ import org.spongepowered.asm.lib.tree.analysis.Frame;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
-import org.spongepowered.asm.mixin.transformer.MixinVerifier;
+import org.spongepowered.asm.mixin.transformer.verify.MixinVerifier;
+import org.spongepowered.asm.util.throwables.LVTGeneratorException;
 
 /**
  * Utility methods for working with local variables using ASM

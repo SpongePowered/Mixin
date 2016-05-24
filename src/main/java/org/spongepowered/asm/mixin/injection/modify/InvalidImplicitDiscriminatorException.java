@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.modify;
 
-import org.spongepowered.asm.mixin.MixinException;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
  * Thrown when an <em>implicit</em> discriminator (no args) fails to identify

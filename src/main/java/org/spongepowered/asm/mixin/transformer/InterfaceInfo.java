@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Interface;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**

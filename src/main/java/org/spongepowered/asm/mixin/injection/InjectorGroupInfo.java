@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**

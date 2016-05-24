@@ -32,6 +32,8 @@ import java.lang.annotation.Target;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 
 /**
  * Specifies that this mixin method should inject a callback (or

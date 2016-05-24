@@ -22,25 +22,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.refmap;
+
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 /**
- * Error to throw for things which really shouldn't happen
+ * Context for performing reference mapping
  */
-public class MixinTransformerError extends Error {
+public interface IReferenceMapperContext {
+    
+    /**
+     * Get the mixin info
+     */
+    public abstract IMixinInfo getMixin();
 
-    private static final long serialVersionUID = 1L;
+    /**
+     * Get the internal mixin class name
+     * 
+     * @return internal class name
+     */
+    public abstract String getClassRef();
 
-    public MixinTransformerError(String message) {
-        super(message);
-    }
-
-    public MixinTransformerError(Throwable cause) {
-        super(cause);
-    }
-
-    public MixinTransformerError(String message, Throwable cause) {
-        super(message, cause);
-    }
+    /**
+     * Get the reference mapper for this mixin
+     * 
+     * @return ReferenceMapper instance (can be null)
+     */
+    public abstract ReferenceMapper getReferenceMapper();
 
 }

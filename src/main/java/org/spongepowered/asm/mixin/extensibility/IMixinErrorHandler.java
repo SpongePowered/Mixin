@@ -51,8 +51,9 @@ public interface IMixinErrorHandler {
         WARN(Level.WARN),
         
         /**
-         * Throw a {@link org.spongepowered.asm.mixin.MixinApplyError} to halt
-         * further processing if possible
+         * Throw a
+         * {@link org.spongepowered.asm.mixin.throwables.MixinApplyError} to
+         * halt further processing if possible
          */
         ERROR(Level.FATAL);
         

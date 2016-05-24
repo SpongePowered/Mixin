@@ -44,16 +44,20 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.SoftOverride;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.InjectionError;
-import org.spongepowered.asm.mixin.injection.InjectionValidationException;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -766,6 +770,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
         if (version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
             throw new InvalidMixinException(this, "Unsupported mixin class version " + version);
         }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapperContext
+     *      #getMixin()
+     */
+    @Override
+    public IMixinInfo getMixin() {
+        return this.mixin;
     }
 
     /**

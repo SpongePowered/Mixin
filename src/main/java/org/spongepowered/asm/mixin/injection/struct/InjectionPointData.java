@@ -31,7 +31,7 @@ import java.util.Map;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.InvalidInjectionPointException;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
