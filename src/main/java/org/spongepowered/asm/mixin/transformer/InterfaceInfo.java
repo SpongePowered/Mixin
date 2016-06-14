@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
@@ -37,15 +38,9 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
 
-import com.sun.xml.internal.ws.org.objectweb.asm.Opcodes;
-
 /**
  * Information about an interface being runtime-patched onto a mixin target
  * class, see {@link org.spongepowered.asm.mixin.Implements Implements}
- */
-/**
- * @author adam
- *
  */
 public class InterfaceInfo extends TreeInfo {
     
