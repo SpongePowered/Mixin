@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.SortedSet;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -91,6 +93,11 @@ class TargetClassContext {
      * Do not remap injector handler methods (debug option)
      */
     private final boolean disableHandlerRemap;
+    
+    /**
+     * Unique method index 
+     */
+    private int nextUniqueMethodIndex = 0;
 
     /**
      * True once mixins have been applied to this class 
@@ -110,6 +117,11 @@ class TargetClassContext {
         this.classInfo = ClassInfo.fromClassNode(classNode);
         this.mixins = mixins;
         this.disableHandlerRemap = MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_DISABLE_HANDLER_REMAP);
+    }
+    
+    @Override
+    public String toString() {
+        return this.className;
     }
     
     public boolean isApplied() {
@@ -154,6 +166,13 @@ class TargetClassContext {
     public List<MethodNode> getMethods() {
         return this.classNode.methods;
     }
+    
+    /**
+     * Get the class fields (from the tree)
+     */
+    public List<FieldNode> getFields() {
+        return this.classNode.fields;
+    }
 
     /**
      * Get the target class metadata
@@ -168,7 +187,44 @@ class TargetClassContext {
     public SortedSet<MixinInfo> getMixins() {
         return this.mixins;
     }
+
+    MethodNode findAliasedMethod(Deque<String> aliases, String desc) {
+        String alias = aliases.poll();
+        if (alias == null) {
+            return null;
+        }
+        
+        for (MethodNode target : this.classNode.methods) {
+            if (target.name.equals(alias) && target.desc.equals(desc)) {
+                return target;
+            }
+        }
+
+        return this.findAliasedMethod(aliases, desc);
+    }
     
+    /**
+     * Finds a field in the target class
+     * 
+     * @param aliases 
+     * @param desc
+     * @return Target field  or null if not found
+     */
+    FieldNode findAliasedField(Deque<String> aliases, String desc) {
+        String alias = aliases.poll();
+        if (alias == null) {
+            return null;
+        }
+        
+        for (FieldNode target : this.classNode.fields) {
+            if (target.name.equals(alias) && target.desc.equals(desc)) {
+                return target;
+            }
+        }
+
+        return this.findAliasedField(aliases, desc);
+    }
+
     /**
      * Get a target method handle from the target class
      * 
@@ -204,6 +260,10 @@ class TargetClassContext {
         }
         return String.format("%s$%s$%d", InjectionInfo.getInjectorPrefix(annotation), method.name, id.value);
     }
+    
+    public String getUniqueName(MethodNode method) {
+        return String.format("md%s$%s$%d", this.sessionId.substring(30), method.name, this.nextUniqueMethodIndex++);
+    }
 
     /**
      * Apply mixins to this class
@@ -226,7 +286,7 @@ class TargetClassContext {
 
 
     /**
-     * Process {@link Debug) annotations on the class after application
+     * Process {@link Debug} annotations on the class after application
      */
     public void processDebugTasks() {
         if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {

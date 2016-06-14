@@ -1025,6 +1025,10 @@ public class ASMHelper {
         return arg == null ? "" : arg.toString();
     }
 
+    public static String getSimpleName(Class<? extends Annotation> annotationType) {
+        return String.format("@%s", annotationType.getSimpleName());
+    }
+    
     public static String getSimpleName(AnnotationNode annotation) {
         return ASMHelper.getSimpleName(annotation.desc);
     }

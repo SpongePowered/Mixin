@@ -25,10 +25,7 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.lang.annotation.Annotation;
-import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -52,7 +49,6 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -92,14 +88,16 @@ class MixinPreProcessorStandard {
      */
     protected final ClassNode classNode;
     
-    private final boolean verboseLogging;
+    private final boolean verboseLogging, strictUnique;
     
     private boolean prepared, attached;
 
     MixinPreProcessorStandard(MixinInfo mixin, ClassNode classNode) {
         this.mixin = mixin;
         this.classNode = classNode;
-        this.verboseLogging = mixin.getParent().getEnvironment().getOption(Option.DEBUG_VERBOSE);
+        MixinEnvironment env = mixin.getParent().getEnvironment();
+        this.verboseLogging = env.getOption(Option.DEBUG_VERBOSE);
+        this.strictUnique = env.getOption(Option.DEBUG_UNIQUE);
     }
 
     /**
@@ -195,13 +193,18 @@ class MixinPreProcessorStandard {
                 continue;
             }
             
-            if (this.processMemberMethod(context, mixinMethod, Shadow.class, true, true)) {
+            if (this.processShadowMethod(context, mixinMethod)) {
                 iter.remove();
                 context.addShadowMethod(mixinMethod);
                 continue;
             }
 
-            if (this.processMemberMethod(context, mixinMethod, Overwrite.class, false, false)) {
+            if (this.processOverwriteMethod(context, mixinMethod)) {
+                continue;
+            }
+
+            if (this.processUniqueMethod(context, mixinMethod)) {
+                iter.remove();
                 continue;
             }
             
@@ -222,28 +225,50 @@ class MixinPreProcessorStandard {
         
         String handlerName = context.getHandlerName(annotation, mixinMethod, surrogate);
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+
+        if (method.isUnique()) {
+            MixinPreProcessorStandard.logger.warn("Redundant @Unique on injector method {} in {}. Injectors are implicitly unique", method, context);
+        }
+        
         method.renameTo(handlerName);
         mixinMethod.name = handlerName;
+        
         return true;
     }
     
-    protected boolean processMemberMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> annotationType,
-            boolean mustExist, boolean mustBePrivate) {
-        AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, annotationType);
+    protected boolean processShadowMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        return this.processSpecialMethod(context, mixinMethod, Shadow.class, false);
+    }
+    
+    protected boolean processOverwriteMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        return this.processSpecialMethod(context, mixinMethod, Overwrite.class, true);
+    }
+    
+    protected boolean processSpecialMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> type, boolean overwrite) {
+        
+        AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, type);
         if (annotation == null) {
             return false;
         }
         
+        if (this.mixin.isUnique() && overwrite) {
+            throw new InvalidMixinException(this.mixin, "@Overwrite method " + mixinMethod.name + " found in a @Unique mixin");
+        }
+        
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-        MethodNode target = MixinPreProcessorStandard.findMethod(context.getTargetClass(), mixinMethod, annotation);
+        MethodNode target = context.findMethod(mixinMethod, annotation);
+        
+        if (method.isUnique()) {
+            throw new InvalidMixinException(this.mixin, ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be @Unique");
+        }
         
         if (target == null) {
-            if (!mustExist) {
+            if (overwrite) {
                 return false;
             }
-            target = MixinPreProcessorStandard.findRemappedMethod(context.getTargetClass(), mixinMethod);
+            target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, annotationType.getSimpleName() + " method " + mixinMethod.name
+                throw new InvalidMixinException(this.mixin, ASMHelper.getSimpleName(type) + " method " + mixinMethod.name
                         + " was not located in the target class");
             }
             mixinMethod.name = target.name;
@@ -255,7 +280,7 @@ class MixinPreProcessorStandard {
         }
         
         if (!target.name.equals(mixinMethod.name)) {
-            if (mustBePrivate && (target.access & Opcodes.ACC_PRIVATE) == 0) {
+            if (!overwrite && (target.access & Opcodes.ACC_PRIVATE) == 0) {
                 throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
             }
             
@@ -266,6 +291,37 @@ class MixinPreProcessorStandard {
         return true;
     }
 
+    protected boolean processUniqueMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+        if (method == null || (!method.isUnique() && !this.mixin.isUnique())) {
+            return false;
+        }
+        
+        MethodNode target = context.findMethod(mixinMethod, null);
+        if (target == null) {
+            return false;
+        }
+        
+        if ((mixinMethod.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) != 0) {
+            String uniqueName = context.getUniqueName(mixinMethod);
+            MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique method {}{} to {} in {}",
+                    mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+            mixinMethod.name = uniqueName;
+            method.renameTo(uniqueName);
+            return false;
+        }
+
+        if (this.strictUnique) {
+            throw new InvalidMixinException(this.mixin, "Method conflict, @Unique method " + mixinMethod.name + " in " + this.mixin
+                    + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
+        }
+        
+        MixinPreProcessorStandard.logger.warn("Discarding @Unique public method {} in {} because it already exists in {}", mixinMethod.name,
+                this.mixin, context.getTarget());
+
+        return true;
+    }
+    
     protected void processMethod(MethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
         if (method == null) {
@@ -293,12 +349,12 @@ class MixinPreProcessorStandard {
             context.transformDescriptor(mixinField);
             
             Field field = this.mixin.getClassInfo().findField(mixinField);
-            FieldNode target = MixinPreProcessorStandard.findField(context.getTargetClass(), mixinField, shadow);
+            FieldNode target = context.findField(mixinField, shadow);
             if (target == null) {
                 if (shadow == null) {
                     continue;
                 }
-                target = MixinPreProcessorStandard.findRemappedField(context.getTargetClass(), mixinField);
+                target = context.findRemappedField(mixinField);
                 if (target == null) {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
                     throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
@@ -400,91 +456,4 @@ class MixinPreProcessorStandard {
         }
     }
 
-    protected static MethodNode findMethod(ClassNode classNode, MethodNode method, AnnotationNode annotation) {
-        Deque<String> aliases = new LinkedList<String>();
-        aliases.add(method.name);
-        if (annotation != null) {
-            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(annotation, "aliases");
-            if (aka != null) {
-                aliases.addAll(aka);
-            }
-        }
-        
-        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, method.desc);
-    }
-
-    protected static MethodNode findRemappedMethod(ClassNode classNode, MethodNode method) {
-        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
-        String remappedName = remapperChain.mapMethodName(classNode.name, method.name, method.desc);
-        if (remappedName.equals(method.name)) {
-            return null;
-        }
-
-        Deque<String> aliases = new LinkedList<String>();
-        aliases.add(remappedName);
-        
-        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, method.desc);
-    }
-    
-    private static MethodNode findMethodRecursive(ClassNode classNode, Deque<String> aliases, String desc) {
-        String alias = aliases.poll();
-        if (alias == null) {
-            return null;
-        }
-        
-        for (MethodNode target : classNode.methods) {
-            if (target.name.equals(alias) && target.desc.equals(desc)) {
-                return target;
-            }
-        }
-
-        return MixinPreProcessorStandard.findMethodRecursive(classNode, aliases, desc);
-    }
-
-    protected static FieldNode findField(ClassNode classNode, FieldNode field, AnnotationNode shadow) {
-        Deque<String> aliases = new LinkedList<String>();
-        aliases.add(field.name);
-        if (shadow != null) {
-            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(shadow, "aliases");
-            if (aka != null) {
-                aliases.addAll(aka);
-            }
-        }
-        
-        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, field.desc);
-    }
-
-    protected static FieldNode findRemappedField(ClassNode classNode, FieldNode field) {
-        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
-        String remappedName = remapperChain.mapFieldName(classNode.name, field.name, field.desc);
-        if (remappedName.equals(field.name)) {
-            return null;
-        }
-      
-        Deque<String> aliases = new LinkedList<String>();
-        aliases.add(remappedName);
-        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, field.desc);
-    }
-    
-    /**
-     * Finds a field in the target class
-     * 
-     * @param aliases 
-     * @param desc
-     * @return Target field  or null if not found
-     */
-    private static FieldNode findFieldRecursive(ClassNode classNode, Deque<String> aliases, String desc) {
-        String alias = aliases.poll();
-        if (alias == null) {
-            return null;
-        }
-        
-        for (FieldNode target : classNode.fields) {
-            if (target.name.equals(alias) && target.desc.equals(desc)) {
-                return target;
-            }
-        }
-
-        return MixinPreProcessorStandard.findFieldRecursive(classNode, aliases, desc);
-    }
 }

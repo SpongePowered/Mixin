@@ -756,7 +756,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * 
      * @param configFile
      * @param outer fallback environment
-     * @return
+     * @return new Config
      */
     static Config create(String configFile, MixinEnvironment outer) {
         try {

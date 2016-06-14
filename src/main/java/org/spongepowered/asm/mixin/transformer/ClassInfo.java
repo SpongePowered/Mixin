@@ -46,8 +46,10 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mutable;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
+import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -59,8 +61,8 @@ import com.google.common.collect.ImmutableSet;
  */
 public class ClassInfo extends TreeInfo {
 
-    public static final int INCLUDE_PRIVATE = 0x0002;
-    public static final int INCLUDE_STATIC = 0x0008;
+    public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
+    public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
     public static final int INCLUDE_ALL = ClassInfo.INCLUDE_PRIVATE | ClassInfo.INCLUDE_STATIC;
 
     /**
@@ -334,10 +336,13 @@ public class ClassInfo extends TreeInfo {
     public class Method extends Member {
 
         private final List<FrameData> frames;
+        
+        private boolean unique;
 
         public Method(Member member) {
             super(member);
             this.frames = member instanceof Method ? ((Method)member).frames : null;
+            this.unique = member instanceof Method ? ((Method)member).unique : false;
         }
 
         public Method(MethodNode method) {
@@ -347,21 +352,25 @@ public class ClassInfo extends TreeInfo {
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
             this.frames = this.gatherFrames(method);
+            this.unique = ASMHelper.getVisibleAnnotation(method, Unique.class) != null;
         }
 
         public Method(String name, String desc) {
             super(Type.METHOD, name, desc, Opcodes.ACC_PUBLIC, false);
             this.frames = null;
+            this.unique = false;
         }
 
         public Method(String name, String desc, int access) {
             super(Type.METHOD, name, desc, access, false);
             this.frames = null;
+            this.unique = false;
         }
 
         public Method(String name, String desc, int access, boolean injected) {
             super(Type.METHOD, name, desc, access, injected);
             this.frames = null;
+            this.unique = false;
         }
 
         private List<FrameData> gatherFrames(MethodNode method) {
@@ -377,6 +386,14 @@ public class ClassInfo extends TreeInfo {
 
         public List<FrameData> getFrames() {
             return this.frames;
+        }
+        
+        public boolean isUnique() {
+            return this.unique;
+        }
+        
+        public void setUnique(boolean unique) {
+            this.unique = unique;
         }
 
         @Override

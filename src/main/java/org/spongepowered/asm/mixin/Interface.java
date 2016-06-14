@@ -53,4 +53,12 @@ public @interface Interface {
      */
     public String prefix();
 
+    /**
+     * If set to <tt>true</tt>, all methods implementing this interface are
+     * treated as if they were individually decorated with {@link Unique}
+     * 
+     * @return true to mark all implementing methods as unique
+     */
+    public boolean unique() default false;
+    
 }

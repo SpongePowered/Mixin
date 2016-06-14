@@ -233,6 +233,7 @@ public class MixinTweaker implements ITweaker {
      * 
      * @param config config resource name, does not require a leading /
      */
+    @SuppressWarnings("deprecation")
     static void addConfig(String config) {
         if (config.endsWith(".json")) {
             MixinTweaker.logger.debug("Registering mixin config: {}", config);

@@ -47,9 +47,11 @@ import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -110,6 +112,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         private boolean detachedSuper;
 
         /**
+         * True if this mixin is decorated with {@link Unique}
+         */
+        private boolean unique;
+
+        /**
          * All interfaces implemented by this mixin, including soft
          * implementations
          */
@@ -137,8 +144,16 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
         State(byte[] mixinBytes, ClassInfo classInfo) {
             this.mixinBytes = mixinBytes;
+            this.connect();
+            this.classInfo = classInfo != null ? classInfo : ClassInfo.fromClassNode(this.getClassNode());
+        }
+
+        private void connect() {
             this.classNode = this.createClassNode(0);
-            this.classInfo = classInfo != null ? classInfo : ClassInfo.fromClassNode(this.classNode);
+        }
+
+        private void complete() {
+            this.classNode = null;
         }
 
         ClassInfo getClassInfo() {
@@ -155,6 +170,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
         boolean isDetachedSuper() {
             return this.detachedSuper;
+        }
+        
+        boolean isUnique() {
+            return this.unique;
         }
 
         List<? extends InterfaceInfo> getSoftImplements() {
@@ -192,6 +211,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             type.validate(this, targetClasses);
 
             this.detachedSuper = type.isDetachedSuper();
+            this.unique = ASMHelper.getVisibleAnnotation(this.getClassNode(), Unique.class) != null;
 
             // Pre-flight checks
             this.validateInner();
@@ -206,7 +226,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.validateChanges(type, targetClasses);
             
             // Null out the validation classnode
-            this.classNode = null;            
+            this.complete();
         }
 
         private void validateInner() {
@@ -380,7 +400,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * Get whether this mixin is detached super, must call {@link #validate}
          * first
          * 
-         * @return
+         * @return true if super is detached
          */
         boolean isDetachedSuper() {
             return this.detached;
@@ -547,6 +567,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Mixin type 
      */
     private final transient SubType type;
+    
+    /**
+     * Strict target checks enabled
+     */
+    private final transient boolean strict;
 
     /**
      * Holds state that currently is not fully initialised or validated
@@ -566,18 +591,19 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param runTransformers
      * @param plugin 
      * @param suppressPlugin 
-     * @throws ClassNotFoundException 
      */
     MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin) {
         this.parent = parent;
         this.name = mixinName;
         this.className = parent.getMixinPackage() + mixinName;
         this.plugin = plugin;
-        this.phase = MixinEnvironment.getCurrentEnvironment().getPhase();
+        this.phase = parent.getEnvironment().getPhase();
+        this.strict = parent.getEnvironment().getOption(Option.DEBUG_TARGETS);
         
         // Read the class bytes and transform
         try {
-            this.pendingState = new State(this.loadMixinClass(this.className, runTransformers));
+            byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
+            this.pendingState = new State(mixinBytes);
             this.info = this.pendingState.getClassInfo();
             this.type = this.initType();
         } catch (Exception ex) {
@@ -627,7 +653,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * 
      * @param classNode
      * @param suppressPlugin 
-     * @return
+     * @return target class list read from classNode
      */
     protected List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
         if (classNode == null) {
@@ -672,7 +698,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             targetName = targetName.replace('/', '.');
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetName, this.className)) {
                 ClassInfo targetInfo = this.getTarget(targetName, checkPublic);
-                if (!outTargets.contains(targetInfo)) {
+                if (targetInfo != null && !outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
                     targetInfo.addMixin(this);
                 }
@@ -683,21 +709,29 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private ClassInfo getTarget(String targetName, boolean checkPublic) throws InvalidMixinException {
         ClassInfo targetInfo = ClassInfo.forName(targetName);
         if (targetInfo == null) {
-            throw new InvalidMixinException(this, "@Mixin target " + targetName + " was not found " + this);
+            this.handleTargetError("@Mixin target " + targetName + " was not found " + this);
+            return null;
         }
         this.type.validateTarget(targetName, targetInfo);
         if (checkPublic && targetInfo.isPublic()) {
-            throw new InvalidMixinException(this, "@Mixin target " + targetName + " is public in " + this
-                    + " and must be specified in value");
+            this.handleTargetError("@Mixin target " + targetName + " is public in " + this + " and should be specified in value");
         }
         return targetInfo;
+    }
+
+    private void handleTargetError(String message) {
+        if (this.strict) {
+            this.logger.error(message);
+            throw new InvalidMixinException(this, message);
+        }
+        this.logger.warn(message);
     }
 
     /**
      * Read the priority from the {@link Mixin} annotation
      * 
      * @param classNode
-     * @return
+     * @return priority read from classNode
      */
     protected int readPriority(ClassNode classNode) {
         if (classNode == null) {
@@ -790,6 +824,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public boolean isDetachedSuper() {
         return this.getState().isDetachedSuper();
+    }
+
+    /**
+     * True if this mixin is decorated with {@link Unique}
+     */
+    public boolean isUnique() {
+        return this.getState().isUnique();
     }
 
     /**
@@ -958,4 +999,5 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         return null;
     }
+    
 }

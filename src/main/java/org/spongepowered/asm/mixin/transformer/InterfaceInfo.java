@@ -31,14 +31,21 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Interface;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
 
+import com.sun.xml.internal.ws.org.objectweb.asm.Opcodes;
+
 /**
  * Information about an interface being runtime-patched onto a mixin target
  * class, see {@link org.spongepowered.asm.mixin.Implements Implements}
+ */
+/**
+ * @author adam
+ *
  */
 public class InterfaceInfo extends TreeInfo {
     
@@ -59,6 +66,12 @@ public class InterfaceInfo extends TreeInfo {
     private final Type iface;
     
     /**
+     * True if all methods implementing this interface should be treated as
+     * unique
+     */
+    private final boolean unique;
+    
+    /**
      * Method signatures in the interface, lazy loaded
      */
     private Set<String> methods;
@@ -70,7 +83,7 @@ public class InterfaceInfo extends TreeInfo {
      * @param prefix Method prefix
      * @param iface Interface to load
      */
-    private InterfaceInfo(MixinInfo mixin, String prefix, Type iface) {
+    private InterfaceInfo(MixinInfo mixin, String prefix, Type iface, boolean unique) {
         if (prefix == null || prefix.length() < 2 || !prefix.endsWith("$")) {
             throw new InvalidMixinException(mixin, String.format("Prefix %s for iface %s is not valid", prefix, iface.toString()));
         }
@@ -78,6 +91,7 @@ public class InterfaceInfo extends TreeInfo {
         this.mixin = mixin;
         this.prefix = prefix;
         this.iface = iface;
+        this.unique = unique;
     }
     
     /**
@@ -123,6 +137,15 @@ public class InterfaceInfo extends TreeInfo {
     public Type getIface() {
         return this.iface;
     }
+    
+    /**
+     * Get the internal name of the interface
+     * 
+     * @return the internal name for the interface
+     */
+    public String getName() {
+        return this.iface.getClassName();
+    }
 
     /**
      * Get the internal name of the interface
@@ -131,6 +154,15 @@ public class InterfaceInfo extends TreeInfo {
      */
     public String getInternalName() {
         return this.iface.getInternalName();
+    }
+    
+    /**
+     * Get whether all methods for this interface should be treated as unique
+     * 
+     * @return true to treat all member methods as unique
+     */
+    public boolean isUnique() {
+        return this.unique;
     }
 
     /**
@@ -148,18 +180,44 @@ public class InterfaceInfo extends TreeInfo {
         }
         
         if (!method.name.startsWith(this.prefix)) {
+            if (this.methods.contains(method.name + method.desc)) {
+                this.decorateUniqueMethod(method);
+            }
             return false;
         }
         
         String realName = method.name.substring(this.prefix.length());
         String signature = realName + method.desc;
+        
         if (!this.methods.contains(signature)) {
-            throw new InvalidMixinException(this.mixin, String.format("%s does not exist in target interface %s", realName, this.iface.toString()));
+            throw new InvalidMixinException(this.mixin, String.format("%s does not exist in target interface %s", realName, this.getName()));
+        }
+        
+        if ((method.access & Opcodes.ACC_PUBLIC) == 0) {
+            throw new InvalidMixinException(this.mixin, String.format("%s cannot implement %s because it is not visible", realName, this.getName()));
         }
         
         ASMHelper.setVisibleAnnotation(method, MixinRenamed.class, "originalName", method.name, "isInterfaceMember", true);
+        this.decorateUniqueMethod(method);
         method.name = realName;
         return true;
+    }
+
+    /**
+     * Decorate the target method with {@link Unique} if the interface is marked
+     * as unique
+     * 
+     * @param method method to decorate
+     */
+    private void decorateUniqueMethod(MethodNode method) {
+        if (!this.unique) {
+            return;
+        }
+        
+        if (ASMHelper.getVisibleAnnotation(method, Unique.class) == null) {
+            ASMHelper.setVisibleAnnotation(method, Unique.class);
+            this.mixin.getClassInfo().findMethod(method).setUnique(true);
+        }
     }
 
     /**
@@ -173,12 +231,13 @@ public class InterfaceInfo extends TreeInfo {
     static InterfaceInfo fromAnnotation(MixinInfo mixin, AnnotationNode node) {
         String prefix = ASMHelper.<String>getAnnotationValue(node, "prefix");
         Type iface = ASMHelper.<Type>getAnnotationValue(node, "iface");
+        Boolean unique = ASMHelper.<Boolean>getAnnotationValue(node, "unique");
         
         if (prefix == null || iface == null) {
             throw new InvalidMixinException(mixin, String.format("@Interface annotation on %s is missing a required parameter", mixin));
         }
         
-        return new InterfaceInfo(mixin, prefix, iface);
+        return new InterfaceInfo(mixin, prefix, iface, unique != null ? unique.booleanValue() : false);
     }
 
     @Override

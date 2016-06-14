@@ -212,7 +212,7 @@ class AnnotatedMixin {
                     this.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " could not be found", this);
                     return null;
                 } else if (type.isPublic()) {
-                    this.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " is public and must be specified in value", this);
+                    this.printMessage(Kind.WARNING, "Mixin target " + privateTarget + " is public and must be specified in value", this);
                     return null;
                 }
                 this.addSoftTarget(type, privateTarget);

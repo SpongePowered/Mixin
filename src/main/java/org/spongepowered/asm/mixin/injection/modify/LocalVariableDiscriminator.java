@@ -259,8 +259,8 @@ public class LocalVariableDiscriminator {
     }
     
     /**
-     * If the user specifies no values for {@link #ordinal}, {@link #index} or 
-     * {@link #names} then we are considered to be operating in "implicit mode"
+     * If the user specifies no values for <tt>ordinal</tt>, <tt>index</tt> or 
+     * <tt>names</tt> then we are considered to be operating in "implicit mode"
      * where only a single local variable of the specified type is expected to
      * exist.
      * 

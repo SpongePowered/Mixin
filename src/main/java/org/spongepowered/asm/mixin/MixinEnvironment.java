@@ -276,7 +276,9 @@ public final class MixinEnvironment implements ITokenProvider {
         },
         
         /**
-         * Run the CheckClassAdapter on all classes after mixins are applied 
+         * Run the CheckClassAdapter on all classes after mixins are applied,
+         * also enables stricter checks on mixins for use at dev-time, promotes
+         * some warning-level messages to exceptions 
          */
         DEBUG_VERIFY(Option.DEBUG_ALL, "verify"),
         
@@ -291,6 +293,28 @@ public final class MixinEnvironment implements ITokenProvider {
          * {@link Inject#expect} for details
          */
         DEBUG_INJECTORS(Option.DEBUG_ALL, "countInjections"),
+        
+        /**
+         * Enable strict checks
+         */
+        DEBUG_STRICT(Option.DEBUG_ALL, "strict") {
+            @Override
+            boolean getBooleanValue() {
+                return Booleans.parseBoolean(System.getProperty(this.property), false);
+            }
+        },
+        
+        /**
+         * If false (default), {@link Unique} public methods merely raise a
+         * warning when encountered and are not merged into the target. If true,
+         * an exception is thrown instead
+         */
+        DEBUG_UNIQUE(Option.DEBUG_STRICT, "unique"),
+        
+        /**
+         * Enable strict checking for mixin targets
+         */
+        DEBUG_TARGETS(Option.DEBUG_STRICT, "targets"),
         
         /**
          * Disable the injector handler remapper
@@ -802,6 +826,7 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     @Deprecated
     public MixinEnvironment addConfiguration(String config) {
+        MixinEnvironment.logger.warn("MixinEnvironment::addConfiguration is deprecated and will be removed. Use Mixins::addConfiguration instead!");
         Mixins.addConfiguration(config, this);
         return this;
     }
@@ -1199,6 +1224,8 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     @Deprecated
     public static void setCompatibilityLevel(CompatibilityLevel level) throws IllegalArgumentException {
+        MixinEnvironment.logger.warn("MixinEnvironment::setCompatibilityLevel is deprecated and will be removed. Set level via config instead!");
+        
         if (level != MixinEnvironment.compatibility && level.isAtLeast(MixinEnvironment.compatibility)) {
             if (!level.isSupported()) {
                 throw new IllegalArgumentException("The requested compatibility level " + level + " could not be set. Level is not supported");

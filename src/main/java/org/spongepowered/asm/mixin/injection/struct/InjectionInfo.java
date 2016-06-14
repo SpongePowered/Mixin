@@ -141,7 +141,7 @@ public abstract class InjectionInfo {
         this.mixin = mixin;
         this.method = method;
         this.annotation = annotation;
-        this.classNode = mixin.getTargetClass();
+        this.classNode = mixin.getTargetClassNode();
         this.isStatic = ASMHelper.methodIsStatic(method);
         this.readAnnotation();
     }

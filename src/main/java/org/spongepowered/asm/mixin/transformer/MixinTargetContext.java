@@ -26,8 +26,10 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -58,6 +60,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
+import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 
@@ -148,7 +151,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @param mixin Mixin information
      * @param classNode Mixin classnode
-     * @param target target class
+     * @param context target class
      */
     MixinTargetContext(MixinInfo mixin, ClassNode classNode, TargetClassContext context) {
         this.mixin = mixin;
@@ -233,6 +236,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
     public String getClassRef() {
         return this.mixin.getClassRef();
     }
+    
+    /**
+     * Get the target class context
+     * 
+     * @return the target class context
+     */
+    public TargetClassContext getTarget() {
+        return this.targetClass;
+    }
 
     /**
      * Get the target class reference
@@ -249,7 +261,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @return the target class
      */
-    public ClassNode getTargetClass() {
+    public ClassNode getTargetClassNode() {
         return this.targetClass.getClassNode();
     }
     
@@ -755,6 +767,57 @@ public class MixinTargetContext implements IReferenceMapperContext {
         return this.targetClass.getTargetMethod(method);
     }
     
+    MethodNode findMethod(MethodNode method, AnnotationNode annotation) {
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(method.name);
+        if (annotation != null) {
+            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(annotation, "aliases");
+            if (aka != null) {
+                aliases.addAll(aka);
+            }
+        }
+        
+        return this.targetClass.findAliasedMethod(aliases, method.desc);
+    }
+
+    MethodNode findRemappedMethod(MethodNode method) {
+        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        String remappedName = remapperChain.mapMethodName(this.targetClass.getName(), method.name, method.desc);
+        if (remappedName.equals(method.name)) {
+            return null;
+        }
+
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(remappedName);
+        
+        return this.targetClass.findAliasedMethod(aliases, method.desc);
+    }
+    
+    FieldNode findField(FieldNode field, AnnotationNode shadow) {
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(field.name);
+        if (shadow != null) {
+            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(shadow, "aliases");
+            if (aka != null) {
+                aliases.addAll(aka);
+            }
+        }
+        
+        return this.targetClass.findAliasedField(aliases, field.desc);
+    }
+
+    FieldNode findRemappedField(FieldNode field) {
+        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        String remappedName = remapperChain.mapFieldName(this.targetClass.getName(), field.name, field.desc);
+        if (remappedName.equals(field.name)) {
+            return null;
+        }
+      
+        Deque<String> aliases = new LinkedList<String>();
+        aliases.add(remappedName);
+        return this.targetClass.findAliasedField( aliases, field.desc);
+    }
+
     /**
      * Mark this mixin as requiring the specified class version in the context
      * of the current target
@@ -907,9 +970,13 @@ public class MixinTargetContext implements IReferenceMapperContext {
         
         this.mixin.postApply(transformedName, targetClass);
     }
-
+    
     public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
         return this.targetClass.getHandlerName(annotation, method, surrogate);
+    }
+
+    public String getUniqueName(MethodNode method) {
+        return this.targetClass.getUniqueName(method);
     }
 
     /**
