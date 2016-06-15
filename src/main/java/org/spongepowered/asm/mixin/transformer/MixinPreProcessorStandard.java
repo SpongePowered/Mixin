@@ -213,6 +213,14 @@ class MixinPreProcessorStandard {
     }
 
     protected boolean validateMethod(MixinTargetContext context, MethodNode mixinMethod) {
+        if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
+                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
+                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
+                && !(ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null)) {
+            throw new InvalidMixinException(context, 
+                    String.format("Mixin %s contains non-private static method %s", context, mixinMethod));
+        }
+        
         return true;
     }
 
@@ -259,7 +267,7 @@ class MixinPreProcessorStandard {
         MethodNode target = context.findMethod(mixinMethod, annotation);
         
         if (method.isUnique()) {
-            throw new InvalidMixinException(this.mixin, ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be @Unique");
+            throw new InvalidMixinException(this.mixin, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be @Unique");
         }
         
         if (target == null) {
@@ -268,7 +276,7 @@ class MixinPreProcessorStandard {
             }
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, ASMHelper.getSimpleName(type) + " method " + mixinMethod.name
+                throw new InvalidMixinException(this.mixin, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name
                         + " was not located in the target class");
             }
             mixinMethod.name = target.name;
@@ -386,7 +394,7 @@ class MixinPreProcessorStandard {
                 }
                 field.setDecoratedFinal(isFinal, isMutable);
 
-                if (this.verboseLogging && MixinApplicatorStandard.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
+                if (this.verboseLogging && ASMHelper.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
                         ? "@Shadow field {}::{} is decorated with @Final but target is not final"
                         : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
@@ -400,9 +408,9 @@ class MixinPreProcessorStandard {
 
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-        if (MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_STATIC)
-                && !MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_PRIVATE)
-                && !MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_SYNTHETIC)
+        if (ASMHelper.hasFlag(field, Opcodes.ACC_STATIC)
+                && !ASMHelper.hasFlag(field, Opcodes.ACC_PRIVATE)
+                && !ASMHelper.hasFlag(field, Opcodes.ACC_SYNTHETIC)
                 && shadow == null) {
             throw new InvalidMixinException(context, String.format("Mixin %s contains non-private static field %s:%s",
                     context, field.name, field.desc));

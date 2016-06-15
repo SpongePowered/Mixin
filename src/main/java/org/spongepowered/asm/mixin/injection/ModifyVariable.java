@@ -32,6 +32,7 @@ import java.lang.annotation.Target;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
  * Specifies that this mixin method should inject a variable modifier callback
@@ -185,5 +186,13 @@ public @interface ModifyVariable {
      * @return Minimum number of <em>expected</em> callbacks, default 1
      */
     public int expect() default 1;
+    
+    /**
+     * Returns constraints which must be validated for this injector to
+     * succeed. See {@link Constraint} for details of constraint formats.
+     * 
+     * @return Constraints for this annotation
+     */
+    public String constraints() default "";
 
 }

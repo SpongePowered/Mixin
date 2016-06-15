@@ -1026,7 +1026,7 @@ public class ASMHelper {
     }
 
     public static String getSimpleName(Class<? extends Annotation> annotationType) {
-        return String.format("@%s", annotationType.getSimpleName());
+        return annotationType.getSimpleName();
     }
     
     public static String getSimpleName(AnnotationNode annotation) {
@@ -1085,4 +1085,38 @@ public class ASMHelper {
         int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
         return index < 0 ? null : Type.getType(ASMHelper.CONSTANTS_TYPES[index]);
     }
+    
+    /**
+     * Check whether the specified flag is set on the specified class
+     * 
+     * @param classNode
+     * @param flag 
+     * @return True if the specified flag is set in this method's access flags
+     */
+    public static boolean hasFlag(ClassNode classNode, int flag) {
+        return (classNode.access & flag) == flag;
+    }
+    
+    /**
+     * Check whether the specified flag is set on the specified method
+     * 
+     * @param method
+     * @param flag 
+     * @return True if the specified flag is set in this method's access flags
+     */
+    public static boolean hasFlag(MethodNode method, int flag) {
+        return (method.access & flag) == flag;
+    }
+    
+    /**
+     * Check whether the specified flag is set on the specified field
+     * 
+     * @param field
+     * @param flag 
+     * @return True if the specified flag is set in this field's access flags
+     */
+    public static boolean hasFlag(FieldNode field, int flag) {
+        return (field.access & flag) == flag;
+    }
+
 }

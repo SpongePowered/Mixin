@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
@@ -72,6 +73,29 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     /**
+     * A MethodNode in a mixin
+     */
+    public class MixinMethodNode extends MethodNode {
+        
+        private final String originalName;
+
+        public MixinMethodNode(int access, String name, String desc, String signature, String[] exceptions) {
+            super(Opcodes.ASM5, access, name, desc, signature, exceptions);
+            this.originalName = name;
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("%s%s", this.originalName, this.desc);
+        }
+        
+        public String getOriginalName() {
+            return this.originalName;
+        }
+
+    }
+    
+    /**
      * ClassNode for a MixinInfo
      */
     public class MixinClassNode extends ClassNode {
@@ -86,6 +110,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
         public MixinInfo getMixin() {
             return MixinInfo.this;
+        }
+        
+        @Override
+        public MethodVisitor visitMethod(final int access, final String name, final String desc, final String signature, final String[] exceptions) {
+            MethodNode method = new MixinMethodNode(access, name, desc, signature, exceptions);
+            this.methods.add(method);
+            return method;
         }
         
     }

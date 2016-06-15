@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -52,6 +53,11 @@ import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -63,10 +69,24 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Applies mixins to a target class
  */
 public class MixinApplicatorStandard {
+    
+    /**
+     * Annotations which can have constraints
+     */
+    protected static final List<Class<? extends Annotation>> CONSTRAINED_ANNOTATIONS = ImmutableList.<Class<? extends Annotation>>of(
+        Overwrite.class,
+        Inject.class,
+        ModifyArg.class,
+        Redirect.class,
+        ModifyVariable.class,
+        ModifyConstant.class
+    );
     
     /**
      * Passes the mixin applicator applies to each mixin
@@ -324,7 +344,7 @@ public class MixinApplicatorStandard {
                 this.mergeAnnotations(shadow, target);
                 
                 // Strip the FINAL flag from @Mutable non-private fields
-                if (entry.getValue().isDecoratedMutable() && !MixinApplicatorStandard.hasFlag(target, Opcodes.ACC_PRIVATE)) {
+                if (entry.getValue().isDecoratedMutable() && !ASMHelper.hasFlag(target, Opcodes.ACC_PRIVATE)) {
                     target.access &= ~Opcodes.ACC_FINAL;
                 }
             }
@@ -359,21 +379,8 @@ public class MixinApplicatorStandard {
             mixin.transformMethod(mixinMethod);
 
             if (!mixinMethod.name.startsWith("<")) {
-                AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class);
-                boolean isOverwrite = overwrite != null;
-                if (isOverwrite) {
-                    this.checkConstraints(mixin, overwrite);
-                }
-                
-                if (MixinApplicatorStandard.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
-                        && !MixinApplicatorStandard.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
-                        && !MixinApplicatorStandard.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
-                        && !isOverwrite) {
-                    throw new InvalidMixinException(mixin, 
-                            String.format("Mixin %s contains non-private static method %s%s", mixin, mixinMethod.name, mixinMethod.desc));
-                }
-                
-                this.mergeMethod(mixin, mixinMethod, isOverwrite);
+                this.checkMethodConstraints(mixin, mixinMethod);
+                this.mergeMethod(mixin, mixinMethod);
             } else if (Constants.CLINIT.equals(mixinMethod.name)) {
                 // Class initialiser insns get appended
                 this.appendInsns(mixinMethod);
@@ -389,7 +396,8 @@ public class MixinApplicatorStandard {
      * @param isOverwrite true if the method is annotated with an
      *      {@link Overwrite} annotation
      */
-    protected void mergeMethod(MixinTargetContext mixin, MethodNode method, boolean isOverwrite) {
+    protected void mergeMethod(MixinTargetContext mixin, MethodNode method) {
+        boolean isOverwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class) != null;
         MethodNode target = this.findTargetMethod(method);
         
         if (target != null) {
@@ -441,8 +449,8 @@ public class MixinApplicatorStandard {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
         }
         
-        if (MixinApplicatorStandard.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
-                && MixinApplicatorStandard.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
+        if (ASMHelper.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
+                && ASMHelper.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
             if (mixin.getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
                 this.logger.warn("Synthetic bridge method clash for {} in {}", method.name, mixin);
             }
@@ -487,7 +495,7 @@ public class MixinApplicatorStandard {
         }
         
         String methodName = method.name + method.desc;
-        if (MixinApplicatorStandard.hasFlag(method, Opcodes.ACC_STATIC)) {
+        if (ASMHelper.hasFlag(method, Opcodes.ACC_STATIC)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
         
@@ -786,23 +794,39 @@ public class MixinApplicatorStandard {
     }
 
     /**
+     * Check constraints in annotations on the specified mixin method
+     * 
+     * @param mixin Target context
+     * @param method Mixin method
+     */
+    protected void checkMethodConstraints(MixinTargetContext mixin, MethodNode method) {
+        for (Class<? extends Annotation> annotationType : MixinApplicatorStandard.CONSTRAINED_ANNOTATIONS) {
+            AnnotationNode annotation = ASMHelper.getVisibleAnnotation(method, annotationType);
+            if (annotation != null) {
+                this.checkConstraints(mixin, method, annotation);
+            }
+        }
+    }
+    
+    /**
      * Check constraints for the specified annotation based on token values in
      * the current environment
      * 
      * @param mixin Mixin being applied
+     * @param method annotated method
      * @param annotation Annotation node to check constraints
      */
-    protected final void checkConstraints(MixinTargetContext mixin, AnnotationNode annotation) {
+    protected final void checkConstraints(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         try {
             Constraint constraint = ConstraintParser.parse(annotation);
             MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
             try {
                 constraint.check(environment);
             } catch (ConstraintViolationException ex) {
-                if (environment.getOption(Option.IGNORE_CONSTRAINTS)) {
-                    this.logger.warn("Constraint violation: {}", ex.getMessage());
-                } else {
-                    throw new InvalidMixinException(mixin, ex.getMessage(), ex);
+                String message = String.format("Constraint violation: %s on %s in %s", ex.getMessage(), method, mixin);
+                this.logger.warn(message);
+                if (!environment.getOption(Option.IGNORE_CONSTRAINTS)) {
+                    throw new InvalidMixinException(mixin, message, ex);
                 }
             }
         } catch (InvalidConstraintException ex) {
@@ -970,25 +994,4 @@ public class MixinApplicatorStandard {
         return null;
     }
     
-    /**
-     * Check whether the specified flag is set on the specified method
-     * 
-     * @param method
-     * @param flag 
-     * @return True if the specified flag is set in this method's access flags
-     */
-    protected static boolean hasFlag(MethodNode method, int flag) {
-        return (method.access & flag) == flag;
-    }
-    
-    /**
-     * Check whether the specified flag is set on the specified field
-     * 
-     * @param field
-     * @param flag 
-     * @return True if the specified flag is set in this field's access flags
-     */
-    protected static boolean hasFlag(FieldNode field, int flag) {
-        return (field.access & flag) == flag;
-    }
 }

@@ -31,6 +31,7 @@ import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinException;
+import org.spongepowered.asm.util.ASMHelper;
 
 /**
  * Bytecode preprocessor for interface mixins, simply performs some additional
@@ -56,7 +57,7 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
     @Override
     protected void prepareMethod(MethodNode mixinMethod, Method method) {
         // I have no idea how the hell you'd compile this, but we make sure anyway!
-        if (!MixinApplicatorStandard.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
+        if (!ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "
                     + this.mixin);
         }
@@ -73,7 +74,7 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
      */
     @Override
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
-        if (!MixinApplicatorStandard.hasFlag(field, Opcodes.ACC_STATIC)) {
+        if (!ASMHelper.hasFlag(field, Opcodes.ACC_STATIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
                     + this.mixin);
         }
