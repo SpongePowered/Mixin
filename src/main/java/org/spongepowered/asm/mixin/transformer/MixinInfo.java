@@ -25,7 +25,6 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,14 +57,15 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
+import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 
 import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * Runtime information bundle about a mixin
@@ -532,12 +532,15 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
+     * Class loader utility
+     */
+    private static final LaunchClassLoaderUtil classLoaderUtil = LaunchClassLoaderUtil.forClassLoader(Launch.classLoader);
+
+    /**
      * Global order of mixin infos, used to determine ordering between mixins
      * with equivalent priority
      */
     static int mixinOrder = 0;
-    
-    static final Set<String> invalidClasses = MixinInfo.$getInvalidClassesSet();
     
     /**
      * Logger
@@ -637,6 +640,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.pendingState = new State(mixinBytes);
             this.info = this.pendingState.getClassInfo();
             this.type = this.initType();
+        } catch (InvalidMixinException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new InvalidMixinException(this, ex);
         }
@@ -646,6 +651,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.priority = this.readPriority(this.pendingState.getClassNode());
             this.targetClasses = this.readTargetClasses(this.pendingState.getClassNode(), suppressPlugin);
             this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
+        } catch (InvalidMixinException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new InvalidMixinException(this, ex);
         }
@@ -725,8 +732,16 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Reads a target list into the outTargets list
      */
     private void readTargets(Collection<ClassInfo> outTargets, Collection<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
-        for (String targetName : inTargets) {
-            targetName = targetName.replace('/', '.');
+        for (String targetRef : inTargets) {
+            String targetName = targetRef.replace('/', '.');
+            if (MixinInfo.classLoaderUtil.isClassLoaded(targetName)) {
+                String message = String.format("Critical problem: %s target %s was already transformed.", this, targetName);
+                if (this.parent.isRequired()) {
+                    throw new MixinTargetAlreadyLoadedException(this, message);
+                }
+                this.logger.error(message);
+            }
+            
             if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetName, this.className)) {
                 ClassInfo targetInfo = this.getTarget(targetName, checkPublic);
                 if (targetInfo != null && !outTargets.contains(targetInfo)) {
@@ -740,12 +755,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private ClassInfo getTarget(String targetName, boolean checkPublic) throws InvalidMixinException {
         ClassInfo targetInfo = ClassInfo.forName(targetName);
         if (targetInfo == null) {
-            this.handleTargetError("@Mixin target " + targetName + " was not found " + this);
+            this.handleTargetError(String.format("@Mixin target %s was not found %s", targetName, this));
             return null;
         }
         this.type.validateTarget(targetName, targetInfo);
         if (checkPublic && targetInfo.isPublic()) {
-            this.handleTargetError("@Mixin target " + targetName + " is public in " + this + " and should be specified in value");
+            this.handleTargetError(String.format("@Mixin target %s is public in %s and should be specified in value", targetName, this));
         }
         return targetInfo;
     }
@@ -957,9 +972,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         // Inject the mixin class name into the LaunchClassLoader's invalid
         // classes set so that any classes referencing the mixin directly will
         // cause the game to crash
-        if (MixinInfo.invalidClasses != null) {
-            MixinInfo.invalidClasses.add(mixinClassName);
-        }
+        MixinInfo.classLoaderUtil.registerInvalidClass(mixinClassName);
 
         return mixinBytes;
     }
@@ -1017,18 +1030,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public String toString() {
         return String.format("%s:%s", this.parent.getName(), this.name);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Set<String> $getInvalidClassesSet() {
-        try {
-            Field invalidClasses = LaunchClassLoader.class.getDeclaredField("invalidClasses");
-            invalidClasses.setAccessible(true);
-            return (Set<String>)invalidClasses.get(Launch.classLoader);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return null;
     }
     
 }

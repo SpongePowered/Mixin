@@ -35,6 +35,7 @@ import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
+import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -136,6 +137,10 @@ abstract class TreeInfo {
      *      except the excluded transformers
      */
     private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass) {
+        if (LaunchClassLoaderUtil.forClassLoader(Launch.classLoader).isClassExcluded(name, transformedName)) {
+            return basicClass;
+        }
+
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
         for (IClassTransformer transformer : environment.getTransformers()) {

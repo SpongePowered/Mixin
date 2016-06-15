@@ -60,13 +60,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.5.8";
-    
-    /**
-     * Blackboard key where the subsystem version will be stored to indicate
-     * successful bootstrap
-     */
-//    public static final String INIT_KEY = Blackboard.Keys.INIT;
+    public static final String VERSION = "0.5.9";
     
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
