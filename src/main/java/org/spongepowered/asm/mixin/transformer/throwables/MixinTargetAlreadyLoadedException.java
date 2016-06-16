@@ -32,17 +32,21 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 public class MixinTargetAlreadyLoadedException extends InvalidMixinException {
 
     private static final long serialVersionUID = 1L;
+    
+    private final String target;
 
-    public MixinTargetAlreadyLoadedException(IMixinInfo mixin, String message) {
+    public MixinTargetAlreadyLoadedException(IMixinInfo mixin, String message, String target) {
         super(mixin, message);
+        this.target = target;
     }
 
-    public MixinTargetAlreadyLoadedException(IMixinInfo mixin, Throwable cause) {
-        super(mixin, cause);
-    }
-
-    public MixinTargetAlreadyLoadedException(IMixinInfo mixin, String message, Throwable cause) {
+    public MixinTargetAlreadyLoadedException(IMixinInfo mixin, String message, String target, Throwable cause) {
         super(mixin, message, cause);
+        this.target = target;
+    }
+    
+    public String getTarget() {
+        return this.target;
     }
 
 }

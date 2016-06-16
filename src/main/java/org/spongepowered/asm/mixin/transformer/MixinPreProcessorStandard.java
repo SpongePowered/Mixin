@@ -32,7 +32,6 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
@@ -47,6 +46,8 @@ import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
@@ -86,13 +87,13 @@ class MixinPreProcessorStandard {
     /**
      * Mixin class node
      */
-    protected final ClassNode classNode;
+    protected final MixinClassNode classNode;
     
     private final boolean verboseLogging, strictUnique;
     
     private boolean prepared, attached;
 
-    MixinPreProcessorStandard(MixinInfo mixin, ClassNode classNode) {
+    MixinPreProcessorStandard(MixinInfo mixin, MixinClassNode classNode) {
         this.mixin = mixin;
         this.classNode = classNode;
         MixinEnvironment env = mixin.getParent().getEnvironment();
@@ -109,7 +110,7 @@ class MixinPreProcessorStandard {
         if (!this.prepared) {
             this.prepared = true;
             
-            for (MethodNode mixinMethod : this.classNode.methods) {
+            for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
                 Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
                 this.prepareMethod(mixinMethod, method);
             }
@@ -122,12 +123,12 @@ class MixinPreProcessorStandard {
         return this;
     }
 
-    protected void prepareMethod(MethodNode mixinMethod, Method method) {
+    protected void prepareMethod(MixinMethodNode mixinMethod, Method method) {
         this.prepareShadow(mixinMethod, method);
         this.prepareSoftImplements(mixinMethod, method);
     }
 
-    protected void prepareShadow(MethodNode mixinMethod, Method method) {
+    protected void prepareShadow(MixinMethodNode mixinMethod, Method method) {
         AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
         if (shadowAnnotation == null) {
             return;
@@ -142,7 +143,7 @@ class MixinPreProcessorStandard {
         }
     }
 
-    protected void prepareSoftImplements(MethodNode mixinMethod, Method method) {
+    protected void prepareSoftImplements(MixinMethodNode mixinMethod, Method method) {
         for (InterfaceInfo iface : this.mixin.getSoftImplements()) {
             if (iface.renameMethod(mixinMethod)) {
                 method.renameTo(mixinMethod.name);
@@ -181,8 +182,8 @@ class MixinPreProcessorStandard {
     }
 
     protected void attachMethods(MixinTargetContext context) {
-        for (Iterator<MethodNode> iter = this.classNode.methods.iterator(); iter.hasNext();) {
-            MethodNode mixinMethod = iter.next();
+        for (Iterator<MixinMethodNode> iter = this.classNode.mixinMethods.iterator(); iter.hasNext();) {
+            MixinMethodNode mixinMethod = iter.next();
             
             if (!this.validateMethod(context, mixinMethod)) {
                 iter.remove();
@@ -212,19 +213,11 @@ class MixinPreProcessorStandard {
         }
     }
 
-    protected boolean validateMethod(MixinTargetContext context, MethodNode mixinMethod) {
-        if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
-                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
-                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
-                && !(ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null)) {
-            throw new InvalidMixinException(context, 
-                    String.format("Mixin %s contains non-private static method %s", context, mixinMethod));
-        }
-        
+    protected boolean validateMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         return true;
     }
 
-    protected boolean processInjectorMethod(MixinTargetContext context, MethodNode mixinMethod) {
+    protected boolean processInjectorMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(context, mixinMethod);
         boolean surrogate = ASMHelper.getVisibleAnnotation(mixinMethod, Surrogate.class) != null;
         if (annotation == null && !surrogate) {
@@ -244,15 +237,16 @@ class MixinPreProcessorStandard {
         return true;
     }
     
-    protected boolean processShadowMethod(MixinTargetContext context, MethodNode mixinMethod) {
+    protected boolean processShadowMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         return this.processSpecialMethod(context, mixinMethod, Shadow.class, false);
     }
     
-    protected boolean processOverwriteMethod(MixinTargetContext context, MethodNode mixinMethod) {
+    protected boolean processOverwriteMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         return this.processSpecialMethod(context, mixinMethod, Overwrite.class, true);
     }
     
-    protected boolean processSpecialMethod(MixinTargetContext context, MethodNode mixinMethod, Class<? extends Annotation> type, boolean overwrite) {
+    protected boolean processSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type,
+            boolean overwrite) {
         
         AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, type);
         if (annotation == null) {
@@ -299,7 +293,7 @@ class MixinPreProcessorStandard {
         return true;
     }
 
-    protected boolean processUniqueMethod(MixinTargetContext context, MethodNode mixinMethod) {
+    protected boolean processUniqueMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
         if (method == null || (!method.isUnique() && !this.mixin.isUnique())) {
             return false;
@@ -330,7 +324,7 @@ class MixinPreProcessorStandard {
         return true;
     }
     
-    protected void processMethod(MethodNode mixinMethod) {
+    protected void processMethod(MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
         if (method == null) {
             return;

@@ -379,6 +379,7 @@ public class MixinApplicatorStandard {
             mixin.transformMethod(mixinMethod);
 
             if (!mixinMethod.name.startsWith("<")) {
+                this.checkMethodVisibility(mixin, mixinMethod);
                 this.checkMethodConstraints(mixin, mixinMethod);
                 this.mergeMethod(mixin, mixinMethod);
             } else if (Constants.CLINIT.equals(mixinMethod.name)) {
@@ -791,6 +792,22 @@ public class MixinApplicatorStandard {
      */
     protected void applyInjections(MixinTargetContext mixin) {
         mixin.applyInjections();
+    }
+
+    /**
+     * Check visibility before merging a mixin method
+     * 
+     * @param mixin
+     * @param mixinMethod
+     */
+    protected void checkMethodVisibility(MixinTargetContext mixin, MethodNode mixinMethod) {
+        if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
+                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
+                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
+                && !(ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null)) {
+            throw new InvalidMixinException(mixin, 
+                    String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
+        }
     }
 
     /**

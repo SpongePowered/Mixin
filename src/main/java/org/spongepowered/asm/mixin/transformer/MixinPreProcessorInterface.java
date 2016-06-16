@@ -26,10 +26,10 @@ package org.spongepowered.asm.mixin.transformer;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinException;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -45,7 +45,7 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
      * @param mixin Mixin info
      * @param classNode Mixin classnode
      */
-    MixinPreProcessorInterface(MixinInfo mixin, ClassNode classNode) {
+    MixinPreProcessorInterface(MixinInfo mixin, MixinClassNode classNode) {
         super(mixin, classNode);
     }
 
@@ -55,7 +55,7 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
      *      org.spongepowered.asm.mixin.transformer.ClassInfo.Method)
      */
     @Override
-    protected void prepareMethod(MethodNode mixinMethod, Method method) {
+    protected void prepareMethod(MixinMethodNode mixinMethod, Method method) {
         // I have no idea how the hell you'd compile this, but we make sure anyway!
         if (!ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "

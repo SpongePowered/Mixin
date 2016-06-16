@@ -75,10 +75,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * A MethodNode in a mixin
      */
-    public class MixinMethodNode extends MethodNode {
+    class MixinMethodNode extends MethodNode {
         
         private final String originalName;
-
+        
         public MixinMethodNode(int access, String name, String desc, String signature, String[] exceptions) {
             super(Opcodes.ASM5, access, name, desc, signature, exceptions);
             this.originalName = name;
@@ -98,14 +98,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * ClassNode for a MixinInfo
      */
-    public class MixinClassNode extends ClassNode {
+    class MixinClassNode extends ClassNode {
+        
+        public final List<MixinMethodNode> mixinMethods;
         
         public MixinClassNode(MixinInfo mixin) {
             this(Opcodes.ASM5);
         }
 
+        @SuppressWarnings("unchecked")
         public MixinClassNode(int api) {
             super(api);
+            this.mixinMethods = (List<MixinMethodNode>)(Object)this.methods;
         }
 
         public MixinInfo getMixin() {
@@ -167,7 +171,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * Initial ClassNode created for mixin validation, not used for actual
          * application
          */
-        protected ClassNode classNode;
+        protected MixinClassNode classNode;
 
         State(byte[] mixinBytes) {
             this(mixinBytes, null);
@@ -225,7 +229,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * @param flags Flags passed into classReader
          * @return Tree representing the bytecode
          */
-        ClassNode createClassNode(int flags) {
+        MixinClassNode createClassNode(int flags) {
             MixinClassNode classNode = new MixinClassNode(MixinInfo.this);
             ClassReader classReader = new ClassReader(this.mixinBytes);
             classReader.accept(classNode, flags);
@@ -454,7 +458,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         
         abstract void validate(State state, List<ClassInfo> targetClasses);
 
-        abstract MixinPreProcessorStandard createPreProcessor(ClassNode classNode);
+        abstract MixinPreProcessorStandard createPreProcessor(MixinClassNode classNode);
 
         /**
          * A standard mixin
@@ -496,7 +500,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             }
 
             @Override
-            MixinPreProcessorStandard createPreProcessor(ClassNode classNode) {
+            MixinPreProcessorStandard createPreProcessor(MixinClassNode classNode) {
                 return new MixinPreProcessorStandard(this.mixin, classNode);
             }
         }
@@ -525,7 +529,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             }
             
             @Override
-            MixinPreProcessorStandard createPreProcessor(ClassNode classNode) {
+            MixinPreProcessorStandard createPreProcessor(MixinClassNode classNode) {
                 return new MixinPreProcessorInterface(this.mixin, classNode);
             }
         }
@@ -737,7 +741,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (MixinInfo.classLoaderUtil.isClassLoaded(targetName)) {
                 String message = String.format("Critical problem: %s target %s was already transformed.", this, targetName);
                 if (this.parent.isRequired()) {
-                    throw new MixinTargetAlreadyLoadedException(this, message);
+                    throw new MixinTargetAlreadyLoadedException(this, message, targetName);
                 }
                 this.logger.error(message);
             }
@@ -898,7 +902,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Get a new tree for the class bytecode
      */
     @Override
-    public ClassNode getClassNode(int flags) {
+    public MixinClassNode getClassNode(int flags) {
         return this.getState().createClassNode(flags);
     }
     
@@ -947,7 +951,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @return new context
      */
     MixinTargetContext createContextFor(TargetClassContext target) {
-        ClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
+        MixinClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
         return this.type.createPreProcessor(classNode).prepare().createContextFor(target);
     }
 
