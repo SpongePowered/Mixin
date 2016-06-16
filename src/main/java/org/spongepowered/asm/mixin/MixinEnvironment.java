@@ -1224,7 +1224,10 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     @Deprecated
     public static void setCompatibilityLevel(CompatibilityLevel level) throws IllegalArgumentException {
-        MixinEnvironment.logger.warn("MixinEnvironment::setCompatibilityLevel is deprecated and will be removed. Set level via config instead!");
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        if (!"org.spongepowered.asm.mixin.transformer.MixinConfig".equals(stackTrace[2].getClassName())) {
+            MixinEnvironment.logger.warn("MixinEnvironment::setCompatibilityLevel is deprecated and will be removed. Set level via config instead!");
+        }
         
         if (level != MixinEnvironment.compatibility && level.isAtLeast(MixinEnvironment.compatibility)) {
             if (!level.isSupported()) {
