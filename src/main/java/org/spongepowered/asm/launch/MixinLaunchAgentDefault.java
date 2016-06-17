@@ -26,17 +26,14 @@ package org.spongepowered.asm.launch;
 
 import java.net.URI;
 
+import org.spongepowered.asm.util.Constants.ManifestAttributes;
+
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * Default launch agent, handles the <tt>MixinConfigs</tt> manifest key
  */
 public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
-
-    protected static final String MFATT_MIXINCONFIGS = "MixinConfigs";
-    protected static final String MFATT_TOKENPROVIDERS = "MixinTokenProviders";
-    protected static final String MFATT_MAINCLASS = "Main-Class";
-    protected static final String MFATT_COMPATIBILITY = "MixinCompatibilityLevel";
 
     public MixinLaunchAgentDefault(URI uri) {
         super(uri);
@@ -45,21 +42,21 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
     @SuppressWarnings("deprecation")
     @Override
     public void prepare() {
-        String compatibilityLevel = this.attributes.get(MixinLaunchAgentDefault.MFATT_COMPATIBILITY);
+        String compatibilityLevel = this.attributes.get(ManifestAttributes.COMPATIBILITY);
         if (compatibilityLevel != null) {
             MixinLaunchAgentAbstract.logger.warn("{} Setting mixin compatibility level via manifest is deprecated, "
                     + "use 'compatibilityLevel' key in config instead", this.container);
             MixinTweaker.setCompatibilityLevel(compatibilityLevel);
         }
         
-        String mixinConfigs = this.attributes.get(MixinLaunchAgentDefault.MFATT_MIXINCONFIGS);
+        String mixinConfigs = this.attributes.get(ManifestAttributes.MIXINCONFIGS);
         if (mixinConfigs != null) {
             for (String config : mixinConfigs.split(",")) {
                 MixinTweaker.addConfig(config.trim());
             }
         }
         
-        String tokenProviders = this.attributes.get(MixinLaunchAgentDefault.MFATT_TOKENPROVIDERS);
+        String tokenProviders = this.attributes.get(ManifestAttributes.TOKENPROVIDERS);
         if (tokenProviders != null) {
             for (String provider : tokenProviders.split(",")) {
                 MixinTweaker.addTokenProvider(provider.trim());
@@ -77,7 +74,7 @@ public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
     
     @Override
     public String getLaunchTarget() {
-        return this.attributes.get(MixinLaunchAgentDefault.MFATT_MAINCLASS);
+        return this.attributes.get(ManifestAttributes.MAINCLASS);
     }
 
 }
