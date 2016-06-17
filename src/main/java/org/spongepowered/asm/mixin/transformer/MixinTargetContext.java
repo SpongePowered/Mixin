@@ -979,6 +979,10 @@ public class MixinTargetContext implements IReferenceMapperContext {
         return this.targetClass.getUniqueName(method);
     }
 
+    public String getUniqueName(FieldNode field) {
+        return this.targetClass.getUniqueName(field);
+    }
+    
     /**
      * Scans the target class for injector methods and prepares discovered
      * injectors

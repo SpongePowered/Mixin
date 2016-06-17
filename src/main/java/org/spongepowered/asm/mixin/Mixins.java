@@ -59,17 +59,29 @@ public final class Mixins {
     
     private Mixins() {}
     
+    public static void addConfigurations(String... configFiles) {
+        MixinEnvironment fallback = MixinEnvironment.getDefaultEnvironment();
+        for (String configFile : configFiles) {
+            Mixins.createConfiguration(configFile, fallback);
+        }
+    }
+    
     /**
      * Add a mixin configuration resource
      * 
      * @param configFile path to configuration resource
      */
     public static void addConfiguration(String configFile) {
-        Mixins.addConfiguration(configFile, MixinEnvironment.getDefaultEnvironment());
+        Mixins.createConfiguration(configFile, MixinEnvironment.getDefaultEnvironment());
     }
     
     @Deprecated
     static void addConfiguration(String configFile, MixinEnvironment fallback) {
+        Mixins.createConfiguration(configFile, fallback);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void createConfiguration(String configFile, MixinEnvironment fallback) {
         Config config = null;
         
         try {
@@ -78,13 +90,19 @@ public final class Mixins {
             Mixins.logger.error("Error encountered reading mixin config " + configFile + ": " + ex.getClass().getName() + " " + ex.getMessage(), ex);
         }
         
-        if (config != null) {
-            MixinEnvironment env = config.getEnvironment();
-            if (env != null) {
-                env.registerConfig(configFile);
-            }
-            Mixins.getConfigs().add(config);
+        Mixins.registerConfiguration(config);
+    }
+
+    private static void registerConfiguration(Config config) {
+        if (config == null) {
+            return;
         }
+        
+        MixinEnvironment env = config.getEnvironment();
+        if (env != null) {
+            env.registerConfig(config.getName());
+        }
+        Mixins.getConfigs().add(config);
     }
     
     /**

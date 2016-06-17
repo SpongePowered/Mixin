@@ -46,6 +46,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mutable;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
@@ -210,9 +211,15 @@ public class ClassInfo extends TreeInfo {
          */
         private boolean decoratedMutable;
 
+        /**
+         * True if this member is decorated with {@link Unique}
+         */
+        private boolean unique;
+
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
             this.currentName = member.currentName;
+            this.unique = member.unique;
         }
 
         protected Member(Type type, String name, String desc, int access) {
@@ -264,6 +271,14 @@ public class ClassInfo extends TreeInfo {
             return (this.modifiers & Opcodes.ACC_FINAL) != 0;
         }
         
+        public boolean isUnique() {
+            return this.unique;
+        }
+        
+        public void setUnique(boolean unique) {
+            this.unique = unique;
+        }
+
         public boolean isDecoratedFinal() {
             return this.decoratedFinal;
         }
@@ -337,40 +352,34 @@ public class ClassInfo extends TreeInfo {
 
         private final List<FrameData> frames;
         
-        private boolean unique;
-
         public Method(Member member) {
             super(member);
             this.frames = member instanceof Method ? ((Method)member).frames : null;
-            this.unique = member instanceof Method ? ((Method)member).unique : false;
         }
 
         public Method(MethodNode method) {
             this(method, false);
+            this.setUnique(ASMHelper.getVisibleAnnotation(method, Unique.class) != null);
         }
 
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
             this.frames = this.gatherFrames(method);
-            this.unique = ASMHelper.getVisibleAnnotation(method, Unique.class) != null;
         }
 
         public Method(String name, String desc) {
             super(Type.METHOD, name, desc, Opcodes.ACC_PUBLIC, false);
             this.frames = null;
-            this.unique = false;
         }
 
         public Method(String name, String desc, int access) {
             super(Type.METHOD, name, desc, access, false);
             this.frames = null;
-            this.unique = false;
         }
 
         public Method(String name, String desc, int access, boolean injected) {
             super(Type.METHOD, name, desc, access, injected);
             this.frames = null;
-            this.unique = false;
         }
 
         private List<FrameData> gatherFrames(MethodNode method) {
@@ -388,14 +397,6 @@ public class ClassInfo extends TreeInfo {
             return this.frames;
         }
         
-        public boolean isUnique() {
-            return this.unique;
-        }
-        
-        public void setUnique(boolean unique) {
-            this.unique = unique;
-        }
-
         @Override
         public ClassInfo getOwner() {
             return ClassInfo.this;
@@ -451,6 +452,14 @@ public class ClassInfo extends TreeInfo {
 
         public Field(FieldNode field, boolean injected) {
             super(Type.FIELD, field.name, field.desc, field.access, injected);
+            
+            this.setUnique(ASMHelper.getVisibleAnnotation(field, Unique.class) != null);
+            
+            if (ASMHelper.getVisibleAnnotation(field, Shadow.class) != null) {
+                boolean decoratedFinal = ASMHelper.getVisibleAnnotation(field, Final.class) != null;
+                boolean decoratedMutable = ASMHelper.getVisibleAnnotation(field, Mutable.class) != null;
+                this.setDecoratedFinal(decoratedFinal, decoratedMutable);
+            }
         }
 
         public Field(String name, String desc, int access) {

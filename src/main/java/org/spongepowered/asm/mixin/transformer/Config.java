@@ -46,6 +46,10 @@ public class Config {
         this.name = config.getName();
         this.config = config;
     }
+    
+    public String getName() {
+        return this.name;
+    }
 
     /**
      * Access inner config

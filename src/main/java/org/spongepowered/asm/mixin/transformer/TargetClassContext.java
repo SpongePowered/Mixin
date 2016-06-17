@@ -95,9 +95,9 @@ class TargetClassContext {
     private final boolean disableHandlerRemap;
     
     /**
-     * Unique method index 
+     * Unique method and field indices 
      */
-    private int nextUniqueMethodIndex = 0;
+    private int nextUniqueMethodIndex, nextUniqueFieldIndex;
 
     /**
      * True once mixins have been applied to this class 
@@ -265,6 +265,10 @@ class TargetClassContext {
         return String.format("md%s$%s$%d", this.sessionId.substring(30), method.name, this.nextUniqueMethodIndex++);
     }
 
+    public String getUniqueName(FieldNode field) {
+        return String.format("fd%s$%s$%d", this.sessionId.substring(30), field.name, this.nextUniqueFieldIndex++);
+    }
+    
     /**
      * Apply mixins to this class
      */

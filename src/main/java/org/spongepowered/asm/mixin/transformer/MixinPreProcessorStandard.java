@@ -36,10 +36,8 @@ import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.Surrogate;
@@ -341,8 +339,8 @@ class MixinPreProcessorStandard {
         for (Iterator<FieldNode> iter = this.classNode.fields.iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
             AnnotationNode shadow = ASMHelper.getVisibleAnnotation(mixinField, Shadow.class);
-            boolean isFinal = ASMHelper.getVisibleAnnotation(mixinField, Final.class) != null;
-            boolean isMutable = ASMHelper.getVisibleAnnotation(mixinField, Mutable.class) != null;
+            boolean isShadow = shadow != null;
+            
             if (!this.validateField(context, mixinField, shadow)) {
                 iter.remove();
                 continue;
@@ -351,6 +349,10 @@ class MixinPreProcessorStandard {
             context.transformDescriptor(mixinField);
             
             Field field = this.mixin.getClassInfo().findField(mixinField);
+            if (field.isUnique() && isShadow) {
+                throw new InvalidMixinException(this.mixin, "@Shadow field " + mixinField.name + " cannot be @Unique");
+            }
+            
             FieldNode target = context.findField(mixinField, shadow);
             if (target == null) {
                 if (shadow == null) {
@@ -363,7 +365,29 @@ class MixinPreProcessorStandard {
                 }
                 mixinField.name = target.name;
                 field.renameTo(target.name);
-            } 
+            }
+            
+            if (field.isUnique()) {
+                if ((mixinField.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) != 0) {
+                    String uniqueName = context.getUniqueName(mixinField);
+                    MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique field {}{} to {} in {}",
+                            mixinField.name, mixinField.desc, uniqueName, this.mixin);
+                    mixinField.name = uniqueName;
+                    field.renameTo(uniqueName);
+                    continue;
+                }
+
+                if (this.strictUnique) {
+                    throw new InvalidMixinException(this.mixin, "Field conflict, @Unique field " + mixinField.name + " in " + this.mixin
+                            + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
+                }
+                
+                MixinPreProcessorStandard.logger.warn("Discarding @Unique public field {} in {} because it already exists in {}. "
+                        + "Note that declared FIELD INITIALISERS will NOT be removed!", mixinField.name, this.mixin, context.getTarget());
+
+                iter.remove();
+                continue;
+            }
             
             // Check that the shadow field has a matching descriptor
             if (!target.desc.equals(mixinField.desc)) {
@@ -382,12 +406,8 @@ class MixinPreProcessorStandard {
             // Shadow fields get stripped from the mixin class
             iter.remove();
             
-            if (shadow != null) {
-                if (field == null) {
-                    throw new InvalidMixinException(this.mixin, "Unable to locate field surrogate: " + mixinField.name + " in " + this.mixin);
-                }
-                field.setDecoratedFinal(isFinal, isMutable);
-
+            if (isShadow) {
+                boolean isFinal = field.isDecoratedFinal();
                 if (this.verboseLogging && ASMHelper.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
                         ? "@Shadow field {}::{} is decorated with @Final but target is not final"
