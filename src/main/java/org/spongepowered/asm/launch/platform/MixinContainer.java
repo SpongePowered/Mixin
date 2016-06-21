@@ -22,46 +22,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.launch.Blackboard;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
- * A collection of {@link IMixinLaunchAgent} launch agents)
+ * A collection of {@link IMixinPlatformAgent} platform agents)
  */
-public class MixinTweakContainer {
+public class MixinContainer {
 
     public static final List<String> agentClasses = new ArrayList<String>();
     
     static {
-        Blackboard.put(Blackboard.Keys.AGENTS, MixinTweakContainer.agentClasses);
-        MixinTweakContainer.agentClasses.add("org.spongepowered.asm.launch.MixinLaunchAgentFML");
-        MixinTweakContainer.agentClasses.add("org.spongepowered.asm.launch.MixinLaunchAgentDefault");
+        Blackboard.put(Blackboard.Keys.AGENTS, MixinContainer.agentClasses);
+        MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentFML");
+        MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentDefault");
     }
     
     private final Logger logger = LogManager.getLogger("mixin");
     
     private final URI uri;
     
-    private final List<IMixinLaunchAgent> agents = new ArrayList<IMixinLaunchAgent>();
+    private final List<IMixinPlatformAgent> agents = new ArrayList<IMixinPlatformAgent>();
 
-    public MixinTweakContainer(URI uri) {
+    public MixinContainer(MixinPlatformManager manager, URI uri) {
         this.uri = uri;
         
-        for (String agentClass : MixinTweakContainer.agentClasses) {
+        for (String agentClass : MixinContainer.agentClasses) {
             try {
                 @SuppressWarnings("unchecked")
-                Class<IMixinLaunchAgent> clazz = (Class<IMixinLaunchAgent>)Class.forName(agentClass);
-                Constructor<IMixinLaunchAgent> ctor = clazz.getDeclaredConstructor(URI.class);
-                IMixinLaunchAgent agent = ctor.newInstance(uri);
+                Class<IMixinPlatformAgent> clazz = (Class<IMixinPlatformAgent>)Class.forName(agentClass);
+                Constructor<IMixinPlatformAgent> ctor = clazz.getDeclaredConstructor(MixinPlatformManager.class, URI.class);
+                IMixinPlatformAgent agent = ctor.newInstance(manager, uri);
                 this.agents.add(agent);
             } catch (Exception ex) {
                 this.logger.catching(ex);
@@ -76,17 +78,28 @@ public class MixinTweakContainer {
         return this.uri;
     }
 
+    public Collection<String> getPhaseProviders() {
+        List<String> phaseProviders = new ArrayList<String>();
+        for (IMixinPlatformAgent agent : this.agents) {
+            String phaseProvider = agent.getPhaseProvider();
+            if (phaseProvider != null) {
+                phaseProviders.add(phaseProvider);
+            }
+        }
+        return phaseProviders;
+    }
+
     /**
      * 
      */
     public void prepare() {
-        for (IMixinLaunchAgent agent : this.agents) {
+        for (IMixinPlatformAgent agent : this.agents) {
             agent.prepare();
         }
     }
     
     public void initPrimaryContainer() {
-        for (IMixinLaunchAgent agent : this.agents) {
+        for (IMixinPlatformAgent agent : this.agents) {
             this.logger.debug("Processing launch tasks for {}", agent);
             agent.initPrimaryContainer();
         }
@@ -96,13 +109,13 @@ public class MixinTweakContainer {
      * @param classLoader
      */
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        for (IMixinLaunchAgent agent : this.agents) {
+        for (IMixinPlatformAgent agent : this.agents) {
             agent.injectIntoClassLoader(classLoader);
         }
     }
 
     public String getLaunchTarget() {
-        for (IMixinLaunchAgent agent : this.agents) {
+        for (IMixinPlatformAgent agent : this.agents) {
             String launchTarget = agent.getLaunchTarget();
             if (launchTarget != null) {
                 return launchTarget;

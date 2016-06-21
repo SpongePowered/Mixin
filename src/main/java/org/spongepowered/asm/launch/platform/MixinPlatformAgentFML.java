@@ -22,32 +22,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+//import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.logging.log4j.Level;
+import org.spongepowered.asm.launch.Blackboard;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+//import org.spongepowered.asm.mixin.environment.IPhaseProvider;
+//import org.spongepowered.asm.mixin.environment.PhaseDefinition;
+//import org.spongepowered.asm.mixin.environment.phase.OnLogMessage;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
+
+//import com.google.common.collect.ImmutableList;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
- * Launch agent for use under FML.
+ * Platform agent for use under FML.
  * 
  * <p>When FML is present we scan containers for the manifest entries which are
  * inhibited by the tweaker, in particular the <tt>FMLCorePlugin</tt> and
  * <tt>FMLCorePluginContainsFMLMod</tt> entries. This is required because FML
  * performs no further processing of containers if they contain a tweaker!</p>
  */
-public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
+public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
     
     private static final String LOAD_CORE_MOD_METHOD = "loadCoreMod";
     private static final String GET_REPARSEABLE_COREMODS_METHOD = "getReparseableCoremods";
@@ -83,8 +90,8 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     /**
      * @param uri
      */
-    public MixinLaunchAgentFML(URI uri) {
-        super(uri);
+    public MixinPlatformAgentFML(MixinPlatformManager manager, URI uri) {
+        super(manager, uri);
         this.fileName = this.container.getName();
         this.coreModWrapper = this.initFMLCoreMod();
     }
@@ -94,9 +101,9 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     private ITweaker initFMLCoreMod() {
         try {
-            this.clCoreModManager = MixinLaunchAgentFML.getCoreModManagerClass();
+            this.clCoreModManager = MixinPlatformAgentFML.getCoreModManagerClass();
 
-            if ("true".equalsIgnoreCase(this.attributes.get(MixinLaunchAgentFML.MFATT_FORCELOADASMOD))) {
+            if ("true".equalsIgnoreCase(this.attributes.get(MixinPlatformAgentFML.MFATT_FORCELOADASMOD))) {
                 this.loadAsMod();
             }
 
@@ -119,12 +126,12 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
      */
     private void loadAsMod() {
         try {
-            MixinLaunchAgentFML.getIgnoredMods(this.clCoreModManager).remove(this.fileName);
+            MixinPlatformAgentFML.getIgnoredMods(this.clCoreModManager).remove(this.fileName);
         } catch (Exception ex) {
-            MixinLaunchAgentAbstract.logger.catching(ex);
+            MixinPlatformAgentAbstract.logger.catching(ex);
         }
         
-        if (this.attributes.get(MixinLaunchAgentFML.MFATT_COREMODCONTAINSMOD) != null) {    
+        if (this.attributes.get(MixinPlatformAgentFML.MFATT_COREMODCONTAINSMOD) != null) {    
             this.addReparseableJar();
         }
     }
@@ -136,7 +143,7 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     private void addReparseableJar() {
         try {
             Method mdGetReparsedCoremods = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                    Blackboard.Keys.FML_GET_REPARSEABLE_COREMODS, MixinLaunchAgentFML.GET_REPARSEABLE_COREMODS_METHOD));
+                    Blackboard.Keys.FML_GET_REPARSEABLE_COREMODS, MixinPlatformAgentFML.GET_REPARSEABLE_COREMODS_METHOD));
             @SuppressWarnings("unchecked")
             List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
             if (!reparsedCoremods.contains(this.fileName)) {
@@ -148,13 +155,13 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     }
 
     private ITweaker injectCorePlugin() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        String coreModName = this.attributes.get(MixinLaunchAgentFML.MFATT_FMLCOREPLUGIN);
+        String coreModName = this.attributes.get(MixinPlatformAgentFML.MFATT_FMLCOREPLUGIN);
         if (coreModName == null) {
             return null;
         }
 
         Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                Blackboard.Keys.FML_LOAD_CORE_MOD, MixinLaunchAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
+                Blackboard.Keys.FML_LOAD_CORE_MOD, MixinPlatformAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
         mdLoadCoreMod.setAccessible(true);
         ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
         if (wrapper == null) {
@@ -163,38 +170,44 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
 
         return wrapper;
     }
+    
+    @Override
+    public String getPhaseProvider() {
+        return MixinPlatformAgentFML.class.getName() + "$PhaseProvider";
+    }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinLaunchAgent#prepare()
+     * @see org.spongepowered.asm.launch.IMixinPlatformAgent#prepare()
      */
     @Override
     public void prepare() {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinLaunchAgent
+     * @see org.spongepowered.asm.launch.IMixinPlatformAgent
      *      #initPrimaryContainer()
      */
     @Override
     public void initPrimaryContainer() {
         if (this.clCoreModManager != null) {
+//            MixinEnvironment.registerPhaseProvider(MixinPlatformAgentFML.class.getName() + "$PhaseProvider");
             this.injectRemapper();
         }
     }
 
     private void injectRemapper() {
         try {
-            Class<?> clFmlRemapperAdapter = Class.forName(MixinLaunchAgentFML.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
+            Class<?> clFmlRemapperAdapter = Class.forName(MixinPlatformAgentFML.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
             Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
             IRemapper remapper = (IRemapper)mdCreate.invoke(null);
             MixinEnvironment.getDefaultEnvironment().getRemappers().add(remapper);
         } catch (Exception ex) {
-            MixinLaunchAgentAbstract.logger.debug("Failed instancing FML remapper adapter, things will probably go horribly for notch-obf'd mods!");
+            MixinPlatformAgentAbstract.logger.debug("Failed instancing FML remapper adapter, things will probably go horribly for notch-obf'd mods!");
         }
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinLaunchAgent
+     * @see org.spongepowered.asm.launch.IMixinPlatformAgent
      *     #injectIntoClassLoader(net.minecraft.launchwrapper.LaunchClassLoader)
      */
     @Override
@@ -205,13 +218,13 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinLaunchAgent#getLaunchTarget()
+     * @see org.spongepowered.asm.launch.IMixinPlatformAgent#getLaunchTarget()
      */
     @Override
     public String getLaunchTarget() {
         return null;
     }
-    
+
     /**
      * Performs a naive check which attempts to discover whether we are pre or
      * post FML's main injection. If we are <i>pre</i>, then we must <b>not</b>
@@ -240,7 +253,7 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
     private static Class<?> getCoreModManagerClass() throws ClassNotFoundException {
         try {
             return Class.forName(Blackboard.getString(
-                    Blackboard.Keys.FML_CORE_MOD_MANAGER, MixinLaunchAgentFML.CORE_MOD_MANAGER_CLASS));
+                    Blackboard.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS));
         } catch (ClassNotFoundException ex) {
             return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
         }
@@ -252,13 +265,13 @@ public class MixinLaunchAgentFML extends MixinLaunchAgentAbstract {
         
         try {
             mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                    Blackboard.Keys.FML_GET_IGNORED_MODS, MixinLaunchAgentFML.GET_IGNORED_MODS_METHOD));
+                    Blackboard.Keys.FML_GET_IGNORED_MODS, MixinPlatformAgentFML.GET_IGNORED_MODS_METHOD));
         } catch (NoSuchMethodException ex1) {
             try {
                 // Legacy name
                 mdGetIgnoredMods = clCoreModManager.getDeclaredMethod("getLoadedCoremods");
             } catch (NoSuchMethodException ex2) {
-                MixinLaunchAgentAbstract.logger.catching(Level.DEBUG, ex2);
+                MixinPlatformAgentAbstract.logger.catching(Level.DEBUG, ex2);
                 return Collections.<String>emptyList();
             }
         }

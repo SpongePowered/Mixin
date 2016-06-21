@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import java.net.URI;
 
@@ -31,35 +31,34 @@ import org.spongepowered.asm.util.Constants.ManifestAttributes;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
- * Default launch agent, handles the <tt>MixinConfigs</tt> manifest key
+ * Default platform agent, handles the mixin manifest keys such as
+ * <tt>MixinConfigs</tt> and <tt>MixinTokenProviders</tt>.
  */
-public class MixinLaunchAgentDefault extends MixinLaunchAgentAbstract {
+public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
 
-    public MixinLaunchAgentDefault(URI uri) {
-        super(uri);
+    public MixinPlatformAgentDefault(MixinPlatformManager manager, URI uri) {
+        super(manager, uri);
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void prepare() {
+        @SuppressWarnings("deprecation")
         String compatibilityLevel = this.attributes.get(ManifestAttributes.COMPATIBILITY);
         if (compatibilityLevel != null) {
-            MixinLaunchAgentAbstract.logger.warn("{} Setting mixin compatibility level via manifest is deprecated, "
-                    + "use 'compatibilityLevel' key in config instead", this.container);
-            MixinTweaker.setCompatibilityLevel(compatibilityLevel);
+            this.manager.setCompatibilityLevel(compatibilityLevel);
         }
         
         String mixinConfigs = this.attributes.get(ManifestAttributes.MIXINCONFIGS);
         if (mixinConfigs != null) {
             for (String config : mixinConfigs.split(",")) {
-                MixinTweaker.addConfig(config.trim());
+                this.manager.addConfig(config.trim());
             }
         }
         
         String tokenProviders = this.attributes.get(ManifestAttributes.TOKENPROVIDERS);
         if (tokenProviders != null) {
             for (String provider : tokenProviders.split(",")) {
-                MixinTweaker.addTokenProvider(provider.trim());
+                this.manager.addTokenProvider(provider.trim());
             }
         }
     }

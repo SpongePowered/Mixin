@@ -549,6 +549,7 @@ public final class MixinEnvironment implements ITokenProvider {
 
         @Override
         public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+            MixinBootstrap.getPlatform().injectIntoClassLoader(classLoader);
         }
 
         @Override

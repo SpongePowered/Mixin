@@ -37,6 +37,11 @@ public class RemapperChain implements IRemapper {
     
     private final List<IRemapper> remappers = new ArrayList<IRemapper>();
     
+    @Override
+    public String toString() {
+        return String.format("RemapperChain[%d]", this.remappers.size());
+    }
+    
     public RemapperChain add(IRemapper remapper) {
         this.remappers.add(remapper);
         return this;

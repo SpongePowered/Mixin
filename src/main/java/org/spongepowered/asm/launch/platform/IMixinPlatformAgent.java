@@ -22,21 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
- * Base interface for launch agents. Launch agents are environment-specific
- * launch handlers which are used by the {@link MixinTweaker mixin tweaker} to
- * perform launch tasks required by that environment without having to fill the
- * tweaker itself with a bunch of environment-specific cruft.
+ * Base interface for platform agents. Platform agents are environment-specific
+ * handlers which are used by the Mixin subsystem to perform platform-specific
+ * tasks required by different environments without having to litter the Mixin
+ * codebase with a bunch of environment-specific cruft.
  * 
- * <p>Agents handle mixin environment launch tasks on a per-container basis,
+ * <p>Platform Agents handle mixin environment tasks on a per-container basis,
  * with each container in the environment being assigned one of each available
  * type of agent to handle those tasks on behalf of the container.</p>
  */
-interface IMixinLaunchAgent {
+public interface IMixinPlatformAgent {
+
+    /**
+     * Get the phase provider for this agent
+     */
+    public abstract String getPhaseProvider();
     
     /**
      * Called during pre-initialisation, after all tweakers and tweak containers
@@ -63,4 +68,5 @@ interface IMixinLaunchAgent {
      * custom target is available.
      */
     public abstract String getLaunchTarget();
+    
 }

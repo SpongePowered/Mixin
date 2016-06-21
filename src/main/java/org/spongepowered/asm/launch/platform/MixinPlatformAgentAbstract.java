@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import java.io.File;
 import java.net.URI;
@@ -31,14 +31,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Launch agent base class
+ * Platform agent base class
  */
-public abstract class MixinLaunchAgentAbstract implements IMixinLaunchAgent {
+public abstract class MixinPlatformAgentAbstract implements IMixinPlatformAgent {
 
     /**
      * Logger 
      */
     protected static final Logger logger = LogManager.getLogger("mixin");
+    
+    protected final MixinPlatformManager manager;
     
     /**
      * URI to the container
@@ -56,11 +58,12 @@ public abstract class MixinLaunchAgentAbstract implements IMixinLaunchAgent {
     protected final MainAttributes attributes;
     
     /**
-     * Create a new launch agent for the specified URI
+     * Create a new platform agent for the specified URI
      * 
      * @param uri
      */
-    public MixinLaunchAgentAbstract(URI uri) {
+    public MixinPlatformAgentAbstract(MixinPlatformManager manager, URI uri) {
+        this.manager = manager;
         this.uri = uri;
         this.container = this.uri != null ? new File(this.uri) : null;
         this.attributes = MainAttributes.of(uri);
@@ -68,7 +71,12 @@ public abstract class MixinLaunchAgentAbstract implements IMixinLaunchAgent {
     
     @Override
     public String toString() {
-        return String.format("LaunchAgent[%s:%s]", this.getClass().getSimpleName(), this.uri);
+        return String.format("PlatformAgent[%s:%s]", this.getClass().getSimpleName(), this.uri);
     }
 
+    @Override
+    public String getPhaseProvider() {
+        return null;
+    }
+    
 }
