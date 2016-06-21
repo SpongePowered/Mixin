@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -43,15 +42,6 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 public final class LaunchClassLoaderUtil {
     
     /**
-     * Class load state
-     */
-    public enum LoadedType {
-        UNLOADED,
-        LOADED,
-        TRANSFORMED
-    }
-    
-    /**
      * ClassLoader -> util mapping
      */
     private static final Map<LaunchClassLoader, LaunchClassLoaderUtil> utils = new HashMap<LaunchClassLoader, LaunchClassLoaderUtil>();
@@ -60,8 +50,6 @@ public final class LaunchClassLoaderUtil {
      * ClassLoader for this util
      */
     private final LaunchClassLoader classLoader;
-    
-    private final Set<String> parentLoadedClassNames = new HashSet<String>();
     
     // Reflected fields
     private Map<String, Class<?>> cachedClasses;
@@ -125,12 +113,6 @@ public final class LaunchClassLoaderUtil {
             return true;
         }
         
-//        if (this.parentLoadedClassNames.contains(name)) {
-//            return true;
-//        }
-//        
-//        this.readLoadedClassesFromParent();
-//        return this.parentLoadedClassNames.contains(name);
         return false;
     }
 
@@ -183,26 +165,6 @@ public final class LaunchClassLoaderUtil {
             return this.transformerExceptions;
         }
         return Collections.<String>emptySet();
-    }
-
-    private void readLoadedClassesFromParent() {
-        if (this.classLoader == null) {
-            return;
-        }
-        
-        ClassLoader parent = this.classLoader.getClass().getClassLoader();
-        try {
-            Field fdClasses = ClassLoader.class.getDeclaredField("classes");
-            fdClasses.setAccessible(true);
-            
-            @SuppressWarnings("unchecked")
-            Vector<Class<?>> classes =  (Vector<Class<?>>) fdClasses.get(parent);
-            for (Class<?> c : classes) {
-                this.parentLoadedClassNames.add(c.getName());
-            }
-        } catch (Exception ex) {
-            // boo
-        }
     }
 
     @SuppressWarnings("unchecked")

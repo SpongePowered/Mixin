@@ -224,6 +224,7 @@ public class MixinPlatformManager {
      * 
      * @param level compatibility level as a string
      */
+    @SuppressWarnings("deprecation")
     final void setCompatibilityLevel(String level) {
         try {
             CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase());
@@ -242,6 +243,7 @@ public class MixinPlatformManager {
      * 
      * @param config config resource name, does not require a leading /
      */
+    @SuppressWarnings("deprecation")
     final void addConfig(String config) {
         if (config.endsWith(".json")) {
             MixinPlatformManager.logger.debug("Registering mixin config: {}", config);

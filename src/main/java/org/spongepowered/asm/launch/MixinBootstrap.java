@@ -24,16 +24,13 @@
  */
 package org.spongepowered.asm.launch;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.TreeMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-import org.spongepowered.asm.util.PrettyPrinter;
 
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -65,7 +62,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.6";
+    public static final String VERSION = "0.5.11";
     
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
@@ -170,10 +167,11 @@ public abstract class MixinBootstrap {
             throw new IllegalStateException("MixinBootstrap.doInit() called before MixinBootstrap.preInit()");
         }
 
-        for (String platformProviderClass : MixinBootstrap.getPlatform().getPhaseProviderClasses()) {
+        MixinBootstrap.getPlatform().getPhaseProviderClasses();
+//        for (String platformProviderClass : MixinBootstrap.getPlatform().getPhaseProviderClasses()) {
 //            System.err.printf("Registering %s\n", platformProviderClass);
 //            MixinEnvironment.registerPhaseProvider(platformProviderClass);
-        }
+//        }
 
         if (MixinBootstrap.initState) {
             MixinBootstrap.getPlatform().prepare(args);
