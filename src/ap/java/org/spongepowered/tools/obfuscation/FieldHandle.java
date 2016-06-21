@@ -26,7 +26,6 @@ package org.spongepowered.tools.obfuscation;
 
 import javax.lang.model.element.VariableElement;
 
-
 /**
  * Retrieved from a {@link TypeHandle} when searching for fields
  */

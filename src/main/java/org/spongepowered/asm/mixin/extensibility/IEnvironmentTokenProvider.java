@@ -26,7 +26,6 @@ package org.spongepowered.asm.mixin.extensibility;
 
 import org.spongepowered.asm.mixin.MixinEnvironment;
 
-
 /**
  * Provides a token value into the attached environment
  */

@@ -27,20 +27,16 @@ package org.spongepowered.tools.obfuscation;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -50,7 +46,6 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
@@ -60,26 +55,32 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.ReferenceMapper;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
+import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
+import org.spongepowered.tools.obfuscation.struct.Message;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
 import com.google.common.collect.ImmutableList;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-import net.minecraftforge.srg2source.rangeapplier.SrgContainer;
-
-
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the srgs
  */
-class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
+class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
     
+    private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
+
+    /**
+     * Detected compiler argument, specifies the behaviour of some operations
+     * for compatibility purposes.
+     */
     static enum CompilerEnvironment {
         /**
          * Default environment
@@ -115,24 +116,9 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private final List<AnnotatedMixin> mixinsForPass = new ArrayList<AnnotatedMixin>();
     
     /**
-     * Name of the resource to write generated srgs to
+     * Obfuscation manager
      */
-    private final String outSrgFileName;
-    
-    /**
-     * Name of the resource to write remapped refs to
-     */
-    private final String outRefMapFileName;
-    
-    /**
-     * File containing the reobfd srgs
-     */
-    private final String reobfSrgFileName;
-    
-    /**
-     * Reference mapper for reference mapping 
-     */
-    private final ReferenceMapper refMapper = new ReferenceMapper();
+    private final ObfuscationManager obf;
     
     /**
      * Rule validators
@@ -145,15 +131,9 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private final Map<String, Integer> tokenCache = new HashMap<String, Integer>();
     
     /**
-     * SRG container for mcp->srg mappings
+     * Serialisable mixin target map 
      */
-    private SrgContainer srgs;
-    
-    /**
-     * True once we've tried to initialise the srgs, initially false so that we
-     * can do srg init lazily
-     */
-    private boolean initDone;
+    private final TargetMap targets;
     
     /**
      * Properties file used to specify options when AP options cannot be
@@ -167,19 +147,31 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+        this.targets = this.initTargetMap();
+        this.obf = new ObfuscationManager(this);
 
         this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
-        
-        this.reobfSrgFileName = this.getOption("reobfSrgFile");
-        this.outSrgFileName = this.getOption("outSrgFile");
-        this.outRefMapFileName = this.getOption("outRefMapFile"); 
-        
+
         this.validators = ImmutableList.<IMixinValidator>of(
-            new ParentValidator(processingEnv, this, this),
-            new TargetValidator(processingEnv, this, this)
+            new ParentValidator(this),
+            new TargetValidator(this)
         );
         
-        this.initTokenCache(this.getOption("tokens"));
+        this.initTokenCache(this.getOption(SupportedOptions.TOKENS));
+    }
+
+    protected TargetMap initTargetMap() {
+        TargetMap targets = TargetMap.create(System.getProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY));
+        System.setProperty(AnnotatedMixins.MAPID_SYSTEM_PROPERTY, targets.getSessionId());
+        String targetsFileName = this.getOption(SupportedOptions.DEPENDENCY_TARGETS_FILE);
+        if (targetsFileName != null) {
+            try {
+                targets.readImports(new File(targetsFileName));
+            } catch (IOException ex) {
+                this.printMessage(Kind.WARNING, "Could not read from specified imports file: " + targetsFileName);
+            }
+        }
+        return targets;
     }
 
     private void initTokenCache(String tokens) {
@@ -194,6 +186,31 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
                 }
             }
         }
+    }
+    
+    @Override
+    public ITypeHandleProvider getTypeProvider() {
+        return this;
+    }
+
+    @Override
+    public ITokenProvider getTokenProvider() {
+        return this;
+    }
+
+    @Override
+    public IObfuscationManager getObfuscationManager() {
+        return this.obf;
+    }
+
+    @Override
+    public IJavadocProvider getJavadocProvider() {
+        return this;
+    }
+    
+    @Override
+    public ProcessingEnvironment getProcessingEnvironment() {
+        return this.processingEnv;
     }
 
     @Override
@@ -253,122 +270,19 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     }
 
     /**
-     * Lazy initialisation for srgs, so that we only initialise the srgs if
-     * they're actually required.
-     */
-    private boolean initSrgs() {
-        if (!this.initDone) {
-            this.initDone = true;
-            
-            if (this.reobfSrgFileName == null) {
-                this.printMessage(Kind.ERROR, "The reobfSrgFile argument was not supplied, obfuscation processing will not occur");
-                return false;
-            }
-            
-            try {
-                File reobfSrgFile = new File(this.reobfSrgFileName);
-                this.printMessage(Kind.NOTE, "Loading SRGs from " + reobfSrgFile.getAbsolutePath());
-                this.srgs = new SrgContainer().readSrg(reobfSrgFile);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                this.printMessage(Kind.ERROR, "The specified SRG file could not be read, processing cannot continue");
-                this.srgs = null;
-            }
-        }
-        
-        return this.srgs != null;
-    }
-
-    /**
      * Write out generated srgs
      */
     public void writeSrgs() {
-        if (this.outSrgFileName == null) {
-            return;
-        }
-        
-        Set<String> fieldMappings = new LinkedHashSet<String>();
-        Set<String> methodMappings = new LinkedHashSet<String>();
-        
-        for (AnnotatedMixin mixin : this.mixins.values()) {
-            fieldMappings.addAll(mixin.getFieldMappings());
-            methodMappings.addAll(mixin.getMethodMappings());
-        }
-        
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(this.outSrgFileName, "output SRGs");
-            for (String fieldMapping : fieldMappings) {
-                writer.println(fieldMapping);
-            }
-            for (String methodMapping : methodMappings) {
-                writer.println(methodMapping);
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
-            }
-        }
-    }
-
-    /**
-     * Open a writer for an output file
-     */
-    private PrintWriter openFileWriter(String fileName, String description) throws IOException {
-        if (fileName.matches("^.*[\\\\/:].*$")) {
-            File outSrgFile = new File(fileName);
-            outSrgFile.getParentFile().mkdirs();
-            this.printMessage(Kind.NOTE, "Writing " + description + " to " + outSrgFile.getAbsolutePath());
-            return new PrintWriter(outSrgFile);
-        }
-        
-        Filer filer = this.processingEnv.getFiler();
-        FileObject outSrg = filer.createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
-        this.printMessage(Kind.NOTE, "Writing " + description + " to " + new File(outSrg.toUri()).getAbsolutePath());
-        return new PrintWriter(outSrg.openWriter());
+        this.obf.writeSrgs(this.mixins);
     }
 
     /**
      * Write out stored mappings
      */
     public void writeRefs() {
-        if (this.outRefMapFileName == null) {
-            return;
-        }
-        
-        PrintWriter writer = null;
-        
-        try {
-            writer = this.openFileWriter(this.outRefMapFileName, "refmap");
-            this.refMapper.write(writer);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (Exception ex) {
-                    // oh well
-                }
-            }
-        }
-        
+        this.obf.writeRefs();
     }
 
-    /**
-     * Get the reference mapper
-     */
-    public ReferenceMapper getReferenceMapper() {
-        return this.refMapper;
-    }
-    
     /**
      * Clear all registered mixins 
      */
@@ -384,6 +298,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
         
         if (!this.mixins.containsKey(name)) {
             AnnotatedMixin mixin = new AnnotatedMixin(this, mixinType);
+            this.targets.registerTargets(mixin);
             mixin.runValidators(ValidationPass.EARLY, this.validators);
             this.mixins.put(name, mixin);
             this.mixinsForPass.add(mixin);
@@ -411,12 +326,10 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     public Collection<TypeMirror> getMixinsTargeting(TypeElement targetType) {
         List<TypeMirror> minions = new ArrayList<TypeMirror>();
         
-        for (AnnotatedMixin mixin : this.mixins.values()) {
-            for (TypeHandle mixinTarget : mixin.getTargets()) {
-                if (targetType.equals(mixinTarget.getElement())) {
-                    minions.add(mixin.getMixin().asType());
-                    break;
-                }
+        for (TypeReference mixin : this.targets.getMixinsTargeting(targetType)) {
+            TypeHandle handle = mixin.getHandle(this.processingEnv);
+            if (handle != null) {
+                minions.add(handle.getType());
             }
         }
         
@@ -443,7 +356,7 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
      * Register a {@link org.spongepowered.asm.mixin.Shadow} field
      * 
      * @param mixinType Mixin class
-     * @param method Shadow field
+     * @param field Shadow field
      * @param shadow {@link org.spongepowered.asm.mixin.Shadow} annotation
      */
     public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationMirror shadow) {
@@ -484,12 +397,14 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Inject annotation on a non-mixin method", method);
+            String type = "@" + inject.getAnnotationType().asElement().getSimpleName() + "";
+            this.printMessage(Kind.ERROR, "Found " + type + " annotation on a non-mixin method", method);
             return;
         }
 
         boolean remap = this.shouldRemap(mixinClass, inject);
-        mixinClass.registerInjector(method, inject, remap);
+        Message errorMessage = mixinClass.registerInjector(method, inject, remap);
+        int remappedAts = 0;
         if (remap) {
             Object ats = MirrorUtils.getAnnotationValue(inject, "at");
             
@@ -501,20 +416,27 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
                         at = ((AnnotationValue)at).getValue();
                     }
                     if (at instanceof AnnotationMirror) {
-                        mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
+                        remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
                     } else {
                         this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
                     }
                 }
             } else if (ats instanceof AnnotationMirror) {
-                mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
+                remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
             } else if (ats instanceof AnnotationValue) {
                 // Fix for JDT
                 Object mirror = ((AnnotationValue)ats).getValue();
                 if (mirror instanceof AnnotationMirror) {
-                    mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
+                    remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
                 }
             }
+        }
+        
+        // The annotation was *not* marked as remap=false and failed so we
+        // checked for remappable @At annotations, if that failed as well then
+        // we raise the original error.
+        if (remappedAts == 0 && errorMessage != null) {
+            errorMessage.sendTo(this);
         }
     }
     
@@ -530,6 +452,10 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
      * Called from each AP when a pass is completed 
      */
     public void onPassCompleted() {
+        if (!"true".equalsIgnoreCase(this.getOption(SupportedOptions.DISABLE_TARGET_EXPORT))) {
+            this.targets.write(true);
+        }
+        
         for (AnnotatedMixin mixin : this.mixinsForPass) {
             mixin.runValidators(ValidationPass.LATE, this.validators);
         }
@@ -581,16 +507,10 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
     }
     
     /**
-     * Print a message to the AP messager
-     */
-    public void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
-        this.processingEnv.getMessager().printMessage(kind, msg, mixin.getMixin(), mixin.getAnnotation());
-    }
-    
-    /**
      * Get a TypeHandle representing another type in the current processing
      * environment
      */
+    @Override
     public TypeHandle getTypeHandle(String name) {
         name = name.replace('/', '.');
         
@@ -615,51 +535,15 @@ class AnnotatedMixins implements Messager, ITokenProvider, IOptionProvider {
         
         return null;
     }
-    
-    /**
-     * Get an obfuscation mapping for a method
-     */
-    public MethodData getObfMethod(MemberInfo method) {
-        MethodData obfd = this.getObfMethod(method.asMethodData());
-        if (obfd != null || !method.isFullyQualified()) {
-            return obfd;
-        }
-        
-        // Get a type handle for the declared method owner
-        TypeHandle type = this.getTypeHandle(method.owner);
-        if (type.isImaginary()) {
-            return null;
-        }
-        
-        // See if we can get the superclass from the reference
-        TypeMirror superClass = type.getElement().getSuperclass();
-        if (superClass.getKind() != TypeKind.DECLARED) {
-            return null;
-        }
-        
-        // Well we found it, let's inflect the class name and recurse the search
-        String superClassName = ((TypeElement)((DeclaredType)superClass).asElement()).getQualifiedName().toString();
-        return this.getObfMethod(new MemberInfo(method.name, superClassName.replace('.', '/'), method.desc, method.matchAll));
-    }
 
-    /**
-     * Get an obfuscation mapping for a method
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.IJavadocProvider
+     *      #getJavadoc(javax.lang.model.element.Element)
      */
-    public MethodData getObfMethod(MethodData method) {
-        if (this.initSrgs()) {
-            return this.srgs.methodMap.get(method);
-        }
-        return null;
-    }
-
-    /**
-     * Get an obfuscation mapping for a field
-     */
-    public String getObfField(String field) {
-        if (this.initSrgs()) {
-            return this.srgs.fieldMap.get(field);
-        }
-        return null;
+    @Override
+    public String getJavadoc(Element element) {
+        Elements elements = this.processingEnv.getElementUtils();
+        return elements.getDocComment(element);
     }
 
     /**

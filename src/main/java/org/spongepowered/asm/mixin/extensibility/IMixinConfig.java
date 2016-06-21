@@ -26,6 +26,8 @@ package org.spongepowered.asm.mixin.extensibility;
 
 import java.util.Set;
 
+import org.spongepowered.asm.mixin.MixinEnvironment;
+
 /**
  * Interface for loaded mixin configurations
  */
@@ -35,6 +37,13 @@ public interface IMixinConfig {
      * Default priority for mixin configs and mixins
      */
     public static final int DEFAULT_PRIORITY = 1000;
+    
+    /**
+     * Get the parent environment of this config
+     * 
+     * @return the parent environment
+     */
+    public abstract MixinEnvironment getEnvironment();
 
     /**
      * Get the name of the file from which this configuration object was

@@ -31,10 +31,11 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 
 /**
  * A bytecode injector which allows a single argument of a chosen method call to
@@ -76,9 +77,20 @@ public class ModifyArgInjector extends InvokeInjector {
         
         if (this.singleArgMode) {
             if (!this.methodArgs[0].equals(this.returnType)) {
-                throw new InvalidInjectionException(this.info, "@ModifyArg return type must match the parameter type."
+                throw new InvalidInjectionException(this.info, "@ModifyArg return type on " + this + " must match the parameter type."
                         + " ARG=" + this.methodArgs[0] + " RETURN=" + this.returnType);
             }
+        }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.invoke.InvokeInjector
+     *      #checkTarget(org.spongepowered.asm.mixin.injection.struct.Target)
+     */
+    @Override
+    protected void checkTarget(Target target) {
+        if (!this.isStatic && target.isStatic) {
+            throw new InvalidInjectionException(this.info, "non-static callback method " + this + " targets a static method which is not supported");
         }
     }
     
@@ -86,8 +98,9 @@ public class ModifyArgInjector extends InvokeInjector {
      * Do the injection
      */
     @Override
-    protected void inject(Target target, MethodInsnNode node) {
-        Type[] args = Type.getArgumentTypes(node.desc);
+    protected void injectAtInvoke(Target target, InjectionNode node) {
+        MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
+        Type[] args = Type.getArgumentTypes(methodNode.desc);
         int argIndex = this.findArgIndex(target, args);
         InsnList insns = new InsnList();
         int extraLocals = 0;
@@ -98,7 +111,7 @@ public class ModifyArgInjector extends InvokeInjector {
             extraLocals = this.injectMultiArgHandler(target, args, argIndex, insns);
         }
         
-        target.insns.insertBefore(node, insns);
+        target.insns.insertBefore(methodNode, insns);
         target.addToLocals(extraLocals);
         target.addToStack(2 - (extraLocals - 1));
     }
@@ -110,7 +123,7 @@ public class ModifyArgInjector extends InvokeInjector {
         int[] argMap = this.storeArgs(target, args, insns, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, argIndex, argIndex + 1);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return (target.getCurrentMaxLocals() - argMap[argMap.length - 1]) + 1 + args[args.length - 1].getSize();
+        return (argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize();
     }
 
     /**
@@ -118,7 +131,7 @@ public class ModifyArgInjector extends InvokeInjector {
      */
     private int injectMultiArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
         if (!Arrays.equals(args, this.methodArgs)) {
-            throw new InvalidInjectionException(this.info, "@ModifyArg method targets a method with an invalid signature "
+            throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
                     + Injector.printArgs(args) + ", expected " + Injector.printArgs(this.methodArgs));
         }
 
@@ -126,14 +139,14 @@ public class ModifyArgInjector extends InvokeInjector {
         this.pushArgs(args, insns, argMap, 0, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return (target.getCurrentMaxLocals() - argMap[argMap.length - 1]) + 1 + args[args.length - 1].getSize();
+        return (argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize();
     }
 
     protected int findArgIndex(Target target, Type[] args) {
         if (this.index > -1) {
             if (this.index >= args.length || !args[this.index].equals(this.returnType)) {
                 throw new InvalidInjectionException(this.info, "Specified index " + this.index + " for @ModifyArg is invalid for args "
-                        + Injector.printArgs(args) + ", expected " + this.returnType);
+                        + Injector.printArgs(args) + ", expected " + this.returnType + " on " + this);
             }
             return this.index;
         }
@@ -147,8 +160,7 @@ public class ModifyArgInjector extends InvokeInjector {
             
             if (argIndex != -1) {
                 throw new InvalidInjectionException(this.info, "Found duplicate args with index [" + argIndex + ", " + arg + "] matching type "
-                        + this.returnType + " for @ModifyArg target " + target + " in " + this.classNode.name
-                        + ". Please specify index of desired arg.");
+                        + this.returnType + " for @ModifyArg target " + target + " in " + this + ". Please specify index of desired arg.");
             }
             
             argIndex = arg;
@@ -156,7 +168,7 @@ public class ModifyArgInjector extends InvokeInjector {
         
         if (argIndex == -1) {
             throw new InvalidInjectionException(this.info, "Could not find arg matching type " + this.returnType + " for @ModifyArg target "
-                    + target + " in " + this.classNode.name);
+                    + target + " in " + this);
         }
 
         return argIndex;

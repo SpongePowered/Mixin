@@ -29,14 +29,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.spongepowered.asm.mixin.transformer.MixinApplicator;
+import org.spongepowered.asm.mixin.transformer.MixinApplicatorStandard;
 
 /**
  * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
  * children.</p>
  * 
- * <p>Decoration annotation used by the {@link MixinApplicator} to mark methods
- * in a class which have been added or overwritten by a mixin.</p>
+ * <p>Decoration annotation used by the {@link MixinApplicatorStandard} to mark
+ * methods in a class which have been added or overwritten by a mixin.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

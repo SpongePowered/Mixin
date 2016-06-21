@@ -24,12 +24,12 @@
  */
 package org.spongepowered.asm.transformers;
 
-import net.minecraft.launchwrapper.IClassTransformer;
-
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinClassWriter;
+
+import net.minecraft.launchwrapper.IClassTransformer;
 
 /**
  * Base class for transformers which work with ASM tree model

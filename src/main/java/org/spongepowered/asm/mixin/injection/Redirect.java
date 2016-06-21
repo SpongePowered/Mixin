@@ -29,9 +29,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
+
 /**
  * <p>Specifies that this mixin method should redirect the specified
- * {@link #method} call to the method decorated with this annotation.</p>
+ * method call or field access to the method decorated with this annotation.</p>
+ * 
+ * <h4>Method Redirect Mode</h4>
  * 
  * <p>The handler method signature must match the hooked method precisely
  * <b>but</b> prepended with an arg of the owning object's type to accept the
@@ -68,6 +75,42 @@ import java.lang.annotation.Target;
  *      <pre>public boolean barProxy(Foo someObject, int abc, int def,
  *   int someInt, String someString)</pre>
  * </blockquote>
+ * 
+ * <h4>Field Access Redirect Mode</h4>
+ * 
+ * <p>The handler method signature varies depending on whether the redirector is
+ * handling a field <b>write</b> (<tt>PUTFIELD</tt>, <tt>PUTSTATIC</tt>) or a
+ * field <b>read</b> (<tt>GETFIELD</tt>, <tt>GETSTATIC</tt>).</p>
+ * 
+ * <table width="100%">
+ *   <tr>
+ *     <th>Operation (OPCODE)</th>
+ *     <th>Handler signature</th>
+ *   </tr>
+ *   <tr>
+ *     <td>Read static field (<tt>GETSTATIC</tt>)</td>
+ *     <td><code>private <b>FieldType</b> getFieldValue()</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Read instance field (<tt>GETFIELD</tt>)</td>
+ *     <td><code>private <b>FieldType</b> getFieldValue(<b>OwnerType</b>
+ *     owner)</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Write static field (<tt>PUTSTATIC</tt>)</td>
+ *     <td><code>private void setFieldValue(<b>FieldType</b> value)</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Write instance field (<tt>PUTFIELD</tt>)</td>
+ *     <td><code>private void getFieldValue(<b>OwnerType</b>
+ *     owner, <b>FieldType</b> value)</code></td>
+ *   </tr>
+ * </table>
+ * 
+ * <p>It is also possible to capture the arguments of the target method in
+ * addition to the arguments being passed to the method call (for example in
+ * the code above this would be the <em>someInt</em> and <em>someString</em>
+ * arguments) by appending the arguments to the method signature.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -108,4 +151,47 @@ public @interface Redirect {
      *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
+    
+    /**
+     * In general, injectors are intended to "fail soft" in that a failure to
+     * locate the injection point in the target method is not considered an
+     * error condition. Another transformer may have changed the method
+     * structure or any number of reasons may cause an injection to fail. This
+     * also makes it possible to define several injections to achieve the same
+     * task given <em>expected</em> mutation of the target class and the
+     * injectors which fail are simply ignored.
+     * 
+     * <p>However, this behaviour is not always desirable. For example, if your
+     * application depends on a particular injection succeeding you may wish to
+     * detect the injection failure as an error condition. This argument is thus
+     * provided to allow you to stipulate a <b>minimum</b> number of successful
+     * injections for this callback handler. If the number of injections
+     * specified is not achieved then an {@link InjectionError} is thrown at
+     * application time. Use this option with care.</p>
+     * 
+     * @return Minimum required number of injected callbacks, default specified
+     *      by the containing config
+     */
+    public int require() default -1;
+    
+    /**
+     * Like {@link #require()} but only enabled if the
+     * {@link Option#DEBUG_INJECTORS mixin.debug.countInjections} option is set
+     * to <tt>true</tt> and defaults to 1. Use this option during debugging to
+     * perform simple checking of your injectors. Causes the injector to throw
+     * a {@link InvalidInjectionException} if the expected number of injections
+     * is not realised.
+     * 
+     * @return Minimum number of <em>expected</em> callbacks, default 1
+     */
+    public int expect() default 1;
+    
+    /**
+     * Returns constraints which must be validated for this injector to
+     * succeed. See {@link Constraint} for details of constraint formats.
+     * 
+     * @return Constraints for this annotation
+     */
+    public String constraints() default "";
+
 }

@@ -44,16 +44,6 @@ targetCompatibility = '1.6'
 repositories {
     mavenCentral()
     maven {
-        // for srg2source
-        name = "forge"
-        url = "http://files.minecraftforge.net/maven"
-    }
-    maven {
-        // because Srg2Source needs an eclipse dependency.
-        name = "eclipse"
-        url = "https://repo.eclipse.org/content/groups/eclipse/"
-    }
-    maven {
         name = 'minecraft'
         url = 'https://libraries.minecraft.net/'
     }
@@ -92,6 +82,12 @@ sourceSets {
     fernflower {
         compileClasspath += main.output
     }
+    agent {
+        compileClasspath += main.output
+    }
+    bridge {
+        compileClasspath += main.output
+    }
 }
 
 // Dependencies for renamed ASM
@@ -127,15 +123,16 @@ task renamedASM {
         }
     }
 }
+eclipseClasspath.dependsOn(renamedASM)
 
 // Project dependencies
 dependencies {
     compile 'org.slf4j:slf4j-api:1.7.7'
     compile 'com.google.guava:guava:17.0'
-    compile 'net.minecraft:launchwrapper:1.11'
     compile 'com.google.code.gson:gson:2.2.4'
     compile 'commons-io:commons-io:2.4'
     compile 'commons-codec:commons-codec:1.9'
+    apCompile 'com.google.guava:guava:17.0'
     testCompile 'junit:junit:4.11'
     testCompile 'org.hamcrest:hamcrest-library:1.3'
     testCompile 'org.mockito:mockito-core:1.9.0'
@@ -143,13 +140,10 @@ dependencies {
     // maven
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
 
-    // for annotation processor
-    compile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
-    apCompile 'net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT'
-
     // remapped ASM
     compile tasks.renamedASM.outputs.files
     apCompile tasks.renamedASM.outputs.files
+    agentCompile tasks.renamedASM.outputs.files
 
     // fernflower bridge
     fernflowerCompile 'commons-io:commons-io:2.4'
@@ -157,6 +151,14 @@ dependencies {
     fernflowerCompile 'com.google.guava:guava:17.0'
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
     compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
+
+    compile 'net.minecraft:launchwrapper:1.11'
+    agentCompile 'net.minecraft:launchwrapper:1.11'
+    
+    // asm bridge
+    compile 'org.ow2.asm:asm-commons:5.0.3'
+    bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
+    bridgeCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 }
 
 // Filter, process, and include resources
@@ -212,6 +214,12 @@ jar {
     
     // Include fernflower bridge
     from sourceSets.fernflower.output
+
+    // Include hotswap agent
+    from sourceSets.agent.output
+    
+    // Bridge
+    from sourceSets.bridge.output
     
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0])
@@ -226,7 +234,12 @@ jar {
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
         "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
-        "Implementation-Vendor": url)
+        "Implementation-Vendor": url,
+        // for hotswap agent
+        "Premain-Class": "org.spongepowered.tools.agent.MixinAgent",
+        "Agent-Class": "org.spongepowered.tools.agent.MixinAgent",
+        "Can-Redefine-Classes": true,
+        "Can-Retransform-Classes": true)
 }
 
 // generate shadow jar so we can use the AP standalone
@@ -259,6 +272,10 @@ task sourceJar(type: Jar) {
 	from sourceSets.ap.resources
 	from sourceSets.fernflower.java
 	from sourceSets.fernflower.resources
+    from sourceSets.agent.java
+    from sourceSets.agent.resources
+    from sourceSets.bridge.java
+    from sourceSets.bridge.resources
 	classifier = "sources"
 }
 
@@ -315,7 +332,20 @@ uploadArchives {
                         }
                     }
                 }
+                whenConfigured {
+                    dependencies = dependencies.findAll {
+                        !it.artifactId.contains('fernflower')
+                    }
+                }
             }
+        }
+    }
+}
+
+install.repositories.mavenInstaller.pom {
+    whenConfigured {
+        dependencies = dependencies.findAll {
+            !it.artifactId.contains('fernflower')
         }
     }
 }

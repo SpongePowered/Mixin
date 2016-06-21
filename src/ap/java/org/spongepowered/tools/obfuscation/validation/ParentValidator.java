@@ -26,17 +26,14 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
-import org.spongepowered.tools.obfuscation.IOptionProvider;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
-
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
  * Validator which checks that the mixin parent is sane
@@ -46,12 +43,10 @@ public class ParentValidator extends MixinValidator {
     /**
      * ctor
      * 
-     * @param processingEnv Processing environment
-     * @param messager Messager
-     * @param options Option provider
+     * @param ap Processing environment
      */
-    public ParentValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options) {
-        super(processingEnv, messager, options, ValidationPass.EARLY);
+    public ParentValidator(IMixinAnnotationProcessor ap) {
+        super(ap, ValidationPass.EARLY);
     }
 
     /* (non-Javadoc)

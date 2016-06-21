@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,9 +32,14 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.modify.AfterStoreLocal;
+import org.spongepowered.asm.mixin.injection.modify.BeforeLoadLocal;
+import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.points.AfterInvoke;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeInvoke;
@@ -43,6 +49,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
 import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -143,12 +150,12 @@ public abstract class InjectionPoint {
             super(points);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
             boolean found = false;
 
-            @SuppressWarnings({ "unchecked", "rawtypes" })
-            ArrayList<AbstractInsnNode>[] allNodes = new ArrayList[this.components.length];
+            ArrayList<AbstractInsnNode>[] allNodes = (ArrayList<AbstractInsnNode>[]) Array.newInstance(ArrayList.class, this.components.length);
 
             for (int i = 0; i < this.components.length; i++) {
                 allNodes[i] = new ArrayList<AbstractInsnNode>();
@@ -308,12 +315,15 @@ public abstract class InjectionPoint {
      * 
      * @param mixin Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
+     * @param method The annotated handler method
+     * @param parent The parent annotation which owns this {@link At} annotation
      * @param at {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, At at) {
-        return InjectionPoint.parse(mixin, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.ordinal(), at.opcode());
+    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, At at) {
+        List<String> args = Arrays.asList(at.args());
+        return InjectionPoint.parse(mixin, method, parent, at.value(), at.shift(), at.by(), args, at.target(), at.ordinal(), at.opcode());
     }
 
     /**
@@ -322,11 +332,13 @@ public abstract class InjectionPoint {
      * 
      * @param mixin Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
+     * @param method The annotated handler method
+     * @param parent The parent annotation which owns this {@link At} annotation
      * @param node {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, AnnotationNode node) {
+    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
@@ -339,7 +351,7 @@ public abstract class InjectionPoint {
             args = ImmutableList.<String>of();
         }
 
-        return InjectionPoint.parse(mixin, at, shift, by, args, target, ordinal, opcode);
+        return InjectionPoint.parse(mixin, method, parent, at, shift, by, args, target, ordinal, opcode);
     }
 
     /**
@@ -348,6 +360,8 @@ public abstract class InjectionPoint {
      * 
      * @param mixin Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
+     * @param method The annotated handler method
+     * @param parent The parent annotation which owns this {@link At} annotation
      * @param at Injection point specifier
      * @param shift Shift type to apply
      * @param by Amount of shift to apply for the BY shift type 
@@ -358,9 +372,9 @@ public abstract class InjectionPoint {
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, String at, At.Shift shift, int by,
+    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
             List<String> args, String target, int ordinal, int opcode) {
-        InjectionPointData data = new InjectionPointData(mixin, args, target, ordinal, opcode);
+        InjectionPointData data = new InjectionPointData(mixin, method, parent, at, args, target, ordinal, opcode);
         InjectionPoint point = null;
 
         if (BeforeFieldAccess.CODE.equals(at)) {
@@ -379,6 +393,12 @@ public abstract class InjectionPoint {
             point = new MethodHead(data);
         } else if (AfterInvoke.CODE.equals(at)) {
             point = new AfterInvoke(data);
+        } else if (BeforeLoadLocal.CODE.equals(at)) {
+            LocalVariableDiscriminator discriminator = LocalVariableDiscriminator.parse(parent);
+            point = new BeforeLoadLocal(mixin, Type.getReturnType(method.desc), discriminator, data);
+        } else if (AfterStoreLocal.CODE.equals(at)) {
+            LocalVariableDiscriminator discriminator = LocalVariableDiscriminator.parse(parent);
+            point = new AfterStoreLocal(mixin, Type.getReturnType(method.desc), discriminator, data);
         } else if (at.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
             try {
                 @SuppressWarnings("unchecked") Class<? extends InjectionPoint> cls = (Class<? extends InjectionPoint>) Class.forName(at);

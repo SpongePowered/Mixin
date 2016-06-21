@@ -26,11 +26,15 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.ModifyArgInjector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
+/**
+ * Information about a {@link ModifyArg} injector
+ */
 public class ModifyArgInjectionInfo extends InjectionInfo {
 
     public ModifyArgInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
@@ -38,9 +42,15 @@ public class ModifyArgInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         int index = ASMHelper.<Integer>getAnnotationValue(injectAnnotation, "index", -1);
         
         return new ModifyArgInjector(this, index);
     }
+    
+    @Override
+    protected String getDescription() {
+        return "Argument modifier method";
+    }
+    
 }

@@ -29,9 +29,6 @@ import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedOptions;
-import javax.annotation.processing.SupportedSourceVersion;
-import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -39,8 +36,11 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.tools.MirrorUtils;
 
@@ -48,14 +48,12 @@ import org.spongepowered.tools.MirrorUtils;
  * Annotation processor which finds {@link Inject} and {@link At} annotations in
  * mixin classes and generates SRG mappings
  */
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedAnnotationTypes({
     "org.spongepowered.asm.mixin.injection.Inject",
     "org.spongepowered.asm.mixin.injection.ModifyArg",
     "org.spongepowered.asm.mixin.injection.Redirect",
     "org.spongepowered.asm.mixin.injection.At"
 })
-@SupportedOptions({ "reobfSrgFile", "outSrgFile", "outRefMapFile" })
 public class InjectionObfuscationProcessor extends MixinProcessor {
     
     /* (non-Javadoc)
@@ -66,13 +64,15 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
-            return false;
+            return true;
         }
         
         this.processMixins(roundEnv);
         this.processInjectors(roundEnv, Inject.class);
         this.processInjectors(roundEnv, ModifyArg.class);
         this.processInjectors(roundEnv, Redirect.class);
+        this.processInjectors(roundEnv, ModifyVariable.class);
+        this.processInjectors(roundEnv, ModifyConstant.class);
         this.postProcess(roundEnv);
         
         return true;

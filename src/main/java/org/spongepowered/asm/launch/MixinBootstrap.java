@@ -26,12 +26,14 @@ package org.spongepowered.asm.launch;
 
 import java.util.List;
 
-import net.minecraft.launchwrapper.Launch;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
@@ -60,13 +62,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.4.5";
-    
-    /**
-     * Blackboard key where the subsystem version will be stored to indicate
-     * successful bootstrap
-     */
-    public static final String INIT_KEY = "mixin.initialised";
+    public static final String VERSION = "0.5.11";
     
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
@@ -82,7 +78,7 @@ public abstract class MixinBootstrap {
     
     // These are Klass local, with luck this shouldn't be a problem
     private static boolean initialised = false;
-    private static boolean injectStateTweaker = true;
+    private static boolean initState = true;
     
     // Static initialiser, add classloader exclusions as early as possible
     static {
@@ -94,6 +90,8 @@ public abstract class MixinBootstrap {
         // Only needed in dev, in production this would be handled by the tweaker
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.LAUNCH_PACKAGE);
     }
+    
+    private static MixinPlatformManager platformManager = new MixinPlatformManager();
 
     private MixinBootstrap() {}
     
@@ -105,21 +103,28 @@ public abstract class MixinBootstrap {
     }
 
     /**
+     * Get the platform manager
+     */
+    public static MixinPlatformManager getPlatform() {
+        return MixinBootstrap.platformManager;
+    }
+
+    /**
      * Initialise the mixin subsystem
      */
     public static void init() {
-        if (!MixinBootstrap.preInit()) {
+        if (!MixinBootstrap.start()) {
             return;
         }
 
-        MixinBootstrap.register();
+        MixinBootstrap.doInit(null);
     }
 
     /**
      * Phase 1 of mixin initialisation
      */
-    static boolean preInit() {
-        Object registeredVersion = Launch.blackboard.get(MixinBootstrap.INIT_KEY);
+    static boolean start() {
+        Object registeredVersion = Blackboard.get(Blackboard.Keys.INIT);
         if (registeredVersion != null) {
             if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
                 throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
@@ -129,15 +134,21 @@ public abstract class MixinBootstrap {
             return false;
         }
 
-        Launch.blackboard.put(MixinBootstrap.INIT_KEY, MixinBootstrap.VERSION);
+        Blackboard.put(Blackboard.Keys.INIT, MixinBootstrap.VERSION);
         
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
-
+            
+            String command = System.getProperty("sun.java.command");
+            if (command != null && command.contains("GradleStart")) {
+                System.setProperty("mixin.env.disableRefMap", "true");
+            }
+            
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
                 MixinEnvironment.init(Phase.DEFAULT);
-                MixinBootstrap.injectStateTweaker = false;
+                MixinBootstrap.getPlatform().prepare(null);
+                MixinBootstrap.initState = false;
             } else {
                 MixinEnvironment.init(Phase.PREINIT);
             }
@@ -149,24 +160,35 @@ public abstract class MixinBootstrap {
     }
 
     /**
-     * Phase 2 of mixin initialisation, register the state tweaker
+     * Phase 2 of mixin initialisation, initialise the phases
      */
-    static void register() {
+    static void doInit(List<String> args) {
         if (!MixinBootstrap.initialised) {
-            throw new IllegalStateException("MixinBootstrap.register() called before MixinBootstrap.preInit()");
+            throw new IllegalStateException("MixinBootstrap.doInit() called before MixinBootstrap.preInit()");
         }
 
-        if (MixinBootstrap.injectStateTweaker) {
+        MixinBootstrap.getPlatform().getPhaseProviderClasses();
+//        for (String platformProviderClass : MixinBootstrap.getPlatform().getPhaseProviderClasses()) {
+//            System.err.printf("Registering %s\n", platformProviderClass);
+//            MixinEnvironment.registerPhaseProvider(platformProviderClass);
+//        }
+
+        if (MixinBootstrap.initState) {
+            MixinBootstrap.getPlatform().prepare(args);
+
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") < 4) {
-                MixinBootstrap.logger.warn("MixinBootstrap.register() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
+                MixinBootstrap.logger.warn("MixinBootstrap.doInit() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
             }
             
-            @SuppressWarnings("unchecked")
-            List<String> tweakClasses = (List<String>)Launch.blackboard.get("TweakClasses");
+            List<String> tweakClasses = Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES);
             if (tweakClasses != null) {
                 tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
             }
         }
+    }
+
+    static void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        MixinBootstrap.getPlatform().injectIntoClassLoader(classLoader);
     }
 
     private static int findInStackTrace(String className, String methodName) {
@@ -185,4 +207,5 @@ public abstract class MixinBootstrap {
         
         return 0;
     }
+
 }

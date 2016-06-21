@@ -27,25 +27,26 @@ package org.spongepowered.asm.mixin.injection.callback;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.injection.Coerce;
-import org.spongepowered.asm.mixin.injection.InjectionError;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.InvalidInjectionException;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
+
+import com.google.common.base.Strings;
 
 /**
  * This class is responsible for generating the bytecode for injected callbacks
@@ -148,10 +149,10 @@ public class CallbackInjector extends Injector {
          */
         private boolean captureArgs = true;
 
-        Callback(MethodNode handler, Target target, final AbstractInsnNode node, final LocalVariableNode[] locals, boolean captureLocals) {
+        Callback(MethodNode handler, Target target, final InjectionNode node, final LocalVariableNode[] locals, boolean captureLocals) {
             this.handler = handler;
             this.target = target;
-            this.node = node;
+            this.node = node.getCurrentTarget();
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
             this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
@@ -260,7 +261,7 @@ public class CallbackInjector extends Injector {
                         return false; // No @Coerce specified, types must match
                     }
 
-                    boolean canCoerce = CallbackInjector.canCoerce(inTypes[arg], myTypes[arg]);
+                    boolean canCoerce = Injector.canCoerce(inTypes[arg], myTypes[arg]);
                     if (!canCoerce) {
                         return false; // Can't coerce source type to local type, give up
                     }
@@ -277,8 +278,6 @@ public class CallbackInjector extends Injector {
         }
     }
     
-    private final Logger logger = LogManager.getLogger("mixin");
-    
     /**
      * True if cancellable 
      */
@@ -290,6 +289,11 @@ public class CallbackInjector extends Injector {
     private final LocalCapture localCapture;
     
     /**
+     * ID to return from callbackinfo 
+     */
+    private final String identifier;
+    
+    /**
      * Make a new CallbackInjector with the supplied args
      * 
      * @param info information about this injector
@@ -297,10 +301,11 @@ public class CallbackInjector extends Injector {
      *      be cancellable
      * @param localCapture Local variable capture behaviour
      */
-    public CallbackInjector(InjectionInfo info, boolean cancellable, LocalCapture localCapture) {
+    public CallbackInjector(InjectionInfo info, boolean cancellable, LocalCapture localCapture, String identifier) {
         super(info);
         this.cancellable = cancellable;
         this.localCapture = localCapture;
+        this.identifier = identifier;
     }
 
     /* (non-Javadoc)
@@ -310,15 +315,17 @@ public class CallbackInjector extends Injector {
      */
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        super.sanityCheck(target, injectionPoints);
+        
         if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this.methodNode.name);
+            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
 
-        if (Constants.INIT.equals(target.method.name)) {
+        if (Constants.CTOR.equals(target.method.name)) {
             for (InjectionPoint injectionPoint : injectionPoints) {
                 if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
                     throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
-                            + " targetting a ctor in " + this.classNode.name + ". Only RETURN allowed for a ctor target");
+                            + " targetting a ctor in " + this + ". Only RETURN allowed for a ctor target");
                 }
             }
         }
@@ -330,11 +337,11 @@ public class CallbackInjector extends Injector {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    protected void inject(Target target, AbstractInsnNode node) {
+    protected void inject(Target target, InjectionNode node) {
         LocalVariableNode[] locals = null;
 
         if (this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) {
-            locals = Locals.getLocalsAt(this.classNode, target.method, node);
+            locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
         }
 
         this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
@@ -357,7 +364,7 @@ public class CallbackInjector extends Injector {
         MethodNode callbackMethod = this.methodNode;
 
         if (!callback.checkDescriptor(this.methodNode.desc)) {
-            if (this.info.getTargets().size() != 0) {
+            if (this.info.getTargets().size() > 1) {
                 return; // Look for a match in other targets before failing
             }
 
@@ -367,24 +374,24 @@ public class CallbackInjector extends Injector {
                 // signature for the current locals. This allows silent failover
                 // if changes to the local variable table are EXPECTED for some
                 // reason.
-                MethodNode handler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
-                if (handler != null && ASMHelper.getVisibleAnnotation(handler, Surrogate.class) != null) {
+                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching method, use it
-                    callbackMethod = handler;
+                    callbackMethod = surrogateHandler;
                 } else {
                     // No matching method, generate a message to bitch about it
                     String message = this.generateBadLVTMessage(callback);
                     
                     switch (this.localCapture) {
                         case CAPTURE_FAILEXCEPTION:
-                            this.logger.error("Injection error: {}", message);
+                            Injector.logger.error("Injection error: {}", message);
                             callbackMethod = this.generateErrorMethod(callback, "org/spongepowered/asm/mixin/injection/InjectionError", message);
                             break;
                         case CAPTURE_FAILSOFT:
-                            this.logger.warn("Injection warning: {}", message);
+                            Injector.logger.warn("Injection warning: {}", message);
                             return;
                         default:
-                            this.logger.error("Critical injection failure: {}", message);
+                            Injector.logger.error("Critical injection failure: {}", message);
                             throw new InjectionError(message);
                     }
                 }
@@ -397,20 +404,29 @@ public class CallbackInjector extends Injector {
                 if (callback.checkDescriptor(returnableSig)) {
                     // Switching out CallbackInfo for CallbackInfoReturnable
                     // worked, so notify the user that they done derped
-                    throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: CallbackInfoReturnable is required!");  
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! CallbackInfoReturnable is required!");  
                 }
                 
-                throw new InvalidInjectionException(this.info, "Invalid descriptor on callback: expected " + callback.getDescriptor()
-                        + " but found " + this.methodNode.desc);
+                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
+                    // Found a matching surrogate method, use it
+                    callbackMethod = surrogateHandler;
+                } else {
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! Expected " + callback.getDescriptor()
+                            + " but found " + this.methodNode.desc);
+                }
             }
         }
         
-        this.createCallbackInfo(callback);
+        this.dupReturnValue(callback);
+        if (this.cancellable) {
+            this.createCallbackInfo(callback, true);
+        }
         this.invokeCallback(callback, callbackMethod);
         this.injectCancellationCode(callback);
         
         callback.inject();
-        this.info.getTargets().clear();
+        this.info.notifyInjected(callback.target);
     }
 
     /**
@@ -422,9 +438,9 @@ public class CallbackInjector extends Injector {
     private String generateBadLVTMessage(final Callback callback) {
         int position = callback.target.method.instructions.indexOf(callback.node);
         List<String> expected = CallbackInjector.summariseLocals(this.methodNode.desc, callback.target.arguments.length + 1);
-        List<String> found = CallbackInjector.summariseLocals(callback.localTypes, callback.frameSize);
-        String message = String.format("LVT in %s::%s has incompatible changes at opcode %d in callback %s%s.\nExpected: %s\n   Found:%s",
-                this.classNode.name, callback.target.method.name, position, this.methodNode.name, this.methodNode.desc, expected, found);
+        List<String> found = CallbackInjector.summariseLocals(callback.getDescriptorWithAllLocals(), callback.frameSize);
+        String message = String.format("LVT in %s has incompatible changes at opcode %d in callback %s.\nExpected: %s\n   Found: %s",
+                callback.target, position, this, expected, found);
         return message;
     }
 
@@ -444,7 +460,7 @@ public class CallbackInjector extends Injector {
         insns.add(new TypeInsnNode(Opcodes.NEW, errorClass));
         insns.add(new InsnNode(Opcodes.DUP));
         insns.add(new LdcInsnNode(message));
-        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, Constants.INIT, "(Ljava/lang/String;)V", false));
+        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, errorClass, Constants.CTOR, "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
         return method;
     }
@@ -461,12 +477,12 @@ public class CallbackInjector extends Injector {
         handlerSig.setModifiers(this.methodNode);
         
         PrettyPrinter printer = new PrettyPrinter();
-        printer.add("%20s : %s", "Target Class", this.classNode.name.replace('/', '.'));
-        printer.add("%20s : %s", "Target Method", methodSig);
-        printer.add("%20s : %d", "Target Max LOCALS", callback.target.getMaxLocals());
-        printer.add("%20s : %d", "Initial Frame Size", callback.frameSize);
-        printer.add("%20s : %s", "Callback Name", this.methodNode.name);
-        printer.add("%20s : %s %s", "Instruction", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
+        printer.kv("Target Class", this.classNode.name.replace('/', '.'));
+        printer.kv("Target Method", methodSig);
+        printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
+        printer.kv("Initial Frame Size", callback.frameSize);
+        printer.kv("Callback Name", this.methodNode.name);
+        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
             printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");
@@ -489,15 +505,27 @@ public class CallbackInjector extends Injector {
 
     /**
      * @param callback callback handle
+     * @param store store the callback info in a local variable
      */
-    private void createCallbackInfo(final Callback callback) {
-        this.dupReturnValue(callback);
-
-        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, false);
+    private void createCallbackInfo(final Callback callback, boolean store) {
+        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
         callback.add(new InsnNode(Opcodes.DUP), true, true);
         
-        this.invokeCallbackInfoCtor(callback);
-        callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        this.invokeCallbackInfoCtor(callback, store);
+        if (store) {
+            callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        }
+    }
+
+    /**
+     * @param callback callback handle
+     */
+    private void loadOrCreateCallbackInfo(final Callback callback) {
+        if (this.cancellable) {
+            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
+        } else {
+            this.createCallbackInfo(callback, false);
+        }
     }
 
     /**
@@ -519,18 +547,20 @@ public class CallbackInjector extends Injector {
 
     /**
      * @param callback callback handle
+     * @param store true if storing in a local, false if this is happening at an
+     *      invoke
      */
-    protected void invokeCallbackInfoCtor(final Callback callback) {
-        callback.add(new LdcInsnNode(callback.target.method.name), true, false);
-        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, false);
+    protected void invokeCallbackInfoCtor(final Callback callback, boolean store) {
+        callback.add(new LdcInsnNode(this.getIdentifier(callback)), true, !store);
+        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, !store);
 
         if (callback.isAtReturn) {
-            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar));
+            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar), true, !store);
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Constants.INIT, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
+                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
         } else {
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Constants.INIT, CallbackInfo.getConstructorDescriptor(), false));
+                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(), false));
         }
     }
 
@@ -540,7 +570,7 @@ public class CallbackInjector extends Injector {
     private void invokeCallback(final Callback callback, final MethodNode callbackMethod) {
         // Push "this" onto the stack if the callback is not static
         if (!this.isStatic) {
-            callback.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            callback.add(new VarInsnNode(Opcodes.ALOAD, 0), false, true);
         }
 
         // Push the target method's parameters onto the stack
@@ -549,7 +579,7 @@ public class CallbackInjector extends Injector {
         }
         
         // Push the callback info onto the stack
-        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
+        this.loadOrCreateCallbackInfo(callback);
         
         // (Maybe) push the locals onto the stack
         if (callback.canCaptureLocals) {
@@ -557,7 +587,19 @@ public class CallbackInjector extends Injector {
         }
         
         // Call the callback!
-        this.invokeMethod(callback, callbackMethod);
+        this.invokeHandler(callback, callbackMethod);
+    }
+
+    /**
+     * Get the identifier to use for the specified callback. If an id was
+     * specified by the end user on the annotation then use the value specified,
+     * otherwise defaults to the target method name.
+     * 
+     * @param callback Callback being injected
+     * @return Identifier to use
+     */
+    private String getIdentifier(Callback callback) {
+        return Strings.isNullOrEmpty(this.identifier) ? callback.target.method.name : this.identifier;
     }
 
     /**
@@ -630,22 +672,6 @@ public class CallbackInjector extends Injector {
             }
         }
         return list;
-    }
-    
-    public static boolean canCoerce(Type from, Type to) {
-        return CallbackInjector.canCoerce(from.getDescriptor(), to.getDescriptor());
-    }
-    
-    public static boolean canCoerce(String from, String to) {
-        if (from.length() > 1 || to.length() > 1) {
-            return false;
-        }
-        
-        return CallbackInjector.canCoerce(from.charAt(0), to.charAt(0));
-    }
-
-    public static boolean canCoerce(char from, char to) {
-        return to == 'I' && "IBSCZ".indexOf(from) > -1;
     }
 
 }

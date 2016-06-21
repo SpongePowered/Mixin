@@ -28,7 +28,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-
+import org.spongepowered.asm.util.throwables.ConstraintViolationException;
+import org.spongepowered.asm.util.throwables.InvalidConstraintException;
 
 /**
  * Parser for constraints

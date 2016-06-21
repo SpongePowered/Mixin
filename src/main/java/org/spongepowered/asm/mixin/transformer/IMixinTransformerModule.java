@@ -24,11 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.util.SortedSet;
-
-import org.spongepowered.asm.lib.tree.ClassNode;
-
-
 /**
  * Mixin Transformer Module interface for pre- and post-processors
  */
@@ -37,19 +32,15 @@ public interface IMixinTransformerModule {
     /**
      * Called before the mixins are applied
      * 
-     * @param transformedName Target class name
-     * @param targetClass Target class tree
-     * @param mixins Mixins to be applied
+     * @param context Target class context
      */
-    public abstract void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
+    public abstract void preApply(TargetClassContext context);
 
     /**
      * Called after the mixins are applied
      * 
-     * @param transformedName Target class name
-     * @param targetClass Target class tree
-     * @param mixins Mixins which were applied
+     * @param context Target class context
      */
-    public abstract void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins);
+    public abstract void postApply(TargetClassContext context);
 
 }

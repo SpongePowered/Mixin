@@ -24,36 +24,56 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.util.SortedSet;
-
 import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
-
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
  * Mixin transformer module which runs CheckClassAdapter on the post-mixin
  * bytecode
  */
 public class MixinTransformerModuleCheckClass implements IMixinTransformerModule {
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #preTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+    
+    /**
+     * Exception thrown when checkclass fails
      */
-    @Override
-    public void preApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
+    public static class ValidationFailedException extends MixinException {
+
+        private static final long serialVersionUID = 1L;
+
+        public ValidationFailedException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public ValidationFailedException(String message) {
+            super(message);
+        }
+
+        public ValidationFailedException(Throwable cause) {
+            super(cause);
+        }
+        
     }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
-     *      #postTransform(java.lang.String, org.objectweb.asm.tree.ClassNode,
-     *      java.util.SortedSet)
+     *     #preApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void postApply(String transformedName, ClassNode targetClass, SortedSet<MixinInfo> mixins) {
-        targetClass.accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
+    public void preApply(TargetClassContext context) {
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
+     *    #postApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
+     */
+    @Override
+    public void postApply(TargetClassContext context) {
+        try {
+            context.getClassNode().accept(new CheckClassAdapter(new MixinClassWriter(ClassWriter.COMPUTE_FRAMES)));
+        } catch (RuntimeException ex) {
+            throw new ValidationFailedException(ex.getMessage(), ex);
+        }
     }
 
 }

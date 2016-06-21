@@ -24,14 +24,15 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import net.minecraftforge.srg2source.rangeapplier.MethodData;
-
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.transformer.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.obfuscation.SrgMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
-
 
 /**
  * <p>Information bundle about a member (method or field) parsed from a String
@@ -164,31 +165,42 @@ public class MemberInfo {
     }
     
     /**
-     * Initialise a MemberInfo using the supplied MethodData object
+     * Initialise a MemberInfo using the supplied SrgMethod object
      * 
-     * @param methodData MethodData object to copy values from
+     * @param srgMethod SrgMethod object to copy values from
      */
-    private MemberInfo(MethodData methodData) {
-        int slashPos = methodData.name.lastIndexOf('/');
-        this.owner = methodData.name.substring(0, slashPos);
-        this.name = methodData.name.substring(slashPos + 1);
-        this.desc = methodData.sig;
+    public MemberInfo(SrgMethod srgMethod) {
+        this.owner = srgMethod.getOwner();
+        this.name = srgMethod.getSimpleName();
+        this.desc = srgMethod.getDesc();
         this.matchAll = false;
     }
     
     /**
-     * Initialise a remapped MemberInfo using the supplied MethodData object
+     * Initialise a remapped MemberInfo using the supplied SrgMethod object
      * 
-     * @param methodData MethodData object to copy values from
+     * @param srgMethod SrgMethod object to copy values from
      */
-    private MemberInfo(MemberInfo remapped, MethodData methodData, boolean setOwner) {
-        int slashPos = methodData.name.lastIndexOf('/');
-        this.owner = setOwner ? methodData.name.substring(0, slashPos) : remapped.owner;
-        this.name = methodData.name.substring(slashPos + 1);
-        this.desc = remapped.desc;
-        this.matchAll = false;
+    private MemberInfo(MemberInfo remapped, SrgMethod srgMethod, boolean setOwner) {
+        this.owner = setOwner ? srgMethod.getOwner() : remapped.owner;
+        this.name = srgMethod.getSimpleName();
+        this.desc = srgMethod.getDesc();
+        this.matchAll = remapped.matchAll;
     }
 
+    /**
+     * Initialise a remapped MemberInfo with a new name
+     * 
+     * @param original Original MemberInfo
+     * @param owner new owner
+     */
+    private MemberInfo(MemberInfo original, String owner) {
+        this.owner = owner;
+        this.name = original.name;
+        this.desc = original.desc;
+        this.matchAll = original.matchAll;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
@@ -209,7 +221,7 @@ public class MemberInfo {
      */
     public String toSrg() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqalified reference to SRG mapping");
+            throw new MixinException("Cannot convert unqualified reference to SRG mapping");
         }
         
         if (this.desc.startsWith("(")) {
@@ -227,16 +239,16 @@ public class MemberInfo {
         return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
-    public MethodData asMethodData() {
+    public SrgMethod asSrgMethod() {
         if (!this.isFullyQualified()) {
-            throw new RuntimeException("Cannot convert unqalified reference to MethodData");
+            throw new MixinException("Cannot convert unqualified reference to SrgMethod");
         }
         
         if (this.isField()) {
-            throw new RuntimeException("Cannot convert a non-method reference to MethodData");
+            throw new MixinException("Cannot convert a non-method reference to SrgMethod");
         }
         
-        return new MethodData(this.owner + "/" + this.name, this.desc);
+        return new SrgMethod(this.owner + "/" + this.name, this.desc);
     }
     
     /**
@@ -256,6 +268,64 @@ public class MemberInfo {
      */
     public boolean isField() {
         return this.desc != null && !this.desc.startsWith("(");
+    }
+    
+    /**
+     * Perform ultra-simple validation of the descriptor, checks that the parts
+     * of the descriptor are basically sane.
+     * 
+     * @return fluent
+     * 
+     * @throws InvalidMemberDescriptorException if any validation check fails
+     */
+    public MemberInfo validate() throws InvalidMemberDescriptorException {
+        // Extremely naive class name validation, just to spot really egregious errors
+        if (this.owner != null) {
+            if (!this.owner.matches("(?i)^[\\w\\p{Sc}/]+$")) {
+                throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
+            }
+            try {
+                if (!this.owner.equals(Type.getType(this.owner).getDescriptor())) {
+                    throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
+                }
+            } catch (Exception ex) {
+                throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
+            }
+        }
+        
+        // Also naive validation, we're looking for stupid errors here
+        if (this.name != null && !this.name.matches("(?i)^<?[\\w\\p{Sc}]+>?$")) {
+            throw new InvalidMemberDescriptorException("Invalid name: " + this.name);
+        }
+        
+        if (this.desc != null) {
+            if (!this.desc.matches("^(\\([\\w\\p{Sc}\\[/;]*\\))?\\[?[\\w\\p{Sc}/;]+$")) {
+                throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+            }
+            if (this.isField()) {
+                if (!this.desc.equals(Type.getType(this.desc).getDescriptor())) {
+                    throw new InvalidMemberDescriptorException("Invalid field type in descriptor: " + this.desc);
+                }
+            } else {
+                try {
+                    Type.getArgumentTypes(this.desc);
+                } catch (Exception ex) {
+                    throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+                }
+    
+                String retString = this.desc.substring(this.desc.indexOf(')') + 1);
+                try {
+                    Type retType = Type.getType(retString);
+                    if (!retString.equals(retType.getDescriptor())) {
+                        throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                    }
+                } catch (Exception ex) {
+                    throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                }
+            }
+        }
+        
+        return this;
     }
 
     /**
@@ -328,14 +398,47 @@ public class MemberInfo {
     }
     
     /**
+     * Create a new version of this member with a different owner
+     * 
+     * @param newOwner New owner for this member
+     */
+    public MemberInfo move(String newOwner) {
+        if (newOwner.equals(this.owner)) {
+            return this;
+        }
+        return new MemberInfo(this, newOwner); 
+    }
+    
+    /**
      * Create a remapped version of this member using the supplied method data
      * 
-     * @param methodData Method data to use
+     * @param srgMethod SRG method data to use
      * @param setOwner True to set the owner as well as the name
      * @return New MethodInfo with remapped values
      */
-    public MemberInfo remapUsing(MethodData methodData, boolean setOwner) {
-        return new MemberInfo(this, methodData, setOwner);
+    public MemberInfo remapUsing(SrgMethod srgMethod, boolean setOwner) {
+        return new MemberInfo(this, srgMethod, setOwner);
+    }
+    
+    /**
+     * Parse a MemberInfo from a string and perform validation
+     * 
+     * @param string String to parse MemberInfo from
+     * @return parsed MemberInfo
+     */
+    public static MemberInfo parseAndValidate(String string) throws InvalidMemberDescriptorException {
+        return MemberInfo.parse(string, null, null).validate();
+    }
+    
+    /**
+     * Parse a MemberInfo from a string and perform validation
+     * 
+     * @param string String to parse MemberInfo from
+     * @param context Context to use for reference mapping
+     * @return parsed MemberInfo
+     */
+    public static MemberInfo parseAndValidate(String string, IReferenceMapperContext context) throws InvalidMemberDescriptorException {
+        return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef()).validate();
     }
     
     /**
@@ -367,10 +470,12 @@ public class MemberInfo {
      * @param mixinClass Mixin class to use for remapping
      * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
+    private static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
         String desc = null;
         String owner = null;
         
+        name = name.replaceAll("\\s", "");
+
         if (refMapper != null) {
             name = refMapper.remap(mixinClass, name);
         }
@@ -414,7 +519,7 @@ public class MemberInfo {
         return new MemberInfo(name, owner, desc, false);
     }
     
-    public static MemberInfo fromSrgMethod(MethodData methodData) {
-        return new MemberInfo(methodData);
+    public static MemberInfo fromSrgMethod(SrgMethod srgMethod) {
+        return new MemberInfo(srgMethod);
     }
 }

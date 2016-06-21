@@ -30,6 +30,9 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
+/**
+ * Information about a redirector injector
+ */
 public class RedirectInjectionInfo extends InjectionInfo {
 
     public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
@@ -37,7 +40,13 @@ public class RedirectInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         return new RedirectInjector(this);
     }
+    
+    @Override
+    protected String getDescription() {
+        return "Redirector";
+    }
+    
 }

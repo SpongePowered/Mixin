@@ -26,12 +26,16 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
+/**
+ * Information about a callback to inject, usually specified by {@link Inject}
+ */
 public class CallbackInjectionInfo extends InjectionInfo {
 
     protected CallbackInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
@@ -39,10 +43,12 @@ public class CallbackInjectionInfo extends InjectionInfo {
     }
 
     @Override
-    protected Injector initInjector(AnnotationNode injectAnnotation) {
+    protected Injector parseInjector(AnnotationNode injectAnnotation) {
         boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
         LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
+        String identifier = ASMHelper.<String>getAnnotationValue(injectAnnotation, "id", "");
         
-        return new CallbackInjector(this, cancellable, locals);
+        return new CallbackInjector(this, cancellable, locals, identifier);
     }
+    
 }

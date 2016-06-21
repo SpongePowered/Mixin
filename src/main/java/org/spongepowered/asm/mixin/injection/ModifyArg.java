@@ -29,6 +29,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.util.ConstraintParser.Constraint;
+
 /**
  * Specifies that this mixin method should inject an argument modifier to itself
  * in the target method(s) identified by {@link #method}.
@@ -86,4 +91,47 @@ public @interface ModifyArg {
      *      obfuscation mappings for this annotation 
      */
     public boolean remap() default true;
+    
+    /**
+     * In general, injectors are intended to "fail soft" in that a failure to
+     * locate the injection point in the target method is not considered an
+     * error condition. Another transformer may have changed the method
+     * structure or any number of reasons may cause an injection to fail. This
+     * also makes it possible to define several injections to achieve the same
+     * task given <em>expected</em> mutation of the target class and the
+     * injectors which fail are simply ignored.
+     * 
+     * <p>However, this behaviour is not always desirable. For example, if your
+     * application depends on a particular injection succeeding you may wish to
+     * detect the injection failure as an error condition. This argument is thus
+     * provided to allow you to stipulate a <b>minimum</b> number of successful
+     * injections for this callback handler. If the number of injections
+     * specified is not achieved then an {@link InjectionError} is thrown at
+     * application time. Use this option with care.</p>
+     * 
+     * @return Minimum required number of injected callbacks, default specified
+     *      by the containing config
+     */
+    public int require() default -1;
+    
+    /**
+     * Like {@link #require()} but only enabled if the
+     * {@link Option#DEBUG_INJECTORS mixin.debug.countInjections} option is set
+     * to <tt>true</tt> and defaults to 1. Use this option during debugging to
+     * perform simple checking of your injectors. Causes the injector to throw
+     * a {@link InvalidInjectionException} if the expected number of injections
+     * is not realised.
+     * 
+     * @return Minimum number of <em>expected</em> callbacks, default 1
+     */
+    public int expect() default 1;
+    
+    /**
+     * Returns constraints which must be validated for this injector to
+     * succeed. See {@link Constraint} for details of constraint formats.
+     * 
+     * @return Constraints for this annotation
+     */
+    public String constraints() default "";
+
 }

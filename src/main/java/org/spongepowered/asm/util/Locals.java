@@ -47,8 +47,9 @@ import org.spongepowered.asm.lib.tree.analysis.BasicValue;
 import org.spongepowered.asm.lib.tree.analysis.Frame;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
-import org.spongepowered.asm.mixin.transformer.MixinVerifier;
-
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.verify.MixinVerifier;
+import org.spongepowered.asm.util.throwables.LVTGeneratorException;
 
 /**
  * Utility methods for working with local variables using ASM
@@ -71,10 +72,10 @@ public class Locals {
      * @param pos Start position
      */
     public static void loadLocals(Type[] locals, InsnList insns, int pos, int limit) {
-        limit += pos;
-        for (; pos < locals.length && pos < limit; pos++) {
+        for (; pos < locals.length && limit > 0; pos++) {
             if (locals[pos] != null) {
                 insns.add(new VarInsnNode(locals[pos].getOpcode(Opcodes.ILOAD), pos));
+                limit--;
             }
         }
     }
@@ -126,7 +127,15 @@ public class Locals {
             node = Locals.nextNode(method.instructions, node);
         }
             
-        List<FrameData> frames = ClassInfo.forName(classNode.name).findMethod(method).getFrames();
+        ClassInfo classInfo = ClassInfo.forName(classNode.name);
+        if (classInfo == null) {
+            throw new LVTGeneratorException("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
+        }
+        Method methodInfo = classInfo.findMethod(method);
+        if (methodInfo == null) {
+            throw new LVTGeneratorException("Could not locate method metadata for " + method.name + " generating LVT in " + classNode.name);
+        }
+        List<FrameData> frames = methodInfo.getFrames();
 
         LocalVariableNode[] frame = new LocalVariableNode[method.maxLocals];
         int local = 0, index = 0;
@@ -177,7 +186,7 @@ public class Locals {
                                 frame[framePos] = null; // TOP
                             }
                         } else {
-                            throw new RuntimeException("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
+                            throw new LVTGeneratorException("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
@@ -185,7 +194,7 @@ public class Locals {
                             frame[framePos] = null;
                         }
                     } else {
-                        throw new RuntimeException("Invalid value " + localType + " in locals array at position " + localPos
+                        throw new LVTGeneratorException("Invalid value " + localType + " in locals array at position " + localPos
                                 + " in " + classNode.name + "." + method.name + method.desc);
                     }
                 }
@@ -220,23 +229,48 @@ public class Locals {
      *      variable at the specified location in the specified local slot
      */
     public static LocalVariableNode getLocalVariableAt(ClassNode classNode, MethodNode method, AbstractInsnNode node, int var) {
+        return Locals.getLocalVariableAt(classNode, method, method.instructions.indexOf(node), var);
+    }
+
+    /**
+     * Attempts to locate the appropriate entry in the local variable table for
+     * the specified local variable index at the location specified by pos.
+     * 
+     * @param classNode Containing class
+     * @param method Method
+     * @param var Local variable index
+     * @param pos The opcode index to get the local variable table at
+     * @return a LocalVariableNode containing information about the local
+     *      variable at the specified location in the specified local slot
+     */
+    private static LocalVariableNode getLocalVariableAt(ClassNode classNode, MethodNode method, int pos, int var) {
         LocalVariableNode localVariableNode = null;
+        LocalVariableNode fallbackNode = null;
 
-        int pos = method.instructions.indexOf(node);
-
-        List<LocalVariableNode> localVariables = Locals.getLocalVariableTable(classNode, method);
-        for (LocalVariableNode local : localVariables) {
+        for (LocalVariableNode local : Locals.getLocalVariableTable(classNode, method)) {
             if (local.index != var) {
                 continue;
             }
-            int start = method.instructions.indexOf(local.start);
-            int end = method.instructions.indexOf(local.end);
-            if (localVariableNode == null || start < pos && end > pos) {
+            if (Locals.isOpcodeInRange(method.instructions, local, pos)) {
                 localVariableNode = local;
+            } else if (localVariableNode == null) {
+                fallbackNode = local;
             }
         }
+        
+        if (localVariableNode == null && !method.localVariables.isEmpty()) {
+            for (LocalVariableNode local : Locals.getGeneratedLocalVariableTable(classNode, method)) {
+                if (local.index == var && Locals.isOpcodeInRange(method.instructions, local, pos)) {
+                    localVariableNode = local;
+                }
+            }
+        }
+        
+        return localVariableNode != null ? localVariableNode : fallbackNode;
+    }
 
-        return localVariableNode;
+    private static boolean isOpcodeInRange(InsnList insns, LocalVariableNode local, int pos) {
+        return insns.indexOf(local.start) < pos && insns.indexOf(local.end) > pos;
     }
 
     /**
@@ -248,23 +282,32 @@ public class Locals {
      * 
      * @param classNode Containing class
      * @param method Method
-     * @return generated local variable table 
+     * @return local variable table 
      */
     public static List<LocalVariableNode> getLocalVariableTable(ClassNode classNode, MethodNode method) {
         if (method.localVariables.isEmpty()) {
-            String signature = String.format("%s.%s%s", classNode.name, method.name, method.desc);
-
-            List<LocalVariableNode> localVars = Locals.calculatedLocalVariables.get(signature);
-            if (localVars != null) {
-                return localVars;
-            }
-
-            localVars = Locals.generateLocalVariableTable(classNode, method);
-            Locals.calculatedLocalVariables.put(signature, localVars);
+            return Locals.getGeneratedLocalVariableTable(classNode, method);
+        }
+        return method.localVariables;
+    }
+    
+    /**
+     * Gets the generated the local variable table for the specified method.
+     * 
+     * @param classNode Containing class
+     * @param method Method
+     * @return generated local variable table 
+     */
+    public static List<LocalVariableNode> getGeneratedLocalVariableTable(ClassNode classNode, MethodNode method) {
+        String methodId = String.format("%s.%s%s", classNode.name, method.name, method.desc);
+        List<LocalVariableNode> localVars = Locals.calculatedLocalVariables.get(methodId);
+        if (localVars != null) {
             return localVars;
         }
 
-        return method.localVariables;
+        localVars = Locals.generateLocalVariableTable(classNode, method);
+        Locals.calculatedLocalVariables.put(methodId, localVars);
+        return localVars;
     }
 
     /**

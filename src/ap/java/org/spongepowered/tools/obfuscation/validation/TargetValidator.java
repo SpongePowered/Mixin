@@ -26,18 +26,18 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import org.spongepowered.tools.obfuscation.IOptionProvider;
+import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.MixinValidator;
+import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.TypeHandle;
-
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
  * Validator which checks that the mixin targets are sane
@@ -47,12 +47,10 @@ public class TargetValidator extends MixinValidator {
     /**
      * ctor
      * 
-     * @param processingEnv Processing environment
-     * @param messager Messager
-     * @param options Option provider
+     * @param ap Processing environment
      */
-    public TargetValidator(ProcessingEnvironment processingEnv, Messager messager, IOptionProvider options) {
-        super(processingEnv, messager, options, ValidationPass.LATE);
+    public TargetValidator(IMixinAnnotationProcessor ap) {
+        super(ap, ValidationPass.LATE);
     }
 
     /* (non-Javadoc)
@@ -62,10 +60,29 @@ public class TargetValidator extends MixinValidator {
      */
     @Override
     public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
-        if ("true".equalsIgnoreCase(this.options.getOption("disableTargetValidator"))) {
+        if ("true".equalsIgnoreCase(this.options.getOption(SupportedOptions.DISABLE_TARGET_VALIDATOR))) {
             return true;
         }
         
+        if (mixin.getKind() == ElementKind.INTERFACE) {
+            this.validateInterfaceMixin(mixin, targets);
+        } else {
+            this.validateClassMixin(mixin, targets);
+        }
+        
+        return true;
+    }
+
+    private void validateInterfaceMixin(TypeElement mixin, Collection<TypeHandle> targets) {
+        for (TypeHandle target : targets) {
+            TypeElement targetType = target.getElement();
+            if (targetType != null && !(targetType.getKind() == ElementKind.INTERFACE)) {
+                this.error("Targetted type '" + target + " of " + mixin + " is not an interface", mixin);
+            }
+        }
+    }
+
+    private void validateClassMixin(TypeElement mixin, Collection<TypeHandle> targets) {
         TypeMirror superClass = mixin.getSuperclass();
         
         for (TypeHandle target : targets) {
@@ -74,12 +91,10 @@ public class TargetValidator extends MixinValidator {
                 this.error("Superclass " + superClass + " of " + mixin + " was not found in the hierarchy of target class " + targetType, mixin);
             }
         }
-        
-        return true;
     }
 
     private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {
-        if (this.isAssignable(targetType, superClass)) {
+        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
             return true;
         }
         
@@ -89,6 +104,10 @@ public class TargetValidator extends MixinValidator {
     private boolean validateSuperClassRecursive(TypeMirror targetType, TypeMirror superClass) {
         if (!(targetType instanceof DeclaredType)) {
             return false;
+        }
+        
+        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
+            return true;
         }
         
         TypeElement targetElement = (TypeElement)((DeclaredType)targetType).asElement();
@@ -106,15 +125,11 @@ public class TargetValidator extends MixinValidator {
 
     private boolean checkMixinsFor(TypeMirror targetType, TypeMirror superClass) {
         for (TypeMirror mixinType : this.getMixinsTargeting(targetType)) {
-            if (this.isAssignable(mixinType, superClass)) {
+            if (MirrorUtils.isAssignable(this.processingEnv, mixinType, superClass)) {
                 return true;
             }
         }
         
         return false;
-    }
-
-    protected final boolean isAssignable(TypeMirror targetType, TypeMirror superClass) {
-        return this.processingEnv.getTypeUtils().isAssignable(targetType, superClass);
     }
 }

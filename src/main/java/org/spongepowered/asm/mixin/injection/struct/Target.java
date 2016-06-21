@@ -25,17 +25,21 @@
 package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.InjectionNodes;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.util.ASMHelper;
-
 
 /**
  * Information about the current injection target, mainly just convenience
  * rather than passing a bunch of values around.
  */
-public class Target {
+public class Target implements Comparable<Target> {
+
+    public final ClassNode classNode;
 
     /**
      * Target method
@@ -68,16 +72,6 @@ public class Target {
     public final Type returnType;
     
     /**
-     * Method's (original) MAXS 
-     */
-    private final int maxStack;
-    
-    /**
-     * Method's original max locals 
-     */
-    private final int maxLocals;
-    
-    /**
      * Callback method descriptor based on this target 
      */
     public final String callbackDescriptor;
@@ -86,13 +80,29 @@ public class Target {
      * Callback info class
      */
     public final String callbackInfoClass;
+    
+    /**
+     * Nodes targetted by injectors 
+     */
+    public final InjectionNodes injectionNodes = new InjectionNodes();
+
+    /**
+     * Method's (original) MAXS 
+     */
+    private final int maxStack;
+    
+    /**
+     * Method's original max locals 
+     */
+    private final int maxLocals;
 
     /**
      * Make a new Target for the supplied method
      * 
      * @param method target method
      */
-    public Target(MethodNode method) {
+    public Target(ClassNode classNode, MethodNode method) {
+        this.classNode = classNode;
         this.method = method;
         this.insns = method.instructions;
         this.isStatic = ASMHelper.methodIsStatic(method);
@@ -255,9 +265,10 @@ public class Target {
         }
 
         String descriptor = this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')'));
-        for (int l = startIndex; l < locals.length && l < (startIndex + extra); l++) {
+        for (int l = startIndex; l < locals.length && extra > 0; l++) {
             if (locals[l] != null) {
                 descriptor += locals[l].getDescriptor();
+                extra--;
             }
         }
 
@@ -266,6 +277,79 @@ public class Target {
     
     @Override
     public String toString() {
-        return this.method.name + this.method.desc;
+        return String.format("%s::%s%s", this.classNode.name, this.method.name, this.method.desc);
     }
+
+    @Override
+    public int compareTo(Target o) {
+        if (o == null) {
+            return Integer.MAX_VALUE;
+        }
+        return this.toString().compareTo(o.toString());
+    }
+    
+    /**
+     * Replace an instruction in this target with the specified instruction and
+     * mark the node as replaced for other injectors
+     * 
+     * @param location Instruction to replace
+     * @param insn Instruction to replace with
+     */
+    public void replaceNode(AbstractInsnNode location, AbstractInsnNode insn) {
+        this.insns.insertBefore(location, insn);
+        this.insns.remove(location);
+        this.injectionNodes.replace(location, insn);
+    }
+    
+    /**
+     * Replace an instruction in this target with the specified instructions and
+     * mark the node as replaced with the specified champion node from the list.
+     * 
+     * @param location Instruction to replace
+     * @param champion Instruction which notionally replaces the original insn
+     * @param insns Instructions to actually insert (must contain champion)
+     */
+    public void replaceNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList insns) {
+        this.insns.insertBefore(location, insns);
+        this.insns.remove(location);
+        this.injectionNodes.replace(location, champion);
+    }
+    
+    /**
+     * Wrap instruction in this target with the specified instructions and mark
+     * the node as replaced with the specified champion node from the list.
+     * 
+     * @param location Instruction to replace
+     * @param champion Instruction which notionally replaces the original insn
+     * @param before Instructions to actually insert (must contain champion)
+     */
+    public void wrapNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList before, InsnList after) {
+        this.insns.insertBefore(location, before);
+        this.insns.insert(location, after);
+        this.injectionNodes.replace(location, champion);
+    }
+
+    /**
+     * Replace an instruction in this target with the specified instructions and
+     * mark the original node as removed
+     * 
+     * @param location Instruction to replace
+     * @param insns Instructions to replace with
+     */
+    public void replaceNode(AbstractInsnNode location, InsnList insns) {
+        this.insns.insertBefore(location, insns);
+        this.removeNode(location);
+    }
+    
+    /**
+     * Remove the specified instruction from the target and mark it as removed
+     * for injections
+     * 
+     * @param insn instruction to remove
+     */
+    public void removeNode(AbstractInsnNode insn) {
+        this.insns.remove(insn);
+        this.injectionNodes.remove(insn);
+    }
+    
 }

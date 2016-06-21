@@ -30,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
@@ -37,19 +39,26 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
-
 
 /**
  * Base class for bytecode injectors
  */
 public abstract class Injector {
     
+    /**
+     * Log more things
+     */
+    protected static final Logger logger = LogManager.getLogger("mixin");
+
     /**
      * Injection info
      */
@@ -64,6 +73,16 @@ public abstract class Injector {
      * Callback method 
      */
     protected final MethodNode methodNode;
+    
+    /**
+     * Arguments of the handler method 
+     */
+    protected final Type[] methodArgs;
+    
+    /**
+     * Return type of the handler method 
+     */
+    protected final Type returnType;
 
     /**
      * True if the callback method is static
@@ -89,20 +108,46 @@ public abstract class Injector {
     private Injector(ClassNode classNode, MethodNode methodNode) {
         this.classNode = classNode;
         this.methodNode = methodNode;
+        this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
+        this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = ASMHelper.methodIsStatic(this.methodNode);
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("%s::%s", this.classNode.name, this.methodNode.name);
     }
 
     /**
-     * Inject into the specified method at the specified injection points
+     * ...
      * 
      * @param target Target method to inject into
      * @param injectionPoints InjectionPoint instances which will identify
      *      target insns in the target method 
+     * @return discovered injection points
      */
-    public final void injectInto(Target target, List<InjectionPoint> injectionPoints) {
+    public final List<InjectionNode> find(Target target, List<InjectionPoint> injectionPoints) {
         this.sanityCheck(target, injectionPoints);
-        
+
+        List<InjectionNode> myNodes = new ArrayList<InjectionNode>();
         for (AbstractInsnNode node : this.findTargetNodes(target.method, injectionPoints)) {
+            this.addTargetNode(target, myNodes, node);
+        }
+        return myNodes;
+    }
+
+    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node) {
+        myNodes.add(target.injectionNodes.add(node));
+    }
+    
+    public final void inject(Target target, List<InjectionNode> nodes) {
+        for (InjectionNode node : nodes) {
+            if (node.isRemoved()) {
+                if (this.info.getContext().getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+                    Injector.logger.warn("Target node for {} was removed by a previous injector in {}", this.info, target);
+                }
+                continue;
+            }
             this.inject(target, node);
         }
     }
@@ -125,7 +170,7 @@ public abstract class Injector {
 
         for (InjectionPoint injectionPoint : injectionPoints) {
             nodes.clear();
-            if (injectionPoint.find(into.desc, insns, nodes)) {
+            if (this.findTargetNodes(into, injectionPoint, insns, nodes)) {
                 targetNodes.addAll(nodes);
             }
         }
@@ -134,28 +179,63 @@ public abstract class Injector {
         return targetNodes;
     }
 
-    protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
-        // stub for subclasses
+    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
+        return injectionPoint.find(into.desc, insns, nodes);
     }
 
-    protected abstract void inject(Target target, AbstractInsnNode node);
+    protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
+        if (target.classNode != this.classNode) {
+            throw new InvalidInjectionException(this.info, "Target class does not match injector class in " + this);
+        }
+    }
+
+    protected abstract void inject(Target target, InjectionNode node);
 
     /**
      * Invoke the handler method
      * 
      * @param insns Instruction list to inject into
+     * @return injected insn node
      */
-    protected void invokeHandler(InsnList insns) {
-        this.invokeMethod(insns, this.methodNode);
+    protected AbstractInsnNode invokeHandler(InsnList insns) {
+        return this.invokeHandler(insns, this.methodNode);
     }
 
-    protected void invokeMethod(InsnList insns, MethodNode methodNode) {
-        boolean isPrivate = (methodNode.access & Opcodes.ACC_PRIVATE) != 0;
+    /**
+     * Invoke a handler method
+     * 
+     * @param insns Instruction list to inject into
+     * @param handler Actual method to invoke (may be different if using a
+     *      surrogate)
+     * @return injected insn node
+     */
+    protected AbstractInsnNode invokeHandler(InsnList insns, MethodNode handler) {
+        boolean isPrivate = (handler.access & Opcodes.ACC_PRIVATE) != 0;
         int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
-        insns.add(new MethodInsnNode(invokeOpcode, this.classNode.name, methodNode.name, methodNode.desc, false));
+        MethodInsnNode insn = new MethodInsnNode(invokeOpcode, this.classNode.name, handler.name, handler.desc, false);
+        insns.add(insn);
+        this.info.addCallbackInvocation(handler);
+        return insn;
     }
     
     protected static String printArgs(Type[] args) {
         return "(" + Joiner.on("").join(args) + ")";
     }
+    
+    public static boolean canCoerce(Type from, Type to) {
+        return Injector.canCoerce(from.getDescriptor(), to.getDescriptor());
+    }
+    
+    public static boolean canCoerce(String from, String to) {
+        if (from.length() > 1 || to.length() > 1) {
+            return false;
+        }
+        
+        return Injector.canCoerce(from.charAt(0), to.charAt(0));
+    }
+
+    public static boolean canCoerce(char from, char to) {
+        return to == 'I' && "IBSCZ".indexOf(from) > -1;
+    }
+
 }

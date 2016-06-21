@@ -32,7 +32,6 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
 import com.google.common.base.Strings;
 
-
 /**
  * Generates callback signature for callback pretty-print
  */

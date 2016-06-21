@@ -35,11 +35,11 @@ import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
-
 
 /**
  * A wrapper for TypeElement which gives us a soft-failover mechanism when
@@ -63,6 +63,11 @@ public class TypeHandle {
      * Actual type element, this is null for inaccessible classes
      */
     private final TypeElement element;
+    
+    /**
+     * Reference to this handle, for serialisation 
+     */
+    private TypeReference reference;
 
     /**
      * Ctor for imaginary elements, require the enclosing package and the FQ
@@ -140,6 +145,23 @@ public class TypeHandle {
     public TypeMirror getType() {
         return this.element != null ? this.element.asType() : null;
     }
+    
+    /**
+     * Returns the enclosed element's superclass if available, or null if this
+     * class does not have a superclass
+     */
+    public TypeHandle getSuperclass() {
+        if (this.element == null) {
+            return null;
+        }
+        
+        TypeMirror superClass = this.element.getSuperclass();
+        if (superClass == null || superClass.getKind() == TypeKind.NONE) {
+            return null;
+        }
+        
+        return new TypeHandle((DeclaredType)superClass);
+    }
 
     /**
      * Get whether the element is probably public
@@ -153,6 +175,13 @@ public class TypeHandle {
      */
     public boolean isImaginary() {
         return this.element == null;
+    }
+    
+    public TypeReference getReference() {
+        if (this.reference == null) {
+            this.reference = new TypeReference(this);
+        }
+        return this.reference;
     }
 
     public String findDescriptor(MemberInfo memberInfo) {
@@ -180,7 +209,7 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(VariableElement element) {
-        return this.findField(element.getSimpleName().toString(), element.asType().toString());
+        return this.findField(element.getSimpleName().toString(), MirrorUtils.getTypeName(element.asType()));
     }
     
     /**
@@ -192,7 +221,7 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(String name, String type) {
-        String rawType = type.replaceAll("<[^>]+>", "");
+        String rawType = MirrorUtils.stripGenerics(type);
 
         for (Element element : this.getEnclosedElements()) {
             if (element.getKind() != ElementKind.FIELD) {
@@ -218,7 +247,7 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(ExecutableElement element) {
-        return this.findMethod(element.getSimpleName().toString(), TypeHandle.getElementSignature(element));
+        return this.findMethod(element.getSimpleName().toString(), MirrorUtils.getJavaSignature(element));
     }
 
     /**
@@ -230,7 +259,7 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(String name, String signature) {
-        String rawSignature = signature.replaceAll("<[^>]+>", "");
+        String rawSignature = MirrorUtils.stripGenerics(signature);
 
         for (Element element : this.getEnclosedElements()) {
             switch (element.getKind()) {
@@ -256,30 +285,12 @@ public class TypeHandle {
     private boolean compareElement(Element elem, String name, String type) {
         try {
             String elementName = elem.getSimpleName().toString();
-            String elementType = TypeHandle.getElementSignature(elem);
-            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType));
+            String elementType = MirrorUtils.getJavaSignature(elem);
+            String rawElementType = MirrorUtils.stripGenerics(elementType);
+            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
         } catch (NullPointerException ex) {
             return false;
         }
-    }
-    
-    static String getElementSignature(Element element) {
-        if (element instanceof ExecutableElement) {
-            ExecutableElement method = (ExecutableElement)element;
-            StringBuilder desc = new StringBuilder().append("(");
-            boolean extra = false;
-            for (VariableElement arg : method.getParameters()) {
-                if (extra) {
-                    desc.append(',');
-                }
-                desc.append(arg.asType().toString());
-                extra = true;
-            }
-            desc.append(')').append(method.getReturnType().toString());
-            return desc.toString();
-        }
-        
-        return element.asType().toString();
     }
 
 }

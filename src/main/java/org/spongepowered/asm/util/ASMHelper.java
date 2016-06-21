@@ -24,8 +24,10 @@
  */
 package org.spongepowered.asm.util;
 
+import static com.google.common.base.Preconditions.*;
 import static org.spongepowered.asm.lib.ClassWriter.*;
 
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -36,16 +38,68 @@ import java.util.Map;
 
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
+import org.spongepowered.asm.lib.util.TraceClassVisitor;
 
+import com.google.common.primitives.Ints;
+
+/**
+ * Utility methods for working with ASM
+ */
 public class ASMHelper {
 
-    private static final int[] intConstants = new int[]
-            {Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5};
+    public static final int[] CONSTANTS_INT = {
+        Opcodes.ICONST_M1, Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5
+    };
 
+    public static final int[] CONSTANTS_FLOAT = {
+        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2
+    };
+    
+    public static final int[] CONSTANTS_DOUBLE = {
+        Opcodes.DCONST_0, Opcodes.DCONST_1
+    };
+    
+    public static final int[] CONSTANTS_LONG = {
+        Opcodes.LCONST_0, Opcodes.LCONST_1
+    };
+    
+    public static final int[] CONSTANTS_ALL = {
+        Opcodes.ACONST_NULL,
+        Opcodes.ICONST_M1,
+        Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
+        Opcodes.LCONST_0, Opcodes.LCONST_1,
+        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2, 
+        Opcodes.DCONST_0, Opcodes.DCONST_1,
+        Opcodes.BIPUSH, // 15
+        Opcodes.SIPUSH, // 16
+        Opcodes.LDC,    // 17
+    };
+    
+    private static final Object[] CONSTANTS_VALUES = {
+        null,
+        Integer.valueOf(-1),
+        Integer.valueOf(0), Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3), Integer.valueOf(4), Integer.valueOf(5),
+        Long.valueOf(0L), Long.valueOf(1L),
+        Float.valueOf(0.0F), Float.valueOf(1.0F), Float.valueOf(2.0F), 
+        Double.valueOf(0.0), Double.valueOf(1.0)
+    };
+    
+    private static final String[] CONSTANTS_TYPES = {
+            null,
+            "I",
+            "I", "I", "I", "I", "I", "I",
+            "J", "J",
+            "F", "F", "F", 
+            "D", "D",
+            "I", //"B",
+            "I", //"S"
+    };
+    
     /**
      * Generate a new method "boolean name()", which returns a constant value.
      *
@@ -279,7 +333,7 @@ public class ASMHelper {
         if (c == -1) {
             return new InsnNode(Opcodes.ICONST_M1);
         } else if (c >= 0 && c <= 5) {
-            return new InsnNode(intConstants[c]);
+            return new InsnNode(ASMHelper.CONSTANTS_INT[c + 1]);
         } else if (c >= Byte.MIN_VALUE && c <= Byte.MAX_VALUE) {
             return new IntInsnNode(Opcodes.BIPUSH, c);
         } else if (c >= Short.MIN_VALUE && c <= Short.MAX_VALUE) {
@@ -323,6 +377,32 @@ public class ASMHelper {
     }
 
     /**
+     * Runs textifier on the specified class node and dumps the output to the
+     * specified output stream
+     * 
+     * @param classNode class to textify
+     * @param out output stream
+     */
+    public static void textify(ClassNode classNode, OutputStream out) {
+        classNode.accept(new TraceClassVisitor(new PrintWriter(out)));
+    }
+
+    /**
+     * Runs textifier on the specified method node and dumps the output to the
+     * specified output stream
+     * 
+     * @param methodNode method to textify
+     * @param out output stream
+     */
+    public static void textify(MethodNode methodNode, OutputStream out) {
+        TraceClassVisitor trace = new TraceClassVisitor(new PrintWriter(out));
+        MethodVisitor mv = trace.visitMethod(methodNode.access, methodNode.name, methodNode.desc, methodNode.signature,
+                methodNode.exceptions.toArray(new String[0]));
+        methodNode.accept(mv);
+        trace.visitEnd();
+    }
+
+    /**
      * Dumps the output of CheckClassAdapter.verify to System.out
      *
      * @param classNode the classNode to verify
@@ -341,6 +421,19 @@ public class ASMHelper {
     public static void dumpClass(byte[] bytes) {
         ClassReader cr = new ClassReader(bytes);
         CheckClassAdapter.verify(cr, true, new PrintWriter(System.out));
+    }
+    
+    /**
+     * Prints a representation of a method's instructions to stderr
+     * 
+     * @param method Method to print
+     */
+    public static void printMethodWithOpcodeIndices(MethodNode method) {
+        System.err.printf("%s%s\n", method.name, method.desc);
+        int i = 0;
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            System.err.printf("[%4d] %s\n", i++, ASMHelper.getNodeDescriptionForDebug(iter.next()));
+        }
     }
 
     /**
@@ -362,32 +455,36 @@ public class ASMHelper {
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
-        System.err.printf("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
-        if (node instanceof LabelNode) {
-            System.err.printf("[%s]", ((LabelNode)node).getLabel());
-        } else if (node instanceof JumpInsnNode) {
-            System.err.printf("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
-        } else if (node instanceof VarInsnNode) {
-            System.err.printf("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
-        } else if (node instanceof MethodInsnNode) {
-            MethodInsnNode mth = (MethodInsnNode)node;
-            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
-        } else if (node instanceof FieldInsnNode) {
-            FieldInsnNode fld = (FieldInsnNode)node;
-            System.err.printf("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
-        } else if (node instanceof LineNumberNode) {
-            LineNumberNode ln = (LineNumberNode)node;
-            System.err.printf("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
-        } else if (node instanceof LdcInsnNode) {
-            System.err.print(((LdcInsnNode)node).cst);
-        } else if (node instanceof IntInsnNode) {
-            System.err.print(((IntInsnNode)node).operand);
-        } else {
-            System.err.printf("[%s] ", ASMHelper.getOpcodeName(node));
-        }
-        System.err.print("\n");
+        System.err.printf("%s\n", ASMHelper.getNodeDescriptionForDebug(node));
     }
 
+    public static String getNodeDescriptionForDebug(AbstractInsnNode node) {
+        String out = String.format("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
+        if (node instanceof LabelNode) {
+            out += String.format("[%s]", ((LabelNode)node).getLabel());
+        } else if (node instanceof JumpInsnNode) {
+            out += String.format("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
+        } else if (node instanceof VarInsnNode) {
+            out += String.format("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
+        } else if (node instanceof MethodInsnNode) {
+            MethodInsnNode mth = (MethodInsnNode)node;
+            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
+        } else if (node instanceof FieldInsnNode) {
+            FieldInsnNode fld = (FieldInsnNode)node;
+            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+        } else if (node instanceof LineNumberNode) {
+            LineNumberNode ln = (LineNumberNode)node;
+            out += String.format("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
+        } else if (node instanceof LdcInsnNode) {
+            out += (((LdcInsnNode)node).cst);
+        } else if (node instanceof IntInsnNode) {
+            out += (((IntInsnNode)node).operand);
+        } else {
+            out += String.format("[%s] ", ASMHelper.getOpcodeName(node));
+        }
+        return out;
+    }
+    
     /**
      * Uses reflection to find an approximate constant name match for the
      * supplied node's opcode
@@ -734,6 +831,7 @@ public class ASMHelper {
      */
     @SuppressWarnings("unchecked")
     public static <T> T getAnnotationValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
+        checkNotNull(annotationClass, "annotationClass cannot be null");
         T value = ASMHelper.getAnnotationValue(annotation, key);
         if (value == null) {
             try {
@@ -898,4 +996,127 @@ public class ASMHelper {
         
         return labels;
     }
+    
+    /**
+     * @param returnType
+     * @param args
+     */
+    public static String generateDescriptor(Object returnType, Object... args) {
+        StringBuilder sb = new StringBuilder().append('(');
+
+        for (Object arg : args) {
+            sb.append(ASMHelper.toDescriptor(arg));
+        }
+
+        return sb.append(')').append(returnType != null ? ASMHelper.toDescriptor(returnType) : "V").toString();
+    }
+
+    /**
+     * @param arg
+     */
+    private static String toDescriptor(Object arg) {
+        if (arg instanceof String) {
+            return (String)arg;
+        } else if (arg instanceof Type) {
+            return arg.toString();
+        } else if (arg instanceof Class) {
+            return Type.getDescriptor((Class<?>)arg).toString();
+        }
+        return arg == null ? "" : arg.toString();
+    }
+
+    public static String getSimpleName(Class<? extends Annotation> annotationType) {
+        return annotationType.getSimpleName();
+    }
+    
+    public static String getSimpleName(AnnotationNode annotation) {
+        return ASMHelper.getSimpleName(annotation.desc);
+    }
+
+    public static String getSimpleName(String desc) {
+        return desc.substring(desc.lastIndexOf('/') + 1).replace(";", "");
+    }
+
+    public static boolean isConstant(AbstractInsnNode insn) {
+        if (insn == null) {
+            return false;
+        }
+        return Ints.contains(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+    }
+
+    public static Object getConstant(AbstractInsnNode insn) {
+        if (insn == null) {
+            return null;
+        } else if (insn instanceof LdcInsnNode) {
+            return ((LdcInsnNode)insn).cst;
+        } else if (insn instanceof IntInsnNode) {
+            int value = ((IntInsnNode)insn).operand;
+            if (insn.getOpcode() == Opcodes.BIPUSH || insn.getOpcode() == Opcodes.SIPUSH) {
+                return Integer.valueOf(value);
+            }
+            throw new IllegalArgumentException("IntInsnNode with invalid opcode " + insn.getOpcode() + " in getConstant");
+        }
+        
+        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : ASMHelper.CONSTANTS_VALUES[index];
+    }
+
+    public static Type getConstantType(AbstractInsnNode insn) {
+        if (insn == null) {
+            return null;
+        } else if (insn instanceof LdcInsnNode) {
+            Object cst = ((LdcInsnNode)insn).cst;
+            if (cst instanceof Integer) {
+                return Type.getType("I");
+            } else if (cst instanceof Float) {
+                return Type.getType("F");
+            } else if (cst instanceof Long) {
+                return Type.getType("J");
+            } else if (cst instanceof Double) {
+                return Type.getType("D");
+            } else if (cst instanceof String) {
+                return Type.getType(Constants.STRING);
+            } else if (cst instanceof Type) {
+                return Type.getType(Constants.CLASS);
+            }
+            throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
+        }
+        
+        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : Type.getType(ASMHelper.CONSTANTS_TYPES[index]);
+    }
+    
+    /**
+     * Check whether the specified flag is set on the specified class
+     * 
+     * @param classNode
+     * @param flag 
+     * @return True if the specified flag is set in this method's access flags
+     */
+    public static boolean hasFlag(ClassNode classNode, int flag) {
+        return (classNode.access & flag) == flag;
+    }
+    
+    /**
+     * Check whether the specified flag is set on the specified method
+     * 
+     * @param method
+     * @param flag 
+     * @return True if the specified flag is set in this method's access flags
+     */
+    public static boolean hasFlag(MethodNode method, int flag) {
+        return (method.access & flag) == flag;
+    }
+    
+    /**
+     * Check whether the specified flag is set on the specified field
+     * 
+     * @param field
+     * @param flag 
+     * @return True if the specified flag is set in this field's access flags
+     */
+    public static boolean hasFlag(FieldNode field, int flag) {
+        return (field.access & flag) == flag;
+    }
+
 }
