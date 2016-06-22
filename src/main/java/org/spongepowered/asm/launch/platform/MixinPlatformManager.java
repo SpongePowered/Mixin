@@ -91,19 +91,22 @@ public class MixinPlatformManager {
     
     public MixinPlatformManager() { //Delegate delegate) {
 //        this.delegate = delegate;
-        
+
+        MixinPlatformManager.logger.debug("Initialising Mixin Platform Manager");
+                
         // Add agents for the tweak container 
         URI uri = null;
         try {
             uri = this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
             if (uri != null) {
+                MixinPlatformManager.logger.debug("Mixin platform: primary container is {}", uri);
                 this.primaryContainer = this.addContainer(uri);
             }
         } catch (URISyntaxException ex) {
             ex.printStackTrace();
         }
     }
-
+    
     public Collection<String> getPhaseProviderClasses() {
         Collection<String> phaseProviders = this.primaryContainer.getPhaseProviders();
         if (phaseProviders != null) {

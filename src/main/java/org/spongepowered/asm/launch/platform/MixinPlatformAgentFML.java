@@ -104,6 +104,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             this.clCoreModManager = MixinPlatformAgentFML.getCoreModManagerClass();
 
             if ("true".equalsIgnoreCase(this.attributes.get(MixinPlatformAgentFML.MFATT_FORCELOADASMOD))) {
+                MixinPlatformAgentAbstract.logger.debug("ForceLoadAsMod was specified for {}, attempting force-load", this.fileName);
                 this.loadAsMod();
             }
 
@@ -147,6 +148,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             @SuppressWarnings("unchecked")
             List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
             if (!reparsedCoremods.contains(this.fileName)) {
+                MixinPlatformAgentAbstract.logger.debug("Adding {} to reparseable coremod collection", this.fileName);
                 reparsedCoremods.add(this.fileName);
             }
         } catch (Exception ex) {
@@ -160,11 +162,13 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             return null;
         }
 
+        MixinPlatformAgentAbstract.logger.debug("{} has core plugin {}. Injecting it into FML for co-initialisation:", this.fileName, coreModName);
         Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
                 Blackboard.Keys.FML_LOAD_CORE_MOD, MixinPlatformAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
         mdLoadCoreMod.setAccessible(true);
         ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
         if (wrapper == null) {
+            MixinPlatformAgentAbstract.logger.debug("Core plugin {} could not be loaded.", coreModName);
             return null;
         }
 
@@ -197,6 +201,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
 
     private void injectRemapper() {
         try {
+            MixinPlatformAgentAbstract.logger.debug("Creating FML remapper adapter: {}", MixinPlatformAgentFML.FML_REMAPPER_ADAPTER_CLASS);
             Class<?> clFmlRemapperAdapter = Class.forName(MixinPlatformAgentFML.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
             Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
             IRemapper remapper = (IRemapper)mdCreate.invoke(null);
@@ -212,8 +217,13 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (this.coreModWrapper != null && !this.isFMLInjected()) {
-            this.coreModWrapper.injectIntoClassLoader(classLoader);
+        if (this.coreModWrapper != null) {
+            if (!this.isFMLInjected()) {
+                MixinPlatformAgentAbstract.logger.debug("FML agent is co-initialising coremod instance {} for {}", this.coreModWrapper, this.uri);
+                this.coreModWrapper.injectIntoClassLoader(classLoader);
+            } else {
+                MixinPlatformAgentAbstract.logger.debug("FML agent is skipping co-init for {} because FML already started", this.coreModWrapper);
+            }
         }
     }
 

@@ -91,7 +91,10 @@ public abstract class MixinBootstrap {
         Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.LAUNCH_PACKAGE);
     }
     
-    private static MixinPlatformManager platformManager = new MixinPlatformManager();
+    /**
+     * Platform manager instance
+     */
+    private static MixinPlatformManager platform;
 
     private MixinBootstrap() {}
     
@@ -106,7 +109,10 @@ public abstract class MixinBootstrap {
      * Get the platform manager
      */
     public static MixinPlatformManager getPlatform() {
-        return MixinBootstrap.platformManager;
+        if (MixinBootstrap.platform == null) {
+            MixinBootstrap.platform = new MixinPlatformManager();
+        }
+        return MixinBootstrap.platform;
     }
 
     /**
@@ -124,17 +130,15 @@ public abstract class MixinBootstrap {
      * Phase 1 of mixin initialisation
      */
     static boolean start() {
-        Object registeredVersion = Blackboard.get(Blackboard.Keys.INIT);
-        if (registeredVersion != null) {
-            if (!registeredVersion.equals(MixinBootstrap.VERSION)) {
-                throw new MixinInitialisationError("Mixin subsystem version " + registeredVersion
+        if (MixinBootstrap.isSubsystemRegistered()) {
+            if (!MixinBootstrap.checkSubsystemVersion()) {
+                throw new MixinInitialisationError("Mixin subsystem version " + MixinBootstrap.getActiveSubsystemVersion()
                         + " was already initialised. Cannot bootstrap version " + MixinBootstrap.VERSION);
             }
-            
             return false;
         }
-
-        Blackboard.put(Blackboard.Keys.INIT, MixinBootstrap.VERSION);
+            
+        MixinBootstrap.registerSubsystem(MixinBootstrap.VERSION);
         
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
@@ -156,6 +160,8 @@ public abstract class MixinBootstrap {
             MixinBootstrap.addProxy();
         }
         
+        MixinBootstrap.getPlatform();
+        
         return true;
     }
 
@@ -164,7 +170,12 @@ public abstract class MixinBootstrap {
      */
     static void doInit(List<String> args) {
         if (!MixinBootstrap.initialised) {
-            throw new IllegalStateException("MixinBootstrap.doInit() called before MixinBootstrap.preInit()");
+            if (MixinBootstrap.isSubsystemRegistered()) {
+                MixinBootstrap.logger.warn("Multiple Mixin containers present, init suppressed for " + MixinBootstrap.VERSION);
+                return;
+            }
+            
+            throw new IllegalStateException("MixinBootstrap.doInit() called before MixinBootstrap.start()");
         }
 
         MixinBootstrap.getPlatform().getPhaseProviderClasses();
@@ -189,6 +200,23 @@ public abstract class MixinBootstrap {
 
     static void injectIntoClassLoader(LaunchClassLoader classLoader) {
         MixinBootstrap.getPlatform().injectIntoClassLoader(classLoader);
+    }
+
+    private static boolean isSubsystemRegistered() {
+        return Blackboard.<Object>get(Blackboard.Keys.INIT) != null;
+    }
+
+    private static boolean checkSubsystemVersion() {
+        return MixinBootstrap.VERSION.equals(MixinBootstrap.getActiveSubsystemVersion());
+    }
+
+    private static Object getActiveSubsystemVersion() {
+        Object version = Blackboard.get(Blackboard.Keys.INIT);
+        return version != null ? version : "";
+    }
+
+    private static void registerSubsystem(String version) {
+        Blackboard.put(Blackboard.Keys.INIT, version);
     }
 
     private static int findInStackTrace(String className, String methodName) {

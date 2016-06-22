@@ -63,6 +63,7 @@ public class MixinContainer {
                 @SuppressWarnings("unchecked")
                 Class<IMixinPlatformAgent> clazz = (Class<IMixinPlatformAgent>)Class.forName(agentClass);
                 Constructor<IMixinPlatformAgent> ctor = clazz.getDeclaredConstructor(MixinPlatformManager.class, URI.class);
+                this.logger.debug("Instancing new {} for {}", clazz.getSimpleName(), this.uri);
                 IMixinPlatformAgent agent = ctor.newInstance(manager, uri);
                 this.agents.add(agent);
             } catch (Exception ex) {
@@ -94,6 +95,7 @@ public class MixinContainer {
      */
     public void prepare() {
         for (IMixinPlatformAgent agent : this.agents) {
+            this.logger.debug("Processing prepare() for {}", agent);
             agent.prepare();
         }
     }
@@ -110,6 +112,7 @@ public class MixinContainer {
      */
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
         for (IMixinPlatformAgent agent : this.agents) {
+            this.logger.debug("Processing injectIntoClassLoader() for {}", agent);
             agent.injectIntoClassLoader(classLoader);
         }
     }
