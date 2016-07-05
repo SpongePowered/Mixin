@@ -738,7 +738,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private void readTargets(Collection<ClassInfo> outTargets, Collection<String> inTargets, boolean suppressPlugin, boolean checkPublic) {
         for (String targetRef : inTargets) {
             String targetName = targetRef.replace('/', '.');
-            if (MixinInfo.classLoaderUtil.isClassLoaded(targetName)) {
+            if (MixinInfo.classLoaderUtil.isClassLoaded(targetName) && !this.isReloading()) {
                 String message = String.format("Critical problem: %s target %s was already transformed.", this, targetName);
                 if (this.parent.isRequired()) {
                     throw new MixinTargetAlreadyLoadedException(this, message, targetName);
@@ -795,6 +795,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         
         Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
         return priority == null ? this.parent.getDefaultMixinPriority() : priority.intValue();
+    }
+    
+    private boolean isReloading() {
+        return this.pendingState instanceof Reloaded;
     }
 
     /**
