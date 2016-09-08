@@ -28,10 +28,12 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.SortedSet;
 
 import org.apache.logging.log4j.LogManager;
@@ -39,15 +41,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Label;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.JumpInsnNode;
-import org.spongepowered.asm.lib.tree.LabelNode;
-import org.spongepowered.asm.lib.tree.LineNumberNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -106,6 +100,23 @@ public class MixinApplicatorStandard {
          * Apply injectors from previous pass 
          */
         INJECT
+    }
+    
+    /**
+     * Strategy for injecting initialiser insns
+     */
+    enum InitialiserInjectionMode {
+        /**
+         * Default mode, attempts to place initialisers after all other
+         * competing initialisers in the target ctor
+         */
+        DEFAULT,
+        
+        /**
+         * Safe mode, only injects initialiser directly after the super-ctor
+         * invocation 
+         */
+        SAFE
     }
     
     /**
@@ -600,7 +611,7 @@ public class MixinApplicatorStandard {
             }
         }
     }
-
+    
     /**
      * Finds a suitable ctor for reading the instance initialiser bytecode
      * 
@@ -753,25 +764,80 @@ public class MixinApplicatorStandard {
     protected final void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
         Map<LabelNode, LabelNode> labels = ASMHelper.cloneLabels(ctor.instructions);
         
-        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(0); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name)) {
-                for (AbstractInsnNode node : initialiser) {
-                    if (node instanceof LabelNode) {
-                        continue;
-                    }
-                    if (node instanceof JumpInsnNode) {
-                        throw new InvalidMixinException(mixin, "Unsupported JUMP opcode in initialiser in " + mixin);
-                    }
-                    AbstractInsnNode imACloneNow = node.clone(labels);
-                    ctor.instructions.insert(insn, imACloneNow);
-                    insn = imACloneNow;
-                }
-                return;
+        AbstractInsnNode insn = this.findInitialiserInjectionPoint(mixin, ctor, initialiser);
+        if (insn == null) {
+            this.logger.warn("Failed to locate initialiser injection point in <init>{}, initialiser was not mixed in.", ctor.desc);
+            return;
+        }
+
+        for (AbstractInsnNode node : initialiser) {
+            if (node instanceof LabelNode) {
+                continue;
+            }
+            if (node instanceof JumpInsnNode) {
+                throw new InvalidMixinException(mixin, "Unsupported JUMP opcode in initialiser in " + mixin);
+            }
+            AbstractInsnNode imACloneNow = node.clone(labels);
+            ctor.instructions.insert(insn, imACloneNow);
+            insn = imACloneNow;
+        }
+    }
+
+    /**
+     * Find the injection point for injected initialiser insns in the target
+     * ctor
+     * 
+     * @param mixin target context for mixin being applied
+     * @param ctor target ctor
+     * @param initialiser source initialiser insns
+     * @return target node
+     */
+    protected AbstractInsnNode findInitialiserInjectionPoint(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
+        Set<String> initialisedFields = new HashSet<String>();
+        for (AbstractInsnNode initialiserInsn : initialiser) {
+            if (initialiserInsn.getOpcode() == Opcodes.PUTFIELD) {
+                initialisedFields.add(MixinApplicatorStandard.fieldKey((FieldInsnNode)initialiserInsn)); 
             }
         }
+
+        InitialiserInjectionMode mode = this.getInitialiserInjectionMode(mixin.getEnvironment());
+        String targetName = mixin.getTargetClassInfo().getName(); 
+        String targetSuperName = mixin.getTargetClassInfo().getSuperName();
+        AbstractInsnNode targetInsn = null;
+
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name)) {
+                String owner = ((MethodInsnNode)insn).owner;
+                if (owner.equals(targetName) || owner.equals(targetSuperName)) {
+                    targetInsn = insn;
+                    if (mode == InitialiserInjectionMode.SAFE) {
+                        break;
+                    }
+                }
+            } else if (insn.getOpcode() == Opcodes.PUTFIELD && mode == InitialiserInjectionMode.DEFAULT) {
+                String key = MixinApplicatorStandard.fieldKey((FieldInsnNode)insn);
+                if (initialisedFields.contains(key)) {
+                    targetInsn = insn;
+                }
+            }            
+        }
         
-        this.logger.warn("Failed to locate super-invoke whilst injecting initialiser, initialiser was not mixed in!");
+        return targetInsn;
+    }
+
+    private InitialiserInjectionMode getInitialiserInjectionMode(MixinEnvironment environment) {
+        String strMode = environment.getOptionValue(Option.INITIALISER_INJECTION_MODE);
+        try {
+            return InitialiserInjectionMode.valueOf(strMode.toUpperCase());
+        } catch (Exception ex) {
+            this.logger.warn("Could not parse unexpected value \"{}\" for mixin.initialiserInjectionMode, reverting to DEFAULT", strMode);
+            return InitialiserInjectionMode.DEFAULT;
+        }
+    }
+
+    private static String fieldKey(FieldInsnNode fieldNode) {
+        return String.format("%s:%s", fieldNode.desc, fieldNode.name);
     }
 
     /**

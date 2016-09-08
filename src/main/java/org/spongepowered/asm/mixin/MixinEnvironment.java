@@ -271,6 +271,7 @@ public final class MixinEnvironment implements ITokenProvider {
         DEBUG_EXPORT_DECOMPILE(Option.DEBUG_EXPORT, "decompile") {
             @Override
             boolean getBooleanValue() {
+                // Allow a local FALSE to override a parent TRUE
                 return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
             }
         },
@@ -300,7 +301,8 @@ public final class MixinEnvironment implements ITokenProvider {
         DEBUG_STRICT(Option.DEBUG_ALL, "strict") {
             @Override
             boolean getBooleanValue() {
-                return Booleans.parseBoolean(System.getProperty(this.property), false);
+                // no inheritance
+                return this.getLocalBooleanValue();
             }
         },
         
@@ -322,6 +324,7 @@ public final class MixinEnvironment implements ITokenProvider {
         DEBUG_DISABLE_HANDLER_REMAP(Option.DEBUG_ALL, "disableHandlerRename") {
             @Override
             boolean getBooleanValue() {
+                // Allow a local FALSE to override a parent TRUE
                 return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
             }
         },
@@ -376,7 +379,13 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Default compatibility level to operate at
          */
-        DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, "compatLevel");
+        DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, "compatLevel"),
+        
+        /**
+         * Behaviour for initialiser injections, current supported options are
+         * "default" and "safe"
+         */
+        INITIALISER_INJECTION_MODE("initialiserInjectionMode", "default");
 
         /**
          * Prefix for mixin options
@@ -395,6 +404,11 @@ public final class MixinEnvironment implements ITokenProvider {
         final String property;
         
         /**
+         * Default value for string properties
+         */
+        final String defaultStringValue;
+        
+        /**
          * Whether this property is boolean or not
          */
         final boolean flag;
@@ -411,14 +425,27 @@ public final class MixinEnvironment implements ITokenProvider {
         private Option(String property, boolean flag) {
             this(null, property, flag);
         }
+
+        private Option(String property, String defaultStringValue) {
+            this(null, property, false, defaultStringValue);
+        }
         
         private Option(Option parent, String property) {
             this(parent, property, true);
         }
         
         private Option(Option parent, String property, boolean flag) {
+            this(parent, property, flag, null);
+        }
+        
+        private Option(Option parent, String property, String defaultStringValue) {
+            this(parent, property, false, defaultStringValue);
+        }
+        
+        private Option(Option parent, String property, boolean flag, String defaultStringValue) {
             this.parent = parent;
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
+            this.defaultStringValue = defaultStringValue;
             this.flag = flag;
             int depth = 0;
             for (; parent != null; depth++) {
@@ -440,20 +467,27 @@ public final class MixinEnvironment implements ITokenProvider {
             return this.flag ? String.valueOf(this.getBooleanValue()) : this.getStringValue();
         }
         
-        boolean getBooleanValue() {
-            return Booleans.parseBoolean(System.getProperty(this.property), false)
-                    || (this.parent != null && this.parent.getBooleanValue());
+        protected boolean getLocalBooleanValue() {
+            return Booleans.parseBoolean(System.getProperty(this.property), false);
         }
         
+        protected boolean getInheritedBooleanValue() {
+            return this.parent != null && this.parent.getBooleanValue();
+        }
+        
+        boolean getBooleanValue() {
+            return this.getLocalBooleanValue() || this.getInheritedBooleanValue();
+        }
+
         String getStringValue() {
-            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property) : null;
+            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property) : this.defaultStringValue;
         }
 
         @SuppressWarnings("unchecked")
         <E extends Enum<E>> E getEnumValue(E defaultValue) {
             String value = System.getProperty(this.property, defaultValue.name());
             try {
-                return (E) Enum.valueOf(defaultValue.getClass(), value);
+                return (E)Enum.valueOf(defaultValue.getClass(), value.toUpperCase());
             } catch (IllegalArgumentException ex) {
                 return defaultValue;
             }
