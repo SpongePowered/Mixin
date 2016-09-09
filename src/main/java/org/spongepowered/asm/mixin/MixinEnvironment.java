@@ -406,7 +406,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Default value for string properties
          */
-        final String defaultStringValue;
+        final String defaultValue;
         
         /**
          * Whether this property is boolean or not
@@ -445,7 +445,7 @@ public final class MixinEnvironment implements ITokenProvider {
         private Option(Option parent, String property, boolean flag, String defaultStringValue) {
             this.parent = parent;
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
-            this.defaultStringValue = defaultStringValue;
+            this.defaultValue = defaultStringValue;
             this.flag = flag;
             int depth = 0;
             for (; parent != null; depth++) {
@@ -480,7 +480,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
 
         String getStringValue() {
-            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property) : this.defaultStringValue;
+            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property, this.defaultValue) : this.defaultValue;
         }
 
         @SuppressWarnings("unchecked")

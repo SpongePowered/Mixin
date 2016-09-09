@@ -828,6 +828,9 @@ public class MixinApplicatorStandard {
 
     private InitialiserInjectionMode getInitialiserInjectionMode(MixinEnvironment environment) {
         String strMode = environment.getOptionValue(Option.INITIALISER_INJECTION_MODE);
+        if (strMode == null) {
+            return InitialiserInjectionMode.DEFAULT;
+        }
         try {
             return InitialiserInjectionMode.valueOf(strMode.toUpperCase());
         } catch (Exception ex) {
