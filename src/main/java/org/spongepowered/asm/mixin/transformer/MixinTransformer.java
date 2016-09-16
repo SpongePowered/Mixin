@@ -472,7 +472,7 @@ public class MixinTransformer extends TreeTransformer {
             return basicClass;
         }
         
-        boolean locked = this.lock.push().isSet();
+        boolean locked = this.lock.push().check();
         
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
