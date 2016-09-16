@@ -308,8 +308,13 @@ public class ClassInfo extends TreeInfo {
             return this.modifiers;
         }
 
-        public void renameTo(String name) {
+        /**
+         * @param name
+         * @return the passed-in argument, for fluency
+         */
+        public String renameTo(String name) {
             this.currentName = name;
+            return name;
         }
 
         public boolean equals(String name, String desc) {
@@ -557,7 +562,9 @@ public class ClassInfo extends TreeInfo {
      * Mixin info if this class is a mixin itself
      */
     private final MixinInfo mixin;
-
+    
+    private final MethodMapper methodMapper;
+    
     /**
      * True if this is a mixin rather than a class
      */
@@ -610,6 +617,7 @@ public class ClassInfo extends TreeInfo {
         this.access = Opcodes.ACC_PUBLIC;
         this.isMixin = false;
         this.mixin = null;
+        this.methodMapper = null;
     }
 
     /**
@@ -654,6 +662,7 @@ public class ClassInfo extends TreeInfo {
 
         this.isProbablyStatic = isProbablyStatic;
         this.outerName = outerName;
+        this.methodMapper = new MethodMapper(MixinEnvironment.getCurrentEnvironment(), this);
     }
 
     void addInterface(String iface) {
@@ -746,6 +755,10 @@ public class ClassInfo extends TreeInfo {
     @Override
     public String toString() {
         return this.name;
+    }
+    
+    public MethodMapper getMethodMapper() {
+        return this.methodMapper;
     }
 
     public int getAccess() {
@@ -840,10 +853,10 @@ public class ClassInfo extends TreeInfo {
     public Set<Method> getInterfaceMethods(boolean includeMixins) {
         Set<Method> methods = new HashSet<Method>();
 
-        ClassInfo superClass = this.addMethodsRecursive(methods, includeMixins);
+        ClassInfo supClass = this.addMethodsRecursive(methods, includeMixins);
         if (!this.isInterface) {
-            while (superClass != null && superClass != ClassInfo.OBJECT) {
-                superClass = superClass.addMethodsRecursive(methods, includeMixins);
+            while (supClass != null && supClass != ClassInfo.OBJECT) {
+                supClass = supClass.addMethodsRecursive(methods, includeMixins);
             }
         }
 
@@ -1062,13 +1075,13 @@ public class ClassInfo extends TreeInfo {
             return false;
         }
 
-        ClassInfo superClass = this.getSuperClass();
+        ClassInfo supClass = this.getSuperClass();
 
-        while (superClass != null && superClass != ClassInfo.OBJECT) {
-            if (superClass.isMixin) {
+        while (supClass != null && supClass != ClassInfo.OBJECT) {
+            if (supClass.isMixin) {
                 return true;
             }
-            superClass = superClass.getSuperClass();
+            supClass = supClass.getSuperClass();
         }
 
         return false;
@@ -1087,13 +1100,13 @@ public class ClassInfo extends TreeInfo {
             return false;
         }
 
-        ClassInfo superClass = this.getSuperClass();
+        ClassInfo supClass = this.getSuperClass();
 
-        while (superClass != null && superClass != ClassInfo.OBJECT) {
-            if (superClass.mixins.size() > 0) {
+        while (supClass != null && supClass != ClassInfo.OBJECT) {
+            if (supClass.mixins.size() > 0) {
                 return true;
             }
-            superClass = superClass.getSuperClass();
+            supClass = supClass.getSuperClass();
         }
 
         return false;

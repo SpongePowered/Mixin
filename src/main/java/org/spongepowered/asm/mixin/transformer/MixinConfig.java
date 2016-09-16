@@ -307,10 +307,10 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private MixinEnvironment parseSelector(String target, MixinEnvironment fallbackEnvironment) {
         if (target != null) {
             String[] selectors = target.split("[&\\| ]");
-            for (String selector : selectors) {
-                selector = selector.trim();
+            for (String sel : selectors) {
+                sel = sel.trim();
                 Pattern environmentSelector = Pattern.compile("^@env(?:ironment)?\\(([A-Z]+)\\)$");
-                Matcher environmentSelectorMatcher = environmentSelector.matcher(selector);
+                Matcher environmentSelectorMatcher = environmentSelector.matcher(sel);
                 if (environmentSelectorMatcher.matches()) {
                     // only parse first env selector
                     return MixinEnvironment.getEnvironment(Phase.forName(environmentSelectorMatcher.group(1)));

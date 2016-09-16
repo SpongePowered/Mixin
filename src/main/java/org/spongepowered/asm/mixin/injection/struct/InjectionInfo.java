@@ -40,6 +40,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
@@ -414,7 +415,7 @@ public abstract class InjectionInfo {
     }
     
     public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
-        AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(mixin, method);
+        AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(mixin.getMixin(), method);
         
         if (annotation == null) {
             return null;
@@ -436,7 +437,7 @@ public abstract class InjectionInfo {
     }
 
     @SuppressWarnings("unchecked")
-    public static AnnotationNode getInjectorAnnotation(MixinTargetContext mixin, MethodNode method) {
+    public static AnnotationNode getInjectorAnnotation(IMixinInfo mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
             annotation = ASMHelper.getSingleVisibleAnnotation(method,

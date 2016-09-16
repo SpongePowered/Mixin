@@ -390,18 +390,21 @@ public class MixinTransformer extends TreeTransformer {
     }
     
     private IDecompiler initDecompiler(File outputPath) {
-        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
+        MixinEnvironment env = MixinEnvironment.getCurrentEnvironment();
+        if (!env.getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
             return null;
         }
-
+        
         try {
-            this.logger.info("Attempting to load Fernflower decompiler");
+            boolean as = env.getOption(Option.DEBUG_EXPORT_DECOMPILE_THREADED);
+            this.logger.info("Attempting to load Fernflower decompiler{}", as ? " (Threaded mode)" : "");
             @SuppressWarnings("unchecked")
             Class<? extends IDecompiler> clazz =
-                (Class<? extends IDecompiler>)Class.forName("org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler");
+                (Class<? extends IDecompiler>)Class.forName("org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + (as ? "Async" : ""));
             Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
             IDecompiler decompiler = ctor.newInstance(outputPath);
-            this.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled");
+            this.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
+                    as ? " in a separate thread" : "");
             return decompiler;
         } catch (Throwable th) {
             this.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",

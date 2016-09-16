@@ -37,7 +37,6 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
 
@@ -45,13 +44,6 @@ import org.spongepowered.asm.util.ASMHelper;
  * Struct for containing target class information during mixin application
  */
 class TargetClassContext {
-    
-    /**
-     * Mutable integer
-     */
-    static class Counter {
-        public int value;
-    }
 
     /**
      * Transformer session ID
@@ -77,22 +69,12 @@ class TargetClassContext {
      * Mixins to apply 
      */
     private final SortedSet<MixinInfo> mixins;
-    
-    /**
-     * Injector Method descriptor to ID map 
-     */
-    private final Map<String, Counter> injectorMethodIndices = new HashMap<String, Counter>();
 
     /**
      * Information about methods in the target class, used to keep track of
      * transformations we apply
      */
     private final Map<String, Target> targetMethods = new HashMap<String, Target>();
-
-    /**
-     * Do not remap injector handler methods (debug option)
-     */
-    private final boolean disableHandlerRemap;
     
     /**
      * Unique method and field indices 
@@ -116,7 +98,6 @@ class TargetClassContext {
         this.classNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
         this.mixins = mixins;
-        this.disableHandlerRemap = MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_DISABLE_HANDLER_REMAP);
     }
     
     @Override
@@ -244,29 +225,15 @@ class TargetClassContext {
         }
         return target;
     }
-
-    public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
-        if (this.disableHandlerRemap) {
-            return method.name;
-        }
-        
-        String descriptor = String.format("%s%s", method.name, method.desc);
-        Counter id = this.injectorMethodIndices.get(descriptor);
-        if (id == null) {
-            id = new Counter();
-            this.injectorMethodIndices.put(descriptor, id);
-        } else if (!surrogate) {
-            id.value++;
-        }
-        return String.format("%s$%s$%d", InjectionInfo.getInjectorPrefix(annotation), method.name, id.value);
-    }
     
     public String getUniqueName(MethodNode method) {
-        return String.format("md%s$%s$%d", this.sessionId.substring(30), method.name, this.nextUniqueMethodIndex++);
+        String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
+        return String.format("md%s$%s$%s", this.sessionId.substring(30), method.name, uniqueIndex);
     }
 
     public String getUniqueName(FieldNode field) {
-        return String.format("fd%s$%s$%d", this.sessionId.substring(30), field.name, this.nextUniqueFieldIndex++);
+        String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
+        return String.format("fd%s$%s$%s", this.sessionId.substring(30), field.name, uniqueIndex);
     }
     
     /**

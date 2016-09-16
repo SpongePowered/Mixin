@@ -40,8 +40,6 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.Surrogate;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
@@ -105,17 +103,19 @@ class MixinPreProcessorStandard {
      * @return Prepared classnode
      */
     MixinPreProcessorStandard prepare() {
-        if (!this.prepared) {
-            this.prepared = true;
-            
-            for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
-                Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
-                this.prepareMethod(mixinMethod, method);
-            }
-            
-            for (FieldNode mixinField : this.classNode.fields) {
-                this.prepareField(mixinField);
-            }
+        if (this.prepared) {
+            return this;
+        }
+        
+        this.prepared = true;
+        
+        for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
+            Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
+            this.prepareMethod(mixinMethod, method);
+        }
+        
+        for (FieldNode mixinField : this.classNode.fields) {
+            this.prepareField(mixinField);
         }
         
         return this;
@@ -136,8 +136,7 @@ class MixinPreProcessorStandard {
         if (mixinMethod.name.startsWith(prefix)) {
             ASMHelper.setVisibleAnnotation(mixinMethod, MixinRenamed.class, "originalName", mixinMethod.name);
             String newName = mixinMethod.name.substring(prefix.length());
-            method.renameTo(newName);
-            mixinMethod.name = newName;
+            mixinMethod.name = method.renameTo(newName);
         }
     }
 
@@ -152,9 +151,29 @@ class MixinPreProcessorStandard {
     protected void prepareField(FieldNode mixinField) {
         // stub
     }
+    
+    MixinPreProcessorStandard conform(TargetClassContext target) {
+        return this.conform(target.getClassInfo());
+    }
+    
+    MixinPreProcessorStandard conform(ClassInfo target) {
+        for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
+            if (mixinMethod.isInjector()) {
+                Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+                this.conformInjector(target, mixinMethod, method);
+            }
+        }
+        return this;
+    }
+    
+    private void conformInjector(ClassInfo targetClass, MixinMethodNode mixinMethod, Method method) {
+        MethodMapper methodMapper = targetClass.getMethodMapper();
+        methodMapper.remapHandlerMethod(this.mixin, mixinMethod, method);
+    }
 
     MixinTargetContext createContextFor(TargetClassContext target) {
         MixinTargetContext context = new MixinTargetContext(this.mixin, this.classNode, target);
+        this.conform(target);
         this.attach(context);
         return context;
     }
@@ -164,7 +183,7 @@ class MixinPreProcessorStandard {
      * 
      * @param context
      */
-    void attach(MixinTargetContext context) {
+    MixinPreProcessorStandard attach(MixinTargetContext context) {
         if (this.attached) {
             throw new IllegalStateException("Preprocessor was already attached");
         }
@@ -177,6 +196,7 @@ class MixinPreProcessorStandard {
         
         // Apply transformations to the mixin bytecode
         this.transform(context);
+        return this;
     }
 
     protected void attachMethods(MixinTargetContext context) {
@@ -188,7 +208,7 @@ class MixinPreProcessorStandard {
                 continue;
             }
             
-            if (this.processInjectorMethod(context, mixinMethod)) {
+            if (mixinMethod.isInjector()) {
                 continue;
             }
             
@@ -215,26 +235,6 @@ class MixinPreProcessorStandard {
         return true;
     }
 
-    protected boolean processInjectorMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(context, mixinMethod);
-        boolean surrogate = ASMHelper.getVisibleAnnotation(mixinMethod, Surrogate.class) != null;
-        if (annotation == null && !surrogate) {
-            return false;
-        }
-        
-        String handlerName = context.getHandlerName(annotation, mixinMethod, surrogate);
-        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-
-        if (method.isUnique()) {
-            MixinPreProcessorStandard.logger.warn("Redundant @Unique on injector method {} in {}. Injectors are implicitly unique", method, context);
-        }
-        
-        method.renameTo(handlerName);
-        mixinMethod.name = handlerName;
-        
-        return true;
-    }
-    
     protected boolean processShadowMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         return this.processSpecialMethod(context, mixinMethod, Shadow.class, false);
     }
@@ -271,8 +271,7 @@ class MixinPreProcessorStandard {
                 throw new InvalidMixinException(this.mixin, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name
                         + " was not located in the target class");
             }
-            mixinMethod.name = target.name;
-            method.renameTo(target.name);
+            mixinMethod.name = method.renameTo(target.name);
         }
         
         if (Constants.CTOR.equals(target.name)) {
@@ -284,8 +283,7 @@ class MixinPreProcessorStandard {
                 throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
             }
             
-            mixinMethod.name = target.name;
-            method.renameTo(target.name);
+            mixinMethod.name = method.renameTo(target.name);
         }
         
         return true;
@@ -306,8 +304,7 @@ class MixinPreProcessorStandard {
             String uniqueName = context.getUniqueName(mixinMethod);
             MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique method {}{} to {} in {}",
                     mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
-            mixinMethod.name = uniqueName;
-            method.renameTo(uniqueName);
+            mixinMethod.name = method.renameTo(uniqueName);
             return false;
         }
 
@@ -330,8 +327,7 @@ class MixinPreProcessorStandard {
         
         Method parentMethod = this.mixin.getClassInfo().findMethodInHierarchy(mixinMethod, false);
         if (parentMethod != null && parentMethod.isRenamed()) {
-            mixinMethod.name = parentMethod.getName();
-            method.renameTo(parentMethod.getName());
+            mixinMethod.name = method.renameTo(parentMethod.getName());
         }
     }
 
@@ -363,8 +359,7 @@ class MixinPreProcessorStandard {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
                     throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
                 }
-                mixinField.name = target.name;
-                field.renameTo(target.name);
+                mixinField.name = field.renameTo(target.name);
             }
             
             if (field.isUnique()) {
@@ -372,8 +367,7 @@ class MixinPreProcessorStandard {
                     String uniqueName = context.getUniqueName(mixinField);
                     MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique field {}{} to {} in {}",
                             mixinField.name, mixinField.desc, uniqueName, this.mixin);
-                    mixinField.name = uniqueName;
-                    field.renameTo(uniqueName);
+                    mixinField.name = field.renameTo(uniqueName);
                     continue;
                 }
 
@@ -399,8 +393,7 @@ class MixinPreProcessorStandard {
                     throw new InvalidMixinException(this.mixin, "Non-private field cannot be aliased. Found " + target.name);
                 }
                 
-                mixinField.name = target.name;
-                field.renameTo(target.name);
+                mixinField.name = field.renameTo(target.name);
             }
             
             // Shadow fields get stripped from the mixin class

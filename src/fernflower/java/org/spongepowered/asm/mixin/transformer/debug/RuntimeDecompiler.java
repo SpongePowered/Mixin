@@ -53,7 +53,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     private final File outputPath;
 
-    private final Logger logger = LogManager.getLogger("fernflower");
+    protected final Logger logger = LogManager.getLogger("fernflower");
 
     public RuntimeDecompiler(File outputPath) {
         this.outputPath = outputPath;

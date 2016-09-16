@@ -55,6 +55,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.injection.Surrogate;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
@@ -91,6 +93,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         
         public String getOriginalName() {
             return this.originalName;
+        }
+
+        public boolean isInjector() {
+            return (this.getInjectorAnnotation() != null || this.isSurrogate());
+        }
+
+        public boolean isSurrogate() {
+            return ASMHelper.getVisibleAnnotation(this, Surrogate.class) != null;
+        }
+
+        public AnnotationNode getInjectorAnnotation() {
+            return InjectionInfo.getInjectorAnnotation(MixinInfo.this, this);
         }
 
     }
@@ -199,7 +213,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             return this.mixinBytes;
         }
         
-        ClassNode getClassNode() {
+        MixinClassNode getClassNode() {
             return this.classNode;
         }
 
@@ -243,6 +257,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * @param targetClasses Mixin's target classes
          */
         void validate(SubType type, List<ClassInfo> targetClasses) {
+            MixinPreProcessorStandard preProcessor = type.createPreProcessor(this.getClassNode()).prepare();
+            for (ClassInfo target : targetClasses) {
+                preProcessor.conform(target);
+            }
+            
             type.validate(this, targetClasses);
 
             this.detachedSuper = type.isDetachedSuper();
@@ -697,7 +716,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param suppressPlugin 
      * @return target class list read from classNode
      */
-    protected List<ClassInfo> readTargetClasses(ClassNode classNode, boolean suppressPlugin) {
+    protected List<ClassInfo> readTargetClasses(MixinClassNode classNode, boolean suppressPlugin) {
         if (classNode == null) {
             return Collections.<ClassInfo>emptyList();
         }

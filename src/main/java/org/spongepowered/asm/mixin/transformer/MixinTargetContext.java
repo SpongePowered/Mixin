@@ -971,10 +971,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.mixin.postApply(transformedName, targetClass);
     }
     
-    public String getHandlerName(AnnotationNode annotation, MethodNode method, boolean surrogate) {
-        return this.targetClass.getHandlerName(annotation, method, surrogate);
-    }
-
     public String getUniqueName(MethodNode method) {
         return this.targetClass.getUniqueName(method);
     }

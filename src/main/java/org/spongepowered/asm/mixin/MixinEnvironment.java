@@ -277,6 +277,20 @@ public final class MixinEnvironment implements ITokenProvider {
         },
         
         /**
+         * Run fernflower in a separate thread. In general this will allow
+         * export to impact startup time much less (decompiling normally adds
+         * about 20% to load times) with the trade-off that crashes may lead to
+         * undecompiled exports.
+         */
+        DEBUG_EXPORT_DECOMPILE_THREADED(Option.DEBUG_EXPORT_DECOMPILE, "async") {
+            @Override
+            boolean getBooleanValue() {
+                // Allow a local FALSE to override a parent TRUE
+                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
+            }
+        },
+        
+        /**
          * Run the CheckClassAdapter on all classes after mixins are applied,
          * also enables stricter checks on mixins for use at dev-time, promotes
          * some warning-level messages to exceptions 
@@ -321,13 +335,13 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Disable the injector handler remapper
          */
-        DEBUG_DISABLE_HANDLER_REMAP(Option.DEBUG_ALL, "disableHandlerRename") {
-            @Override
-            boolean getBooleanValue() {
-                // Allow a local FALSE to override a parent TRUE
-                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
-            }
-        },
+//        DEBUG_DISABLE_HANDLER_REMAP(Option.DEBUG_ALL, "disableHandlerRename") {
+//            @Override
+//            boolean getBooleanValue() {
+//                // Allow a local FALSE to override a parent TRUE
+//                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
+//            }
+//        },
 
         /**
          * Dumps the bytecode for the target class to disk when mixin
