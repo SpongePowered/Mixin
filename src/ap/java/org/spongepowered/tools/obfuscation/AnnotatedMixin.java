@@ -27,11 +27,7 @@ package org.spongepowered.tools.obfuscation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.AnnotationMirror;
@@ -46,9 +42,13 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjectionPoint;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjector;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinOverwriteHandler.AnnotatedElementOverwrite;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.struct.Message;
@@ -78,6 +78,11 @@ class AnnotatedMixin {
      */
     private final IObfuscationManager obf;
     
+    /**
+     * Generated mappings 
+     */
+    private final IMappingConsumer mappings;
+
     /**
      * Mixin class
      */
@@ -112,17 +117,7 @@ class AnnotatedMixin {
      * True if we will actually process remappings for this mixin
      */
     private final boolean remap;
-    
-    /**
-     * Stored (ordered) field mappings
-     */
-    private final Map<ObfuscationType, Set<String>> fieldMappings = new HashMap<ObfuscationType, Set<String>>();
-    
-    /**
-     * Stored (ordered) method mappings
-     */
-    private final Map<ObfuscationType, Set<String>> methodMappings = new HashMap<ObfuscationType, Set<String>>();
-    
+ 
     /**
      * Overwrite handler
      */
@@ -142,6 +137,7 @@ class AnnotatedMixin {
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.typeProvider = ap.getTypeProvider();
         this.obf = ap.getObfuscationManager();
+        this.mappings = this.obf.createMappingConsumer();
         this.messager = ap;
         this.mixin = type;
         this.handle = new TypeHandle(type);
@@ -157,11 +153,6 @@ class AnnotatedMixin {
         }
 
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
-        
-        for (ObfuscationType obfType : ObfuscationType.values()) {
-            this.fieldMappings.put(obfType, new LinkedHashSet<String>());
-            this.methodMappings.put(obfType, new LinkedHashSet<String>());
-        }
         
         this.overwrites = new AnnotatedMixinOverwriteHandler(ap, this);
         this.shadows = new AnnotatedMixinShadowHandler(ap, this);
@@ -239,9 +230,9 @@ class AnnotatedMixin {
     }
 
     private void addSoftTarget(TypeHandle type, String reference) {
-        ObfuscationData<String> obfClassData = this.obf.getObfClass(type);
+        ObfuscationData<String> obfClassData = this.obf.getDataProvider().getObfClass(type);
         if (!obfClassData.isEmpty()) {
-            this.obf.addClassMapping(this.classRef, reference, obfClassData);
+            this.obf.getReferenceManager().addClassMapping(this.classRef, reference, obfClassData);
         }
         
         this.addTarget(type);
@@ -316,54 +307,28 @@ class AnnotatedMixin {
         return this.remap;
     }
     
-    /**
-     * Get stored field mappings
-     */
-    public Set<String> getFieldMappings(ObfuscationType type) {
-        return this.fieldMappings.get(type);
+    public IMappingConsumer getMappings() {
+        return this.mappings;
     }
     
-    /**
-     * Get stored method mappings
-     */
-    public Set<String> getMethodMappings(ObfuscationType type) {
-        return this.methodMappings.get(type);
-    }
-    
-    /**
-     * Clear all stored mappings
-     */
-    public void clear() {
-        this.fieldMappings.clear();
-        this.methodMappings.clear();
-    }
-
     public void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
-        this.overwrites.registerOverwrite(method, overwrite);
+        this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite));
     }
 
     public void registerShadow(VariableElement field, AnnotationMirror shadow, boolean shouldRemap) {
-        this.shadows.registerShadow(field, shadow, shouldRemap);
+        this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowField(field, shadow, shouldRemap));
     }
 
     public void registerShadow(ExecutableElement method, AnnotationMirror shadow, boolean shouldRemap) {
-        this.shadows.registerShadow(method, shadow, shouldRemap);
+        this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowMethod(method, shadow, shouldRemap));
     }
 
-    public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
-        return this.injectors.registerInjector(method, inject, remap);
+    public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean shouldRemap) {
+        return this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, shouldRemap));
     }
 
     public int registerInjectionPoint(ExecutableElement element, AnnotationMirror inject, AnnotationMirror at) {
-        return this.injectors.registerInjectionPoint(element, inject, at);
-    }
-
-    void addFieldMapping(ObfuscationType type, String mapping) {
-        this.fieldMappings.get(type).add(mapping);
-    }
-
-    void addMethodMapping(ObfuscationType type, String mapping) {
-        this.methodMappings.get(type).add(mapping);
+        return this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at));
     }
     
 }

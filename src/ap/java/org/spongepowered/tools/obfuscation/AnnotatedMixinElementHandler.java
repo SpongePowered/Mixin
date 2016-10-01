@@ -35,7 +35,9 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
@@ -49,6 +51,32 @@ import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
  * aspects of mixin target classes 
  */
 abstract class AnnotatedMixinElementHandler {
+    
+    /**
+     * An annotated element to be processed by this element handler
+     * 
+     * @param <E> type of inner element
+     */
+    abstract static class AnnotatedElement<E extends Element> {
+        
+        private final E element;
+        
+        private final AnnotationMirror annotation;
+
+        public AnnotatedElement(E element, AnnotationMirror annotation) {
+            this.element = element;
+            this.annotation = annotation;
+        }
+
+        public E getElement() {
+            return this.element;
+        }
+        
+        public AnnotationMirror getAnnotation() {
+            return this.annotation;
+        }
+        
+    }
     
     /**
      * A name of an element which may have aliases
@@ -153,6 +181,17 @@ abstract class AnnotatedMixinElementHandler {
         public String baseName() {
             return this.baseName;
         }
+        
+        /**
+         * Sets the obfuscated name for this element
+         * 
+         * @param name Mapping containing new name
+         * @return fluent interface
+         */
+        public ShadowElementName setObfuscatedName(IMapping<?> name) {
+            this.obfuscated = name.getName();
+            return this;
+        }
 
         /**
          * Sets the obfuscated name for this element
@@ -161,7 +200,7 @@ abstract class AnnotatedMixinElementHandler {
          * @return fluent interface
          */
         public ShadowElementName setObfuscatedName(String name) {
-            this.obfuscated = name.substring(name.lastIndexOf('/') + 1);
+            this.obfuscated = name;
             return this;
         }
 
@@ -241,20 +280,20 @@ abstract class AnnotatedMixinElementHandler {
         }
         
         if (targetMember.isField()) {
-            ObfuscationData<String> obfFieldData = this.obf.getObfFieldRecursive(targetMember);
+            ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
             if (obfFieldData.isEmpty()) {
                 this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
                 return false;
             }
-            this.obf.addFieldMapping(this.classRef, target, targetMember, obfFieldData);
+            this.obf.getReferenceManager().addFieldMapping(this.classRef, target, targetMember, obfFieldData);
         } else {
-            ObfuscationData<SrgMethod> obfMethodData = this.obf.getObfMethodRecursive(targetMember);
+            ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
             if (obfMethodData.isEmpty()) {
                 if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
                 }
             }
-            this.obf.addMethodMapping(this.classRef, target, targetMember, obfMethodData);
+            this.obf.getReferenceManager().addMethodMapping(this.classRef, target, targetMember, obfMethodData);
         }
         return true;
     }
@@ -262,9 +301,17 @@ abstract class AnnotatedMixinElementHandler {
     /**
      * Add a field mapping to the local table
      */
-    protected final void addFieldMapping(ObfuscationType type, ShadowElementName name) {
-        String mapping = String.format("FD: %s %s", this.classRef + "/" + name.name(), this.classRef + "/" + name.obfuscated());
-        this.mixin.addFieldMapping(type, mapping);
+    protected final void addFieldMapping(ObfuscationType type, ShadowElementName name, String mcpSignature, String obfSignature) {
+        this.addFieldMapping(type, name.name(), name.obfuscated(), mcpSignature, obfSignature);
+    }
+
+    /**
+     * Add a field mapping to the local table
+     */
+    protected final void addFieldMapping(ObfuscationType type, String mcpName, String obfName, String mcpSignature, String obfSignature) {
+        MappingField from = new MappingField(this.classRef, mcpName, mcpSignature);
+        MappingField to = new MappingField(this.classRef, obfName, obfSignature);
+        this.mixin.getMappings().addFieldMapping(type, from, to);
     }
 
     /**
@@ -278,8 +325,9 @@ abstract class AnnotatedMixinElementHandler {
      * Add a method mapping to the local table
      */
     protected final void addMethodMapping(ObfuscationType type, String mcpName, String obfName, String mcpSignature, String obfSignature) {
-        String mapping = String.format("MD: %s %s %s %s", this.classRef + "/" + mcpName, mcpSignature, this.classRef + "/" + obfName, obfSignature);
-        this.mixin.addMethodMapping(type, mapping);
+        MappingMethod from = new MappingMethod(this.classRef, mcpName, mcpSignature);
+        MappingMethod to = new MappingMethod(this.classRef, obfName, obfSignature);
+        this.mixin.getMappings().addMethodMapping(type, from, to);
     }
 
     /**
@@ -314,6 +362,14 @@ abstract class AnnotatedMixinElementHandler {
             }
         } catch (InvalidConstraintException ex) {
             this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation);
+        }
+    }
+    
+    protected final void validateTarget(Element element, AnnotationMirror annotation, AliasedElementName name, String type) {
+        if (element instanceof ExecutableElement) {
+            this.validateTargetMethod((ExecutableElement)element, annotation, name, type);
+        } else if (element instanceof VariableElement) {
+            this.validateTargetField((VariableElement)element, annotation, name, type);
         }
     }
     

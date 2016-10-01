@@ -22,51 +22,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.tools.obfuscation.mcp;
 
-import java.util.List;
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
 
 import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import org.spongepowered.tools.obfuscation.ObfuscationType;
+import org.spongepowered.tools.obfuscation.mapping.IMappingProvider;
+import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
+import org.spongepowered.tools.obfuscation.mapping.mcp.MappingProviderSrg;
+import org.spongepowered.tools.obfuscation.mapping.mcp.MappingWriterSrg;
 
 /**
- * Manages obfuscation things
+ * An MCP obfuscation environment (eg. SEARGE or NOTCH)
  */
-public interface IObfuscationManager {
+public class ObfuscationEnvironmentMCP extends ObfuscationEnvironment {
 
-    /**
-     * Initialise the obfuscation environments
-     */
-    public abstract void init();
-
-    /**
-     * Get the obfuscation mapping source
-     */
-    public abstract IObfuscationDataProvider getDataProvider();
+    protected ObfuscationEnvironmentMCP(ObfuscationType type) {
+        super(type);
+    }
     
-    /**
-     * Get the reference manager
-     */
-    public abstract IReferenceManager getReferenceManager();
-
-    /**
-     * Create a new mapping consumer
-     */
-    public abstract IMappingConsumer createMappingConsumer();
-
-    /**
-     * Get available obfuscation environments within this manager
-     */
-    public abstract List<ObfuscationEnvironment> getEnvironments();
-
-    /**
-     * Write out generated mappings to the target environments
-     */
-    public abstract void writeMappings();
-
-    /**
-     * Write out generated refmap 
-     */
-    void writeReferences();
+    @Override
+    protected IMappingProvider getMappingProvider(Messager messager, Filer filer) {
+        return new MappingProviderSrg(messager, filer);
+    }
     
+    @Override
+    protected IMappingWriter getMappingWriter(Messager messager, Filer filer) {
+        return new MappingWriterSrg(messager, filer);
+    }
 }

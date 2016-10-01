@@ -42,7 +42,7 @@ import org.spongepowered.tools.MirrorUtils;
 
 /**
  * Annotation processor which finds {@link Shadow} and {@link Overwrite}
- * annotations in mixin classes and generates SRG mappings
+ * annotations in mixin classes and generates new obfuscation mappings
  */
 @SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.Mixin", "org.spongepowered.asm.mixin.Shadow", "org.spongepowered.asm.mixin.Overwrite" })
 public class TargetObfuscationProcessor extends MixinProcessor {
@@ -71,7 +71,7 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         super.postProcess(roundEnv);
         
         try {
-            this.mixins.writeSrgs();
+            this.mixins.writeMappings();
         } catch (Exception ex) {
             ex.printStackTrace();
         }

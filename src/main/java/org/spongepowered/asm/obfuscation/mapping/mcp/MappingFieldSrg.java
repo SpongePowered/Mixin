@@ -22,51 +22,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.asm.obfuscation.mapping.mcp;
 
-import java.util.List;
-
-import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 
 /**
- * Manages obfuscation things
+ * An SRG field mapping
  */
-public interface IObfuscationManager {
+public class MappingFieldSrg extends MappingField {
 
-    /**
-     * Initialise the obfuscation environments
-     */
-    public abstract void init();
+    private final String srg;
 
-    /**
-     * Get the obfuscation mapping source
-     */
-    public abstract IObfuscationDataProvider getDataProvider();
+    public MappingFieldSrg(String srg) {
+        super(MappingFieldSrg.getOwnerFromSrg(srg), MappingFieldSrg.getNameFromSrg(srg), null);
+        this.srg = srg;
+    }
     
-    /**
-     * Get the reference manager
-     */
-    public abstract IReferenceManager getReferenceManager();
+    public MappingFieldSrg(MappingField field) {
+        super(field.getOwner(), field.getName(), null);
+        this.srg = field.getOwner() + "/" + field.getName();
+    }
 
-    /**
-     * Create a new mapping consumer
-     */
-    public abstract IMappingConsumer createMappingConsumer();
+    @Override
+    public String serialise() {
+        return this.srg;
+    }
 
-    /**
-     * Get available obfuscation environments within this manager
-     */
-    public abstract List<ObfuscationEnvironment> getEnvironments();
+    private static String getNameFromSrg(String srg) {
+        if (srg == null) {
+            return null;
+        }
+        int pos = srg.lastIndexOf('/');
+        return pos > -1 ? srg.substring(pos + 1) : srg;
+    }
 
-    /**
-     * Write out generated mappings to the target environments
-     */
-    public abstract void writeMappings();
+    private static String getOwnerFromSrg(String srg) {
+        if (srg == null) {
+            return null;
+        }
+        int pos = srg.lastIndexOf('/');
+        return pos > -1 ? srg.substring(0, pos) : null;
+    }
 
-    /**
-     * Write out generated refmap 
-     */
-    void writeReferences();
-    
 }

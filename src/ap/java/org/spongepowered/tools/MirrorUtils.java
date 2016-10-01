@@ -194,6 +194,16 @@ public abstract class MirrorUtils {
         }
         return sb.toString();
     }
+    
+    public static String getDescriptor(Element elem) {
+        if (elem instanceof ExecutableElement) {
+            return MirrorUtils.generateSignature((ExecutableElement)elem);
+        } else if (elem instanceof VariableElement) {
+            return MirrorUtils.getInternalName((VariableElement)elem);
+        }
+        
+        return MirrorUtils.getInternalName(elem.asType());
+    }
 
     public static String getTypeName(TypeMirror type) {
         switch (type.getKind()) {

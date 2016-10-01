@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 
 /**
  * Return value struct for various obfuscation queries performed by the mixin
@@ -43,7 +43,7 @@ import org.spongepowered.asm.obfuscation.SrgMethod;
  * {@link #get} to retrieve the remapped entries for each key.</p>
  * 
  * @param <T> Contained type of the data, usually {@link String} for field
- *      and type obfuscations, and {@link SrgMethod} for methods.
+ *      and type obfuscations, and {@link MappingMethod} for methods.
  */
 public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     
@@ -85,7 +85,7 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     private String listValues() {
         StringBuilder sb = new StringBuilder();
         for (ObfuscationType type : this.data.keySet()) {
-            sb.append(type.name()).append('=').append(this.data.get(type)).append(',');
+            sb.append(type.getKey()).append('=').append(this.data.get(type)).append(',');
         }
         return sb.toString();
     }

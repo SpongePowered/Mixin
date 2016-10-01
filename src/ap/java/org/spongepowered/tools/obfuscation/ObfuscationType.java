@@ -24,9 +24,15 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.reflect.Constructor;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+import org.spongepowered.tools.obfuscation.mcp.ObfuscationServiceMCP;
+import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -34,47 +40,34 @@ import com.google.common.collect.ImmutableList.Builder;
 /**
  * Obfuscation types supported by the annotation processor
  */
-enum ObfuscationType {
+public final class ObfuscationType {
     
-    /**
-     * "SEARGE" mappings, these are unique mappings used by MCP and derived
-     * projects 
-     */
-    SRG("searge", SupportedOptions.REOBF_SRG_FILE, SupportedOptions.REOBF_EXTRA_SRG_FILES, SupportedOptions.OUT_SRG_SRG_FILE),
+    private static final Map<String, ObfuscationType> types = new LinkedHashMap<String, ObfuscationType>();
     
-    /**
-     * "NOTCH" mappings, internal to minecraft only 
-     */
-    NOTCH("notch", SupportedOptions.REOBF_NOTCH_FILE, SupportedOptions.REOBF_EXTRA_NOTCH_FILES, SupportedOptions.OUT_NOTCH_SRG_FILE);
-    
-    /**
-     * Refmap key for this mapping type
-     */
     private final String key;
+
+    private final ObfuscationTypeDescriptor descriptor;
     
-    /**
-     * The name of the Annotation Processor argument which contains the file
-     * name to read the SRGs for this obfuscation type from 
-     */
-    private final String srgFileArgName;
+    private final IMixinAnnotationProcessor ap;
     
-    /**
-     * The name of the Annotation Processor argument which contains the file
-     * name to read the extra SRGs for this obfuscation type from 
-     */
-    private final String extraSrgFilesArgName;
+    private final IOptionProvider options;
     
-    /**
-     * The name of the Annotation Processor argument which contains the file
-     * name to write generated SRG mappings to 
-     */
-    private final String outSrgFileArgName;
+    private ObfuscationType(ObfuscationTypeDescriptor descriptor, IMixinAnnotationProcessor ap) {
+        this.key = descriptor.getKey();
+        this.descriptor = descriptor;
+        this.ap = ap;
+        this.options = ap;
+    }
     
-    private ObfuscationType(String displayName, String srgFileArgName, String extraSrgFilesArgName, String outSrgFileArgName) {
-        this.key = displayName;
-        this.srgFileArgName = srgFileArgName;
-        this.extraSrgFilesArgName = extraSrgFilesArgName;
-        this.outSrgFileArgName = outSrgFileArgName;
+    public final ObfuscationEnvironment createEnvironment() {
+        try {
+            Class<? extends ObfuscationEnvironment> cls = this.descriptor.getEnvironmentType();
+            Constructor<? extends ObfuscationEnvironment> ctor = cls.getDeclaredConstructor(ObfuscationType.class);
+            ctor.setAccessible(true);
+            return ctor.newInstance(this);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
     
     @Override
@@ -82,51 +75,70 @@ enum ObfuscationType {
         return this.key;
     }
     
+    
     public String getKey() {
         return this.key;
     }
-    
-    public String getSrgFileOption() {
-        return this.srgFileArgName;
+
+    public ObfuscationTypeDescriptor getConfig() {
+        return this.descriptor;
     }
     
-    public String getExtraSrgFilesOption() {
-        return this.extraSrgFilesArgName;
+    public IMixinAnnotationProcessor getAnnotationProcessor() {
+        return this.ap;
     }
     
-    public String getOutputSrgFileOption() {
-        return this.outSrgFileArgName;
+    public boolean isDefault() {
+        String defaultEnv = this.options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
+        return (defaultEnv == null && this.key.equals(ObfuscationServiceMCP.SEARGE))
+                || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase()));
     }
     
-    public boolean isDefault(IOptionProvider options) {
-        String defaultEnv = options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
-        return (defaultEnv == null && this == ObfuscationType.SRG) || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase()));
+    public boolean isSupported() {
+        return this.getInputFileNames().size() > 0;
     }
     
-    public boolean isSupported(IOptionProvider options) {
-        return this.getSrgFileNames(options).size() > 0;
-    }
-    
-    public List<String> getSrgFileNames(IOptionProvider options) {
+    public List<String> getInputFileNames() {
         Builder<String> builder = ImmutableList.<String>builder();
         
-        String srgFile = options.getOption(this.srgFileArgName);
-        if (srgFile != null) {
-            builder.add(srgFile);
+        String inputFile = this.options.getOption(this.descriptor.getInputFileOption());
+        if (inputFile != null) {
+            builder.add(inputFile);
         }
         
-        String extraSrgFiles = options.getOption(this.extraSrgFilesArgName);
-        if (extraSrgFiles != null) {
-            for (String extraSrgFile : extraSrgFiles.split(";")) {
-                builder.add(extraSrgFile.trim());
+        String extraInputFiles = this.options.getOption(this.descriptor.getExtraInputFilesOption());
+        if (extraInputFiles != null) {
+            for (String extraInputFile : extraInputFiles.split(";")) {
+                builder.add(extraInputFile.trim());
             }
         }
         
         return builder.build();
     }
     
-    public String getOutputSrgFileName(IOptionProvider options) {
-        return options.getOption(this.outSrgFileArgName);
+    public String getOutputFileName() {
+        return this.options.getOption(this.descriptor.getOutputFileOption());
     }
-   
+
+    public static Iterable<ObfuscationType> types() {
+        return ObfuscationType.types.values();
+    }
+    
+    public static ObfuscationType create(ObfuscationTypeDescriptor config, IMixinAnnotationProcessor ap) {
+        String key = config.getKey();
+        if (ObfuscationType.types.containsKey(key)) {
+            throw new IllegalArgumentException("Obfuscation type with key " + key + " was already registered");
+        }
+        ObfuscationType type = new ObfuscationType(config, ap);
+        ObfuscationType.types.put(key, type);
+        return type;
+    }
+    
+    public static ObfuscationType get(String key) {
+        ObfuscationType type = ObfuscationType.types.get(key);
+        if (type == null) {
+            throw new IllegalArgumentException("Obfuscation type with key " + key + " was not registered");
+        }
+        return type;
+    }
 }

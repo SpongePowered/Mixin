@@ -46,7 +46,7 @@ import org.spongepowered.tools.MirrorUtils;
 
 /**
  * Annotation processor which finds {@link Inject} and {@link At} annotations in
- * mixin classes and generates SRG mappings
+ * mixin classes and generates obfuscation mappings
  */
 @SupportedAnnotationTypes({
     "org.spongepowered.asm.mixin.injection.Inject",
@@ -83,7 +83,7 @@ public class InjectionObfuscationProcessor extends MixinProcessor {
         super.postProcess(roundEnv);
 
         try {
-            this.mixins.writeRefs();
+            this.mixins.writeReferences();
         } catch (Exception ex) {
             ex.printStackTrace();
         }

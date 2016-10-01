@@ -31,7 +31,9 @@ import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.throwables.MixinException;
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
@@ -95,6 +97,11 @@ public class MemberInfo {
      * True to match all matching members, not just the first
      */
     public final boolean matchAll;
+    
+    /**
+     * Force this member to report as a field
+     */
+    private final boolean forceField;
 
     /**
      * ctor
@@ -134,10 +141,11 @@ public class MemberInfo {
             throw new IllegalArgumentException("Attempt to instance a MemberInfo with an invalid owner format");
         }
         
-        this.owner    = owner;
-        this.name     = name;
-        this.desc     = desc;
+        this.owner = owner;
+        this.name = name;
+        this.desc = desc;
         this.matchAll = matchAll;
+        this.forceField = false;
     }
     
     /**
@@ -148,6 +156,7 @@ public class MemberInfo {
      */
     public MemberInfo(AbstractInsnNode insn) {
         this.matchAll = false;
+        this.forceField = false;
         
         if (insn instanceof MethodInsnNode) {
             MethodInsnNode methodNode = (MethodInsnNode) insn;
@@ -165,27 +174,29 @@ public class MemberInfo {
     }
     
     /**
-     * Initialise a MemberInfo using the supplied SrgMethod object
+     * Initialise a MemberInfo using the supplied mapping object
      * 
-     * @param srgMethod SrgMethod object to copy values from
+     * @param mapping Mapping object to copy values from
      */
-    public MemberInfo(SrgMethod srgMethod) {
-        this.owner = srgMethod.getOwner();
-        this.name = srgMethod.getSimpleName();
-        this.desc = srgMethod.getDesc();
+    public MemberInfo(IMapping<?> mapping) {
+        this.owner = mapping.getOwner();
+        this.name = mapping.getSimpleName();
+        this.desc = mapping.getDesc();
         this.matchAll = false;
+        this.forceField = mapping.getType() == IMapping.Type.FIELD;
     }
     
     /**
-     * Initialise a remapped MemberInfo using the supplied SrgMethod object
+     * Initialise a remapped MemberInfo using the supplied mapping object
      * 
-     * @param srgMethod SrgMethod object to copy values from
+     * @param method mapping method object to copy values from
      */
-    private MemberInfo(MemberInfo remapped, SrgMethod srgMethod, boolean setOwner) {
-        this.owner = setOwner ? srgMethod.getOwner() : remapped.owner;
-        this.name = srgMethod.getSimpleName();
-        this.desc = srgMethod.getDesc();
+    private MemberInfo(MemberInfo remapped, MappingMethod method, boolean setOwner) {
+        this.owner = setOwner ? method.getOwner() : remapped.owner;
+        this.name = method.getSimpleName();
+        this.desc = method.getDesc();
         this.matchAll = remapped.matchAll;
+        this.forceField = false;
     }
 
     /**
@@ -199,6 +210,7 @@ public class MemberInfo {
         this.name = original.name;
         this.desc = original.desc;
         this.matchAll = original.matchAll;
+        this.forceField = original.forceField;
     }
     
     /* (non-Javadoc)
@@ -218,7 +230,9 @@ public class MemberInfo {
      * Return this MemberInfo as an SRG mapping
      * 
      * @return SRG representation of this MemberInfo
+     * @deprecated use m.asMethodMapping().serialise() instead
      */
+    @Deprecated
     public String toSrg() {
         if (!this.isFullyQualified()) {
             throw new MixinException("Cannot convert unqualified reference to SRG mapping");
@@ -239,16 +253,28 @@ public class MemberInfo {
         return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
-    public SrgMethod asSrgMethod() {
+    public IMapping<?> asMapping() {
+        return this.isField() ? this.asFieldMapping() : this.asMethodMapping();
+    }
+    
+    public MappingMethod asMethodMapping() {
         if (!this.isFullyQualified()) {
-            throw new MixinException("Cannot convert unqualified reference to SrgMethod");
+            throw new MixinException("Cannot convert unqualified reference " + this + " to MethodMapping");
         }
         
         if (this.isField()) {
-            throw new MixinException("Cannot convert a non-method reference to SrgMethod");
+            throw new MixinException("Cannot convert a non-method reference " + this + " to MethodMapping");
         }
         
-        return new SrgMethod(this.owner + "/" + this.name, this.desc);
+        return new MappingMethod(this.owner + "/" + this.name, this.desc);
+    }
+    
+    public MappingField asFieldMapping() {
+        if (!this.isField()) {
+            throw new MixinException("Cannot convert non-field reference " + this + " to FieldMapping");
+        }
+        
+        return new MappingField(this.owner, this.name, this.desc);
     }
     
     /**
@@ -267,7 +293,7 @@ public class MemberInfo {
      * @return true if this is definitely a field
      */
     public boolean isField() {
-        return this.desc != null && !this.desc.startsWith("(");
+        return this.forceField || (this.desc != null && !this.desc.startsWith("("));
     }
     
     /**
@@ -416,7 +442,7 @@ public class MemberInfo {
      * @param setOwner True to set the owner as well as the name
      * @return New MethodInfo with remapped values
      */
-    public MemberInfo remapUsing(SrgMethod srgMethod, boolean setOwner) {
+    public MemberInfo remapUsing(MappingMethod srgMethod, boolean setOwner) {
         return new MemberInfo(this, srgMethod, setOwner);
     }
     
@@ -512,14 +538,7 @@ public class MemberInfo {
         return new MemberInfo(name, owner, desc, matchAll);
     }
 
-    public static MemberInfo fromSrgField(String srgName, String desc) {
-        int slashPos = srgName.lastIndexOf('/');
-        String owner = srgName.substring(0, slashPos);
-        String name = srgName.substring(slashPos + 1);
-        return new MemberInfo(name, owner, desc, false);
-    }
-    
-    public static MemberInfo fromSrgMethod(SrgMethod srgMethod) {
-        return new MemberInfo(srgMethod);
+    public static MemberInfo fromMapping(IMapping<?> mapping) {
+        return new MemberInfo(mapping);
     }
 }

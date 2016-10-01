@@ -22,51 +22,43 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
-
-import java.util.List;
-
-import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+package org.spongepowered.asm.obfuscation.mapping;
 
 /**
- * Manages obfuscation things
+ * Base class for member mapping entries
+ * 
+ * @param <TMapping> type of this member, for transformation method return types
  */
-public interface IObfuscationManager {
+public interface IMapping<TMapping> {
 
     /**
-     * Initialise the obfuscation environments
+     * Type of mapping
      */
-    public abstract void init();
-
-    /**
-     * Get the obfuscation mapping source
-     */
-    public abstract IObfuscationDataProvider getDataProvider();
+    public enum Type {
+        FIELD,
+        METHOD,
+        CLASS,
+        PACKAGE
+    }
     
-    /**
-     * Get the reference manager
-     */
-    public abstract IReferenceManager getReferenceManager();
+    public abstract Type getType();
+    
+    public abstract TMapping move(String newOwner);
 
-    /**
-     * Create a new mapping consumer
-     */
-    public abstract IMappingConsumer createMappingConsumer();
+    public abstract TMapping remap(String newName);
+    
+    public abstract TMapping transform(String newDesc);
+    
+    public abstract TMapping copy();
 
-    /**
-     * Get available obfuscation environments within this manager
-     */
-    public abstract List<ObfuscationEnvironment> getEnvironments();
+    public abstract String getName();
 
-    /**
-     * Write out generated mappings to the target environments
-     */
-    public abstract void writeMappings();
+    public abstract String getSimpleName();
 
-    /**
-     * Write out generated refmap 
-     */
-    void writeReferences();
+    public abstract String getOwner();
+
+    public abstract String getDesc();
+
+    public abstract String serialise();
     
 }

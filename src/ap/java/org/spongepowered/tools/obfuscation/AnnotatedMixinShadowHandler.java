@@ -25,18 +25,127 @@
 package org.spongepowered.tools.obfuscation;
 
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
+import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 
 /**
  * A module for {@link AnnotatedMixin} which handles shadowed fields and methods
  */
 class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
+    
+    /**
+     * A shadow element to be processed
+     * 
+     * @param <E> Type of inner element
+     * @param <M> Mapping type of mapping used by this element
+     */
+    abstract static class AnnotatedElementShadow<E extends Element, M extends IMapping<M>> extends AnnotatedElement<E> {
+        
+        private final boolean shouldRemap;
+        
+        private final ShadowElementName name;
+        
+        private final String desc;
+
+        private final Type type;
+
+        protected AnnotatedElementShadow(E element, AnnotationMirror annotation, boolean shouldRemap, Type type) {
+            super(element, annotation);
+            this.shouldRemap = shouldRemap;
+            this.name = new ShadowElementName(element, annotation);
+            this.desc = MirrorUtils.getDescriptor(element);
+            this.type = type;
+        }
+        
+        public boolean shouldRemap() {
+            return this.shouldRemap;
+        }
+        
+        public ShadowElementName getName() {
+            return this.name;
+        }
+
+        public String getDesc() {
+            return this.desc;
+        }
+        
+        public Type getElementType() {
+            return this.type;
+        }
+
+        @Override
+        public String toString() {
+            return this.getElementType().name().toLowerCase();
+        }
+        
+        public ShadowElementName setObfuscatedName(IMapping<?> name) {
+            return this.setObfuscatedName(name.getName());
+        }
+        
+        public ShadowElementName setObfuscatedName(String name) {
+            return this.getName().setObfuscatedName(name);
+        }
+        
+        public ObfuscationData<M> getObfuscationData(IObfuscationDataProvider provider, String owner) {
+            return provider.getObfEntry(this.getMapping(owner, this.getName().toString(), this.getDesc()));
+        }
+
+        public abstract M getMapping(String owner, String name, String desc);
+
+        public abstract void addMapping(ObfuscationType type, IMapping<?> remapped);
+
+    }
+    
+    /**
+     * Shadow field element
+     */
+    class AnnotatedElementShadowField extends AnnotatedElementShadow<VariableElement, MappingField> {
+
+        public AnnotatedElementShadowField(VariableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+            super(element, annotation, shouldRemap, Type.FIELD);
+        }
+        
+        @Override
+        public MappingField getMapping(String owner, String name, String desc) {
+            return new MappingField(owner, name, desc);
+        }
+        
+        @Override
+        public void addMapping(ObfuscationType type, IMapping<?> remapped) {
+            AnnotatedMixinShadowHandler.this.addFieldMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
+        }
+    }
+    
+    /**
+     * Shadow method element
+     */
+    class AnnotatedElementShadowMethod extends AnnotatedElementShadow<ExecutableElement, MappingMethod> {
+
+        public AnnotatedElementShadowMethod(ExecutableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+            super(element, annotation, shouldRemap, Type.METHOD);
+        }
+        
+        @Override
+        public MappingMethod getMapping(String owner, String name, String desc) {
+            return new MappingMethod(owner, name, desc);
+        }
+        
+        @Override
+        public void addMapping(ObfuscationType type, IMapping<?> remapped) {
+            AnnotatedMixinShadowHandler.this.addMethodMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
+        }
+
+    }
 
     AnnotatedMixinShadowHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
@@ -45,49 +154,22 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
     /**
      * Register a {@link org.spongepowered.asm.mixin.Shadow} field
      */
-    public void registerShadow(VariableElement field, AnnotationMirror shadow, boolean remap) {
-        ShadowElementName name = new ShadowElementName(field, shadow);
-        this.validateTargetField(field, shadow, name, "@Shadow");
+    public void registerShadow(AnnotatedElementShadow<?, ?> elem) {
+        this.validateTarget(elem.getElement(), elem.getAnnotation(), elem.getName(), "@Shadow");
         
-        if (!remap || !this.validateSingleTarget("@Shadow", field)) {
+        if (!elem.shouldRemap() || !this.validateSingleTarget("@Shadow", elem.getElement())) {
             return;
         }
         
-        ObfuscationData<String> obfFieldData = this.obf.getObfField(this.mixin.getPrimaryTargetRef() + "/" + name);
-        
-        if (obfFieldData.isEmpty()) {
-            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow field", field, shadow);
-            return;
-        }
-
-        for (ObfuscationType type : obfFieldData) {
-            String fieldName = obfFieldData.get(type);
-            this.addFieldMapping(type, name.setObfuscatedName(fieldName));
-        }
-    }
-
-    /**
-     * Register a {@link org.spongepowered.asm.mixin.Shadow} method
-     */
-    public void registerShadow(ExecutableElement method, AnnotationMirror shadow, boolean remap) {
-        ShadowElementName name = new ShadowElementName(method, shadow);
-        this.validateTargetMethod(method, shadow, name, "@Shadow");
-        
-        if (!remap || !this.validateSingleTarget("@Shadow", method)) {
-            return;
-        }
-        
-        String mcpSignature = MirrorUtils.generateSignature(method);
-        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + name, mcpSignature));
+        ObfuscationData<? extends IMapping<?>> obfData = elem.getObfuscationData(this.obf.getDataProvider(), this.mixin.getPrimaryTargetRef());
         
         if (obfData.isEmpty()) {
-            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow method", method, shadow);
+            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow " + elem, elem.getElement(), elem.getAnnotation());
             return;
         }
-        
+
         for (ObfuscationType type : obfData) {
-            SrgMethod obfMethod = obfData.get(type);
-            this.addMethodMapping(type, name.setObfuscatedName(obfMethod.getName()), mcpSignature, obfMethod.getDesc());
+            elem.addMapping(type, obfData.get(type));
         }
     }
 
