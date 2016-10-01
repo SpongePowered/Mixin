@@ -71,7 +71,7 @@ import com.google.common.collect.ImmutableList;
 
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
- * manages access to the srgs
+ * manages access to the mappings
  */
 class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
     
@@ -118,7 +118,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     /**
      * Obfuscation manager
      */
-    private final ObfuscationManager obf;
+    private final IObfuscationManager obf;
     
     /**
      * Rule validators
@@ -145,12 +145,13 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
+        this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
+
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
         this.targets = this.initTargetMap();
         this.obf = new ObfuscationManager(this);
-
-        this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
+        this.obf.init();
 
         this.validators = ImmutableList.<IMixinValidator>of(
             new ParentValidator(this),
@@ -233,6 +234,10 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
 
     @Override
     public String getOption(String option) {
+        if (option == null) {
+            return null;
+        }
+        
         String value = this.processingEnv.getOptions().get(option);
         if (value != null) {
             return value;
@@ -270,17 +275,17 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     }
 
     /**
-     * Write out generated srgs
+     * Write out generated mappings
      */
-    public void writeSrgs() {
-        this.obf.writeSrgs(this.mixins);
+    public void writeMappings() {
+        this.obf.writeMappings();
     }
 
     /**
-     * Write out stored mappings
+     * Write out stored references
      */
-    public void writeRefs() {
-        this.obf.writeRefs();
+    public void writeReferences() {
+        this.obf.writeReferences();
     }
 
     /**

@@ -26,7 +26,10 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.Set;
 
+import org.spongepowered.tools.obfuscation.service.ObfuscationServices;
+
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 
 /**
  * Supported options for the annotation processor. Not an enum mainly so that
@@ -35,12 +38,6 @@ import com.google.common.collect.ImmutableSet;
 public final class SupportedOptions {
     
     public static final String TOKENS                    = "tokens";
-    public static final String REOBF_SRG_FILE            = "reobfSrgFile";
-    public static final String REOBF_EXTRA_SRG_FILES     = "reobfSrgFiles";
-    public static final String REOBF_NOTCH_FILE          = "reobfNotchSrgFile";
-    public static final String REOBF_EXTRA_NOTCH_FILES   = "reobfNotchSrgFiles";
-    public static final String OUT_SRG_SRG_FILE          = "outSrgFile";
-    public static final String OUT_NOTCH_SRG_FILE        = "outNotchSrgFile";
     public static final String OUT_REFMAP_FILE           = "outRefMapFile";
     public static final String DISABLE_TARGET_VALIDATOR  = "disableTargetValidator";
     public static final String DISABLE_TARGET_EXPORT     = "disableTargetExport";
@@ -48,24 +45,24 @@ public final class SupportedOptions {
     public static final String OVERWRITE_ERROR_LEVEL     = "overwriteErrorLevel";
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
     public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
-
-    public static final Set<String> all = ImmutableSet.<String>of(
-        SupportedOptions.TOKENS,
-        SupportedOptions.REOBF_SRG_FILE,
-        SupportedOptions.REOBF_EXTRA_SRG_FILES,
-        SupportedOptions.REOBF_NOTCH_FILE,
-        SupportedOptions.REOBF_EXTRA_NOTCH_FILES,
-        SupportedOptions.OUT_SRG_SRG_FILE,
-        SupportedOptions.OUT_NOTCH_SRG_FILE,
-        SupportedOptions.OUT_REFMAP_FILE,
-        SupportedOptions.DISABLE_TARGET_VALIDATOR,
-        SupportedOptions.DISABLE_TARGET_EXPORT,
-        SupportedOptions.DISABLE_OVERWRITE_CHECKER,
-        SupportedOptions.OVERWRITE_ERROR_LEVEL,
-        SupportedOptions.DEFAULT_OBFUSCATION_ENV,
-        SupportedOptions.DEPENDENCY_TARGETS_FILE
-    );
     
     private SupportedOptions() {}
 
+    public static Set<String> getAllOptions() {
+        Builder<String> options = ImmutableSet.<String>builder();
+        options.add(
+            SupportedOptions.TOKENS,
+            SupportedOptions.OUT_REFMAP_FILE,
+            SupportedOptions.DISABLE_TARGET_VALIDATOR,
+            SupportedOptions.DISABLE_TARGET_EXPORT,
+            SupportedOptions.DISABLE_OVERWRITE_CHECKER,
+            SupportedOptions.OVERWRITE_ERROR_LEVEL,
+            SupportedOptions.DEFAULT_OBFUSCATION_ENV,
+            SupportedOptions.DEPENDENCY_TARGETS_FILE
+        );
+        options.addAll(
+            ObfuscationServices.getInstance().getSupportedOptions()
+        );
+        return options.build();
+    }
 }

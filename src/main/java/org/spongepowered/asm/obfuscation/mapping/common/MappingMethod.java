@@ -22,32 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.obfuscation;
+package org.spongepowered.asm.obfuscation.mapping.common;
+
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
 
 import com.google.common.base.Objects;
 
 /**
- * Stores information about an SRG method mapping during AP runs
+ * Stores information about a method mapping during AP runs
  */
-public final class SrgMethod {
+public class MappingMethod implements IMapping<MappingMethod> {
 
     private final String name;
     private final String desc;
 
-    public SrgMethod(String name, String desc) {
+    public MappingMethod(String name, String desc) {
         this.name = name;
         this.desc = desc;
     }
     
-    public SrgMethod(String owner, String simpleName, String desc) {
-        this.name = SrgMethod.createName(owner, simpleName);
+    public MappingMethod(String owner, String simpleName, String desc) {
+        this.name = MappingMethod.createName(owner, simpleName);
         this.desc = desc;
     }
     
+    @Override
+    public Type getType() {
+        return Type.METHOD;
+    }
+    
+    @Override
     public String getName() {
         return this.name;
     }
     
+    @Override
     public String getSimpleName() {
         if (this.name == null) {
             return null;
@@ -56,6 +65,7 @@ public final class SrgMethod {
         return pos > -1 ? this.name.substring(pos + 1) : this.name;
     }
     
+    @Override
     public String getOwner() {
         if (this.name == null) {
             return null;
@@ -64,21 +74,34 @@ public final class SrgMethod {
         return pos > -1 ? this.name.substring(0, pos) : null;
     }
     
+    @Override
     public String getDesc() {
         return this.desc;
     }
     
-    public SrgMethod move(String newOwner) {
-        return new SrgMethod(newOwner, this.getSimpleName(), this.desc);
+    @Override
+    public MappingMethod move(String newOwner) {
+        return new MappingMethod(newOwner, this.getSimpleName(), this.getDesc());
+    }
+    
+    @Override
+    public MappingMethod remap(String newName) {
+        return new MappingMethod(this.getOwner(), newName, this.getDesc());
+    }
+    
+    @Override
+    public MappingMethod transform(String newDesc) {
+        return new MappingMethod(this.getName(), newDesc);
     }
 
-    public SrgMethod copy() {
-        return new SrgMethod(this.name, this.desc);
+    @Override
+    public MappingMethod copy() {
+        return new MappingMethod(this.getName(), this.getDesc());
     }
     
     @Override
     public int hashCode() {
-        return Objects.hashCode(this.name, this.desc);
+        return Objects.hashCode(this.getName(), this.getDesc());
     }
 
     @Override
@@ -86,10 +109,15 @@ public final class SrgMethod {
         if (this == obj) {
             return true;
         }
-        if (obj instanceof SrgMethod) {
-            return Objects.equal(this.name, ((SrgMethod)obj).name) && Objects.equal(this.desc, ((SrgMethod)obj).desc);
+        if (obj instanceof MappingMethod) {
+            return Objects.equal(this.name, ((MappingMethod)obj).name) && Objects.equal(this.desc, ((MappingMethod)obj).desc);
         }
         return false;
+    }
+    
+    @Override
+    public String serialise() {
+        return this.toString();
     }
 
     @Override

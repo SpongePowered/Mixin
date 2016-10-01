@@ -30,13 +30,12 @@ import java.util.Map;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -47,24 +46,52 @@ import org.spongepowered.tools.obfuscation.struct.Message;
  */
 class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
 
+    /**
+     * Injector element
+     */
+    static class AnnotatedElementInjector extends AnnotatedElement<ExecutableElement> {
+        
+        private final boolean shouldRemap;
+
+        public AnnotatedElementInjector(ExecutableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+            super(element, annotation);
+            this.shouldRemap = shouldRemap;
+        }
+        
+        public boolean shouldRemap() {
+            return this.shouldRemap;
+        }
+        
+    }
+    
+    /**
+     * Injection point element
+     */
+    static class AnnotatedElementInjectionPoint extends AnnotatedElement<ExecutableElement> {
+        
+        private final AnnotationMirror at;
+        
+        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationMirror inject, AnnotationMirror at) {
+            super(element, inject);
+            this.at = at;
+        }
+        
+        public AnnotationMirror getAt() {
+            return this.at;
+        }
+        
+    }
+    
     AnnotatedMixinInjectorHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
-    /**
-     * Register a {@link org.spongepowered.asm.mixin.injection.Inject} method
-     * 
-     * @param method Callback method
-     * @param inject Inject annotation
-     * @param remap 
-     * @return pending error message or null if no error condition
-     */
-    public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean remap) {
+    public Message registerInjector(AnnotatedElementInjector elem) {
         if (this.mixin.isInterface()) {
-            this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", method);
+            this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        String originalReference = MirrorUtils.<String>getAnnotationValue(inject, "method");
+        String originalReference = MirrorUtils.<String>getAnnotationValue(elem.getAnnotation(), "method");
         MemberInfo targetMember = MemberInfo.parse(originalReference);
         if (targetMember.name == null) {
             return null;
@@ -73,15 +100,15 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         try {
             targetMember.validate();
         } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), method, inject);
+            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAnnotation());
         }
         
-        String type = "@" + inject.getAnnotationType().asElement().getSimpleName() + "";
+        String type = "@" + elem.getAnnotation().getAnnotationType().asElement().getSimpleName() + "";
         if (targetMember.desc != null) {
-            this.validateReferencedTarget(method, inject, targetMember, type);
+            this.validateReferencedTarget(elem.getElement(), elem.getAnnotation(), targetMember, type);
         }
         
-        if (!remap || !this.validateSingleTarget(type, method)) {
+        if (!elem.shouldRemap() || !this.validateSingleTarget(type, elem.getElement())) {
             return null;
         }
         
@@ -89,20 +116,22 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         if (desc == null) {
             if (this.mixin.getPrimaryTarget().isImaginary()) {
                 this.ap.printMessage(Kind.WARNING, type + " target requires method signature because enclosing type information is unavailable",
-                        method, inject);
+                        elem.getElement(), elem.getAnnotation());
             } else if (!Constants.CTOR.equals(targetMember.name)) {
-                this.ap.printMessage(Kind.WARNING, "Unable to determine signature for " + type + " target method", method, inject);
+                this.ap.printMessage(Kind.WARNING, "Unable to determine signature for " + type + " target method",
+                        elem.getElement(), elem.getAnnotation());
             }
             return null;
        }
         
-        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + targetMember.name, desc));
+        MappingMethod targetMethod = new MappingMethod(this.mixin.getPrimaryTargetRef(), targetMember.name, desc);
+        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         if (obfData.isEmpty()) {
             Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
-            return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, method, inject);
+            return new Message(error, "No obfuscation mapping for " + type + " target " + targetMember.name, elem.getElement(), elem.getAnnotation());
         }
         
-        this.obf.addMethodMapping(this.classRef, originalReference, obfData);
+        this.obf.getReferenceManager().addMethodMapping(this.classRef, originalReference, obfData);
         return null;
     }
 
@@ -110,22 +139,22 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
      * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation
      * and process the references
      */
-    public int registerInjectionPoint(Element element, AnnotationMirror inject, AnnotationMirror at) {
+    public int registerInjectionPoint(AnnotatedElementInjectionPoint elem) {
         if (this.mixin.isInterface()) {
-            this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", element);
+            this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        if (!AnnotatedMixins.getRemapValue(at)) {
+        if (!AnnotatedMixins.getRemapValue(elem.getAt())) {
             return 0;
         }
         
-        String type = MirrorUtils.<String>getAnnotationValue(at, "value");
-        String target = MirrorUtils.<String>getAnnotationValue(at, "target");
-        int remapped = this.remapReference(type + ".<target>", target, element, inject, at) ? 1 : 0;
+        String type = MirrorUtils.<String>getAnnotationValue(elem.getAt(), "value");
+        String target = MirrorUtils.<String>getAnnotationValue(elem.getAt(), "target");
+        int remapped = this.remapReference(type + ".<target>", target, elem.getElement(), elem.getAnnotation(), elem.getAt()) ? 1 : 0;
         
         // Pattern for replacing references in args, not used yet
 //        if ("SOMETYPE".equals(type)) {
-//            Map<String, String> args = InjectorHandler.getAtArgs(at);
+//            Map<String, String> args = InjectorHandler.getAtArgs(e.getAt());
 //            this.remapReference(type + ".args[target]", args.get("target"));
 //        }
         

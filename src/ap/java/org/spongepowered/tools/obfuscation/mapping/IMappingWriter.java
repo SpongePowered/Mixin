@@ -22,51 +22,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.tools.obfuscation.mapping;
 
-import java.util.List;
-
-import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.tools.obfuscation.ObfuscationType;
+import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer.MappingSet;
 
 /**
- * Manages obfuscation things
+ * Mapping writer
  */
-public interface IObfuscationManager {
+public interface IMappingWriter {
 
     /**
-     * Initialise the obfuscation environments
+     * Receives 
+     * 
+     * @param output
+     * @param type
+     * @param fields
+     * @param methods
      */
-    public abstract void init();
+    public abstract void write(String output, ObfuscationType type, MappingSet<MappingField> fields, MappingSet<MappingMethod> methods);
 
-    /**
-     * Get the obfuscation mapping source
-     */
-    public abstract IObfuscationDataProvider getDataProvider();
-    
-    /**
-     * Get the reference manager
-     */
-    public abstract IReferenceManager getReferenceManager();
-
-    /**
-     * Create a new mapping consumer
-     */
-    public abstract IMappingConsumer createMappingConsumer();
-
-    /**
-     * Get available obfuscation environments within this manager
-     */
-    public abstract List<ObfuscationEnvironment> getEnvironments();
-
-    /**
-     * Write out generated mappings to the target environments
-     */
-    public abstract void writeMappings();
-
-    /**
-     * Write out generated refmap 
-     */
-    void writeReferences();
-    
 }

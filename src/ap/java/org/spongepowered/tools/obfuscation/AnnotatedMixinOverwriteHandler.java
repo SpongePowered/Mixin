@@ -30,7 +30,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.obfuscation.SrgMethod;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
@@ -39,42 +39,54 @@ import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
  */
 class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
     
+    /**
+     * Overwrite element
+     */
+    static class AnnotatedElementOverwrite extends AnnotatedElement<ExecutableElement> {
+
+        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationMirror annotation) {
+            super(element, annotation);
+        }
+        
+    }
+    
     AnnotatedMixinOverwriteHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
-    void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
-        AliasedElementName name = new AliasedElementName(method, overwrite);
-        this.validateTargetMethod(method, overwrite, name, "@Overwrite");
-        this.checkConstraints(method, overwrite);
+    public void registerOverwrite(AnnotatedElementOverwrite elem) {
+        AliasedElementName name = new AliasedElementName(elem.getElement(), elem.getAnnotation());
+        this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite");
+        this.checkConstraints(elem.getElement(), elem.getAnnotation());
         
-        if (!this.mixin.remap() || !this.validateSingleTarget("@Overwrite", method)) {
+        if (!this.mixin.remap() || !this.validateSingleTarget("@Overwrite", elem.getElement())) {
             return;
         }
         
-        String mcpName = method.getSimpleName().toString();
-        String mcpSignature = MirrorUtils.generateSignature(method);
-        ObfuscationData<SrgMethod> obfData = this.obf.getObfMethod(new SrgMethod(this.mixin.getPrimaryTargetRef() + "/" + mcpName, mcpSignature));
+        String mcpName = elem.getElement().getSimpleName().toString();
+        String mcpSignature = MirrorUtils.generateSignature(elem.getElement());
+        MappingMethod targetMethod = new MappingMethod(this.mixin.getPrimaryTargetRef(), mcpName, mcpSignature);
+        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         
         if (obfData.isEmpty()) {
             Kind error = Kind.ERROR;
             
             try {
                 // Try to access isStatic from com.sun.tools.javac.code.Symbol
-                Method md = method.getClass().getMethod("isStatic");
-                if (((Boolean)md.invoke(method)).booleanValue()) {
+                Method md = elem.getElement().getClass().getMethod("isStatic");
+                if (((Boolean)md.invoke(elem.getElement())).booleanValue()) {
                     error = Kind.WARNING;
                 }
             } catch (Exception ex) {
                 // well, we tried
             }
             
-            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", method);
+            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", elem.getElement());
             return;
         }
 
         for (ObfuscationType type : obfData) {
-            SrgMethod obfMethod = obfData.get(type);
+            MappingMethod obfMethod = obfData.get(type);
             this.addMethodMapping(type, mcpName, obfMethod.getSimpleName(), mcpSignature, obfMethod.getDesc());
         }
         
@@ -82,20 +94,20 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
             Kind overwriteErrorKind = "error".equalsIgnoreCase(this.ap.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))
                     ? Kind.ERROR : Kind.WARNING;
             
-            String javadoc = this.ap.getJavadocProvider().getJavadoc(method);
+            String javadoc = this.ap.getJavadocProvider().getJavadoc(elem.getElement());
             if (javadoc == null) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", method);
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement());
                 return;
             }
             
             if (!javadoc.toLowerCase().contains("@author")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", method);
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement());
             }
             
             if (!javadoc.toLowerCase().contains("@reason")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", method);
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement());
             }
         }
     }
-    
+
 }

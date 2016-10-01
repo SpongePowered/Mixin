@@ -22,51 +22,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.tools.obfuscation.service;
 
-import java.util.List;
-
-import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import java.util.Collection;
+import java.util.Set;
 
 /**
- * Manages obfuscation things
+ * Service interface for obfuscation services
  */
-public interface IObfuscationManager {
-
-    /**
-     * Initialise the obfuscation environments
-     */
-    public abstract void init();
-
-    /**
-     * Get the obfuscation mapping source
-     */
-    public abstract IObfuscationDataProvider getDataProvider();
+public interface IObfuscationService {
     
     /**
-     * Get the reference manager
+     * Get all options supported by this service
+     * 
+     * @return supported options as a Set
      */
-    public abstract IReferenceManager getReferenceManager();
+    public abstract Set<String> getSupportedOptions();
 
     /**
-     * Create a new mapping consumer
+     * This method should return a collection of available obfuscation types
+     * supported by this service
+     *  
+     * @return available obfuscation types or null
      */
-    public abstract IMappingConsumer createMappingConsumer();
-
-    /**
-     * Get available obfuscation environments within this manager
-     */
-    public abstract List<ObfuscationEnvironment> getEnvironments();
-
-    /**
-     * Write out generated mappings to the target environments
-     */
-    public abstract void writeMappings();
-
-    /**
-     * Write out generated refmap 
-     */
-    void writeReferences();
+    public abstract Collection<ObfuscationTypeDescriptor> getObfuscationTypes();
     
 }

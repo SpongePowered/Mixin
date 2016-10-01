@@ -89,7 +89,7 @@ public abstract class MixinProcessor extends AbstractProcessor {
     
     @Override
     public Set<String> getSupportedOptions() {
-        return SupportedOptions.all;
+        return SupportedOptions.getAllOptions();
     }
     
 }
