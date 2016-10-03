@@ -24,7 +24,9 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -34,6 +36,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
+
+import com.google.common.base.Strings;
 
 /**
  * Maintains method remaps for a target class
@@ -52,11 +56,13 @@ public class MethodMapper {
      */
     private static final Logger logger = LogManager.getLogger("mixin");
     
+    private static final List<String> classes = new ArrayList<String>();
+    
     /**
      * Method descriptor to ID map, used to ensure that remappings are globally
      * unique 
      */
-    private static final Map<String, Counter> methodIndices = new HashMap<String, Counter>();
+    private static final Map<String, Counter> methods = new HashMap<String, Counter>();
 
     private final ClassInfo info;
 
@@ -87,18 +93,61 @@ public class MethodMapper {
     }
     
     public String getHandlerName(MixinMethodNode method) {
-        String descriptor = String.format("%s%s", method.name, method.desc);
-        Counter id = MethodMapper.methodIndices.get(descriptor);
+        String prefix = InjectionInfo.getInjectorPrefix(method.getInjectorAnnotation());
+        String classUID = MethodMapper.getClassUID(method.getOwner().getClassRef());
+        String methodUID = MethodMapper.getMethodUID(method.name, method.desc, !method.isSurrogate());
+        return String.format("%s$%s$%s%s", prefix, method.name, classUID, methodUID);
+    }
+
+    /**
+     * Get a unique identifier for a class
+     * 
+     * @param classRef Class name (binary)
+     * @return unique identifier
+     */
+    private static String getClassUID(String classRef) {
+        int index = MethodMapper.classes.indexOf(classRef);
+        if (index < 0) {
+            index = MethodMapper.classes.size();
+            MethodMapper.classes.add(classRef);
+        }
+        return MethodMapper.finagle(index);
+    }
+
+    /**
+     * Get a unique identifier for a method
+     * 
+     * @param name method name
+     * @param desc method descriptor
+     * @param increment true to incrememnt the id if it already exists
+     * @return unique identifier
+     */
+    private static String getMethodUID(String name, String desc, boolean increment) {
+        String descriptor = String.format("%s%s", name, desc);
+        Counter id = MethodMapper.methods.get(descriptor);
         if (id == null) {
             id = new Counter();
-            MethodMapper.methodIndices.put(descriptor, id);
-        } else if (!method.isSurrogate()) {
+            MethodMapper.methods.put(descriptor, id);
+        } else if (increment) {
             id.value++;
         }
-        
-        String prefix = InjectionInfo.getInjectorPrefix(method.getInjectorAnnotation());
-        String uniqueIndex = Integer.toHexString(id.value);
-        return String.format("%s$%s$%s", prefix, method.name, uniqueIndex);
+        return String.format("%03x", id.value);
+    }
+
+    /**
+     * Finagle a string from an index thingummy, for science, you monster
+     * 
+     * @param index a positive number
+     * @return unique identifier string of some kind
+     */
+    private static String finagle(int index) {
+        String hex = Integer.toHexString(index);
+        StringBuilder sb = new StringBuilder();
+        for (int pos = 0; pos < hex.length(); pos++) {
+            char c = hex.charAt(pos);
+            sb.append(c += c < 0x3A ? 0x31 : 0x0A);
+        }
+        return Strings.padStart(sb.toString(), 3, 'z');
     }
 
 }
