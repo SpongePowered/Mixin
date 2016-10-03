@@ -27,7 +27,7 @@ package org.spongepowered.asm.mixin.transformer.debug;
 import java.io.File;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Asynchronous decompiler, runs mixin export task in a separate thread to avoid
@@ -35,7 +35,7 @@ import java.util.concurrent.SynchronousQueue;
  */
 public class RuntimeDecompilerAsync extends RuntimeDecompiler implements Runnable, UncaughtExceptionHandler {
     
-    private final BlockingQueue<File> queue = new SynchronousQueue<File>();
+    private final BlockingQueue<File> queue = new LinkedBlockingQueue<File>();
     
     private final Thread thread;
     
