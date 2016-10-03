@@ -106,6 +106,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         public AnnotationNode getInjectorAnnotation() {
             return InjectionInfo.getInjectorAnnotation(MixinInfo.this, this);
         }
+        
+        public IMixinInfo getOwner() {
+            return MixinInfo.this;
+        }
 
     }
     
