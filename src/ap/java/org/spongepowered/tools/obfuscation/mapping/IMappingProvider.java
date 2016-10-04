@@ -31,7 +31,11 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 
 /**
- * A mapping provider supplies mapping information to the AP
+ * A mapping provider stores raw mapping information for use by the AP, access
+ * is delegated via the environment which provides enhanced lookup functionality
+ * such as resolving members recursively in super classes. The mapping provider
+ * is not required to provide such functionality and merely facilitates raw
+ * mapping lookups from a particular source. 
  */
 public interface IMappingProvider {
 

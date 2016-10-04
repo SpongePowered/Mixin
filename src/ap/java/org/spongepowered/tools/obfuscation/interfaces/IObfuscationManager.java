@@ -67,6 +67,6 @@ public interface IObfuscationManager {
     /**
      * Write out generated refmap 
      */
-    void writeReferences();
+    public abstract void writeReferences();
     
 }

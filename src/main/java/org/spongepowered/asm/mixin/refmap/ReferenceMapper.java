@@ -176,10 +176,11 @@ public final class ReferenceMapper implements Serializable {
      * @param className Class which owns this mapping, cannot be null
      * @param reference Reference to remap, cannot be null
      * @param newReference Remapped value, cannot be null
+     * @return replaced value, per the contract of {@link Map#put}
      */
-    public void addMapping(String context, String className, String reference, String newReference) {
+    public String addMapping(String context, String className, String reference, String newReference) {
         if (this.readOnly || reference == null || newReference == null || reference.equals(newReference)) {
-            return;
+            return null;
         }
         Map<String, Map<String, String>> mappings = this.mappings;
         if (context != null) {
@@ -194,7 +195,7 @@ public final class ReferenceMapper implements Serializable {
             classMappings = new HashMap<String, String>();
             mappings.put(className, classMappings);
         }
-        classMappings.put(reference, newReference);
+        return classMappings.put(reference, newReference);
     }
     
     /**

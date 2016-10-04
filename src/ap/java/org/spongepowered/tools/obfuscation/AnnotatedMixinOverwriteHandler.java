@@ -32,6 +32,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
@@ -43,11 +44,22 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
      * Overwrite element
      */
     static class AnnotatedElementOverwrite extends AnnotatedElement<ExecutableElement> {
+        
+        private final String desc;
 
         public AnnotatedElementOverwrite(ExecutableElement element, AnnotationMirror annotation) {
             super(element, annotation);
+            this.desc = MirrorUtils.getDescriptor(element);
         }
         
+        public String getSimpleName() {
+            return this.getElement().getSimpleName().toString();
+        }
+        
+        public String getDesc() {
+            return this.desc;
+        }
+
     }
     
     AnnotatedMixinOverwriteHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
@@ -59,35 +71,14 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
         this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite");
         this.checkConstraints(elem.getElement(), elem.getAnnotation());
         
-        if (!this.mixin.remap() || !this.validateSingleTarget("@Overwrite", elem.getElement())) {
+        if (!this.mixin.remap()) {
             return;
         }
         
-        String mcpName = elem.getElement().getSimpleName().toString();
-        String mcpSignature = MirrorUtils.generateSignature(elem.getElement());
-        MappingMethod targetMethod = new MappingMethod(this.mixin.getPrimaryTargetRef(), mcpName, mcpSignature);
-        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
-        
-        if (obfData.isEmpty()) {
-            Kind error = Kind.ERROR;
-            
-            try {
-                // Try to access isStatic from com.sun.tools.javac.code.Symbol
-                Method md = elem.getElement().getClass().getMethod("isStatic");
-                if (((Boolean)md.invoke(elem.getElement())).booleanValue()) {
-                    error = Kind.WARNING;
-                }
-            } catch (Exception ex) {
-                // well, we tried
+        for (TypeHandle target : this.mixin.getTargets()) {
+            if (!this.registerOverwriteForTarget(elem, target)) {
+                return;
             }
-            
-            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", elem.getElement());
-            return;
-        }
-
-        for (ObfuscationType type : obfData) {
-            MappingMethod obfMethod = obfData.get(type);
-            this.addMethodMapping(type, mcpName, obfMethod.getSimpleName(), mcpSignature, obfMethod.getDesc());
         }
         
         if (!"true".equalsIgnoreCase(this.ap.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
@@ -108,6 +99,37 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
                 this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement());
             }
         }
+    }
+
+    private boolean registerOverwriteForTarget(AnnotatedElementOverwrite elem, TypeHandle target) {
+        MappingMethod targetMethod = new MappingMethod(target.getName(), elem.getSimpleName(), elem.getDesc());
+        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
+        
+        if (obfData.isEmpty()) {
+            Kind error = Kind.ERROR;
+            
+            try {
+                // Try to access isStatic from com.sun.tools.javac.code.Symbol
+                Method md = elem.getElement().getClass().getMethod("isStatic");
+                if (((Boolean)md.invoke(elem.getElement())).booleanValue()) {
+                    error = Kind.WARNING;
+                }
+            } catch (Exception ex) {
+                // well, we tried
+            }
+            
+            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", elem.getElement());
+            return false;
+        }
+
+        try {
+            this.addMethodMappings(elem.getSimpleName(), elem.getDesc(), obfData);
+        } catch (MappingConflictException ex) {
+            this.ap.printMessage(Kind.ERROR, "Mapping conflict for @Overwrite method: " + ex.getNew().getSimpleName() + " for target " + target 
+                    + " conflicts with existing mapping " + ex.getOld().getSimpleName(), elem.getElement(), elem.getAnnotation());
+            return false;
+        }
+        return true;
     }
 
 }
