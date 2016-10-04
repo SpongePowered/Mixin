@@ -33,16 +33,17 @@ import com.google.common.base.Objects;
  */
 public class MappingMethod implements IMapping<MappingMethod> {
 
+    private final String owner;
     private final String name;
     private final String desc;
 
-    public MappingMethod(String name, String desc) {
-        this.name = name;
-        this.desc = desc;
+    public MappingMethod(String fullyQualifiedName, String desc) {
+        this(MappingMethod.getOwnerFromName(fullyQualifiedName), MappingMethod.getBaseName(fullyQualifiedName), desc);
     }
-    
+
     public MappingMethod(String owner, String simpleName, String desc) {
-        this.name = MappingMethod.createName(owner, simpleName);
+        this.owner = owner;
+        this.name = simpleName;
         this.desc = desc;
     }
     
@@ -53,25 +54,20 @@ public class MappingMethod implements IMapping<MappingMethod> {
     
     @Override
     public String getName() {
-        return this.name;
+        if (this.name == null) {
+            return null;
+        }
+        return (this.owner != null ? this.owner + "/" : "") + this.name;
     }
     
     @Override
     public String getSimpleName() {
-        if (this.name == null) {
-            return null;
-        }
-        int pos = this.name.lastIndexOf('/');
-        return pos > -1 ? this.name.substring(pos + 1) : this.name;
+        return this.name;
     }
     
     @Override
     public String getOwner() {
-        if (this.name == null) {
-            return null;
-        }
-        int pos = this.name.lastIndexOf('/');
-        return pos > -1 ? this.name.substring(0, pos) : null;
+        return this.owner;
     }
     
     @Override
@@ -91,12 +87,12 @@ public class MappingMethod implements IMapping<MappingMethod> {
     
     @Override
     public MappingMethod transform(String newDesc) {
-        return new MappingMethod(this.getName(), newDesc);
+        return new MappingMethod(this.getOwner(), this.getSimpleName(), newDesc);
     }
 
     @Override
     public MappingMethod copy() {
-        return new MappingMethod(this.getName(), this.getDesc());
+        return new MappingMethod(this.getOwner(), this.getSimpleName(), this.getDesc());
     }
     
     @Override
@@ -122,11 +118,23 @@ public class MappingMethod implements IMapping<MappingMethod> {
 
     @Override
     public String toString() {
-        return String.format("%s %s", this.name, this.desc);
+        return String.format("%s %s", this.getName(), this.getDesc());
     }
     
-    private static String createName(String owner, String simpleName) {
-        return (owner != null ? owner + "/" : "") + simpleName;
+    private static String getBaseName(String name) {
+        if (name == null) {
+            return null;
+        }
+        int pos = name.lastIndexOf('/');
+        return pos > -1 ? name.substring(pos + 1) : name;
+    }
+
+    private static String getOwnerFromName(String name) {
+        if (name == null) {
+            return null;
+        }
+        int pos = name.lastIndexOf('/');
+        return pos > -1 ? name.substring(0, pos) : null;
     }
 
 }

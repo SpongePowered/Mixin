@@ -46,6 +46,30 @@ import org.spongepowered.tools.obfuscation.interfaces.IReferenceManager;
 public class ReferenceManager implements IReferenceManager {
     
     /**
+     * Exception thrown when a reference conflict occurs
+     */
+    public static class ReferenceConflictException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+        
+        private final String oldReference, newReference;
+
+        public ReferenceConflictException(String oldReference, String newReference) {
+            this.oldReference = oldReference;
+            this.newReference = newReference;
+        }
+        
+        public String getOld() {
+            return this.oldReference;
+        }
+        
+        public String getNew() {
+            return this.newReference;
+        }
+        
+    }
+
+    /**
      * Annotation processor
      */
     private final IMixinAnnotationProcessor ap;
@@ -189,7 +213,11 @@ public class ReferenceManager implements IReferenceManager {
     }
 
     protected void addMapping(ObfuscationType type, String className, String reference, String newReference) {
-        this.refMapper.addMapping(type.getKey(), className, reference, newReference);
+        String oldReference = this.refMapper.addMapping(type.getKey(), className, reference, newReference);
+        if (oldReference != null && !oldReference.equals(newReference)) {
+            throw new ReferenceConflictException(oldReference, newReference);
+        }
+        
         if (type.isDefault()) {
             this.refMapper.addMapping(null, className, reference, newReference);
         }

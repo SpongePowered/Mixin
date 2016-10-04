@@ -113,9 +113,9 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
     public <T> ObfuscationData<T> getObfEntry(IMapping<T> mapping) {
         if (mapping != null) {
             if (mapping.getType() == Type.FIELD) {
-                return (ObfuscationData<T>) this.getObfField((MappingField)mapping);
+                return (ObfuscationData<T>)this.getObfField((MappingField)mapping);
             } else if (mapping.getType() == Type.METHOD) {
-                return (ObfuscationData<T>) this.getObfMethod((MappingMethod)mapping);
+                return (ObfuscationData<T>)this.getObfMethod((MappingMethod)mapping);
             } 
         }
         

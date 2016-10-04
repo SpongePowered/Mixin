@@ -45,16 +45,18 @@ import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mapping.IMappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer.MappingSet;
+import org.spongepowered.tools.obfuscation.interfaces.IObfuscationEnvironment;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
- * Stores information relevant to a particular obfuscation environment.
+ * Provides access to information relevant to a particular obfuscation
+ * environment.
  * 
  * <p>We classify different types of possible obfuscation (eg. "searge",
  * "notch") as <em>obfuscation environments</em> and store related information
- * such as the input mappings, generated refmap and generated mappings here.</p>
+ * such as the input mappings here.</p>
  */
-public abstract class ObfuscationEnvironment {
+public abstract class ObfuscationEnvironment implements IObfuscationEnvironment {
     
     /**
      * Remapping proxy for remapping descriptors
@@ -178,6 +180,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a method
      */
+    @Override
     public MappingMethod getObfMethod(MemberInfo method) {
         MappingMethod obfd = this.getObfMethod(method.asMethodMapping());
         if (obfd != null || !method.isFullyQualified()) {
@@ -204,6 +207,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a method
      */
+    @Override
     public MappingMethod getObfMethod(MappingMethod method) {
         return this.getObfMethod(method, true);
     }
@@ -211,6 +215,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a method
      */
+    @Override
     public MappingMethod getObfMethod(MappingMethod method, boolean lazyRemap) {
         if (this.initMappings()) {
             boolean remapped = true;
@@ -243,6 +248,7 @@ public abstract class ObfuscationEnvironment {
      * @param method method to remap
      * @return remapped method or null if no remapping occurred
      */
+    @Override
     public MemberInfo remapDescriptor(MemberInfo method) {
         boolean transformed = false;
         
@@ -274,6 +280,7 @@ public abstract class ObfuscationEnvironment {
      * @return remapped descriptor, may return the original descriptor if no
      *      remapping occurred
      */
+    @Override
     public String remapDescriptor(String desc) {
         return ObfuscationUtil.mapDescriptor(desc, this.remapper);
     }
@@ -281,6 +288,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a field
      */
+    @Override
     public MappingField getObfField(MemberInfo field) {
         return this.getObfField(field.asFieldMapping(), true);
     }
@@ -288,6 +296,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a field
      */
+    @Override
     public MappingField getObfField(MappingField field) {
         return this.getObfField(field, true);
     }
@@ -295,6 +304,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a field
      */
+    @Override
     public MappingField getObfField(MappingField field, boolean lazyRemap) {
         if (!this.initMappings()) {
             return null;
@@ -318,6 +328,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Get an obfuscation mapping for a class
      */
+    @Override
     public String getObfClass(String className) {
         if (!this.initMappings()) {
             return null;
@@ -328,6 +339,7 @@ public abstract class ObfuscationEnvironment {
     /**
      * Write out generated mappings
      */
+    @Override
     public void writeMappings(Collection<IMappingConsumer> consumers) {
         MappingSet<MappingField> fields = new MappingSet<MappingField>();
         MappingSet<MappingMethod> methods = new MappingSet<MappingMethod>();

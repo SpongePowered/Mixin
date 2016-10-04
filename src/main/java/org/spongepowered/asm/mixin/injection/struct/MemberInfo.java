@@ -266,7 +266,7 @@ public class MemberInfo {
             throw new MixinException("Cannot convert a non-method reference " + this + " to MethodMapping");
         }
         
-        return new MappingMethod(this.owner + "/" + this.name, this.desc);
+        return new MappingMethod(this.owner, this.name, this.desc);
     }
     
     public MappingField asFieldMapping() {

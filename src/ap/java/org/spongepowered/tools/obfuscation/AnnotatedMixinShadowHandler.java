@@ -35,6 +35,7 @@ import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 
@@ -89,7 +90,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         }
         
         public ShadowElementName setObfuscatedName(IMapping<?> name) {
-            return this.setObfuscatedName(name.getName());
+            return this.setObfuscatedName(name.getSimpleName());
         }
         
         public ShadowElementName setObfuscatedName(String name) {
@@ -99,7 +100,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         public ObfuscationData<M> getObfuscationData(IObfuscationDataProvider provider, String owner) {
             return provider.getObfEntry(this.getMapping(owner, this.getName().toString(), this.getDesc()));
         }
-
+        
         public abstract M getMapping(String owner, String name, String desc);
 
         public abstract void addMapping(ObfuscationType type, IMapping<?> remapped);
@@ -124,6 +125,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         public void addMapping(ObfuscationType type, IMapping<?> remapped) {
             AnnotatedMixinShadowHandler.this.addFieldMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
         }
+
     }
     
     /**
@@ -152,24 +154,37 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
     }
 
     /**
-     * Register a {@link org.spongepowered.asm.mixin.Shadow} field
+     * Register a {@link org.spongepowered.asm.mixin.Shadow} field or method
      */
     public void registerShadow(AnnotatedElementShadow<?, ?> elem) {
         this.validateTarget(elem.getElement(), elem.getAnnotation(), elem.getName(), "@Shadow");
         
-        if (!elem.shouldRemap() || !this.validateSingleTarget("@Shadow", elem.getElement())) {
+        if (!elem.shouldRemap()) {
             return;
         }
         
-        ObfuscationData<? extends IMapping<?>> obfData = elem.getObfuscationData(this.obf.getDataProvider(), this.mixin.getPrimaryTargetRef());
+        for (TypeHandle target : this.mixin.getTargets()) {
+            this.registerShadowForTarget(elem, target);
+        }
+    }
+
+    private void registerShadowForTarget(AnnotatedElementShadow<?, ?> elem, TypeHandle target) {
+        ObfuscationData<? extends IMapping<?>> obfData = elem.getObfuscationData(this.obf.getDataProvider(), target.getName());
         
         if (obfData.isEmpty()) {
-            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping for @Shadow " + elem, elem.getElement(), elem.getAnnotation());
+            String info = this.mixin.isMultiTarget() ? " in target " + target : "";
+            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem,
+                    elem.getElement(), elem.getAnnotation());
             return;
         }
 
         for (ObfuscationType type : obfData) {
-            elem.addMapping(type, obfData.get(type));
+            try {
+                elem.addMapping(type, obfData.get(type));
+            } catch (MappingConflictException ex) {
+                this.ap.printMessage(Kind.ERROR, "Mapping conflict for @Shadow " + elem + ": " + ex.getNew().getSimpleName() + " for target "
+                        + target + " conflicts with existing mapping " + ex.getOld().getSimpleName(), elem.getElement(), elem.getAnnotation());
+            }
         }
     }
 

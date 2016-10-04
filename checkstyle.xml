@@ -76,7 +76,7 @@
       <message key="name.invalidPattern" value="Class type name ''{0}'' must match pattern ''{1}''."/>
     </module>
     <module name="MethodTypeParameterName">
-      <property name="format" value="(^[A-Z][0-9]?)$|([A-Z][a-zA-Z0-9]*[T]$)"/>
+      <property name="format" value="^([A-Z][0-9]?)|([T][A-Z][a-zA-Z0-9]*)$"/>
       <message key="name.invalidPattern" value="Method type name ''{0}'' must match pattern ''{1}''."/>
     </module>
     <module name="NoFinalizer"/>

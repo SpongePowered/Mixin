@@ -43,8 +43,10 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
+import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 
 /**
  * Base class for module for {@link AnnotatedMixin} which handle different
@@ -249,10 +251,9 @@ abstract class AnnotatedMixinElementHandler {
      */
     protected final IMixinAnnotationProcessor ap;
     
-    /**
-     * Manager
-     */
     protected final IObfuscationManager obf;
+    
+    private IMappingConsumer mappings;
 
     AnnotatedMixinElementHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         this.ap = ap;
@@ -261,15 +262,28 @@ abstract class AnnotatedMixinElementHandler {
         this.obf = ap.getObfuscationManager();
     }
     
-    protected final boolean remapReference(String key, String target, Element element, AnnotationMirror inject, AnnotationMirror at) {
-        if (target == null) {
+    private IMappingConsumer getMappings() {
+        if (this.mappings == null) {
+            IMappingConsumer mappingConsumer = this.mixin.getMappings();
+            if (mappingConsumer instanceof Mappings) {
+                this.mappings = ((Mappings)mappingConsumer).asUnique();
+            } else {
+                this.mappings = mappingConsumer;
+            }
+        }
+        return this.mappings;
+    }
+    
+    protected final boolean remapReference(String key, String reference, Element element, AnnotationMirror inject, AnnotationMirror at) {
+        if (reference == null) {
             return false;
         }
         
-        MemberInfo targetMember = MemberInfo.parse(target);
+        String annotation = "@At(" + key + ")";
+        MemberInfo targetMember = MemberInfo.parse(reference);
         if (!targetMember.isFullyQualified()) {
             String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
-            this.ap.printMessage(Kind.ERROR, "@At(" + key + ") is not fully qualified, " + missing, element, inject);
+            this.ap.printMessage(Kind.ERROR, annotation + " is not fully qualified, " + missing, element, inject);
             return false;
         }
         
@@ -279,25 +293,42 @@ abstract class AnnotatedMixinElementHandler {
             this.ap.printMessage(Kind.ERROR, ex.getMessage(), element, inject);
         }
         
-        if (targetMember.isField()) {
-            ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
-            if (obfFieldData.isEmpty()) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for @At(" + key + ") '" + target + "'", element, inject);
-                return false;
-            }
-            this.obf.getReferenceManager().addFieldMapping(this.classRef, target, targetMember, obfFieldData);
-        } else {
-            ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
-            if (obfMethodData.isEmpty()) {
-                if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
-                    this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for @At(" + key + ") '" + target + "'", element, inject);
+        try {
+            if (targetMember.isField()) {
+                ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
+                if (obfFieldData.isEmpty()) {
+                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + annotation + " '" + reference + "'", element, inject);
+                    return false;
                 }
+                this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
+            } else {
+                ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
+                if (obfMethodData.isEmpty()) {
+                    if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
+                        this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + annotation + " '" + reference + "'", element, inject);
+                        return false;
+                    }
+                }
+                this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, targetMember, obfMethodData);
             }
-            this.obf.getReferenceManager().addMethodMapping(this.classRef, target, targetMember, obfMethodData);
+        } catch (ReferenceConflictException ex) {
+            // Since references are fully-qualified, it shouldn't be possible for there to be multiple mappings, however
+            // we catch and log the error in case something weird happens in the mapping provider
+            this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + annotation + ": " + reference + " -> "
+                    + ex.getNew() + " previously defined as " + ex.getOld(), element, inject);
+            return false;
         }
+        
         return true;
     }
-    
+
+    protected final void addFieldMappings(String mcpName, String mcpSignature, ObfuscationData<MappingField> obfData) {
+        for (ObfuscationType type : obfData) {
+            MappingField obfField = obfData.get(type);
+            this.addFieldMapping(type, mcpName, obfField.getSimpleName(), mcpSignature, obfField.getDesc());
+        }
+    }
+
     /**
      * Add a field mapping to the local table
      */
@@ -311,7 +342,14 @@ abstract class AnnotatedMixinElementHandler {
     protected final void addFieldMapping(ObfuscationType type, String mcpName, String obfName, String mcpSignature, String obfSignature) {
         MappingField from = new MappingField(this.classRef, mcpName, mcpSignature);
         MappingField to = new MappingField(this.classRef, obfName, obfSignature);
-        this.mixin.getMappings().addFieldMapping(type, from, to);
+        this.getMappings().addFieldMapping(type, from, to);
+    }
+
+    protected final void addMethodMappings(String mcpName, String mcpSignature, ObfuscationData<MappingMethod> obfData) {
+        for (ObfuscationType type : obfData) {
+            MappingMethod obfMethod = obfData.get(type);
+            this.addMethodMapping(type, mcpName, obfMethod.getSimpleName(), mcpSignature, obfMethod.getDesc());
+        }
     }
 
     /**
@@ -327,24 +365,9 @@ abstract class AnnotatedMixinElementHandler {
     protected final void addMethodMapping(ObfuscationType type, String mcpName, String obfName, String mcpSignature, String obfSignature) {
         MappingMethod from = new MappingMethod(this.classRef, mcpName, mcpSignature);
         MappingMethod to = new MappingMethod(this.classRef, obfName, obfSignature);
-        this.mixin.getMappings().addMethodMapping(type, from, to);
+        this.getMappings().addMethodMapping(type, from, to);
     }
 
-    /**
-     * Validate method for {@link org.spongepowered.asm.mixin.Shadow} and
-     * {@link org.spongepowered.asm.mixin.Overwrite} registrations to check that
-     * only a single target is registered. Mixins containing annotated methods
-     * with these annotations cannot be multi-targetted.
-     */
-    protected final boolean validateSingleTarget(String annotation, Element element) {
-        if (this.mixin.getPrimaryTargetRef() == null || this.mixin.getTargets().size() > 1) {
-            this.ap.printMessage(Kind.ERROR, "Mixin with " + annotation + " members must have exactly one target.", element);
-            this.ap.printMessage(Kind.ERROR, "Mixin with " + annotation + " members must have exactly one target.", this.mixin.getMixin());
-            return false;
-        }
-        return true;
-    }
-    
     /**
      * Check constraints for the specified annotation based on token values in
      * the current environment
@@ -416,7 +439,7 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the specified field exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateTargetField(VariableElement field, AnnotationMirror shadow, AliasedElementName name, String type) {
+    protected final void validateTargetField(VariableElement field, AnnotationMirror annotation, AliasedElementName name, String type) {
         String fieldType = field.asType().toString();
 
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -439,7 +462,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetField == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, shadow);
+                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation);
             }
         }
     }

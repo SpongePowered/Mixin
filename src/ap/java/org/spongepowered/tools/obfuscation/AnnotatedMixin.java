@@ -99,14 +99,9 @@ class AnnotatedMixin {
     private final List<TypeHandle> targets = new ArrayList<TypeHandle>();
     
     /**
-     * Target "reference" (bytecode name)
-     */
-    private final String targetRef;
-    
-    /**
      * Target type (for single-target mixins) 
      */
-    private final TypeHandle targetType;
+    private final TypeHandle primaryTarget;
     
     /**
      * Mixin class "reference" (bytecode name)
@@ -142,16 +137,7 @@ class AnnotatedMixin {
         this.mixin = type;
         this.handle = new TypeHandle(type);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
-        
-        TypeHandle primaryTarget = this.initTargets();
-        if (primaryTarget != null) {
-            this.targetRef = primaryTarget.getName();
-            this.targetType = primaryTarget; 
-        } else {
-            this.targetRef = null;
-            this.targetType = null;
-        }
-
+        this.primaryTarget = this.initTargets();
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
         
         this.overwrites = new AnnotatedMixinOverwriteHandler(ap, this);
@@ -280,17 +266,11 @@ class AnnotatedMixin {
     }
     
     /**
-     * Get the <em>primary</em> target class reference
-     */
-    public String getPrimaryTargetRef() {
-        return this.targetRef;
-    }
-    
-    /**
      * Get the <em>primary</em> target
      */
+    @Deprecated
     public TypeHandle getPrimaryTarget() {
-        return this.targetType;
+        return this.primaryTarget;
     }
     
     /**
@@ -298,6 +278,13 @@ class AnnotatedMixin {
      */
     public List<TypeHandle> getTargets() {
         return this.targets;
+    }
+    
+    /**
+     * Get whether this is a multi-target mixin
+     */
+    public boolean isMultiTarget() {
+        return this.targets.size() > 1;
     }
     
     /**
