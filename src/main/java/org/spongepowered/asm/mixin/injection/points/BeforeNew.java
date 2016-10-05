@@ -34,6 +34,8 @@ import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
+import com.google.common.base.Strings;
+
 /**
  * <p>This injection point searches for NEW opcodes matching its arguments and
  * returns a list of insns immediately prior to matching instructions. It
@@ -51,9 +53,12 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  *   The default value is <b>-1</b> which supresses ordinal matching</dd>
  * </dl>
  * 
- * <p>Example:</p>
+ * <p>Examples:</p>
  * <blockquote><pre>
- *   &#064;At(value = "NEW", args = { "class=java/lang/String" })</pre>
+ *   &#064;At(value = "NEW", args = "class=java/lang/String")</pre>
+ * </blockquote> 
+ * <blockquote><pre>
+ *   &#064;At(value = "NEW", target = "java/lang/String"</pre>
  * </blockquote> 
  * 
  * <p>Note that like all standard injection points, this class matches the insn
@@ -77,7 +82,7 @@ public class BeforeNew extends InjectionPoint {
 
     public BeforeNew(InjectionPointData data) {
         this.ordinal = data.getOrdinal();
-        this.className = data.get("class", null).replace('.', '/');
+        this.className = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
     }
 
     @Override
