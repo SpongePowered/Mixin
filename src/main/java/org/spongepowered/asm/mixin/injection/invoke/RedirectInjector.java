@@ -24,16 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -42,18 +38,19 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.primitives.Ints;
 
 /**
- * <p>A bytecode injector which allows a method call or field access to be
- * redirected to the annotated handler method. For method redirects, the handler
- * method signature must match the hooked method precisely <b>but</b> prepended
- * with an arg of the owning object's type to accept the object instance the
- * method was going to be invoked on. For example when hooking the following
- * call:</p>
+ * <p>A bytecode injector which allows a method call, field access or
+ * <tt>new</tt> object creation to be redirected to the annotated handler
+ * method. For method redirects, the handler method signature must match the
+ * hooked method precisely <b>but</b> prepended with an arg of the owning
+ * object's type to accept the object instance the method was going to be
+ * invoked upon. For example when hooking the following call:</p>
  * 
  * <blockquote><pre>
  *   int abc = 0;
@@ -76,6 +73,10 @@ import com.google.common.primitives.Ints;
  * 
  * <p>For field redirections, see the details in {@link Redirect} for the
  * required signature of the handler method.</p>
+ * 
+ * <p>For constructor redirections, the signature of the handler method should
+ * match the constructor itself, return type should be of the type of object
+ * being created.</p>
  */
 public class RedirectInjector extends InvokeInjector {
     
@@ -124,6 +125,15 @@ public class RedirectInjector extends InvokeInjector {
         this.meta = new Meta(priority, isFinal, this.info.toString(), this.methodNode.desc);
     }
     
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.invoke.InvokeInjector
+     *      #checkTarget(org.spongepowered.asm.mixin.injection.struct.Target)
+     */
+    @Override
+    protected void checkTarget(Target target) {
+        // Overridden so we can do this check later
+    }
+
     @Override
     protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn) {
         InjectionNode node = target.injectionNodes.get(insn);
@@ -157,12 +167,22 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         if (node.getCurrentTarget() instanceof MethodInsnNode) {
+            super.checkTarget(target);
             this.injectAtInvoke(target, node);
             return;
         }
         
         if (node.getCurrentTarget() instanceof FieldInsnNode) {
+            super.checkTarget(target);
             this.injectAtFieldAccess(target, node);
+            return;
+        }
+        
+        if (node.getCurrentTarget() instanceof TypeInsnNode && node.getCurrentTarget().getOpcode() == Opcodes.NEW) {
+            if (!this.isStatic && target.isStatic) {
+                throw new InvalidInjectionException(this.info, "non-static callback method " + this + " has a static target which is not supported");
+            }
+            this.injectAtConstructor(target, node);
             return;
         }
         
@@ -303,7 +323,7 @@ public class RedirectInjector extends InvokeInjector {
 
     /**
      * Check that the handler descriptor matches the calculated descriptor for
-     * the field access being redirected.
+     * the access being redirected.
      */
     protected boolean checkDescriptor(String desc, Target target, String type) {
         if (this.methodNode.desc.equals(desc)) {
@@ -320,4 +340,67 @@ public class RedirectInjector extends InvokeInjector {
                 + " has an invalid signature. Expected " + desc + " but found " + this.methodNode.desc);
     }
 
+    protected void injectAtConstructor(Target target, InjectionNode node) {
+        final TypeInsnNode newNode = (TypeInsnNode)node.getCurrentTarget();
+        final AbstractInsnNode dupNode = target.get(target.indexOf(newNode) + 1);
+        final MethodInsnNode initNode = this.findInitNode(target, newNode);
+        
+        if (initNode == null) {
+            throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
+        }
+        
+        // True if the result of the object construction is being assigned
+        boolean isAssigned = dupNode.getOpcode() == Opcodes.DUP;
+        String desc = initNode.desc.replace(")V", ")L" + newNode.desc + ";");
+        boolean withArgs = this.checkDescriptor(desc, target, "constructor");
+        
+        if (isAssigned) {
+            target.removeNode(dupNode);
+        }
+        
+        if (this.isStatic) {
+            target.removeNode(newNode);
+        } else {
+            target.replaceNode(newNode, new VarInsnNode(Opcodes.ALOAD, 0));
+        }
+        
+        InsnList insns = new InsnList();
+        if (withArgs) {
+            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+        }
+        
+        this.invokeHandler(insns);
+        
+        if (isAssigned) {
+            // Do a null-check following the redirect to ensure that the handler
+            // didn't return null. Since NEW cannot return null, this would break
+            // the contract of the target method!
+            LabelNode nullCheckSucceeded = new LabelNode();
+            insns.add(new InsnNode(Opcodes.DUP));
+            insns.add(new JumpInsnNode(Opcodes.IFNONNULL, nullCheckSucceeded));
+            this.throwException(insns, "java/lang/NullPointerException", this.annotationType + " constructor handler " + this
+                    + " returned null for " + newNode.desc.replace('/', '.'));
+            insns.add(nullCheckSucceeded);
+        } else {
+            // Result is not assigned, so just pop it from the operand stack
+            insns.add(new InsnNode(Opcodes.POP));
+        }
+        
+        target.replaceNode(initNode, insns);
+    }
+
+    protected MethodInsnNode findInitNode(Target target, TypeInsnNode newNode) {
+        int indexOf = target.indexOf(newNode);
+        for (Iterator<AbstractInsnNode> iter = target.insns.iterator(indexOf); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
+                    return methodNode;
+                }
+            }
+        }
+        return null;
+    }
 }

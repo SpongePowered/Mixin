@@ -36,7 +36,8 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
  * <p>Specifies that this mixin method should redirect the specified
- * method call or field access to the method decorated with this annotation.</p>
+ * method call, field access or object construction (via the <tt>new</tt>
+ * keyword) to the method decorated with this annotation.</p>
  * 
  * <h4>Method Redirect Mode</h4>
  * 
@@ -111,6 +112,28 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * addition to the arguments being passed to the method call (for example in
  * the code above this would be the <em>someInt</em> and <em>someString</em>
  * arguments) by appending the arguments to the method signature.</p>
+ * 
+ * <h4>Constructor Redirect Mode</h4>
+ * 
+ * <p>The handler method signature must match the constructor being redirected
+ * and the return type must match the type of object being constructed. For
+ * example to redirect the following constructor call:</p>
+ * 
+ * <blockquote><pre>
+ *   public void baz(int someInt, String someString) {
+ *     // Hooking this constructor
+ *     Foo someObject = new Foo("bar");
+ *   }</pre>
+ * </blockquote>
+ * 
+ * <p>The signature of the handler method should be:</p>
+ * 
+ * <blockquote>
+ *      <pre>public Foo constructFoo(String arg1)</pre>
+ * </blockquote>
+ * 
+ * <p>Note that like other redirectors, it is possible to capture the target
+ * method's arguments by appending them to the handler method's signature.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

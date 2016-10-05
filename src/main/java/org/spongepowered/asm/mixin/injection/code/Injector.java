@@ -37,8 +37,11 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.lib.tree.LdcInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
@@ -216,6 +219,22 @@ public abstract class Injector {
         insns.add(insn);
         this.info.addCallbackInvocation(handler);
         return insn;
+    }
+    
+    /**
+     * Throw an exception. The exception class must have a string which takes a
+     * string argument
+     * 
+     * @param insns Insn list to inject into
+     * @param exceptionType Type of exception to throw (binary name)
+     * @param message Message to pass to the exception constructor
+     */
+    protected void throwException(InsnList insns, String exceptionType, String message) {
+        insns.add(new TypeInsnNode(Opcodes.NEW, exceptionType));
+        insns.add(new InsnNode(Opcodes.DUP));
+        insns.add(new LdcInsnNode(message));
+        insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, exceptionType, "<init>", "(Ljava/lang/String;)V", false));
+        insns.add(new InsnNode(Opcodes.ATHROW));
     }
     
     protected static String printArgs(Type[] args) {

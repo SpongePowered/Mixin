@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import java.util.Iterator;
+
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
@@ -37,7 +39,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * Information about the current injection target, mainly just convenience
  * rather than passing a bunch of values around.
  */
-public class Target implements Comparable<Target> {
+public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     public final ClassNode classNode;
 
@@ -287,7 +289,20 @@ public class Target implements Comparable<Target> {
         }
         return this.toString().compareTo(o.toString());
     }
+
+    public int indexOf(AbstractInsnNode insn) {
+        return this.insns.indexOf(insn);
+    }
     
+    public AbstractInsnNode get(int index) {
+        return this.insns.get(index);
+    }
+    
+    @Override
+    public Iterator<AbstractInsnNode> iterator() {
+        return this.insns.iterator();
+    }
+
     /**
      * Replace an instruction in this target with the specified instruction and
      * mark the node as replaced for other injectors
