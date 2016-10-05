@@ -30,6 +30,8 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+
 /**
  * Wrapper for Annotation Processor messages, used to enable messages to be
  * easily queued and manipulated
@@ -43,15 +45,23 @@ public class Message {
     private final AnnotationValue value;
 
     public Message(Diagnostic.Kind kind, CharSequence msg) {
-        this(kind, msg, null, null, null);
+        this(kind, msg, null, (AnnotationMirror)null, null);
     }
     
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element) {
-        this(kind, msg, element, null, null);
+        this(kind, msg, element, (AnnotationMirror)null, null);
+    }
+    
+    public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation) {
+        this(kind, msg, element, annotation.getMirror(), null);
     }
     
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationMirror annotation) {
         this(kind, msg, element, annotation, null);
+    }
+    
+    public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation, AnnotationValue value) {
+        this(kind, msg, element, annotation.getMirror(), value);
     }
     
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
@@ -75,38 +85,31 @@ public class Message {
         return this;
     }
 
-    
     public Diagnostic.Kind getKind() {
         return this.kind;
     }
 
-    
     public Message setKind(Diagnostic.Kind kind) {
         this.kind = kind;
         return this;
     }
 
-    
     public CharSequence getMsg() {
         return this.msg;
     }
 
-    
     public Message setMsg(CharSequence msg) {
         this.msg = msg;
         return this;
     }
-
     
     public Element getElement() {
         return this.element;
     }
-
     
     public AnnotationMirror getAnnotation() {
         return this.annotation;
     }
-
     
     public AnnotationValue getValue() {
         return this.value;

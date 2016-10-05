@@ -28,7 +28,6 @@ import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -39,6 +38,7 @@ import javax.tools.Diagnostic.Kind;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
 
 /**
  * Annotation processor which finds {@link Shadow} and {@link Overwrite}
@@ -89,7 +89,7 @@ public class TargetObfuscationProcessor extends MixinProcessor {
                 continue;
             }
             
-            AnnotationMirror shadow = MirrorUtils.getAnnotation(elem, Shadow.class);
+            AnnotationHandle shadow = AnnotationHandle.of(elem, Shadow.class);
             
             if (elem.getKind() == ElementKind.FIELD) {
                 this.mixins.registerShadow((TypeElement)parent, (VariableElement)elem, shadow);

@@ -28,7 +28,6 @@ import java.util.Collection;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -37,6 +36,8 @@ import javax.tools.Diagnostic.Kind;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * Base class for mixin validators
@@ -84,7 +85,7 @@ public abstract class MixinValidator implements IMixinValidator {
      *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
      */
     @Override
-    public final boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+    public final boolean validate(ValidationPass pass, TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets) {
         if (pass != this.pass) {
             return true;
         }
@@ -92,7 +93,7 @@ public abstract class MixinValidator implements IMixinValidator {
         return this.validate(mixin, annotation, targets);
     }
 
-    protected abstract boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
+    protected abstract boolean validate(TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets);
     
     /**
      * Output a compiler note

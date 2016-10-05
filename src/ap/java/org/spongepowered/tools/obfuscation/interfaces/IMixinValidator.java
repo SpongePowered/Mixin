@@ -26,10 +26,10 @@ package org.spongepowered.tools.obfuscation.interfaces;
 
 import java.util.Collection;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 
-import org.spongepowered.tools.obfuscation.TypeHandle;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * A mixin validator module, basically just a way of making the various sanity
@@ -55,5 +55,5 @@ public interface IMixinValidator {
      * 
      * @return False to halt processing of further validators
      */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets);
+    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets);
 }

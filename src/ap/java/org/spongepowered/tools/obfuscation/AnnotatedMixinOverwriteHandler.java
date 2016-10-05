@@ -26,7 +26,6 @@ package org.spongepowered.tools.obfuscation;
 
 import java.lang.reflect.Method;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
@@ -34,6 +33,8 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * A module for {@link AnnotatedMixin} which handles method overwrites
@@ -47,7 +48,7 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
         
         private final String desc;
 
-        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationMirror annotation) {
+        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationHandle annotation) {
             super(element, annotation);
             this.desc = MirrorUtils.getDescriptor(element);
         }
@@ -125,7 +126,7 @@ class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
         try {
             this.addMethodMappings(elem.getSimpleName(), elem.getDesc(), obfData);
         } catch (MappingConflictException ex) {
-            this.ap.printMessage(Kind.ERROR, "Mapping conflict for @Overwrite method: " + ex.getNew().getSimpleName() + " for target " + target 
+            this.printMessage(Kind.ERROR, "Mapping conflict for @Overwrite method: " + ex.getNew().getSimpleName() + " for target " + target
                     + " conflicts with existing mapping " + ex.getOld().getSimpleName(), elem.getElement(), elem.getAnnotation());
             return false;
         }

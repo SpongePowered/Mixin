@@ -24,7 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation.interfaces;
 
-import org.spongepowered.tools.obfuscation.TypeHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * Manager object which cann supply {@link TypeHandle} instances

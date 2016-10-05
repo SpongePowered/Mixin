@@ -34,6 +34,7 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * Implementation of obfuscation provider which queries all obfuscation

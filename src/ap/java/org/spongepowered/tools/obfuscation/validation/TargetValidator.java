@@ -26,7 +26,6 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
@@ -36,8 +35,9 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
-import org.spongepowered.tools.obfuscation.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 
 /**
  * Validator which checks that the mixin targets are sane
@@ -59,7 +59,7 @@ public class TargetValidator extends MixinValidator {
      *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
      */
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+    public boolean validate(TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets) {
         if ("true".equalsIgnoreCase(this.options.getOption(SupportedOptions.DISABLE_TARGET_VALIDATOR))) {
             return true;
         }

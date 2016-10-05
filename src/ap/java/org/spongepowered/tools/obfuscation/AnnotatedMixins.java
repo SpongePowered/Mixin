@@ -56,11 +56,14 @@ import javax.tools.StandardLocation;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.util.ITokenProvider;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TargetMap;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
+import org.spongepowered.tools.obfuscation.model.TypeReference;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.struct.Message;
@@ -303,7 +306,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         
         if (!this.mixins.containsKey(name)) {
             AnnotatedMixin mixin = new AnnotatedMixin(this, mixinType);
-            this.targets.registerTargets(mixin);
+            this.targets.registerTargets(mixin.getTargets(), mixin.getHandle());
             mixin.runValidators(ValidationPass.EARLY, this.validators);
             this.mixins.put(name, mixin);
             this.mixinsForPass.add(mixin);
@@ -354,7 +357,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
             return;
         }
         
-        mixinClass.registerOverwrite(method, MirrorUtils.getAnnotation(method, Overwrite.class));
+        mixinClass.registerOverwrite(method, AnnotationHandle.of(method, Overwrite.class));
     }
 
     /**
@@ -364,7 +367,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
      * @param field Shadow field
      * @param shadow {@link org.spongepowered.asm.mixin.Shadow} annotation
      */
-    public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationMirror shadow) {
+    public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationHandle shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
             this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin field", field);
@@ -381,7 +384,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
      * @param method Shadow method
      * @param shadow {@link org.spongepowered.asm.mixin.Shadow} annotation
      */
-    public void registerShadow(TypeElement mixinType, ExecutableElement method, AnnotationMirror shadow) {
+    public void registerShadow(TypeElement mixinType, ExecutableElement method, AnnotationHandle shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
             this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin method", method);
@@ -399,11 +402,10 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
      * @param inject {@link org.spongepowered.asm.mixin.injection.Inject}
      *      annotation
      */
-    public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationMirror inject) {
+    public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationHandle inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            String type = "@" + inject.getAnnotationType().asElement().getSimpleName() + "";
-            this.printMessage(Kind.ERROR, "Found " + type + " annotation on a non-mixin method", method);
+            this.printMessage(Kind.ERROR, "Found " + inject + " annotation on a non-mixin method", method);
             return;
         }
 
@@ -411,7 +413,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         Message errorMessage = mixinClass.registerInjector(method, inject, remap);
         int remappedAts = 0;
         if (remap) {
-            Object ats = MirrorUtils.getAnnotationValue(inject, "at");
+            Object ats = inject.getValue("at");
             
             if (ats instanceof List) {
                 List<?> annotationList = (List<?>)ats;
@@ -420,19 +422,19 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
                     if (at instanceof AnnotationValue) {
                         at = ((AnnotationValue)at).getValue();
                     }
-                    if (at instanceof AnnotationMirror) {
-                        remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)at);
+                    if (at instanceof AnnotationHandle) {
+                        remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationHandle)at);
                     } else {
                         this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
                     }
                 }
-            } else if (ats instanceof AnnotationMirror) {
-                remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)ats);
+            } else if (ats instanceof AnnotationHandle) {
+                remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationHandle)ats);
             } else if (ats instanceof AnnotationValue) {
                 // Fix for JDT
                 Object mirror = ((AnnotationValue)ats).getValue();
-                if (mirror instanceof AnnotationMirror) {
-                    remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationMirror)mirror);
+                if (mirror instanceof AnnotationHandle) {
+                    remappedAts += mixinClass.registerInjectionPoint(method, inject, (AnnotationHandle)mirror);
                 }
             }
         }
@@ -466,15 +468,15 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         }
     }
 
-    private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationMirror annotation) {
+    private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationHandle annotation) {
         return mixinClass.remap() && AnnotatedMixins.getRemapValue(annotation);
     }
 
     /**
      * Check whether we should remap the annotated member or skip it
      */
-    public static boolean getRemapValue(AnnotationMirror annotation) {
-        return MirrorUtils.<Boolean>getAnnotationValue(annotation, "remap", Boolean.TRUE).booleanValue();
+    public static boolean getRemapValue(AnnotationHandle annotation) {
+        return annotation.<Boolean>getValue("remap", Boolean.TRUE).booleanValue();
     }
 
     /**

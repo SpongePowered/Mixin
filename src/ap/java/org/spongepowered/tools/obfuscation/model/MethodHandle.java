@@ -22,33 +22,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.model;
 
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.ExecutableElement;
 
 /**
- * Retrieved from a {@link TypeHandle} when searching for fields
+ * Retrieved from a {@link TypeHandle} when searching for methods
  */
-class FieldHandle {
+public class MethodHandle {
     
     /**
      * Actual element, can be null
      */
-    private final VariableElement element;
-    
-    /**
-     * True if this is a raw type element returned against a query for a
-     * specialised type
-     */
-    private final boolean rawType;
+    private final ExecutableElement element;
 
-    public FieldHandle(VariableElement element) {
-        this(element, false);
-    }
-    
-    public FieldHandle(VariableElement element, boolean rawType) {
+    public MethodHandle(ExecutableElement element) {
         this.element = element;
-        this.rawType = rawType;
     }
     
     /**
@@ -57,19 +46,12 @@ class FieldHandle {
     public boolean isImaginary() {
         return this.element == null;
     }
-    
+
     /**
      * Get the underlying element, may return null if the handle is imaginary
      */
-    public VariableElement getElement() {
+    public ExecutableElement getElement() {
         return this.element;
     }
 
-    /**
-     * Returns true if the searched type had a type specifier but the returned
-     * type does not
-     */
-    public boolean isRawType() {
-        return this.rawType;
-    }
 }

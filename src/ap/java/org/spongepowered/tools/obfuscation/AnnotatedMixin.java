@@ -26,12 +26,9 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.processing.Messager;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -41,16 +38,17 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjectionPoint;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjector;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinOverwriteHandler.AnnotatedElementOverwrite;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
+import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import org.spongepowered.tools.obfuscation.model.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 import org.spongepowered.tools.obfuscation.struct.Message;
 
 /**
@@ -61,7 +59,7 @@ class AnnotatedMixin {
     /**
      * Mixin annotation
      */
-    private final AnnotationMirror annotation;
+    private final AnnotationHandle annotation;
     
     /**
      * Messager 
@@ -129,13 +127,13 @@ class AnnotatedMixin {
     private final AnnotatedMixinInjectorHandler injectors;
 
     public AnnotatedMixin(IMixinAnnotationProcessor ap, TypeElement type) {
-        this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
         this.typeProvider = ap.getTypeProvider();
         this.obf = ap.getObfuscationManager();
         this.mappings = this.obf.createMappingConsumer();
         this.messager = ap;
         this.mixin = type;
         this.handle = new TypeHandle(type);
+        this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         this.primaryTarget = this.initTargets();
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
@@ -160,9 +158,7 @@ class AnnotatedMixin {
         
         // Public targets, referenced by class
         try {
-            List<AnnotationValue> publicTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "value",
-                    Collections.<AnnotationValue>emptyList());
-            for (TypeMirror target : MirrorUtils.<TypeMirror>unfold(publicTargets)) {
+            for (TypeMirror target : this.annotation.<TypeMirror>getList()) {
                 TypeHandle type = new TypeHandle((DeclaredType)target);
                 if (this.targets.contains(type)) {
                     continue;
@@ -178,9 +174,7 @@ class AnnotatedMixin {
         
         // Private targets, referenced by name
         try {
-            List<AnnotationValue> privateTargets = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(this.annotation, "targets",
-                    Collections.<AnnotationValue>emptyList());
-            for (String privateTarget : MirrorUtils.<String>unfold(privateTargets)) {
+            for (String privateTarget : this.annotation.<String>getList("targets")) {
                 TypeHandle type = this.typeProvider.getTypeHandle(privateTarget);
                 if (this.targets.contains(type)) {
                     continue;
@@ -212,7 +206,7 @@ class AnnotatedMixin {
      * Print a message to the AP messager
      */
     private void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
-        this.messager.printMessage(kind, msg, this.mixin, this.annotation);
+        this.messager.printMessage(kind, msg, this.mixin, this.annotation.getMirror());
     }
 
     private void addSoftTarget(TypeHandle type, String reference) {
@@ -233,7 +227,7 @@ class AnnotatedMixin {
         return this.mixin.getSimpleName().toString();
     }
     
-    public AnnotationMirror getAnnotation() {
+    public AnnotationHandle getAnnotation() {
         return this.annotation;
     }
     
@@ -298,23 +292,23 @@ class AnnotatedMixin {
         return this.mappings;
     }
     
-    public void registerOverwrite(ExecutableElement method, AnnotationMirror overwrite) {
+    public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite) {
         this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite));
     }
 
-    public void registerShadow(VariableElement field, AnnotationMirror shadow, boolean shouldRemap) {
+    public void registerShadow(VariableElement field, AnnotationHandle shadow, boolean shouldRemap) {
         this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowField(field, shadow, shouldRemap));
     }
 
-    public void registerShadow(ExecutableElement method, AnnotationMirror shadow, boolean shouldRemap) {
+    public void registerShadow(ExecutableElement method, AnnotationHandle shadow, boolean shouldRemap) {
         this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowMethod(method, shadow, shouldRemap));
     }
 
-    public Message registerInjector(ExecutableElement method, AnnotationMirror inject, boolean shouldRemap) {
+    public Message registerInjector(ExecutableElement method, AnnotationHandle inject, boolean shouldRemap) {
         return this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, shouldRemap));
     }
 
-    public int registerInjectionPoint(ExecutableElement element, AnnotationMirror inject, AnnotationMirror at) {
+    public int registerInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at) {
         return this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at));
     }
     

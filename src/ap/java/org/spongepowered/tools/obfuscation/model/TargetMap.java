@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.model;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -76,15 +76,6 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
      */
     public String getSessionId() {
         return this.sessionId;
-    }
-
-    /**
-     * Register target classes for the specified mixin
-     * 
-     * @param mixin mixin to add targets for
-     */
-    public void registerTargets(AnnotatedMixin mixin) {
-        this.registerTargets(mixin.getTargets(), mixin.getHandle());
     }
 
     /**

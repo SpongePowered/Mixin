@@ -22,8 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.model;
 
+import java.lang.annotation.Annotation;
 import java.util.Collections;
 import java.util.List;
 
@@ -136,6 +137,10 @@ public class TypeHandle {
      */
     public List<? extends Element> getEnclosedElements() {
         return this.element != null ? this.element.getEnclosedElements() : Collections.<Element>emptyList();
+    }
+    
+    public AnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+        return AnnotationHandle.of(this.element, annotationClass);
     }
 
     /**

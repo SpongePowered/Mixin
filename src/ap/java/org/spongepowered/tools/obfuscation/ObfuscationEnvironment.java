@@ -45,6 +45,7 @@ import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mapping.IMappingProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer.MappingSet;
+import org.spongepowered.tools.obfuscation.model.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationEnvironment;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
