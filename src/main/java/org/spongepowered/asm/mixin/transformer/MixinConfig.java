@@ -41,7 +41,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
+import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.lib.tree.FieldNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -112,6 +115,11 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Synthetic inner classes for mixins in this set
      */
     private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
+    
+    /**
+     * Accessor mixins in this set
+     */
+    private final transient Set<String> passThroughClasses = new HashSet<String>();
     
     /**
      * Marshal 
@@ -475,6 +483,9 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                     if (hotSwapper != null) {
                         hotSwapper.registerMixinClass(mixin.getClassName());
                     }
+                    if (mixin.isLoadable()) {
+                        this.passThroughClasses.add(mixin.getClassName());
+                    }
                     this.mixins.add(mixin);
                 }
             } catch (InvalidMixinException ex) {
@@ -673,14 +684,52 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
 
     /**
-     * Get whether this config can allow passthrough for the specified class
+     * Get whether the specified class is a synthetic inner class for this
+     * config
      * 
      * @param className Class name to check
      * @return True if the specified class name is in this config's passthrough
      *      set
      */
     public boolean canPassThrough(String className) {
-        return this.syntheticInnerClasses.contains(className);
+        return this.syntheticInnerClasses.contains(className) || this.passThroughClasses.contains(className);
+    }
+
+    public ClassNode passThrough(String className, ClassNode passThroughClassNode) {
+        if (this.syntheticInnerClasses.contains(className)) {
+            return this.passThroughSyntheticInner(passThroughClassNode);
+        }
+        
+        return passThroughClassNode;
+    }
+
+    /**
+     * "Pass through" a synthetic inner class. Transforms package-private
+     * members in the class into public so that they are accessible from their
+     * new home in the target class
+     * 
+     * @param classNode Class to pass through as tree
+     * @return transformed class
+     */
+    private ClassNode passThroughSyntheticInner(ClassNode classNode) {
+        // Make the class public
+        classNode.access |= Opcodes.ACC_PUBLIC;
+        
+        // Make package-private fields public
+        for (FieldNode field : classNode.fields) {
+            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                field.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
+        
+        // Make package-private methods public
+        for (MethodNode method : classNode.methods) {
+            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                method.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
+        
+        return classNode;
     }
 
     /**

@@ -65,9 +65,12 @@ abstract class AnnotatedMixinElementHandler {
         
         private final AnnotationMirror annotation;
 
+        private final String desc;
+
         public AnnotatedElement(E element, AnnotationMirror annotation) {
             this.element = element;
             this.annotation = annotation;
+            this.desc = MirrorUtils.getDescriptor(element);
         }
 
         public E getElement() {
@@ -78,6 +81,14 @@ abstract class AnnotatedMixinElementHandler {
             return this.annotation;
         }
         
+        public String getSimpleName() {
+            return this.getElement().getSimpleName().toString();
+        }
+        
+        public String getDesc() {
+            return this.desc;
+        }
+
     }
     
     /**
@@ -95,10 +106,21 @@ abstract class AnnotatedMixinElementHandler {
          */
         private final List<String> aliases;
         
+        private boolean caseSensitive;
+        
         public AliasedElementName(Element element, AnnotationMirror annotation) {
             this.originalName = element.getSimpleName().toString();
             List<AnnotationValue> aliases = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(annotation, "aliases");
             this.aliases = MirrorUtils.<String>unfold(aliases);
+        }
+        
+        public AliasedElementName setCaseSensitive(boolean caseSensitive) {
+            this.caseSensitive = caseSensitive;
+            return this;
+        }
+        
+        public boolean isCaseSensitive() {
+            return this.caseSensitive;
         }
         
         /**
@@ -484,6 +506,15 @@ abstract class AnnotatedMixinElementHandler {
                 this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject);
             }
         }            
+    }
+
+    protected static <T extends IMapping<T>> ObfuscationData<T> stripOwnerData(ObfuscationData<T> data) {
+        ObfuscationData<T> stripped = new ObfuscationData<T>();
+        for (ObfuscationType type : data) {
+            T mapping = data.get(type);
+            stripped.add(type, mapping.move(null));
+        }
+        return stripped;
     }
 
 }

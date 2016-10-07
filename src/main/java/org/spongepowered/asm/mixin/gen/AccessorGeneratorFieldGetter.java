@@ -22,37 +22,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.meta;
+package org.spongepowered.asm.mixin.gen;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * Generator for instance field getters
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
+public class AccessorGeneratorFieldGetter extends AccessorGeneratorField {
     
-    /**
-     * Mixin which merged this method
-     * 
-     * @return mixin name 
+    public AccessorGeneratorFieldGetter(AccessorInfo info) {
+        super(info);
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.gen.AccessorGenerator#generate()
      */
-    public String mixin();
+    @Override
+    public MethodNode generate() {
+        MethodNode method = this.createMethod(this.targetType.getSize(), this.targetType.getSize());
+        if (this.isInstanceField) {
+            method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
+        }
+        int opcode = this.isInstanceField ? Opcodes.GETFIELD : Opcodes.GETSTATIC;
+        method.instructions.add(new FieldInsnNode(opcode, this.info.getClassNode().name, this.targetField.name, this.targetField.desc));
+        method.instructions.add(new InsnNode(this.targetType.getOpcode(Opcodes.IRETURN)));
+        return method;
+    }
     
-    /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
-     * 
-     * @return mixin priority
-     */
-    public int priority();
 }

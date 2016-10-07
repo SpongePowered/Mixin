@@ -209,7 +209,18 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(VariableElement element) {
-        return this.findField(element.getSimpleName().toString(), MirrorUtils.getTypeName(element.asType()));
+        return this.findField(element, true);
+    }
+    
+    /**
+     * Find a member field in this type which matches the name and declared type
+     * of the supplied element
+     * 
+     * @param element Element to match
+     * @return handle to the discovered field if matched or null if no match
+     */
+    public FieldHandle findField(VariableElement element, boolean caseSensitive) {
+        return this.findField(element.getSimpleName().toString(), MirrorUtils.getTypeName(element.asType()), caseSensitive);
     }
     
     /**
@@ -221,6 +232,18 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(String name, String type) {
+        return this.findField(name, type, true);
+    }
+    
+    /**
+     * Find a member field in this type which matches the name and declared type
+     * specified
+     * 
+     * @param name Field name to search for
+     * @param type Field descriptor (java-style)
+     * @return handle to the discovered field if matched or null if no match
+     */
+    public FieldHandle findField(String name, String type, boolean caseSensitive) {
         String rawType = MirrorUtils.stripGenerics(type);
 
         for (Element element : this.getEnclosedElements()) {
@@ -229,14 +252,25 @@ public class TypeHandle {
             }
             
             VariableElement field = (VariableElement)element;
-            if (this.compareElement(field, name, type)) {
+            if (this.compareElement(field, name, type, caseSensitive)) {
                 return new FieldHandle(field);
-            } else if (this.compareElement(field, name, rawType)) {
+            } else if (this.compareElement(field, name, rawType, caseSensitive)) {
                 return new FieldHandle(field, true);
             }                
         }
         
         return null;
+    }
+    
+    /**
+     * Find a member method in this type which matches the name and declared
+     * type of the supplied element
+     * 
+     * @param element Element to match
+     * @return handle to the discovered method if matched or null if no match
+     */
+    public MethodHandle findMethod(ExecutableElement element) {
+        return this.findMethod(element, true);
     }
 
     /**
@@ -246,8 +280,8 @@ public class TypeHandle {
      * @param element Element to match
      * @return handle to the discovered method if matched or null if no match
      */
-    public MethodHandle findMethod(ExecutableElement element) {
-        return this.findMethod(element.getSimpleName().toString(), MirrorUtils.getJavaSignature(element));
+    public MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
+        return this.findMethod(element.getSimpleName().toString(), MirrorUtils.getJavaSignature(element), caseSensitive);
     }
 
     /**
@@ -259,6 +293,18 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(String name, String signature) {
+        return this.findMethod(name, signature, true);
+    }
+    
+    /**
+     * Find a member method in this type which matches the name and signature
+     * specified
+     * 
+     * @param name Method name to search for
+     * @param signature Method signature
+     * @return handle to the discovered method if matched or null if no match
+     */
+    public MethodHandle findMethod(String name, String signature, boolean caseSensitive) {
         String rawSignature = MirrorUtils.stripGenerics(signature);
 
         for (Element element : this.getEnclosedElements()) {
@@ -266,7 +312,8 @@ public class TypeHandle {
                 case CONSTRUCTOR:
                 case METHOD:
                     ExecutableElement method = (ExecutableElement)element;
-                    if (this.compareElement(method, name, signature) || this.compareElement(method, name, rawSignature)) {
+                    if (this.compareElement(method, name, signature, caseSensitive)
+                            || this.compareElement(method, name, rawSignature, caseSensitive)) {
                         return new MethodHandle(method);
                     }
                     
@@ -282,12 +329,13 @@ public class TypeHandle {
         return null;
     }
     
-    private boolean compareElement(Element elem, String name, String type) {
+    private boolean compareElement(Element elem, String name, String type, boolean caseSensitive) {
         try {
             String elementName = elem.getSimpleName().toString();
             String elementType = MirrorUtils.getJavaSignature(elem);
             String rawElementType = MirrorUtils.stripGenerics(elementType);
-            return name.equals(elementName) && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
+            boolean compared = caseSensitive ? name.equals(elementName) : name.equalsIgnoreCase(elementName);
+            return compared && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
         } catch (NullPointerException ex) {
             return false;
         }

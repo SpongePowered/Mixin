@@ -35,7 +35,6 @@ import java.util.Map.Entry;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -52,6 +51,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
@@ -61,24 +61,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * Contructs information about an injection from an {@link Inject} annotation
  * and allows the injection to be processed.
  */
-public abstract class InjectionInfo {
-    
-    protected final AnnotationNode annotation;
-    
-    /**
-     * Class
-     */
-    protected final ClassNode classNode;
-    
-    /**
-     * Annotated method
-     */
-    protected final MethodNode method;
-
-    /**
-     * Mixin data
-     */
-    protected final MixinTargetContext mixin;
+public abstract class InjectionInfo extends SpecialMethodInfo {
     
     /**
      * Annotated method is static 
@@ -139,10 +122,7 @@ public abstract class InjectionInfo {
      * @param annotation Annotation to parse
      */
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        this.mixin = mixin;
-        this.method = method;
-        this.annotation = annotation;
-        this.classNode = mixin.getTargetClassNode();
+        super(mixin, method, annotation);
         this.isStatic = ASMHelper.methodIsStatic(method);
         this.readAnnotation();
     }
@@ -285,42 +265,6 @@ public abstract class InjectionInfo {
     @Override
     public String toString() {
         return InjectionInfo.describeInjector(this.mixin, this.annotation, this.method);
-    }
-    
-    /**
-     * Get the mixin target context for this injection
-     * 
-     * @return the target context
-     */
-    public MixinTargetContext getContext() {
-        return this.mixin;
-    }
-    
-    /**
-     * Get the annotation which this InjectionInfo was created from
-     *  
-     * @return The annotation which this InjectionInfo was created from 
-     */
-    public AnnotationNode getAnnotation() {
-        return this.annotation;
-    }
-
-    /**
-     * Get the class node for this injection
-     * 
-     * @return the class containing the injector and the target
-     */
-    public ClassNode getClassNode() {
-        return this.classNode;
-    }
-
-    /**
-     * Get method being called
-     * 
-     * @return injector method
-     */
-    public MethodNode getMethod() {
-        return this.method;
     }
     
     /**

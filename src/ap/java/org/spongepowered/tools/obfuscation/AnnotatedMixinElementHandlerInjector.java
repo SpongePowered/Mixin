@@ -45,7 +45,7 @@ import org.spongepowered.tools.obfuscation.struct.Message;
 /**
  * A module for {@link AnnotatedMixin} whic handles injectors
  */
-class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler {
 
     /**
      * Injector element
@@ -88,7 +88,7 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         
     }
     
-    AnnotatedMixinInjectorHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
+    AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
@@ -151,7 +151,7 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         try {
             // If the original owner is unspecified, and the mixin is multi-target, we strip the owner from the obf mappings
             if (targetMember.owner == null && this.mixin.isMultiTarget()) {
-                obfData = AnnotatedMixinInjectorHandler.stripOwnerData(obfData);
+                obfData = AnnotatedMixinElementHandler.<MappingMethod>stripOwnerData(obfData);
             }
             this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, obfData);
         } catch (ReferenceConflictException ex) {
@@ -161,15 +161,6 @@ class AnnotatedMixinInjectorHandler extends AnnotatedMixinElementHandler {
         }
         
         return null;
-    }
-
-    private static ObfuscationData<MappingMethod> stripOwnerData(ObfuscationData<MappingMethod> data) {
-        ObfuscationData<MappingMethod> stripped = new ObfuscationData<MappingMethod>();
-        for (ObfuscationType type : data) {
-            MappingMethod mappingMethod = data.get(type);
-            stripped.add(type, mappingMethod.move(null));
-        }
-        return stripped;
     }
 
     /**

@@ -55,6 +55,8 @@ import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
@@ -339,6 +341,38 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         }
         
         return minions;
+    }
+    
+    /**
+     * Register an {@link org.spongepowered.asm.mixin.gen.Accessor} method
+     * 
+     * @param mixinType Mixin class
+     * @param method Accessor method
+     */
+    public void registerAccessor(TypeElement mixinType, ExecutableElement method) {
+        AnnotatedMixin mixinClass = this.getMixin(mixinType);
+        if (mixinClass == null) {
+            this.printMessage(Kind.ERROR, "Found @Accessor annotation on a non-mixin method", method);
+            return;
+        }
+        
+        mixinClass.registerAccessor(method, MirrorUtils.getAnnotation(method, Accessor.class));
+    }
+    
+    /**
+     * Register an {@link org.spongepowered.asm.mixin.gen.Accessor} method
+     * 
+     * @param mixinType Mixin class
+     * @param method Accessor method
+     */
+    public void registerInvoker(TypeElement mixinType, ExecutableElement method) {
+        AnnotatedMixin mixinClass = this.getMixin(mixinType);
+        if (mixinClass == null) {
+            this.printMessage(Kind.ERROR, "Found @Accessor annotation on a non-mixin method", method);
+            return;
+        }
+        
+        mixinClass.registerInvoker(method, MirrorUtils.getAnnotation(method, Invoker.class));
     }
 
     /**

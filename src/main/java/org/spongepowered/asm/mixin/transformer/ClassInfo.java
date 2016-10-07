@@ -48,6 +48,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.util.ASMHelper;
@@ -357,19 +359,26 @@ public class ClassInfo extends TreeInfo {
 
         private final List<FrameData> frames;
         
+        private boolean isAccessor;
+        
         public Method(Member member) {
             super(member);
             this.frames = member instanceof Method ? ((Method)member).frames : null;
         }
 
+        @SuppressWarnings("unchecked")
         public Method(MethodNode method) {
             this(method, false);
             this.setUnique(ASMHelper.getVisibleAnnotation(method, Unique.class) != null);
+            this.isAccessor = ASMHelper.getSingleVisibleAnnotation(method, Accessor.class, Invoker.class) != null;
         }
 
+        @SuppressWarnings("unchecked")
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
             this.frames = this.gatherFrames(method);
+            this.setUnique(ASMHelper.getVisibleAnnotation(method, Unique.class) != null);
+            this.isAccessor = ASMHelper.getSingleVisibleAnnotation(method, Accessor.class, Invoker.class) != null;
         }
 
         public Method(String name, String desc) {
@@ -407,6 +416,10 @@ public class ClassInfo extends TreeInfo {
             return ClassInfo.this;
         }
 
+        public boolean isAccessor() {
+            return this.isAccessor;
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof Method)) {
@@ -415,6 +428,7 @@ public class ClassInfo extends TreeInfo {
 
             return super.equals(obj);
         }
+        
     }
     
     /**

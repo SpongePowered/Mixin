@@ -134,6 +134,18 @@ public class MemberInfo {
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
      * @param desc Member descriptor, can be null
+     */
+    public MemberInfo(String name, String owner, String desc) {
+        this(name, owner, desc, false);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param desc Member descriptor, can be null
      * @param matchAll True to match all matching members, not just the first
      */
     public MemberInfo(String name, String owner, String desc, boolean matchAll) {
@@ -429,7 +441,7 @@ public class MemberInfo {
      * @param newOwner New owner for this member
      */
     public MemberInfo move(String newOwner) {
-        if (newOwner.equals(this.owner)) {
+        if ((newOwner == null && this.owner == null) || (newOwner != null && newOwner.equals(this.owner))) {
             return this;
         }
         return new MemberInfo(this, newOwner); 

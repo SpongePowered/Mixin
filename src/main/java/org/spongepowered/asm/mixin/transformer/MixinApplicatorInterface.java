@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinE
  * Applicator for interface mixins, mainly just disables things which aren't
  * supported for interface mixins
  */
-public class MixinApplicatorInterface extends MixinApplicatorStandard {
+class MixinApplicatorInterface extends MixinApplicatorStandard {
 
     /**
      * ctor

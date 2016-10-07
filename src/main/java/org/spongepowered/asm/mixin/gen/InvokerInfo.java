@@ -22,37 +22,44 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.meta;
+package org.spongepowered.asm.mixin.gen;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * Information about an invoker
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
+public class InvokerInfo extends AccessorInfo {
+
+    public InvokerInfo(MixinTargetContext mixin, MethodNode method) {
+        super(mixin, method, Invoker.class);
+    }
+
+    @Override
+    protected AccessorType initType() {
+        return AccessorType.METHOD_PROXY;
+    }
     
-    /**
-     * Mixin which merged this method
-     * 
-     * @return mixin name 
-     */
-    public String mixin();
+    @Override
+    protected Type initTargetFieldType() {
+        return null;
+    }
     
-    /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
-     * 
-     * @return mixin priority
-     */
-    public int priority();
+    @Override
+    protected MemberInfo initTarget() {
+        return new MemberInfo(this.getTargetName(), null, this.method.desc);
+    }
+    
+    @Override
+    public void locate() {
+        this.targetMethod = this.findTargetMethod();
+    }
+
+    private MethodNode findTargetMethod() {
+        return this.<MethodNode>findTarget(this.classNode.methods);
+    }
+
 }

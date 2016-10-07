@@ -26,6 +26,9 @@ package org.spongepowered.tools.obfuscation;
 
 import javax.lang.model.element.VariableElement;
 
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
+import org.spongepowered.tools.MirrorUtils;
+
 /**
  * Retrieved from a {@link TypeHandle} when searching for fields
  */
@@ -72,4 +75,9 @@ class FieldHandle {
     public boolean isRawType() {
         return this.rawType;
     }
+
+    public MappingField asMapping() {
+        return new MappingField(null, this.element.getSimpleName().toString(), MirrorUtils.getInternalName(this.element));
+    }
+    
 }

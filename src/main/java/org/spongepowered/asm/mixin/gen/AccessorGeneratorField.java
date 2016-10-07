@@ -22,37 +22,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.meta;
+package org.spongepowered.asm.mixin.gen;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.tree.FieldNode;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * Accessor generator for field accessors
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
+public abstract class AccessorGeneratorField extends AccessorGenerator {
     
     /**
-     * Mixin which merged this method
-     * 
-     * @return mixin name 
+     * The target field, identified by the accessor info
      */
-    public String mixin();
+    protected final FieldNode targetField;
     
     /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
-     * 
-     * @return mixin priority
+     * The type of the target member
      */
-    public int priority();
+    protected final Type targetType;
+
+    /**
+     * True for instance field, false for static field 
+     */
+    protected final boolean isInstanceField;
+
+    public AccessorGeneratorField(AccessorInfo info) {
+        super(info);
+        this.targetField = info.getTargetField();
+        this.targetType = info.getTargetFieldType();
+        this.isInstanceField = (this.targetField.access & Opcodes.ACC_STATIC) == 0;
+    }
+
 }

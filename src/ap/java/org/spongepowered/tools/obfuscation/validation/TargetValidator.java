@@ -27,12 +27,15 @@ package org.spongepowered.tools.obfuscation.validation;
 import java.util.Collection;
 
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
@@ -74,6 +77,19 @@ public class TargetValidator extends MixinValidator {
     }
 
     private void validateInterfaceMixin(TypeElement mixin, Collection<TypeHandle> targets) {
+        boolean containsNonAccessorMethod = false;
+        for (Element element : mixin.getEnclosedElements()) {
+            if (element.getKind() == ElementKind.METHOD) {
+                boolean isAccessor = MirrorUtils.getAnnotation(element, Accessor.class) != null;
+                boolean isInvoker = MirrorUtils.getAnnotation(element, Invoker.class) != null;
+                containsNonAccessorMethod |= (!isAccessor && !isInvoker);
+            }
+        }
+        
+        if (!containsNonAccessorMethod) {
+            return;
+        }
+        
         for (TypeHandle target : targets) {
             TypeElement targetType = target.getElement();
             if (targetType != null && !(targetType.getKind() == ElementKind.INTERFACE)) {

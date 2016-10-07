@@ -43,10 +43,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -55,11 +52,11 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.throwables.ClassAlreadyLoadedException;
 import org.spongepowered.asm.mixin.throwables.MixinApplyError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.throwables.MixinPrepareError;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTransformerModuleCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.debug.IDecompiler;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
@@ -492,7 +489,7 @@ public class MixinTransformer extends TreeTransformer {
             for (MixinConfig config : this.configs) {
                 if (config.packageMatch(transformedName)) {
                     if (config.canPassThrough(transformedName)) {
-                        return this.passThrough(name, transformedName, basicClass);
+                        return this.passThrough(config, name, transformedName, basicClass);
                     }
                     invalidRef = true;
                     continue;
@@ -678,36 +675,18 @@ public class MixinTransformer extends TreeTransformer {
     }
 
     /**
-     * "Pass through" a synthetic inner class. Transforms package-private
-     * members in the class into public so that they are accessible from their
-     * new home in the target class
+     * Pass a class through a specific config, used to access classes within a
+     * mixin package through a pinhole
      * 
+     * @param config 
      * @param name original class name
      * @param transformedName deobfuscated class name
      * @param basicClass class bytecode
      * @return public-ified class bytecode
      */
-    private byte[] passThrough(String name, String transformedName, byte[] basicClass) {
-        ClassNode passThroughClass = this.readClass(basicClass, true);
-        
-        // Make the class public
-        passThroughClass.access |= Opcodes.ACC_PUBLIC;
-        
-        // Make package-private fields public
-        for (FieldNode field : passThroughClass.fields) {
-            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                field.access |= Opcodes.ACC_PUBLIC;
-            }
-        }
-        
-        // Make package-private methods public
-        for (MethodNode method : passThroughClass.methods) {
-            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                method.access |= Opcodes.ACC_PUBLIC;
-            }
-        }
-        
-        return this.writeClass(transformedName, passThroughClass, false);
+    private byte[] passThrough(MixinConfig config, String name, String transformedName, byte[] basicClass) {
+        ClassNode classNode = config.passThrough(transformedName, this.readClass(basicClass, true));
+        return this.writeClass(transformedName, classNode, false);
     }
 
     /**

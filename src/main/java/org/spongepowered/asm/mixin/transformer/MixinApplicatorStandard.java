@@ -68,7 +68,7 @@ import com.google.common.collect.ImmutableList;
 /**
  * Applies mixins to a target class
  */
-public class MixinApplicatorStandard {
+class MixinApplicatorStandard {
     
     /**
      * Annotations which can have constraints
@@ -289,6 +289,7 @@ public class MixinApplicatorStandard {
                 break;
                 
             case INJECT:
+                this.applyAccessors(mixin);
                 this.applyInjections(mixin);
                 break;
                 
@@ -379,24 +380,32 @@ public class MixinApplicatorStandard {
      */
     protected void applyMethods(MixinTargetContext mixin) {
         for (MethodNode shadow : mixin.getShadowMethods()) {
-            MethodNode target = this.findTargetMethod(shadow);
-            if (target != null) {
-                this.mergeAnnotations(shadow, target);
-            }
+            this.applyShadowMethod(mixin, shadow);
         }
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
-            // Reparent all mixin methods into the target class
-            mixin.transformMethod(mixinMethod);
+            this.applyNormalMethod(mixin, mixinMethod);
+        }
+    }
 
-            if (!mixinMethod.name.startsWith("<")) {
-                this.checkMethodVisibility(mixin, mixinMethod);
-                this.checkMethodConstraints(mixin, mixinMethod);
-                this.mergeMethod(mixin, mixinMethod);
-            } else if (Constants.CLINIT.equals(mixinMethod.name)) {
-                // Class initialiser insns get appended
-                this.appendInsns(mixinMethod);
-            }
+    protected void applyShadowMethod(MixinTargetContext mixin, MethodNode shadow) {
+        MethodNode target = this.findTargetMethod(shadow);
+        if (target != null) {
+            this.mergeAnnotations(shadow, target);
+        }
+    }
+
+    protected void applyNormalMethod(MixinTargetContext mixin, MethodNode mixinMethod) {
+        // Reparent all mixin methods into the target class
+        mixin.transformMethod(mixinMethod);
+
+        if (!mixinMethod.name.startsWith("<")) {
+            this.checkMethodVisibility(mixin, mixinMethod);
+            this.checkMethodConstraints(mixin, mixinMethod);
+            this.mergeMethod(mixin, mixinMethod);
+        } else if (Constants.CLINIT.equals(mixinMethod.name)) {
+            // Class initialiser insns get appended
+            this.appendInsns(mixinMethod);
         }
     }
 
@@ -859,6 +868,20 @@ public class MixinApplicatorStandard {
      */
     protected void applyInjections(MixinTargetContext mixin) {
         mixin.applyInjections();
+    }
+    
+    /**
+     * Apply all accessors discovered during preprocessing
+     * 
+     * @param mixin Mixin being applied
+     */
+    protected void applyAccessors(MixinTargetContext mixin) {
+        List<MethodNode> accessorMethods = mixin.generateAccessors();
+        for (MethodNode method : accessorMethods) {
+            if (!method.name.startsWith("<")) {
+                this.mergeMethod(mixin, method);
+            }
+        }
     }
 
     /**

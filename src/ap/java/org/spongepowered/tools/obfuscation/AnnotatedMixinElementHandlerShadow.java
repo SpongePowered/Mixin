@@ -34,7 +34,6 @@ import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
@@ -42,7 +41,7 @@ import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 /**
  * A module for {@link AnnotatedMixin} which handles shadowed fields and methods
  */
-class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
     
     /**
      * A shadow element to be processed
@@ -56,15 +55,12 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         
         private final ShadowElementName name;
         
-        private final String desc;
-
         private final Type type;
 
         protected AnnotatedElementShadow(E element, AnnotationMirror annotation, boolean shouldRemap, Type type) {
             super(element, annotation);
             this.shouldRemap = shouldRemap;
             this.name = new ShadowElementName(element, annotation);
-            this.desc = MirrorUtils.getDescriptor(element);
             this.type = type;
         }
         
@@ -76,10 +72,6 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
             return this.name;
         }
 
-        public String getDesc() {
-            return this.desc;
-        }
-        
         public Type getElementType() {
             return this.type;
         }
@@ -123,7 +115,7 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         
         @Override
         public void addMapping(ObfuscationType type, IMapping<?> remapped) {
-            AnnotatedMixinShadowHandler.this.addFieldMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
+            AnnotatedMixinElementHandlerShadow.this.addFieldMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
         }
 
     }
@@ -144,12 +136,12 @@ class AnnotatedMixinShadowHandler extends AnnotatedMixinElementHandler {
         
         @Override
         public void addMapping(ObfuscationType type, IMapping<?> remapped) {
-            AnnotatedMixinShadowHandler.this.addMethodMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
+            AnnotatedMixinElementHandlerShadow.this.addMethodMapping(type, this.setObfuscatedName(remapped), this.getDesc(), remapped.getDesc());
         }
 
     }
 
-    AnnotatedMixinShadowHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
+    AnnotatedMixinElementHandlerShadow(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 

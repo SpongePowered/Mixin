@@ -31,38 +31,26 @@ import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
  * A module for {@link AnnotatedMixin} which handles method overwrites
  */
-class AnnotatedMixinOverwriteHandler extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler {
     
     /**
      * Overwrite element
      */
     static class AnnotatedElementOverwrite extends AnnotatedElement<ExecutableElement> {
         
-        private final String desc;
-
         public AnnotatedElementOverwrite(ExecutableElement element, AnnotationMirror annotation) {
             super(element, annotation);
-            this.desc = MirrorUtils.getDescriptor(element);
-        }
-        
-        public String getSimpleName() {
-            return this.getElement().getSimpleName().toString();
-        }
-        
-        public String getDesc() {
-            return this.desc;
         }
 
     }
     
-    AnnotatedMixinOverwriteHandler(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
+    AnnotatedMixinElementHandlerOverwrite(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
