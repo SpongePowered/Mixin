@@ -40,6 +40,9 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
+import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
@@ -208,26 +211,30 @@ class MixinPreProcessorStandard {
                 continue;
             }
             
-            if (mixinMethod.isInjector()) {
+            if (this.attachInjectorMethod(context, mixinMethod)) {
                 continue;
             }
             
-            if (this.processShadowMethod(context, mixinMethod)) {
-                iter.remove();
-                context.addShadowMethod(mixinMethod);
-                continue;
-            }
-
-            if (this.processOverwriteMethod(context, mixinMethod)) {
-                continue;
-            }
-
-            if (this.processUniqueMethod(context, mixinMethod)) {
+            if (this.attachAccessorMethod(context, mixinMethod)) {
                 iter.remove();
                 continue;
             }
             
-            this.processMethod(mixinMethod);
+            if (this.attachShadowMethod(context, mixinMethod)) {
+                iter.remove();
+                continue;
+            }
+
+            if (this.attachOverwriteMethod(context, mixinMethod)) {
+                continue;
+            }
+
+            if (this.attachUniqueMethod(context, mixinMethod)) {
+                iter.remove();
+                continue;
+            }
+            
+            this.attachMethod(mixinMethod);
         }
     }
 
@@ -235,33 +242,60 @@ class MixinPreProcessorStandard {
         return true;
     }
 
-    protected boolean processShadowMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        return this.processSpecialMethod(context, mixinMethod, Shadow.class, false);
+    protected boolean attachInjectorMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+        return mixinMethod.isInjector();
     }
-    
-    protected boolean processOverwriteMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        return this.processSpecialMethod(context, mixinMethod, Overwrite.class, true);
+
+    protected boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+        return this.attachAccessorMethod(context, mixinMethod, Accessor.class) || this.attachAccessorMethod(context, mixinMethod, Invoker.class);
     }
-    
-    protected boolean processSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type,
-            boolean overwrite) {
-        
-        AnnotationNode annotation = ASMHelper.getVisibleAnnotation(mixinMethod, type);
+
+    private boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type);
         if (annotation == null) {
             return false;
         }
         
-        if (this.mixin.isUnique() && overwrite) {
-            throw new InvalidMixinException(this.mixin, "@Overwrite method " + mixinMethod.name + " found in a @Unique mixin");
+        Method method = this.getSpecialMethod(mixinMethod, type);
+        if (!method.isAbstract()) {
+            throw new InvalidAccessorException(context, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " is not abstract");
+        }
+
+        if (method.isStatic()) {
+            throw new InvalidAccessorException(context, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be static");
         }
         
-        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+        context.addAccessorMethod(mixinMethod, type);
+        return true;
+    }
+
+    protected boolean attachShadowMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+        if (this.attachSpecialMethod(context, mixinMethod, Shadow.class, false)) {
+            context.addShadowMethod(mixinMethod);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    protected boolean attachOverwriteMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+        return this.attachSpecialMethod(context, mixinMethod, Overwrite.class, true);
+    }
+    
+    protected boolean attachSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type,
+            boolean overwrite) {
+        
+        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type);
+        if (annotation == null) {
+            return false;
+        }
+        
+        if (overwrite) {
+            this.checkMixinNotUnique(mixinMethod, type);
+        }
+        
+        Method method = this.getSpecialMethod(mixinMethod, type);
         MethodNode target = context.findMethod(mixinMethod, annotation);
-        
-        if (method.isUnique()) {
-            throw new InvalidMixinException(this.mixin, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be @Unique");
-        }
-        
         if (target == null) {
             if (overwrite) {
                 return false;
@@ -275,7 +309,7 @@ class MixinPreProcessorStandard {
         }
         
         if (Constants.CTOR.equals(target.name)) {
-            throw new InvalidMixinException(this.mixin, "Nice try! Cannot alias a constructor!");
+            throw new InvalidMixinException(this.mixin, "Nice try! " + mixinMethod.name + " cannot alias a constructor!");
         }
         
         if (!target.name.equals(mixinMethod.name)) {
@@ -289,7 +323,27 @@ class MixinPreProcessorStandard {
         return true;
     }
 
-    protected boolean processUniqueMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+    protected Method getSpecialMethod(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+        Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
+        this.checkMethodNotUnique(type, method);
+        return method;
+    }
+
+    protected void checkMethodNotUnique(Class<? extends Annotation> type, Method method) {
+        if (method.isUnique()) {
+            String annotation = "@" + ASMHelper.getSimpleName(type);
+            throw new InvalidMixinException(this.mixin, annotation + " method " + method.getName() + " cannot be @Unique");
+        }
+    }
+
+    protected void checkMixinNotUnique(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+        if (this.mixin.isUnique()) {
+            String annotation = "@" + ASMHelper.getSimpleName(type);
+            throw new InvalidMixinException(this.mixin, annotation + " method " + mixinMethod.name + " found in a @Unique mixin");
+        }
+    }
+
+    protected boolean attachUniqueMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
         if (method == null || (!method.isUnique() && !this.mixin.isUnique())) {
             return false;
@@ -319,7 +373,7 @@ class MixinPreProcessorStandard {
         return true;
     }
     
-    protected void processMethod(MixinMethodNode mixinMethod) {
+    protected void attachMethod(MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
         if (method == null) {
             return;

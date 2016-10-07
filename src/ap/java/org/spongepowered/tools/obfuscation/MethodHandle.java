@@ -26,6 +26,9 @@ package org.spongepowered.tools.obfuscation;
 
 import javax.lang.model.element.ExecutableElement;
 
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.tools.MirrorUtils;
+
 /**
  * Retrieved from a {@link TypeHandle} when searching for methods
  */
@@ -52,6 +55,10 @@ class MethodHandle {
      */
     public ExecutableElement getElement() {
         return this.element;
+    }
+
+    public MappingMethod asMapping() {
+        return new MappingMethod(null, this.element.getSimpleName().toString(), MirrorUtils.getDescriptor(this.element));
     }
 
 }

@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -57,6 +58,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
@@ -100,7 +102,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
 
         public boolean isSurrogate() {
-            return ASMHelper.getVisibleAnnotation(this, Surrogate.class) != null;
+            return this.getVisibleAnnotation(Surrogate.class) != null;
+        }
+
+        public AnnotationNode getVisibleAnnotation(Class<? extends Annotation> annotationClass) {
+            return ASMHelper.getVisibleAnnotation(this, annotationClass);
         }
 
         public AnnotationNode getInjectorAnnotation() {
@@ -277,7 +283,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.validateRemappables(targetClasses);
 
             // Read information from the mixin
-            this.readImplementations();
+            this.readImplementations(type);
             this.readInnerClasses();
             
             // Takeoff validation
@@ -334,8 +340,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         /**
          * Read and process any {@link Implements} annotations on the mixin
          */
-        void readImplementations() {
+        void readImplementations(SubType type) {
             this.interfaces.addAll(this.classNode.interfaces);
+            this.interfaces.addAll(type.getInterfaces());
             
             AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(this.classNode, Implements.class);
             if (implementsAnnotation == null) {
@@ -454,6 +461,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.targetMustBeInterface = targetMustBeInterface;
         }
         
+        Collection<String> getInterfaces() {
+            return Collections.<String>emptyList();
+        }
+
         /**
          * Get whether this mixin is detached super, must call {@link #validate}
          * first
@@ -463,7 +474,16 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         boolean isDetachedSuper() {
             return this.detached;
         }
-        
+
+        /**
+         * True if this mixin class can actually be classloaded
+         * 
+         * @return
+         */
+        boolean isLoadable() {
+            return false;
+        }
+
         /**
          * Validate a single target before adding
          * 
@@ -555,7 +575,74 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             MixinPreProcessorStandard createPreProcessor(MixinClassNode classNode) {
                 return new MixinPreProcessorInterface(this.mixin, classNode);
             }
+            
         }
+        
+        /**
+         * An accessor mixin
+         */
+        static class Accessor extends SubType {
+            
+            private final Collection<String> interfaces = new ArrayList<String>();
+
+            Accessor(MixinInfo info) {
+                super(info, "@Mixin", false);
+                this.interfaces.add(info.getClassRef());
+            }
+            
+            @Override
+            boolean isLoadable() {
+                return true;
+            }
+            
+            @Override
+            Collection<String> getInterfaces() {
+                return this.interfaces;
+            }
+            
+            @Override
+            void validateTarget(String targetName, ClassInfo targetInfo) {
+                boolean targetIsInterface = targetInfo.isInterface();
+                if (targetIsInterface && !MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces()) {
+                    throw new InvalidMixinException(this.mixin, "Accessor mixin targetting an interface is not supported in current enviromnment");
+                }
+            }
+            
+            @Override
+            void validate(State state, List<ClassInfo> targetClasses) {
+                ClassNode classNode = state.getClassNode();
+                
+                if (!"java/lang/Object".equals(classNode.superName)) {
+                    throw new InvalidMixinException(this.mixin, "Super class of " + this + " is invalid, found " 
+                            + classNode.superName.replace('/', '.'));
+                }
+            }
+            
+            @Override
+            MixinPreProcessorStandard createPreProcessor(MixinClassNode classNode) {
+                return new MixinPreProcessorAccessor(this.mixin, classNode);
+            }
+        }
+
+        static SubType getTypeFor(MixinInfo mixin) {
+            if (!mixin.getClassInfo().isInterface()) {
+                return new SubType.Standard(mixin);
+            }
+            
+            boolean containsNonAccessorMethod = false;
+            for (Method method : mixin.getClassInfo().getMethods()) {
+                containsNonAccessorMethod |= !method.isAccessor();
+            }
+            
+            if (containsNonAccessorMethod) {
+                // If the mixin contains any other methods, treat it as a regular interface mixin
+                return new SubType.Interface(mixin);
+            }
+            
+            // The mixin contains no non-accessor methods, so we can treat it as an accessor
+            return new SubType.Accessor(mixin);
+        }
+
     }
     
     /**
@@ -666,11 +753,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             byte[] mixinBytes = this.loadMixinClass(this.className, runTransformers);
             this.pendingState = new State(mixinBytes);
             this.info = this.pendingState.getClassInfo();
-            this.type = this.initType();
+            this.type = SubType.getTypeFor(this);
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new InvalidMixinException(this, ex);
+        }
+        
+        if (!this.type.isLoadable()) {
+            // Inject the mixin class name into the LaunchClassLoader's invalid
+            // classes set so that any classes referencing the mixin directly will
+            // cause the game to crash
+            MixinInfo.classLoaderUtil.registerInvalidClass(this.className);
         }
         
         // Read the class bytes and transform
@@ -683,18 +777,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         } catch (Exception ex) {
             throw new InvalidMixinException(this, ex);
         }
-    }
-    
-    /**
-     * Initialise the mixin subtype handler
-     * 
-     * @return subtype
-     */
-    private SubType initType() {
-        if (this.info.isInterface()) {
-            return new SubType.Interface(this);
-        }
-        return new SubType.Standard(this);
     }
 
     /**
@@ -911,6 +993,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     /**
+     * True if the mixin class is actually class-loadable
+     */
+    public boolean isLoadable() {
+        return this.type.isLoadable();
+    }
+    
+    /**
      * Get the logging level for this mixin
      */
     public Level getLoggingLevel() {
@@ -1000,11 +1089,6 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             throw new InvalidMixinException(this, "An error was encountered whilst loading the mixin class", ex);
         }
         
-        // Inject the mixin class name into the LaunchClassLoader's invalid
-        // classes set so that any classes referencing the mixin directly will
-        // cause the game to crash
-        MixinInfo.classLoaderUtil.registerInvalidClass(mixinClassName);
-
         return mixinBytes;
     }
 

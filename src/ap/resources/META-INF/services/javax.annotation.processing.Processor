@@ -1,2 +1,2 @@
-org.spongepowered.tools.obfuscation.TargetObfuscationProcessor
-org.spongepowered.tools.obfuscation.InjectionObfuscationProcessor
+org.spongepowered.tools.obfuscation.MixinObfuscationProcessorInjection
+org.spongepowered.tools.obfuscation.MixinObfuscationProcessorTargets

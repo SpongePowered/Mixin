@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
@@ -47,6 +48,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -128,7 +130,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * Injectors for this target 
      */
     private final List<InjectionInfo> injectors = new ArrayList<InjectionInfo>();
-    
+
+    /**
+     * Accessor method list
+     */
+    private final List<AccessorInfo> accessors = new ArrayList<AccessorInfo>();
+
     /**
      * True if this mixin inherits from a mixin at any point in its hierarchy 
      */
@@ -178,6 +185,13 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.shadowFields.put(fieldNode, fieldInfo);
     }
     
+    /**
+     * @param method
+     */
+    void addAccessorMethod(MethodNode method, Class<? extends Annotation> type) {
+        this.accessors.add(AccessorInfo.of(this, method, type));
+    }
+
     /**
      * Callback from the applicator which notifies us that a method was merged
      * 
@@ -1016,4 +1030,17 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.injectors.clear();
     }
 
+    public List<MethodNode> generateAccessors() {
+        for (AccessorInfo accessor : this.accessors) {
+            accessor.locate();
+        }
+        
+        List<MethodNode> methods = new ArrayList<MethodNode>();
+        
+        for (AccessorInfo accessor : this.accessors) {
+            methods.add(accessor.generate());
+        }
+        
+        return methods;
+    }
 }

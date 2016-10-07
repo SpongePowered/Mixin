@@ -42,15 +42,17 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjectionPoint;
-import org.spongepowered.tools.obfuscation.AnnotatedMixinInjectorHandler.AnnotatedElementInjector;
-import org.spongepowered.tools.obfuscation.AnnotatedMixinOverwriteHandler.AnnotatedElementOverwrite;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementAccessor;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementInvoker;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjectionPoint;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjector;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerOverwrite.AnnotatedElementOverwrite;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
-import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
+import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.struct.Message;
 
 /**
@@ -116,17 +118,22 @@ class AnnotatedMixin {
     /**
      * Overwrite handler
      */
-    private final AnnotatedMixinOverwriteHandler overwrites;
+    private final AnnotatedMixinElementHandlerOverwrite overwrites;
     
     /**
      * Shadow handler
      */
-    private final AnnotatedMixinShadowHandler shadows;
+    private final AnnotatedMixinElementHandlerShadow shadows;
     
     /**
      * Injector handler
      */
-    private final AnnotatedMixinInjectorHandler injectors;
+    private final AnnotatedMixinElementHandlerInjector injectors;
+    
+    /**
+     * Accessor handler 
+     */
+    private final AnnotatedMixinElementHandlerAccessor accessors;
 
     public AnnotatedMixin(IMixinAnnotationProcessor ap, TypeElement type) {
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
@@ -140,9 +147,10 @@ class AnnotatedMixin {
         this.primaryTarget = this.initTargets();
         this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
         
-        this.overwrites = new AnnotatedMixinOverwriteHandler(ap, this);
-        this.shadows = new AnnotatedMixinShadowHandler(ap, this);
-        this.injectors = new AnnotatedMixinInjectorHandler(ap, this);
+        this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
+        this.shadows = new AnnotatedMixinElementHandlerShadow(ap, this);
+        this.injectors = new AnnotatedMixinElementHandlerInjector(ap, this);
+        this.accessors = new AnnotatedMixinElementHandlerAccessor(ap, this);
     }
 
     AnnotatedMixin runValidators(ValidationPass pass, Collection<IMixinValidator> validators) {
@@ -316,6 +324,14 @@ class AnnotatedMixin {
 
     public int registerInjectionPoint(ExecutableElement element, AnnotationMirror inject, AnnotationMirror at) {
         return this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at));
+    }
+
+    public void registerAccessor(ExecutableElement element, AnnotationMirror accessor) {
+        this.accessors.registerAccessor(new AnnotatedElementAccessor(element, accessor));
+    }
+
+    public void registerInvoker(ExecutableElement element, AnnotationMirror invoker) {
+        this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker));
     }
     
 }

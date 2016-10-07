@@ -22,37 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.meta;
+package org.spongepowered.asm.mixin.transformer;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * Bytecode preprocessor for accessor mixins 
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
-    
-    /**
-     * Mixin which merged this method
-     * 
-     * @return mixin name 
-     */
-    public String mixin();
-    
-    /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
-     * 
-     * @return mixin priority
-     */
-    public int priority();
+class MixinPreProcessorAccessor extends MixinPreProcessorInterface {
+
+    public MixinPreProcessorAccessor(MixinInfo mixin, MixinClassNode classNode) {
+        super(mixin, classNode);
+    }
+
 }

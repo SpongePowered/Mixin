@@ -54,7 +54,7 @@ import org.spongepowered.tools.MirrorUtils;
     "org.spongepowered.asm.mixin.injection.Redirect",
     "org.spongepowered.asm.mixin.injection.At"
 })
-public class InjectionObfuscationProcessor extends MixinProcessor {
+public class MixinObfuscationProcessorInjection extends MixinObfuscationProcessor {
     
     /* (non-Javadoc)
      * @see javax.annotation.processing.AbstractProcessor

@@ -38,14 +38,21 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.gen.Accessor;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.tools.MirrorUtils;
 
 /**
  * Annotation processor which finds {@link Shadow} and {@link Overwrite}
  * annotations in mixin classes and generates new obfuscation mappings
  */
-@SupportedAnnotationTypes({ "org.spongepowered.asm.mixin.Mixin", "org.spongepowered.asm.mixin.Shadow", "org.spongepowered.asm.mixin.Overwrite" })
-public class TargetObfuscationProcessor extends MixinProcessor {
+@SupportedAnnotationTypes({
+    "org.spongepowered.asm.mixin.Mixin",
+    "org.spongepowered.asm.mixin.Shadow",
+    "org.spongepowered.asm.mixin.Overwrite",
+    "org.spongepowered.asm.mixin.gen.Accessor"
+})
+public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor {
     
     /* (non-Javadoc)
      * @see javax.annotation.processing.AbstractProcessor
@@ -61,6 +68,8 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         this.processMixins(roundEnv);
         this.processShadows(roundEnv);
         this.processOverwrites(roundEnv);
+        this.processAccessors(roundEnv);
+        this.processInvokers(roundEnv);
         this.postProcess(roundEnv);
         
         return true;
@@ -71,6 +80,7 @@ public class TargetObfuscationProcessor extends MixinProcessor {
         super.postProcess(roundEnv);
         
         try {
+            this.mixins.writeReferences();
             this.mixins.writeMappings();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -115,6 +125,46 @@ public class TargetObfuscationProcessor extends MixinProcessor {
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerOverwrite((TypeElement)parent, (ExecutableElement)elem);
+            } else {
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+            }
+        }
+    }
+    
+    /**
+     * Searches for {@link Accessor} annotations and registers them with their
+     * parent mixins
+     */
+    private void processAccessors(RoundEnvironment roundEnv) {
+        for (Element elem : roundEnv.getElementsAnnotatedWith(Accessor.class)) {
+            Element parent = elem.getEnclosingElement();
+            if (!(parent instanceof TypeElement)) {
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                continue;
+            }
+            
+            if (elem.getKind() == ElementKind.METHOD) {
+                this.mixins.registerAccessor((TypeElement)parent, (ExecutableElement)elem);
+            } else {
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+            }
+        }
+    }
+    
+    /**
+     * Searches for {@link Invoker} annotations and registers them with their
+     * parent mixins
+     */
+    private void processInvokers(RoundEnvironment roundEnv) {
+        for (Element elem : roundEnv.getElementsAnnotatedWith(Invoker.class)) {
+            Element parent = elem.getEnclosingElement();
+            if (!(parent instanceof TypeElement)) {
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                continue;
+            }
+            
+            if (elem.getKind() == ElementKind.METHOD) {
+                this.mixins.registerInvoker((TypeElement)parent, (ExecutableElement)elem);
             } else {
                 this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
             }
