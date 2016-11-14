@@ -56,8 +56,8 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
      */
     @Override
     protected void prepareMethod(MixinMethodNode mixinMethod, Method method) {
-        // I have no idea how the hell you'd compile this, but we make sure anyway!
-        if (!ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
+        // Userland interfaces should not have non-public methods except for lambda bodies
+        if (!ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC) && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "
                     + this.mixin);
         }
