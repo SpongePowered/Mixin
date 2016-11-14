@@ -683,8 +683,12 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter add(Throwable th, int indent) {
-        this.add("%s: %s", th.getClass().getName(), th.getMessage());
-        return this.add(th.getStackTrace(), indent);
+        while (th != null) {
+            this.add("%s: %s", th.getClass().getName(), th.getMessage());
+            this.add(th.getStackTrace(), indent);
+            th = th.getCause();
+        }
+        return this;
     }
     
     /**
