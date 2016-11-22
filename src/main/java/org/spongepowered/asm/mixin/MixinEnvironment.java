@@ -361,6 +361,20 @@ public final class MixinEnvironment implements ITokenProvider {
         CHECK_IMPLEMENTS(Option.CHECK_ALL, "interfaces"),
         
         /**
+         * If interface check is enabled, "strict mode" (default) applies the
+         * implementation check even to abstract target classes. Setting this
+         * option to <tt>false</tt> causes abstract targets to be skipped when
+         * generating the implementation report.
+         */
+        CHECK_IMPLEMENTS_STRICT(Option.CHECK_IMPLEMENTS, "strict") {
+            @Override
+            boolean getBooleanValue() {
+                // Allow a local FALSE to override a parent TRUE
+                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
+            }
+        },
+        
+        /**
          * Ignore all constraints on mixin annotations, output warnings instead
          */
         IGNORE_CONSTRAINTS("ignoreConstraints"),

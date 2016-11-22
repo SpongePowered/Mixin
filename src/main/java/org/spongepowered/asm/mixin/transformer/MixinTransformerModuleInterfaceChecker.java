@@ -34,6 +34,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
@@ -50,6 +54,8 @@ import com.google.common.io.Files;
  * implemented and generates reports to the console and to files on disk
  */
 public class MixinTransformerModuleInterfaceChecker implements IMixinTransformerModule {
+
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * CSV Report file
@@ -106,6 +112,12 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
     @Override
     public void postApply(TargetClassContext context) {
         ClassInfo targetClassInfo = context.getClassInfo();
+        
+        // If the target is abstract and strict mode is not enabled, skip this class
+        if (targetClassInfo.isAbstract() && !MixinEnvironment.getCurrentEnvironment().getOption(Option.CHECK_IMPLEMENTS_STRICT)) {
+            MixinTransformerModuleInterfaceChecker.logger.info("{} is skipping abstract target {}", this.getClass().getSimpleName(), context);
+            return;
+        }
 
         String className = targetClassInfo.getName().replace('/', '.');
         int missingMethodCount = 0;
