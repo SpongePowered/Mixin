@@ -67,6 +67,24 @@ public class ClassInfo extends TreeInfo {
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
     public static final int INCLUDE_ALL = ClassInfo.INCLUDE_PRIVATE | ClassInfo.INCLUDE_STATIC;
+    
+    /**
+     * Search type for the findInHierarchy methods, replaces a boolean flag
+     * which made calling code difficult to read
+     */
+    public static enum SearchType {
+        
+        /**
+         * Include this class when searching in the hierarchy
+         */
+        ALL_CLASSES,
+        
+        /**
+         * Only walk the superclasses when searching the hierarchy 
+         */
+        SUPER_CLASSES_ONLY
+        
+    }
 
     /**
      * <p>To all intents and purposes, the "real" class hierarchy and the mixin
@@ -88,31 +106,34 @@ public class ClassInfo extends TreeInfo {
         /**
          * No traversals are allowed.
          */
-        NONE(null, false),
+        NONE(null, false, SearchType.SUPER_CLASSES_ONLY),
 
         /**
          * Traversal is allowed at all stages.
          */
-        ALL(null, true),
+        ALL(null, true, SearchType.ALL_CLASSES),
 
         /**
          * Traversal is allowed at the bottom of the hierarchy but no further.
          */
-        IMMEDIATE(Traversal.NONE, true),
+        IMMEDIATE(Traversal.NONE, true, SearchType.SUPER_CLASSES_ONLY),
 
         /**
          * Traversal is allowed only on superclasses and not at the bottom of
          * the hierarchy.
          */
-        SUPER(Traversal.ALL, false);
+        SUPER(Traversal.ALL, false, SearchType.SUPER_CLASSES_ONLY);
 
         private final Traversal next;
 
         private final boolean traverse;
+        
+        private final SearchType searchType;
 
-        private Traversal(Traversal next, boolean traverse) {
+        private Traversal(Traversal next, boolean traverse, SearchType searchType) {
             this.next = next != null ? next : this;
             this.traverse = traverse;
+            this.searchType = searchType;
         }
 
         public Traversal next() {
@@ -122,6 +143,11 @@ public class ClassInfo extends TreeInfo {
         public boolean canTraverse() {
             return this.traverse;
         }
+        
+        public SearchType getSearchType() {
+            return this.searchType;
+        }
+
     }
 
     /**
@@ -1130,50 +1156,46 @@ public class ClassInfo extends TreeInfo {
      * Finds the specified private or protected method in this class's hierarchy
      *
      * @param method Method to search for
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodNode method, boolean includeThisClass) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE);
+    public Method findMethodInHierarchy(MethodNode method, SearchType searchType) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, Traversal.NONE);
     }
 
     /**
      * Finds the specified private or protected method in this class's hierarchy
      *
      * @param method Method to search for
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodNode method, boolean includeThisClass, int flags) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, flags);
+    public Method findMethodInHierarchy(MethodNode method, SearchType searchType, int flags) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, Traversal.NONE, flags);
     }
 
     /**
      * Finds the specified public or protected method in this class's hierarchy
      *
      * @param method Method to search for
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodInsnNode method, boolean includeThisClass) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE);
+    public Method findMethodInHierarchy(MethodInsnNode method, SearchType searchType) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, Traversal.NONE);
     }
 
     /**
      * Finds the specified public or protected method in this class's hierarchy
      *
      * @param method Method to search for
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(MethodInsnNode method, boolean includeThisClass, int flags) {
-        return this.findMethodInHierarchy(method.name, method.desc, includeThisClass, Traversal.NONE, flags);
+    public Method findMethodInHierarchy(MethodInsnNode method, SearchType searchType, int flags) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, Traversal.NONE, flags);
     }
 
     /**
@@ -1181,12 +1203,11 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Method name to search for
      * @param desc Method descriptor
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass) {
-        return this.findMethodInHierarchy(name, desc, includeThisClass, Traversal.NONE);
+    public Method findMethodInHierarchy(String name, String desc, SearchType searchType) {
+        return this.findMethodInHierarchy(name, desc, searchType, Traversal.NONE);
     }
 
     /**
@@ -1194,13 +1215,12 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Method name to search for
      * @param desc Method descriptor
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param traversal Traversal type to allow during this lookup
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal) {
-        return this.findMethodInHierarchy(name, desc, includeThisClass, traversal, 0);
+    public Method findMethodInHierarchy(String name, String desc, SearchType searchType, Traversal traversal) {
+        return this.findMethodInHierarchy(name, desc, searchType, traversal, 0);
     }
 
     /**
@@ -1208,64 +1228,59 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Method name to search for
      * @param desc Method descriptor
-     * @param includeThisClass True to return this class if the method exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param traversal Traversal type to allow during this lookup
      * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
-    public Method findMethodInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags) {
-        return this.findInHierarchy(name, desc, includeThisClass, traversal, flags, Type.METHOD);
+    public Method findMethodInHierarchy(String name, String desc, SearchType searchType, Traversal traversal, int flags) {
+        return this.findInHierarchy(name, desc, searchType, traversal, flags, Type.METHOD);
     }
 
     /**
      * Finds the specified private or protected field in this class's hierarchy
      *
      * @param field Field to search for
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldNode field, boolean includeThisClass) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE);
+    public Field findFieldInHierarchy(FieldNode field, SearchType searchType) {
+        return this.findFieldInHierarchy(field.name, field.desc, searchType, Traversal.NONE);
     }
 
     /**
      * Finds the specified private or protected field in this class's hierarchy
      *
      * @param field Field to search for
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldNode field, boolean includeThisClass, int flags) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, flags);
+    public Field findFieldInHierarchy(FieldNode field, SearchType searchType, int flags) {
+        return this.findFieldInHierarchy(field.name, field.desc, searchType, Traversal.NONE, flags);
     }
 
     /**
      * Finds the specified public or protected field in this class's hierarchy
      *
      * @param field Field to search for
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldInsnNode field, boolean includeThisClass) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE);
+    public Field findFieldInHierarchy(FieldInsnNode field, SearchType searchType) {
+        return this.findFieldInHierarchy(field.name, field.desc, searchType, Traversal.NONE);
     }
 
     /**
      * Finds the specified public or protected field in this class's hierarchy
      *
      * @param field Field to search for
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(FieldInsnNode field, boolean includeThisClass, int flags) {
-        return this.findFieldInHierarchy(field.name, field.desc, includeThisClass, Traversal.NONE, flags);
+    public Field findFieldInHierarchy(FieldInsnNode field, SearchType searchType, int flags) {
+        return this.findFieldInHierarchy(field.name, field.desc, searchType, Traversal.NONE, flags);
     }
 
     /**
@@ -1273,12 +1288,11 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Field name to search for
      * @param desc Field descriptor
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass) {
-        return this.findFieldInHierarchy(name, desc, includeThisClass, Traversal.NONE);
+    public Field findFieldInHierarchy(String name, String desc, SearchType searchType) {
+        return this.findFieldInHierarchy(name, desc, searchType, Traversal.NONE);
     }
 
     /**
@@ -1286,13 +1300,12 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Field name to search for
      * @param desc Field descriptor
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param traversal Traversal type to allow during this lookup
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal) {
-        return this.findFieldInHierarchy(name, desc, includeThisClass, traversal, 0);
+    public Field findFieldInHierarchy(String name, String desc, SearchType searchType, Traversal traversal) {
+        return this.findFieldInHierarchy(name, desc, searchType, traversal, 0);
     }
 
     /**
@@ -1300,14 +1313,13 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Field name to search for
      * @param desc Field descriptor
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param traversal Traversal type to allow during this lookup
      * @param flags search flags
      * @return the field object or null if the field could not be resolved
      */
-    public Field findFieldInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags) {
-        return this.findInHierarchy(name, desc, includeThisClass, traversal, flags, Type.FIELD);
+    public Field findFieldInHierarchy(String name, String desc, SearchType searchType, Traversal traversal, int flags) {
+        return this.findInHierarchy(name, desc, searchType, traversal, flags, Type.FIELD);
     }
 
     /**
@@ -1316,16 +1328,15 @@ public class ClassInfo extends TreeInfo {
      *
      * @param name Member name to search
      * @param desc Member descriptor
-     * @param includeThisClass True to return this class if the field exists
-     *      here, or false to search only superclasses
+     * @param searchType Search strategy to use
      * @param traversal Traversal type to allow during this lookup
      * @param flags Inclusion flags
      * @param type Type of member to search for (field or method)
      * @return the discovered member or null if the member could not be resolved
      */
     @SuppressWarnings("unchecked")
-    private <M extends Member> M findInHierarchy(String name, String desc, boolean includeThisClass, Traversal traversal, int flags, Type type) {
-        if (includeThisClass) {
+    private <M extends Member> M findInHierarchy(String name, String desc, SearchType searchType, Traversal traversal, int flags, Type type) {
+        if (searchType == SearchType.ALL_CLASSES) {
             M member = this.findMember(name, desc, flags, type);
             if (member != null) {
                 return member;
@@ -1344,7 +1355,8 @@ public class ClassInfo extends TreeInfo {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
             for (ClassInfo superTarget : superClassInfo.getTargets()) {
-                M member = superTarget.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
+                M member = superTarget.findInHierarchy(name, desc, SearchType.ALL_CLASSES, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE,
+                        type);
                 if (member != null) {
                     return member;
                 }
@@ -1359,7 +1371,7 @@ public class ClassInfo extends TreeInfo {
                     continue;
 //                    throw new RuntimeException(new ClassNotFoundException(implemented));
                 }
-                M member = iface.findInHierarchy(name, desc, true, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
+                M member = iface.findInHierarchy(name, desc, SearchType.ALL_CLASSES, traversal.next(), flags & ~ClassInfo.INCLUDE_PRIVATE, type);
                 if (member != null) {
                     return  this.isInterface ? member : (M)new InterfaceMethod(member);
                 }

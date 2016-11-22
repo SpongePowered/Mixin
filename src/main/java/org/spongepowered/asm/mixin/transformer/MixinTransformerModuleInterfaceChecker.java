@@ -35,6 +35,7 @@ import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -118,7 +119,7 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
         implementedMethods.addAll(this.interfaceMethods.removeAll(targetClassInfo));
 
         for (Method method : interfaceMethods) {
-            Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), true, Traversal.ALL);
+            Method found = targetClassInfo.findMethodInHierarchy(method.getName(), method.getDesc(), SearchType.ALL_CLASSES, Traversal.ALL);
 
             // If method IS found and IS implemented, then do nothing (don't print an error)
             if (found != null && !found.isAbstract()) {

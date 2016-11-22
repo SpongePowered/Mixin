@@ -58,6 +58,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationExcep
 import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
@@ -386,7 +387,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
     private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
-            ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, false, Traversal.SUPER);
+            ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, SearchType.SUPER_CLASSES_ONLY,
+                    Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.targetClass.getName());
@@ -658,7 +660,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         }
         
         ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(methodRef.getName(), methodRef.getDesc(),
-                traversal == Traversal.ALL, traversal);
+                traversal.getSearchType(), traversal);
         if (superMethod != null) {
             if (superMethod.getOwner().isMixin()) {
                 throw new InvalidMixinException(this, "Invalid " + methodRef + " in " + this + " resolved " + superMethod.getOwner()

@@ -45,6 +45,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -379,7 +380,7 @@ class MixinPreProcessorStandard {
             return;
         }
         
-        Method parentMethod = this.mixin.getClassInfo().findMethodInHierarchy(mixinMethod, false);
+        Method parentMethod = this.mixin.getClassInfo().findMethodInHierarchy(mixinMethod, SearchType.SUPER_CLASSES_ONLY);
         if (parentMethod != null && parentMethod.isRenamed()) {
             mixinMethod.name = method.renameTo(parentMethod.getName());
         }
@@ -510,7 +511,8 @@ class MixinPreProcessorStandard {
                 AbstractInsnNode insn = iter.next();
                 if (insn instanceof MethodInsnNode) {
                     MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    Method method = ClassInfo.forName(methodNode.owner).findMethodInHierarchy(methodNode, true, ClassInfo.INCLUDE_PRIVATE);
+                    Method method = ClassInfo.forName(methodNode.owner).findMethodInHierarchy(methodNode, SearchType.ALL_CLASSES,
+                            ClassInfo.INCLUDE_PRIVATE);
                     if (method != null && method.isRenamed()) {
                         methodNode.name = method.getName();
                     }
