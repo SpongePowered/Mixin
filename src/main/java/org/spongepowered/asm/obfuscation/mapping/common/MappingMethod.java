@@ -95,6 +95,14 @@ public class MappingMethod implements IMapping<MappingMethod> {
         return new MappingMethod(this.getOwner(), this.getSimpleName(), this.getDesc());
     }
     
+    public MappingMethod addPrefix(String prefix) {
+        String simpleName = this.getSimpleName();
+        if (simpleName == null || simpleName.startsWith(prefix)) {
+            return this;
+        }
+        return new MappingMethod(this.getOwner(), prefix + simpleName, this.getDesc());
+    }
+    
     @Override
     public int hashCode() {
         return Objects.hashCode(this.getName(), this.getDesc());

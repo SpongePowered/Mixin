@@ -41,6 +41,9 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.tools.MirrorUtils;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+
 /**
  * A wrapper for TypeElement which gives us a soft-failover mechanism when
  * dealing with classes that are inaccessible via mirror (such as anonymous
@@ -137,6 +140,34 @@ public class TypeHandle {
     public List<? extends Element> getEnclosedElements() {
         return this.element != null ? this.element.getEnclosedElements() : Collections.<Element>emptyList();
     }
+    
+    /**
+     * Returns enclosed elements (methods, fields, etc.) of a particular type
+     * 
+     * @param kind types of element to return
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends Element> List<T> getEnclosedElements(ElementKind... kind) {
+        if (kind == null || kind.length < 1) {
+            return (List<T>)this.getEnclosedElements();
+        }
+        
+        if (this.element == null) {
+            return Collections.<T>emptyList();
+        }
+        
+        Builder<T> list = ImmutableList.<T>builder();
+        for (Element elem : this.element.getEnclosedElements()) {
+            for (ElementKind ek : kind) {
+                if (elem.getKind() == ek) {
+                    list.add((T)elem);
+                    break;
+                }
+            }
+        }
+
+        return list.build();
+    }
 
     /**
      * Returns the enclosed element as a type mirror, or null if this is an
@@ -161,6 +192,19 @@ public class TypeHandle {
         }
         
         return new TypeHandle((DeclaredType)superClass);
+    }
+    
+    public List<TypeHandle> getInterfaces() {
+        if (this.element == null) {
+            return Collections.<TypeHandle>emptyList();
+        }
+        
+        Builder<TypeHandle> list = ImmutableList.<TypeHandle>builder();
+        for (TypeMirror iface : this.element.getInterfaces()) {
+            list.add(new TypeHandle((DeclaredType)iface));
+        }
+        
+        return list.build();
     }
 
     /**
@@ -187,13 +231,9 @@ public class TypeHandle {
     public String findDescriptor(MemberInfo memberInfo) {
         String desc = memberInfo.desc;
         if (desc == null) {
-            for (Element child : this.getEnclosedElements()) {
-                if (child.getKind() != ElementKind.METHOD) {
-                    continue;
-                }
-                
-                if (child.getSimpleName().toString().equals(memberInfo.name)) {
-                    desc = MirrorUtils.generateSignature((ExecutableElement)child);
+            for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
+                if (method.getSimpleName().toString().equals(memberInfo.name)) {
+                    desc = MirrorUtils.generateSignature(method);
                     break;
                 }
             }
@@ -246,12 +286,7 @@ public class TypeHandle {
     public FieldHandle findField(String name, String type, boolean caseSensitive) {
         String rawType = MirrorUtils.stripGenerics(type);
 
-        for (Element element : this.getEnclosedElements()) {
-            if (element.getKind() != ElementKind.FIELD) {
-                continue;
-            }
-            
-            VariableElement field = (VariableElement)element;
+        for (VariableElement field : this.<VariableElement>getEnclosedElements(ElementKind.FIELD)) {
             if (this.compareElement(field, name, type, caseSensitive)) {
                 return new FieldHandle(field);
             } else if (this.compareElement(field, name, rawType, caseSensitive)) {
@@ -307,23 +342,10 @@ public class TypeHandle {
     public MethodHandle findMethod(String name, String signature, boolean caseSensitive) {
         String rawSignature = MirrorUtils.stripGenerics(signature);
 
-        for (Element element : this.getEnclosedElements()) {
-            switch (element.getKind()) {
-                case CONSTRUCTOR:
-                case METHOD:
-                    ExecutableElement method = (ExecutableElement)element;
-                    if (this.compareElement(method, name, signature, caseSensitive)
-                            || this.compareElement(method, name, rawSignature, caseSensitive)) {
-                        return new MethodHandle(method);
-                    }
-                    
-                    break;
-//                case STATIC_INIT:  // TODO?
-//                    break;
-                default:
-                    break;
+        for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
+            if (this.compareElement(method, name, signature, caseSensitive) || this.compareElement(method, name, rawSignature, caseSensitive)) {
+                return new MethodHandle(method);
             }
-            
         }
         
         return null;

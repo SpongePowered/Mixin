@@ -134,6 +134,11 @@ class AnnotatedMixin {
      * Accessor handler 
      */
     private final AnnotatedMixinElementHandlerAccessor accessors;
+    
+    /**
+     * Soft implementation handler;
+     */
+    private final AnnotatedMixinElementHandlerSoftImplements softImplements;
 
     public AnnotatedMixin(IMixinAnnotationProcessor ap, TypeElement type) {
         this.annotation = MirrorUtils.getAnnotation(type, Mixin.class);
@@ -151,6 +156,7 @@ class AnnotatedMixin {
         this.shadows = new AnnotatedMixinElementHandlerShadow(ap, this);
         this.injectors = new AnnotatedMixinElementHandlerInjector(ap, this);
         this.accessors = new AnnotatedMixinElementHandlerAccessor(ap, this);
+        this.softImplements = new AnnotatedMixinElementHandlerSoftImplements(ap, this);
     }
 
     AnnotatedMixin runValidators(ValidationPass pass, Collection<IMixinValidator> validators) {
@@ -332,6 +338,10 @@ class AnnotatedMixin {
 
     public void registerInvoker(ExecutableElement element, AnnotationMirror invoker) {
         this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker));
+    }
+
+    public void registerSoftImplements(AnnotationMirror implementsAnnotation) {
+        this.softImplements.process(implementsAnnotation);
     }
     
 }

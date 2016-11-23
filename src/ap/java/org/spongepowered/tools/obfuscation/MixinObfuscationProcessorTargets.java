@@ -36,6 +36,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -50,7 +51,8 @@ import org.spongepowered.tools.MirrorUtils;
     "org.spongepowered.asm.mixin.Mixin",
     "org.spongepowered.asm.mixin.Shadow",
     "org.spongepowered.asm.mixin.Overwrite",
-    "org.spongepowered.asm.mixin.gen.Accessor"
+    "org.spongepowered.asm.mixin.gen.Accessor",
+    "org.spongepowered.asm.mixin.Implements"
 })
 public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor {
     
@@ -70,6 +72,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         this.processOverwrites(roundEnv);
         this.processAccessors(roundEnv);
         this.processInvokers(roundEnv);
+        this.processImplements(roundEnv);
         this.postProcess(roundEnv);
         
         return true;
@@ -170,4 +173,20 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
             }
         }
     }
+    
+    /**
+     * Searches for {@link Implements} annotations and registers them with their
+     * parent mixins
+     */
+    private void processImplements(RoundEnvironment roundEnv) {
+        for (Element elem : roundEnv.getElementsAnnotatedWith(Implements.class)) {
+            if (elem.getKind() == ElementKind.CLASS || elem.getKind() == ElementKind.INTERFACE) {
+                AnnotationMirror implementsAnnotation = MirrorUtils.getAnnotation(elem, Implements.class);
+                this.mixins.registerSoftImplements((TypeElement)elem, implementsAnnotation);
+            } else {
+                this.mixins.printMessage(Kind.ERROR, "Found an @Implements annotation on an element which is not a class or interface", elem);
+            }
+        }
+    }
+    
 }

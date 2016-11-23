@@ -81,13 +81,21 @@ public abstract class MirrorUtils {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static <T> T getAnnotationValue(AnnotationMirror annotation, String key, T defaultValue) {
         if (annotation == null) {
             return defaultValue;
         }
         
         AnnotationValue value = MirrorUtils.getAnnotationValue0(annotation, key);
+        if (defaultValue instanceof Enum && value != null) {
+            VariableElement varValue = (VariableElement)value.getValue();
+            if (varValue == null) {
+                return defaultValue;
+            }
+            return (T)Enum.valueOf((Class<? extends Enum>)defaultValue.getClass(), varValue.getSimpleName().toString());
+        }
+        
         return value != null ? (T)value.getValue() : defaultValue;
     }
 

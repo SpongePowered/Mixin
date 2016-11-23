@@ -42,6 +42,10 @@ class MethodHandle {
     public MethodHandle(ExecutableElement element) {
         this.element = element;
     }
+
+    public String getName() {
+        return this.element != null ? this.element.getSimpleName().toString() : null;
+    }
     
     /**
      * Get whether the element is imaginary (inaccessible via mirror)

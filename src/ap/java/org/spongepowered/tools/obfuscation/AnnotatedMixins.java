@@ -147,10 +147,11 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
-        this.printMessage(Kind.NOTE, "SpongePowered Mixin Annotation Processor v" + MixinBootstrap.VERSION);
-
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+        
+        this.printMessage(Kind.NOTE, "SpongePowered MIXIN Annotation Processor Version=" + MixinBootstrap.VERSION);
+        
         this.targets = this.initTargetMap();
         this.obf = new ObfuscationManager(this);
         this.obf.init();
@@ -477,6 +478,24 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         if (remappedAts == 0 && errorMessage != null) {
             errorMessage.sendTo(this);
         }
+    }
+    
+    /**
+     * Register an {@link org.spongepowered.asm.mixin.Implements} declaration on
+     * a mixin class
+     * 
+     * @param mixin Annotated mixin
+     * @param implementsAnnotation
+     *      {@link org.spongepowered.asm.mixin.Implements} annotation
+     */
+    public void registerSoftImplements(TypeElement mixin, AnnotationMirror implementsAnnotation) {
+        AnnotatedMixin mixinClass = this.getMixin(mixin);
+        if (mixinClass == null) {
+            this.printMessage(Kind.ERROR, "Found @Implements annotation on a non-mixin class");
+            return;
+        }
+
+        mixinClass.registerSoftImplements(implementsAnnotation);
     }
     
     /**

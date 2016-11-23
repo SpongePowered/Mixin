@@ -37,6 +37,55 @@ import java.lang.annotation.Target;
 public @interface Interface {
     
     /**
+     * Describes the remapping strategy applied to methods matching this
+     * interface.
+     */
+    public enum Remap {
+        
+        /**
+         * Attempt to remap all members of this interface which are declared in
+         * the annotated mixin, including non-prefixed methods which match.
+         */
+        ALL,
+        
+        /**
+         * Attempt to remap all members of this interface which are declared in
+         * the annotated mixin, including non-prefixed methods which match. <b>
+         * If mappings are not located for a member method, raise a compile-time
+         * error.</b> 
+         */
+        FORCE(true),
+        
+        /**
+         * Remap only methods in the annotated mixin which are prefixed with the
+         * declared prefix. Note that if no prefix is defined, this has the same
+         * effect as {@link #NONE} 
+         */
+        ONLY_PREFIXED,
+        
+        /**
+         * Do not remap members matching this interface. (Equivalent to <tt>
+         * remap=false</tt> on other remappable annotations)
+         */
+        NONE;
+        
+        private final boolean forceRemap;
+
+        private Remap() {
+            this(false);
+        }
+        
+        private Remap(boolean forceRemap) {
+            this.forceRemap = forceRemap;
+        }
+        
+        public boolean forceRemap() {
+            return this.forceRemap;
+        }
+        
+    }
+    
+    /**
      * Interface that the parent {@link Implements} indicates the mixin 
      * implements. The interface will be hot-patched onto the target class as
      * part of the mixin application.
@@ -60,5 +109,19 @@ public @interface Interface {
      * @return true to mark all implementing methods as unique
      */
     public boolean unique() default false;
+
+    /**
+     * By default, the annotation processor will attempt to locate an
+     * obfuscation mapping for all methods soft-implemented by the interface
+     * declared in this {@link Interface} annotation, since it is possible that
+     * the declared interface may be obfuscated and therefore contain obfuscated
+     * member methods. However since it may be desirable to skip this pass (for
+     * example if an interface method intrinsically shadows a soft-implemented
+     * method) this setting is provided to restrict or inhibit processing of
+     * member methods matching this soft-implements decoration.
+     * 
+     * @return Remapping strategy to use, see {@link Remap} for details. 
+     */
+    public Remap remap() default Remap.ALL;
     
 }
