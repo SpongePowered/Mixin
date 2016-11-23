@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.mirror;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -52,7 +52,7 @@ public class AnnotationHandle {
      * 
      * @param annotation annotation to wrap
      */
-    AnnotationHandle(AnnotationMirror annotation) {
+    private AnnotationHandle(AnnotationMirror annotation) {
         this.annotation = annotation;
     }
     
@@ -213,6 +213,10 @@ public class AnnotationHandle {
         }
         
         return null;
+    }
+    
+    public static AnnotationHandle of(AnnotationMirror annotation) {
+        return new AnnotationHandle(annotation);
     }
 
     public static AnnotationHandle of(Element elem, Class<? extends Annotation> annotationClass) {

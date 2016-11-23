@@ -30,7 +30,7 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
-import org.spongepowered.tools.obfuscation.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 
 /**
  * Wrapper for Annotation Processor messages, used to enable messages to be

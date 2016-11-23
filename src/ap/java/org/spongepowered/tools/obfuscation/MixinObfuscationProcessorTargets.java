@@ -40,7 +40,8 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
-import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
 /**
  * Annotation processor which finds {@link Shadow} and {@link Overwrite}
@@ -97,7 +98,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Shadow.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
@@ -121,7 +122,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Overwrite.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
@@ -141,7 +142,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Accessor.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
@@ -161,7 +162,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Invoker.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + MirrorUtils.getElementType(parent), elem);
+                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             

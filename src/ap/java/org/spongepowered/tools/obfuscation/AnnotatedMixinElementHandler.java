@@ -42,11 +42,15 @@ import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
+import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * Base class for module for {@link AnnotatedMixin} which handle different
@@ -70,7 +74,7 @@ abstract class AnnotatedMixinElementHandler {
         public AnnotatedElement(E element, AnnotationHandle annotation) {
             this.element = element;
             this.annotation = annotation;
-            this.desc = MirrorUtils.getDescriptor(element);
+            this.desc = TypeUtils.getDescriptor(element);
         }
 
         public E getElement() {
@@ -428,7 +432,7 @@ abstract class AnnotatedMixinElementHandler {
      * warnings where appropriate
      */
     protected final void validateTargetMethod(ExecutableElement method, AnnotationHandle annotation, AliasedElementName name, String type) {
-        String signature = MirrorUtils.getJavaSignature(method);
+        String signature = TypeUtils.getJavaSignature(method);
 
         for (TypeHandle target : this.mixin.getTargets()) {
             if (target.isImaginary()) {

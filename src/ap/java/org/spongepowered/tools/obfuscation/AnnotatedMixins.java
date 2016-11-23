@@ -62,6 +62,9 @@ import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeReference;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.struct.Message;
@@ -454,18 +457,18 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
                         at = ((AnnotationValue)at).getValue();
                     }
                     if (at instanceof AnnotationMirror) {
-                        remappedAts += mixinClass.registerInjectionPoint(method, inject, new AnnotationHandle((AnnotationMirror)at));
+                        remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)at));
                     } else {
                         this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
                     }
                 }
             } else if (ats instanceof AnnotationMirror) {
-                remappedAts += mixinClass.registerInjectionPoint(method, inject, new AnnotationHandle((AnnotationMirror)ats));
+                remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)ats));
             } else if (ats instanceof AnnotationValue) {
                 // Fix for JDT
                 Object mirror = ((AnnotationValue)ats).getValue();
                 if (mirror instanceof AnnotationMirror) {
-                    remappedAts += mixinClass.registerInjectionPoint(method, inject, new AnnotationHandle((AnnotationMirror)mirror));
+                    remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)mirror));
                 }
             }
         }

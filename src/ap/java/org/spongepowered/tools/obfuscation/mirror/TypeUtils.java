@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools;
+package org.spongepowered.tools.obfuscation.mirror;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -37,9 +37,9 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 
 /**
- * Convenience functions for mirror
+ * Convenience functions for mirror types
  */
-public abstract class MirrorUtils {
+public abstract class TypeUtils {
 
     /**
      * Number of times to recurse into TypeMirrors when trying to determine the
@@ -51,7 +51,7 @@ public abstract class MirrorUtils {
     private static final String OBJECT_REF = "java/lang/Object";
 
     // No instances for you
-    private MirrorUtils() {}
+    private TypeUtils() {}
 
     public static PackageElement getPackage(TypeElement elem) {
         Element parent = elem.getEnclosingElement();
@@ -86,13 +86,13 @@ public abstract class MirrorUtils {
                 if (extra) {
                     desc.append(',');
                 }
-                desc.append(MirrorUtils.getTypeName(arg.asType()));
+                desc.append(TypeUtils.getTypeName(arg.asType()));
                 extra = true;
             }
             desc.append(')').append(method.getReturnType().toString());
             return desc.toString();
         }
-        return MirrorUtils.getTypeName(element.asType());
+        return TypeUtils.getTypeName(element.asType());
     }
 
     public static String stripGenerics(String type) {
@@ -113,55 +113,55 @@ public abstract class MirrorUtils {
     
     public static String getDescriptor(Element elem) {
         if (elem instanceof ExecutableElement) {
-            return MirrorUtils.getDescriptor((ExecutableElement)elem);
+            return TypeUtils.getDescriptor((ExecutableElement)elem);
         } else if (elem instanceof VariableElement) {
-            return MirrorUtils.getInternalName((VariableElement)elem);
+            return TypeUtils.getInternalName((VariableElement)elem);
         }
         
-        return MirrorUtils.getInternalName(elem.asType());
+        return TypeUtils.getInternalName(elem.asType());
     }
 
     public static String getTypeName(TypeMirror type) {
         switch (type.getKind()) {
-            case ARRAY:    return MirrorUtils.getTypeName(((ArrayType)type).getComponentType()) + "[]";
-            case DECLARED: return MirrorUtils.getTypeName((DeclaredType)type);
-            case TYPEVAR:  return MirrorUtils.getTypeName(MirrorUtils.getUpperBound(type));
-            case ERROR:    return MirrorUtils.OBJECT_SIG;
+            case ARRAY:    return TypeUtils.getTypeName(((ArrayType)type).getComponentType()) + "[]";
+            case DECLARED: return TypeUtils.getTypeName((DeclaredType)type);
+            case TYPEVAR:  return TypeUtils.getTypeName(TypeUtils.getUpperBound(type));
+            case ERROR:    return TypeUtils.OBJECT_SIG;
             default:       return type.toString();
         }
     }
 
     public static String getTypeName(DeclaredType type) {
         if (type == null) {
-            return MirrorUtils.OBJECT_SIG;
+            return TypeUtils.OBJECT_SIG;
         }
-        return MirrorUtils.getTypeName((TypeElement)type.asElement());
+        return TypeUtils.getTypeName((TypeElement)type.asElement());
     }
 
     private static String getTypeName(TypeElement elem) {
-        return MirrorUtils.getInternalName(elem).replace('/', '.');
+        return TypeUtils.getInternalName(elem).replace('/', '.');
     }
 
     public static String getDescriptor(ExecutableElement method) {
         StringBuilder signature = new StringBuilder();
         
         for (VariableElement var : method.getParameters()) {
-            signature.append(MirrorUtils.getInternalName(var));
+            signature.append(TypeUtils.getInternalName(var));
         }
         
-        String returnType = MirrorUtils.getInternalName(method.getReturnType());
+        String returnType = TypeUtils.getInternalName(method.getReturnType());
         return String.format("(%s)%s", signature, returnType);
     }
     
     public static String getInternalName(VariableElement var) {
-        return MirrorUtils.getInternalName(var.asType());
+        return TypeUtils.getInternalName(var.asType());
     }
     
     public static String getInternalName(TypeMirror type) {
         switch (type.getKind()) {
-            case ARRAY:    return "[" + MirrorUtils.getInternalName(((ArrayType)type).getComponentType());
-            case DECLARED: return "L" + MirrorUtils.getInternalName((DeclaredType)type) + ";";
-            case TYPEVAR:  return "L" + MirrorUtils.getInternalName(MirrorUtils.getUpperBound(type)) + ";";
+            case ARRAY:    return "[" + TypeUtils.getInternalName(((ArrayType)type).getComponentType());
+            case DECLARED: return "L" + TypeUtils.getInternalName((DeclaredType)type) + ";";
+            case TYPEVAR:  return "L" + TypeUtils.getInternalName(TypeUtils.getUpperBound(type)) + ";";
             case BOOLEAN:  return "Z";
             case BYTE:     return "B";
             case CHAR:     return "C";
@@ -172,7 +172,7 @@ public abstract class MirrorUtils {
             case SHORT:    return "S";
             case VOID:     return "V";
             // TODO figure out a better way to not crash when we get here
-            case ERROR:    return "L" + MirrorUtils.OBJECT_REF + ";";
+            case ERROR:    return "L" + TypeUtils.OBJECT_REF + ";";
             default:
         }
 
@@ -181,7 +181,7 @@ public abstract class MirrorUtils {
     
     private static DeclaredType getUpperBound(TypeMirror type) {
         try {
-            return MirrorUtils.getUpperBound0(type, MirrorUtils.MAX_GENERIC_RECURSION_DEPTH);
+            return TypeUtils.getUpperBound0(type, TypeUtils.MAX_GENERIC_RECURSION_DEPTH);
         } catch (IllegalStateException ex) {
             throw new IllegalArgumentException("Type symbol \"" + type + "\" is too complex", ex);
         } catch (IllegalArgumentException ex) {
@@ -192,7 +192,7 @@ public abstract class MirrorUtils {
     private static DeclaredType getUpperBound0(TypeMirror type, int depth) {
         if (depth == 0) {
             throw new IllegalStateException("Generic symbol \"" + type + "\" is too complex, exceeded "
-                    + MirrorUtils.MAX_GENERIC_RECURSION_DEPTH + " iterations attempting to determine upper bound");
+                    + TypeUtils.MAX_GENERIC_RECURSION_DEPTH + " iterations attempting to determine upper bound");
         }
         if (type instanceof DeclaredType) {
             return (DeclaredType)type;
@@ -200,7 +200,7 @@ public abstract class MirrorUtils {
         if (type instanceof TypeVariable) {
             try {
                 TypeMirror upper = ((TypeVariable)type).getUpperBound();
-                return MirrorUtils.getUpperBound0(upper, --depth);
+                return TypeUtils.getUpperBound0(upper, --depth);
             } catch (IllegalStateException ex) {
                 throw ex;
             } catch (IllegalArgumentException ex) {
@@ -214,9 +214,9 @@ public abstract class MirrorUtils {
 
     public static String getInternalName(DeclaredType type) {
         if (type == null) {
-            return MirrorUtils.OBJECT_REF;
+            return TypeUtils.OBJECT_REF;
         }
-        return MirrorUtils.getInternalName((TypeElement)type.asElement());
+        return TypeUtils.getInternalName((TypeElement)type.asElement());
     }
 
     public static String getInternalName(TypeElement elem) {
@@ -237,8 +237,8 @@ public abstract class MirrorUtils {
     public static boolean isAssignable(ProcessingEnvironment processingEnv, TypeMirror targetType, TypeMirror superClass) {
         boolean assignable = processingEnv.getTypeUtils().isAssignable(targetType, superClass);
         if (!assignable && targetType instanceof DeclaredType && superClass instanceof DeclaredType) {
-            TypeMirror rawTargetType = MirrorUtils.toRawType(processingEnv, (DeclaredType)targetType);
-            TypeMirror rawSuperType = MirrorUtils.toRawType(processingEnv, (DeclaredType)superClass);
+            TypeMirror rawTargetType = TypeUtils.toRawType(processingEnv, (DeclaredType)targetType);
+            TypeMirror rawSuperType = TypeUtils.toRawType(processingEnv, (DeclaredType)superClass);
             return processingEnv.getTypeUtils().isAssignable(rawTargetType, rawSuperType);
         }
         

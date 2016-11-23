@@ -40,6 +40,9 @@ import java.util.Set;
 
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeReference;
+
 import com.google.common.io.Files;
 
 /**

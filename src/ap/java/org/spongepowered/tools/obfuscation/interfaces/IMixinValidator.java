@@ -28,8 +28,8 @@ import java.util.Collection;
 
 import javax.lang.model.element.TypeElement;
 
-import org.spongepowered.tools.obfuscation.AnnotationHandle;
-import org.spongepowered.tools.obfuscation.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * A mixin validator module, basically just a way of making the various sanity

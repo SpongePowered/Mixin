@@ -41,7 +41,8 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
 /**
  * Annotation processor which finds {@link Inject} and {@link At} annotations in
@@ -97,7 +98,7 @@ public class MixinObfuscationProcessorInjection extends MixinObfuscationProcesso
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
                 throw new IllegalStateException("@" + injectorClass.getSimpleName() + " element has unexpected parent with type "
-                        + MirrorUtils.getElementType(parent));
+                        + TypeUtils.getElementType(parent));
             }
             
             AnnotationHandle inject = AnnotationHandle.of(elem, injectorClass);

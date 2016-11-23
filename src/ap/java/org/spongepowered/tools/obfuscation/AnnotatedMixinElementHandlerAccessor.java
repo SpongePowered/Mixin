@@ -37,9 +37,13 @@ import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
+import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 import com.google.common.base.Strings;
 
@@ -78,11 +82,11 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         }
         
         public String getTargetTypeName() {
-            return MirrorUtils.getTypeName(this.getTargetType());
+            return TypeUtils.getTypeName(this.getTargetType());
         }
         
         public String getAccessorDesc() {
-            return MirrorUtils.getInternalName(this.getTargetType());
+            return TypeUtils.getInternalName(this.getTargetType());
         }
         
         public MemberInfo getContext() {
@@ -118,7 +122,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         
         @Override
         public String getAccessorDesc() {
-            return MirrorUtils.getDescriptor(this.getElement());
+            return TypeUtils.getDescriptor(this.getElement());
         }
         
         @Override
@@ -128,7 +132,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         
         @Override
         public String getTargetTypeName() {
-            return MirrorUtils.getJavaSignature(this.getElement());
+            return TypeUtils.getJavaSignature(this.getElement());
         }
         
     }

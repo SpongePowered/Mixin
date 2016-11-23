@@ -29,7 +29,7 @@ import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationData;
-import org.spongepowered.tools.obfuscation.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * Provides obfuscation data to the annotation processor

@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.mirror;
 
 import java.lang.annotation.Annotation;
 import java.util.Collections;
@@ -40,7 +40,6 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.tools.MirrorUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -92,8 +91,8 @@ public class TypeHandle {
      * @param element ze element
      */
     public TypeHandle(TypeElement element) {
-        this.pkg = MirrorUtils.getPackage(element);
-        this.name = MirrorUtils.getInternalName(element);
+        this.pkg = TypeUtils.getPackage(element);
+        this.name = TypeUtils.getInternalName(element);
         this.element = element;
     }
     
@@ -238,7 +237,7 @@ public class TypeHandle {
         if (desc == null) {
             for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
                 if (method.getSimpleName().toString().equals(memberInfo.name)) {
-                    desc = MirrorUtils.getDescriptor(method);
+                    desc = TypeUtils.getDescriptor(method);
                     break;
                 }
             }
@@ -265,7 +264,7 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(VariableElement element, boolean caseSensitive) {
-        return this.findField(element.getSimpleName().toString(), MirrorUtils.getTypeName(element.asType()), caseSensitive);
+        return this.findField(element.getSimpleName().toString(), TypeUtils.getTypeName(element.asType()), caseSensitive);
     }
     
     /**
@@ -289,7 +288,7 @@ public class TypeHandle {
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(String name, String type, boolean caseSensitive) {
-        String rawType = MirrorUtils.stripGenerics(type);
+        String rawType = TypeUtils.stripGenerics(type);
 
         for (VariableElement field : this.<VariableElement>getEnclosedElements(ElementKind.FIELD)) {
             if (this.compareElement(field, name, type, caseSensitive)) {
@@ -321,7 +320,7 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
-        return this.findMethod(element.getSimpleName().toString(), MirrorUtils.getJavaSignature(element), caseSensitive);
+        return this.findMethod(element.getSimpleName().toString(), TypeUtils.getJavaSignature(element), caseSensitive);
     }
 
     /**
@@ -345,7 +344,7 @@ public class TypeHandle {
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(String name, String signature, boolean caseSensitive) {
-        String rawSignature = MirrorUtils.stripGenerics(signature);
+        String rawSignature = TypeUtils.stripGenerics(signature);
 
         for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
             if (this.compareElement(method, name, signature, caseSensitive) || this.compareElement(method, name, rawSignature, caseSensitive)) {
@@ -359,8 +358,8 @@ public class TypeHandle {
     private boolean compareElement(Element elem, String name, String type, boolean caseSensitive) {
         try {
             String elementName = elem.getSimpleName().toString();
-            String elementType = MirrorUtils.getJavaSignature(elem);
-            String rawElementType = MirrorUtils.stripGenerics(elementType);
+            String elementType = TypeUtils.getJavaSignature(elem);
+            String rawElementType = TypeUtils.stripGenerics(elementType);
             boolean compared = caseSensitive ? name.equals(elementName) : name.equalsIgnoreCase(elementName);
             return compared && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
         } catch (NullPointerException ex) {

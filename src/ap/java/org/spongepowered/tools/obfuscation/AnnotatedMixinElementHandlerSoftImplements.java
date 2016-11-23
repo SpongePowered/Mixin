@@ -33,8 +33,11 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Interface.Remap;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * A module for {@link AnnotatedMixin} whic handles soft-implements clauses
@@ -110,8 +113,8 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
      */
     private void processMethod(Remap remap, TypeHandle iface, String prefix, ExecutableElement method) {
         String name = method.getSimpleName().toString();
-        String sig = MirrorUtils.getJavaSignature(method);
-        String desc = MirrorUtils.getDescriptor(method);
+        String sig = TypeUtils.getJavaSignature(method);
+        String desc = TypeUtils.getDescriptor(method);
         
         if (remap != Remap.ONLY_PREFIXED) {
             MethodHandle mixinMethod = this.mixin.getHandle().findMethod(name, sig);

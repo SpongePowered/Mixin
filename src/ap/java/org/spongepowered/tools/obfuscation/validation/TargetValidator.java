@@ -35,12 +35,12 @@ import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
-import org.spongepowered.tools.MirrorUtils;
-import org.spongepowered.tools.obfuscation.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
-import org.spongepowered.tools.obfuscation.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * Validator which checks that the mixin targets are sane
@@ -111,7 +111,7 @@ public class TargetValidator extends MixinValidator {
     }
 
     private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {
-        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
+        if (TypeUtils.isAssignable(this.processingEnv, targetType, superClass)) {
             return true;
         }
         
@@ -123,7 +123,7 @@ public class TargetValidator extends MixinValidator {
             return false;
         }
         
-        if (MirrorUtils.isAssignable(this.processingEnv, targetType, superClass)) {
+        if (TypeUtils.isAssignable(this.processingEnv, targetType, superClass)) {
             return true;
         }
         
@@ -142,7 +142,7 @@ public class TargetValidator extends MixinValidator {
 
     private boolean checkMixinsFor(TypeMirror targetType, TypeMirror superClass) {
         for (TypeMirror mixinType : this.getMixinsTargeting(targetType)) {
-            if (MirrorUtils.isAssignable(this.processingEnv, mixinType, superClass)) {
+            if (TypeUtils.isAssignable(this.processingEnv, mixinType, superClass)) {
                 return true;
             }
         }

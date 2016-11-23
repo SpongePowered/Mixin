@@ -30,10 +30,10 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
-import org.spongepowered.tools.obfuscation.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.MixinValidator;
-import org.spongepowered.tools.obfuscation.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
  * Validator which checks that the mixin parent is sane

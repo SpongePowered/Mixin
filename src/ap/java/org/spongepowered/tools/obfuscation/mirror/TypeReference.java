@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation;
+package org.spongepowered.tools.obfuscation.mirror;
 
 import java.io.Serializable;
 
@@ -61,7 +61,7 @@ public class TypeReference implements Serializable, Comparable<TypeReference> {
      * 
      * @param name Name of the type
      */
-    TypeReference(String name) {
+    public TypeReference(String name) {
         this.name = name;
     }
     
