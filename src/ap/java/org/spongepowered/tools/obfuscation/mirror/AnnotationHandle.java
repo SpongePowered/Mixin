@@ -59,7 +59,7 @@ public class AnnotationHandle {
     /**
      * Return the wrapped mirror, only used to pass to Messager methods
      * 
-     * @return
+     * @return annotation mirror (can be null)
      */
     public AnnotationMirror asMirror() {
         return this.annotation;
@@ -77,6 +77,9 @@ public class AnnotationHandle {
     
     @Override
     public String toString() {
+        if (this.annotation == null) {
+            return "@{UnknownAnnotation}";
+        }
         return "@" + this.annotation.getAnnotationType().asElement().getSimpleName();
     }
     
@@ -94,7 +97,7 @@ public class AnnotationHandle {
             return defaultValue;
         }
         
-        AnnotationValue value = this.getAnnotationValue0(key);
+        AnnotationValue value = this.getAnnotationValue(key);
         if (defaultValue instanceof Enum && value != null) {
             VariableElement varValue = (VariableElement)value.getValue();
             if (varValue == null) {
@@ -119,12 +122,25 @@ public class AnnotationHandle {
      * Get the annotation value with the specified key or return null if not
      * present or not set
      * 
+     * @param key key to fetch
      * @return value or null if not present or not set
      */
     public <T> T getValue(String key) {
         return this.getValue(key, null);
     }
-    
+
+    /**
+     * Get the primitive boolean value with the specified key or return null if
+     * not present or not set
+     * 
+     * @param key key to fetch
+     * @param defaultValue default value to return if value is not present
+     * @return value or default if not present or not set
+     */
+    public boolean getBoolean(String key, boolean defaultValue) {
+        return this.<Boolean>getValue(key, Boolean.valueOf(defaultValue)).booleanValue();
+    }
+
     /**
      * Retrieve the annotation value as a list with values of the specified
      * type. Returns an empty list if the value is not present or not set.
@@ -140,11 +156,12 @@ public class AnnotationHandle {
      * values of the specified type. Returns an empty list if the value is not
      * present or not set.
      * 
+     * @param key key to fetch
      * @return list of values
      */
     public <T> List<T> getList(String key) {
         List<AnnotationValue> list = this.<List<AnnotationValue>>getValue(key, Collections.<AnnotationValue>emptyList());
-        return AnnotationHandle.<T>unfold(list);
+        return AnnotationHandle.<T>unwrapAnnotationValueList(list);
     }
 
     /**
@@ -166,7 +183,7 @@ public class AnnotationHandle {
         return annotations;
     }
 
-    protected AnnotationValue getAnnotationValue0(String key) {
+    protected AnnotationValue getAnnotationValue(String key) {
         for (ExecutableElement elem : this.annotation.getElementValues().keySet()) {
             if (elem.getSimpleName().contentEquals(key)) {
                 return this.annotation.getElementValues().get(elem);
@@ -177,7 +194,7 @@ public class AnnotationHandle {
     }
     
     @SuppressWarnings("unchecked")
-    protected static <T> List<T> unfold(List<AnnotationValue> list) {
+    protected static <T> List<T> unwrapAnnotationValueList(List<AnnotationValue> list) {
         if (list == null) {
             return Collections.<T>emptyList();
         }

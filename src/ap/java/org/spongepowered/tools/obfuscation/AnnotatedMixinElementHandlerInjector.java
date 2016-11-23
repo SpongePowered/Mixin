@@ -169,7 +169,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        if (!AnnotatedMixins.getRemapValue(elem.getAt())) {
+        if (!elem.getAt().getBoolean("remap", true)) {
             return 0;
         }
         

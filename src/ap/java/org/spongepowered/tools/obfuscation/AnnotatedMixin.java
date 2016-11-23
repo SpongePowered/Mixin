@@ -148,7 +148,7 @@ class AnnotatedMixin {
         this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         this.primaryTarget = this.initTargets();
-        this.remap = AnnotatedMixins.getRemapValue(this.annotation) && this.targets.size() > 0;
+        this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
         
         this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
         this.shadows = new AnnotatedMixinElementHandlerShadow(ap, this);

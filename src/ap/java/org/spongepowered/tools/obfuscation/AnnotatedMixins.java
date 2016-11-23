@@ -521,14 +521,7 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     }
 
     private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationHandle annotation) {
-        return mixinClass.remap() && AnnotatedMixins.getRemapValue(annotation);
-    }
-
-    /**
-     * Check whether we should remap the annotated member or skip it
-     */
-    public static boolean getRemapValue(AnnotationHandle annotation) {
-        return annotation.<Boolean>getValue("remap", Boolean.TRUE).booleanValue();
+        return mixinClass.remap() && annotation.getBoolean("remap", true);
     }
 
     /**

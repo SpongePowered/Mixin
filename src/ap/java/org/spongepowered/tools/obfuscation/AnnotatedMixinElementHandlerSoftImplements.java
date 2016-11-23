@@ -58,6 +58,10 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
      * @param implementsAnnotation
      */
     public void process(AnnotationHandle implementsAnnotation) {
+        if (!this.mixin.remap()) {
+            return;
+        }
+        
         List<AnnotationHandle> interfaces = implementsAnnotation.getAnnotationList("value");
         
         // Derp?
