@@ -26,11 +26,11 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.List;
 
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
+import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
+import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
@@ -63,11 +63,11 @@ abstract class AnnotatedMixinElementHandler {
         
         private final E element;
         
-        private final AnnotationMirror annotation;
+        private final AnnotationHandle annotation;
 
         private final String desc;
 
-        public AnnotatedElement(E element, AnnotationMirror annotation) {
+        public AnnotatedElement(E element, AnnotationHandle annotation) {
             this.element = element;
             this.annotation = annotation;
             this.desc = MirrorUtils.getDescriptor(element);
@@ -77,7 +77,7 @@ abstract class AnnotatedMixinElementHandler {
             return this.element;
         }
         
-        public AnnotationMirror getAnnotation() {
+        public AnnotationHandle getAnnotation() {
             return this.annotation;
         }
         
@@ -87,6 +87,10 @@ abstract class AnnotatedMixinElementHandler {
         
         public String getDesc() {
             return this.desc;
+        }
+        
+        public final void printMessage(Messager messager, Diagnostic.Kind kind, CharSequence msg) {
+            messager.printMessage(kind, msg, this.element, this.annotation.asMirror());
         }
 
     }
@@ -108,10 +112,9 @@ abstract class AnnotatedMixinElementHandler {
         
         private boolean caseSensitive;
         
-        public AliasedElementName(Element element, AnnotationMirror annotation) {
+        public AliasedElementName(Element element, AnnotationHandle annotation) {
             this.originalName = element.getSimpleName().toString();
-            List<AnnotationValue> aliases = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(annotation, "aliases");
-            this.aliases = MirrorUtils.<String>unfold(aliases);
+            this.aliases = annotation.<String>getList("aliases");
         }
         
         public AliasedElementName setCaseSensitive(boolean caseSensitive) {
@@ -177,10 +180,10 @@ abstract class AnnotatedMixinElementHandler {
          */
         private String obfuscated;
         
-        ShadowElementName(Element element, AnnotationMirror shadow) {
+        ShadowElementName(Element element, AnnotationHandle shadow) {
             super(element, shadow);
             
-            this.prefix = MirrorUtils.<String>getAnnotationValue(shadow, "prefix", "shadow$");
+            this.prefix = shadow.<String>getValue("prefix", "shadow$");
             
             boolean hasPrefix = false;
             String name = this.originalName;
@@ -296,7 +299,7 @@ abstract class AnnotatedMixinElementHandler {
         return this.mappings;
     }
     
-    protected final boolean remapReference(String key, String reference, Element element, AnnotationMirror inject, AnnotationMirror at) {
+    protected final boolean remapReference(String key, String reference, Element element, AnnotationHandle inject, AnnotationHandle at) {
         if (reference == null) {
             return false;
         }
@@ -305,21 +308,22 @@ abstract class AnnotatedMixinElementHandler {
         MemberInfo targetMember = MemberInfo.parse(reference);
         if (!targetMember.isFullyQualified()) {
             String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
-            this.ap.printMessage(Kind.ERROR, annotation + " is not fully qualified, " + missing, element, inject);
+            this.ap.printMessage(Kind.ERROR, annotation + " is not fully qualified, " + missing, element, inject.asMirror());
             return false;
         }
         
         try {
             targetMember.validate();
         } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), element, inject);
+            this.ap.printMessage(Kind.ERROR, ex.getMessage(), element, inject.asMirror());
         }
         
         try {
             if (targetMember.isField()) {
                 ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
                 if (obfFieldData.isEmpty()) {
-                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + annotation + " '" + reference + "'", element, inject);
+                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + annotation + " '" + reference + "'", element,
+                            inject.asMirror());
                     return false;
                 }
                 this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
@@ -327,7 +331,8 @@ abstract class AnnotatedMixinElementHandler {
                 ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
                 if (obfMethodData.isEmpty()) {
                     if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
-                        this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + annotation + " '" + reference + "'", element, inject);
+                        this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + annotation + " '" + reference + "'", element,
+                                inject.asMirror());
                         return false;
                     }
                 }
@@ -337,7 +342,7 @@ abstract class AnnotatedMixinElementHandler {
             // Since references are fully-qualified, it shouldn't be possible for there to be multiple mappings, however
             // we catch and log the error in case something weird happens in the mapping provider
             this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + annotation + ": " + reference + " -> "
-                    + ex.getNew() + " previously defined as " + ex.getOld(), element, inject);
+                    + ex.getNew() + " previously defined as " + ex.getOld(), element, inject.asMirror());
             return false;
         }
         
@@ -397,20 +402,20 @@ abstract class AnnotatedMixinElementHandler {
      * @param method Annotated method
      * @param annotation Annotation to check constraints
      */
-    protected final void checkConstraints(ExecutableElement method, AnnotationMirror annotation) {
+    protected final void checkConstraints(ExecutableElement method, AnnotationHandle annotation) {
         try {
-            Constraint constraint = ConstraintParser.parse(MirrorUtils.<String>getAnnotationValue(annotation, "constraints"));
+            Constraint constraint = ConstraintParser.parse(annotation.<String>getValue("constraints"));
             try {
                 constraint.check(this.ap.getTokenProvider());
             } catch (ConstraintViolationException ex) {
-                this.ap.printMessage(Kind.ERROR, ex.getMessage(), method, annotation);
+                this.ap.printMessage(Kind.ERROR, ex.getMessage(), method, annotation.asMirror());
             }
         } catch (InvalidConstraintException ex) {
-            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation);
+            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation.asMirror());
         }
     }
     
-    protected final void validateTarget(Element element, AnnotationMirror annotation, AliasedElementName name, String type) {
+    protected final void validateTarget(Element element, AnnotationHandle annotation, AliasedElementName name, String type) {
         if (element instanceof ExecutableElement) {
             this.validateTargetMethod((ExecutableElement)element, annotation, name, type);
         } else if (element instanceof VariableElement) {
@@ -422,7 +427,7 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the specified method exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateTargetMethod(ExecutableElement method, AnnotationMirror annotation, AliasedElementName name, String type) {
+    protected final void validateTargetMethod(ExecutableElement method, AnnotationHandle annotation, AliasedElementName name, String type) {
         String signature = MirrorUtils.getJavaSignature(method);
 
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -452,7 +457,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation);
+                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation.asMirror());
             }
         }
     }
@@ -461,7 +466,7 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the specified field exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateTargetField(VariableElement field, AnnotationMirror annotation, AliasedElementName name, String type) {
+    protected final void validateTargetField(VariableElement field, AnnotationHandle annotation, AliasedElementName name, String type) {
         String fieldType = field.asType().toString();
 
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -484,7 +489,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetField == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation);
+                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation.asMirror());
             }
         }
     }
@@ -493,7 +498,7 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the referenced method exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateReferencedTarget(ExecutableElement method, AnnotationMirror inject, MemberInfo reference, String type) {
+    protected final void validateReferencedTarget(ExecutableElement method, AnnotationHandle inject, MemberInfo reference, String type) {
         String signature = reference.toDescriptor();
         
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -503,7 +508,7 @@ abstract class AnnotatedMixinElementHandler {
             
             MethodHandle targetMethod = target.findMethod(reference.name, signature);
             if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject);
+                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror());
             }
         }            
     }

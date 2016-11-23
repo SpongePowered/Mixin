@@ -24,10 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
-import java.util.Collections;
 import java.util.List;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
@@ -56,29 +54,28 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
      * 
      * @param implementsAnnotation
      */
-    public void process(AnnotationMirror implementsAnnotation) {
-        List<AnnotationMirror> interfaces = MirrorUtils.<List<AnnotationMirror>>getAnnotationValue(implementsAnnotation, "value",
-                Collections.<AnnotationMirror>emptyList());
+    public void process(AnnotationHandle implementsAnnotation) {
+        List<AnnotationHandle> interfaces = implementsAnnotation.getAnnotationList("value");
         
         // Derp?
         if (interfaces.size() < 1) {
-            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixin(), implementsAnnotation);
+            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixin(), implementsAnnotation.asMirror());
             return;
         }
         
-        for (AnnotationMirror interfaceAnnotation : interfaces) {
-            Remap remap = MirrorUtils.<Remap>getAnnotationValue(interfaceAnnotation, "remap", Remap.ALL);
+        for (AnnotationHandle interfaceAnnotation : interfaces) {
+            Remap remap = interfaceAnnotation.<Remap>getValue("remap", Remap.ALL);
             if (remap == Remap.NONE) {
                 continue;
             }
             
             try {
-                TypeHandle iface = new TypeHandle(MirrorUtils.<DeclaredType>getAnnotationValue(interfaceAnnotation, "iface"));
-                String prefix = MirrorUtils.<String>getAnnotationValue(interfaceAnnotation, "prefix");
+                TypeHandle iface = new TypeHandle(interfaceAnnotation.<DeclaredType>getValue("iface"));
+                String prefix = interfaceAnnotation.<String>getValue("prefix");
                 this.processSoftImplements(remap, iface, prefix);
             } catch (Exception ex) {
                 this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(), this.mixin.getMixin(),
-                        interfaceAnnotation);
+                        interfaceAnnotation.asMirror());
             }
         }
     }

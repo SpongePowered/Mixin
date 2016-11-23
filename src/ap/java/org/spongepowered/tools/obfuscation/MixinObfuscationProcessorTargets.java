@@ -28,7 +28,6 @@ import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -102,7 +101,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
                 continue;
             }
             
-            AnnotationMirror shadow = MirrorUtils.getAnnotation(elem, Shadow.class);
+            AnnotationHandle shadow = AnnotationHandle.of(elem, Shadow.class);
             
             if (elem.getKind() == ElementKind.FIELD) {
                 this.mixins.registerShadow((TypeElement)parent, (VariableElement)elem, shadow);
@@ -181,7 +180,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
     private void processImplements(RoundEnvironment roundEnv) {
         for (Element elem : roundEnv.getElementsAnnotatedWith(Implements.class)) {
             if (elem.getKind() == ElementKind.CLASS || elem.getKind() == ElementKind.INTERFACE) {
-                AnnotationMirror implementsAnnotation = MirrorUtils.getAnnotation(elem, Implements.class);
+                AnnotationHandle implementsAnnotation = AnnotationHandle.of(elem, Implements.class);
                 this.mixins.registerSoftImplements((TypeElement)elem, implementsAnnotation);
             } else {
                 this.mixins.printMessage(Kind.ERROR, "Found an @Implements annotation on an element which is not a class or interface", elem);

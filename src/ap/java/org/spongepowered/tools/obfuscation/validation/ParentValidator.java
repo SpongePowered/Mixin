@@ -26,11 +26,11 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.tools.obfuscation.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -52,10 +52,11 @@ public class ParentValidator extends MixinValidator {
     /* (non-Javadoc)
      * @see org.spongepowered.tools.obfuscation.MixinValidator
      *      #validate(javax.lang.model.element.TypeElement,
-     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
+     *      org.spongepowered.tools.obfuscation.AnnotationHandle,
+     *      java.util.Collection)
      */
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+    public boolean validate(TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets) {
         if (mixin.getEnclosingElement().getKind() != ElementKind.PACKAGE && !mixin.getModifiers().contains(Modifier.STATIC)) {
             this.error("Inner class mixin must be declared static", mixin);
         }

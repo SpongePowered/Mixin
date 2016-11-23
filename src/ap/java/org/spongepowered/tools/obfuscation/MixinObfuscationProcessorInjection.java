@@ -29,7 +29,6 @@ import java.util.Set;
 
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -101,7 +100,7 @@ public class MixinObfuscationProcessorInjection extends MixinObfuscationProcesso
                         + MirrorUtils.getElementType(parent));
             }
             
-            AnnotationMirror inject = MirrorUtils.getAnnotation(elem, injectorClass);
+            AnnotationHandle inject = AnnotationHandle.of(elem, injectorClass);
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerInjector((TypeElement)parent, (ExecutableElement)elem, inject);

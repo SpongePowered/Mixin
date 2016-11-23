@@ -24,14 +24,7 @@
  */
 package org.spongepowered.tools;
 
-import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
@@ -60,91 +53,6 @@ public abstract class MirrorUtils {
     // No instances for you
     private MirrorUtils() {}
 
-    public static AnnotationMirror getAnnotation(Element elem, Class<? extends Annotation> annotationClass) {
-        List<? extends AnnotationMirror> annotations = elem.getAnnotationMirrors();
-        
-        if (annotations == null) {
-            return null;
-        }
-        
-        for (AnnotationMirror annotation : annotations) {
-            Element element = annotation.getAnnotationType().asElement();
-            if (!(element instanceof TypeElement)) {
-                continue;
-            }
-            TypeElement annotationElement = (TypeElement)element;
-            if (annotationElement.getQualifiedName().contentEquals(annotationClass.getName())) {
-                return annotation;
-            }
-        }
-        
-        return null;
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <T> T getAnnotationValue(AnnotationMirror annotation, String key, T defaultValue) {
-        if (annotation == null) {
-            return defaultValue;
-        }
-        
-        AnnotationValue value = MirrorUtils.getAnnotationValue0(annotation, key);
-        if (defaultValue instanceof Enum && value != null) {
-            VariableElement varValue = (VariableElement)value.getValue();
-            if (varValue == null) {
-                return defaultValue;
-            }
-            return (T)Enum.valueOf((Class<? extends Enum>)defaultValue.getClass(), varValue.getSimpleName().toString());
-        }
-        
-        return value != null ? (T)value.getValue() : defaultValue;
-    }
-
-    public static <T> T getAnnotationValue(TypeElement elem, Class<? extends Annotation> annotationClass, String key, T defaultValue) {
-        AnnotationMirror annotation = MirrorUtils.getAnnotation(elem, annotationClass);
-        return MirrorUtils.getAnnotationValue(annotation, key, defaultValue);
-    }
-    
-    public static <T> T getAnnotationValue(AnnotationMirror annotation) {
-        return MirrorUtils.getAnnotationValue(annotation, "value", null);
-    }
-    
-    public static <T> T getAnnotationValue(AnnotationMirror annotation, String key) {
-        return MirrorUtils.getAnnotationValue(annotation, key, null);
-    }
-    
-    public static <T> T getAnnotationValue(TypeElement elem, Class<? extends Annotation> annotationClass) {
-        return MirrorUtils.getAnnotationValue(elem, annotationClass, "value");
-    }
-    
-    public static <T> T getAnnotationValue(TypeElement elem, Class<? extends Annotation> annotationClass, String key) {
-        AnnotationMirror annotation = MirrorUtils.getAnnotation(elem, annotationClass);
-        return MirrorUtils.getAnnotationValue(annotation, key, null);
-    }
-    
-    private static AnnotationValue getAnnotationValue0(AnnotationMirror annotation, String key) {
-        for (ExecutableElement elem : annotation.getElementValues().keySet()) {
-            if (elem.getSimpleName().contentEquals(key)) {
-                return annotation.getElementValues().get(elem);
-            }
-        }
-        
-        return null;
-    }
-    
-    @SuppressWarnings("unchecked")
-    public static <T> List<T> unfold(List<AnnotationValue> list) {
-        if (list == null) {
-            return Collections.<T>emptyList();
-        }
-        
-        List<T> unfolded = new ArrayList<T>(list.size());
-        for (AnnotationValue value : list) {
-            unfolded.add((T)value.getValue());
-        }
-        
-        return unfolded;
-    }
-    
     public static PackageElement getPackage(TypeElement elem) {
         Element parent = elem.getEnclosingElement();
         while (parent != null && !(parent instanceof PackageElement)) {
@@ -205,7 +113,7 @@ public abstract class MirrorUtils {
     
     public static String getDescriptor(Element elem) {
         if (elem instanceof ExecutableElement) {
-            return MirrorUtils.generateSignature((ExecutableElement)elem);
+            return MirrorUtils.getDescriptor((ExecutableElement)elem);
         } else if (elem instanceof VariableElement) {
             return MirrorUtils.getInternalName((VariableElement)elem);
         }
@@ -234,14 +142,15 @@ public abstract class MirrorUtils {
         return MirrorUtils.getInternalName(elem).replace('/', '.');
     }
 
-    public static String generateSignature(ExecutableElement method) {
+    public static String getDescriptor(ExecutableElement method) {
         StringBuilder signature = new StringBuilder();
         
         for (VariableElement var : method.getParameters()) {
             signature.append(MirrorUtils.getInternalName(var));
         }
         
-        return String.format("(%s)%s", signature, MirrorUtils.getInternalName(method.getReturnType()));
+        String returnType = MirrorUtils.getInternalName(method.getReturnType());
+        return String.format("(%s)%s", signature, returnType);
     }
     
     public static String getInternalName(VariableElement var) {

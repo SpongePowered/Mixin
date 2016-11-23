@@ -24,7 +24,6 @@
  */
 package org.spongepowered.tools.obfuscation;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
@@ -57,7 +56,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         
         private final Type type;
 
-        protected AnnotatedElementShadow(E element, AnnotationMirror annotation, boolean shouldRemap, Type type) {
+        protected AnnotatedElementShadow(E element, AnnotationHandle annotation, boolean shouldRemap, Type type) {
             super(element, annotation);
             this.shouldRemap = shouldRemap;
             this.name = new ShadowElementName(element, annotation);
@@ -104,7 +103,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
      */
     class AnnotatedElementShadowField extends AnnotatedElementShadow<VariableElement, MappingField> {
 
-        public AnnotatedElementShadowField(VariableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+        public AnnotatedElementShadowField(VariableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation, shouldRemap, Type.FIELD);
         }
         
@@ -125,7 +124,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
      */
     class AnnotatedElementShadowMethod extends AnnotatedElementShadow<ExecutableElement, MappingMethod> {
 
-        public AnnotatedElementShadowMethod(ExecutableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+        public AnnotatedElementShadowMethod(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation, shouldRemap, Type.METHOD);
         }
         
@@ -165,8 +164,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
-            this.ap.printMessage(Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem,
-                    elem.getElement(), elem.getAnnotation());
+            elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
             return;
         }
 
@@ -174,8 +172,8 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
             try {
                 elem.addMapping(type, obfData.get(type));
             } catch (MappingConflictException ex) {
-                this.ap.printMessage(Kind.ERROR, "Mapping conflict for @Shadow " + elem + ": " + ex.getNew().getSimpleName() + " for target "
-                        + target + " conflicts with existing mapping " + ex.getOld().getSimpleName(), elem.getElement(), elem.getAnnotation());
+                elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Shadow " + elem + ": " + ex.getNew().getSimpleName() + " for target "
+                        + target + " conflicts with existing mapping " + ex.getOld().getSimpleName());
             }
         }
     }

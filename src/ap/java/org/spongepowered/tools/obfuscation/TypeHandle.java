@@ -24,6 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.annotation.Annotation;
 import java.util.Collections;
 import java.util.List;
 
@@ -134,6 +135,10 @@ public class TypeHandle {
         return this.element;
     }
 
+    public AnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+        return AnnotationHandle.of(this.element, annotationClass);
+    }
+
     /**
      * Returns enclosed elements (methods, fields, etc.)
      */
@@ -233,7 +238,7 @@ public class TypeHandle {
         if (desc == null) {
             for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
                 if (method.getSimpleName().toString().equals(memberInfo.name)) {
-                    desc = MirrorUtils.generateSignature(method);
+                    desc = MirrorUtils.getDescriptor(method);
                     break;
                 }
             }

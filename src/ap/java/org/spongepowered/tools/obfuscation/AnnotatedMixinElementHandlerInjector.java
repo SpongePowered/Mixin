@@ -25,11 +25,8 @@
 package org.spongepowered.tools.obfuscation;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
 
@@ -37,7 +34,6 @@ import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorExcep
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
-import org.spongepowered.tools.MirrorUtils;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.struct.Message;
@@ -54,7 +50,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         private final boolean shouldRemap;
 
-        public AnnotatedElementInjector(ExecutableElement element, AnnotationMirror annotation, boolean shouldRemap) {
+        public AnnotatedElementInjector(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation);
             this.shouldRemap = shouldRemap;
         }
@@ -65,7 +61,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         @Override
         public String toString() {
-            return "@" + this.getAnnotation().getAnnotationType().asElement().getSimpleName();
+            return this.getAnnotation().toString();
         }
         
     }
@@ -75,14 +71,14 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
      */
     static class AnnotatedElementInjectionPoint extends AnnotatedElement<ExecutableElement> {
         
-        private final AnnotationMirror at;
+        private final AnnotationHandle at;
         
-        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationMirror inject, AnnotationMirror at) {
+        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at) {
             super(element, inject);
             this.at = at;
         }
         
-        public AnnotationMirror getAt() {
+        public AnnotationHandle getAt() {
             return this.at;
         }
         
@@ -97,7 +93,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        String reference = MirrorUtils.<String>getAnnotationValue(elem.getAnnotation(), "method");
+        String reference = elem.getAnnotation().<String>getValue("method");
         MemberInfo targetMember = MemberInfo.parse(reference);
         if (targetMember.name == null) {
             return null;
@@ -106,7 +102,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         try {
             targetMember.validate();
         } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAnnotation());
+            elem.printMessage(this.ap, Kind.ERROR, ex.getMessage());
         }
         
         if (targetMember.desc != null) {
@@ -131,11 +127,10 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         if (desc == null) {
             Kind error = this.mixin.isMultiTarget() ? Kind.ERROR : Kind.WARNING;
             if (target.isImaginary()) {
-                this.ap.printMessage(error, elem + " target requires method signature because enclosing type information for " 
-                        + target + " is unavailable", elem.getElement(), elem.getAnnotation());
+                elem.printMessage(this.ap, error, elem + " target requires method signature because enclosing type information for " 
+                        + target + " is unavailable");
             } else if (!Constants.CTOR.equals(targetMember.name)) {
-                this.ap.printMessage(error, "Unable to determine signature for " + elem + " target method",
-                        elem.getElement(), elem.getAnnotation());
+                elem.printMessage(this.ap, error, "Unable to determine signature for " + elem + " target method");
             }
             return null;
         }
@@ -156,8 +151,8 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, obfData);
         } catch (ReferenceConflictException ex) {
             String conflictType = this.mixin.isMultiTarget() ? "Multi-target" : "Target";
-            this.ap.printMessage(Kind.ERROR, conflictType + " reference conflict for " + targetName + ": " + reference + " -> "
-                    + ex.getNew() + " previously defined as " + ex.getOld(), elem.getElement(), elem.getAnnotation());
+            elem.printMessage(this.ap, Kind.ERROR, conflictType + " reference conflict for " + targetName + ": " + reference + " -> "
+                    + ex.getNew() + " previously defined as " + ex.getOld());
         }
         
         return null;
@@ -176,8 +171,8 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             return 0;
         }
         
-        String type = MirrorUtils.<String>getAnnotationValue(elem.getAt(), "value");
-        String target = MirrorUtils.<String>getAnnotationValue(elem.getAt(), "target");
+        String type = elem.getAt().<String>getValue("value");
+        String target = elem.getAt().<String>getValue("target");
         int remapped = this.remapReference(type + ".<target>", target, elem.getElement(), elem.getAnnotation(), elem.getAt()) ? 1 : 0;
         
         // Pattern for replacing references in args, not used yet
@@ -189,21 +184,17 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         return remapped;
     }
 
-    static Map<String, String> getAtArgs(AnnotationMirror at) {
+    static Map<String, String> getAtArgs(AnnotationHandle at) {
         Map<String, String> args = new HashMap<String, String>();
-        List<AnnotationValue> argv = MirrorUtils.<List<AnnotationValue>>getAnnotationValue(at, "args");
-        if (argv != null) {
-            for (AnnotationValue av : argv) {
-                String arg = (String)av.getValue();
-                if (arg == null) {
-                    continue;
-                }
-                int eqPos = arg.indexOf('=');
-                if (eqPos > -1) {
-                    args.put(arg.substring(0, eqPos), arg.substring(eqPos + 1));
-                } else {
-                    args.put(arg, "");
-                }
+        for (String arg : at.<String>getList("args")) {
+            if (arg == null) {
+                continue;
+            }
+            int eqPos = arg.indexOf('=');
+            if (eqPos > -1) {
+                args.put(arg.substring(0, eqPos), arg.substring(eqPos + 1));
+            } else {
+                args.put(arg, "");
             }
         }
         return args;

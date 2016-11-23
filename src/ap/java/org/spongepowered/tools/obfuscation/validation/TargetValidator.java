@@ -26,7 +26,6 @@ package org.spongepowered.tools.obfuscation.validation;
 
 import java.util.Collection;
 
-import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
@@ -37,6 +36,7 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.tools.MirrorUtils;
+import org.spongepowered.tools.obfuscation.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.MixinValidator;
 import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.TypeHandle;
@@ -59,10 +59,11 @@ public class TargetValidator extends MixinValidator {
     /* (non-Javadoc)
      * @see org.spongepowered.tools.obfuscation.MixinValidator
      *      #validate(javax.lang.model.element.TypeElement,
-     *      javax.lang.model.element.AnnotationMirror, java.util.Collection)
+     *      org.spongepowered.tools.obfuscation.AnnotationHandle,
+     *      java.util.Collection)
      */
     @Override
-    public boolean validate(TypeElement mixin, AnnotationMirror annotation, Collection<TypeHandle> targets) {
+    public boolean validate(TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets) {
         if ("true".equalsIgnoreCase(this.options.getOption(SupportedOptions.DISABLE_TARGET_VALIDATOR))) {
             return true;
         }
@@ -80,8 +81,8 @@ public class TargetValidator extends MixinValidator {
         boolean containsNonAccessorMethod = false;
         for (Element element : mixin.getEnclosedElements()) {
             if (element.getKind() == ElementKind.METHOD) {
-                boolean isAccessor = MirrorUtils.getAnnotation(element, Accessor.class) != null;
-                boolean isInvoker = MirrorUtils.getAnnotation(element, Invoker.class) != null;
+                boolean isAccessor = AnnotationHandle.of(element, Accessor.class).exists();
+                boolean isInvoker = AnnotationHandle.of(element, Invoker.class).exists();
                 containsNonAccessorMethod |= (!isAccessor && !isInvoker);
             }
         }
