@@ -380,6 +380,30 @@ public final class MixinEnvironment implements ITokenProvider {
         IGNORE_CONSTRAINTS("ignoreConstraints"),
 
         /**
+         * Adds additional debugging information to the target classes that can
+         * used for debugging code injected by Mixins. Please note that the
+         * format is specific to Mixin classes and requires a modification of
+         * your IDE (e.g. a plugin) to support debugging Mixin code.
+         *
+         * <p>The additional debugging information is added as the
+         * <a href="https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.7.11">
+         * SourceDebugExtension</a> attribute on the target class with the
+         * following format (example):</p>
+         *
+         * <pre>{@code MIXIN
+         * com.example.mixin.MixinExample run()V handler$onRun$zza000(Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V
+         * com.example.mixin.MixinExtra runExtra()V}</pre>
+         *
+         * <p>The source debug extension consists out of the identifier
+         * {@code MIXIN} and a list of full-qualified names of Mixin classes
+         * that have been applied to the Mixin, each separated by a new line
+         * ({@code \n}). Each Mixin class line is followed by a space-separated
+         * list of method names and descriptors that have been merged from the
+         * Mixin into the target class.</p>
+         */
+        SOURCE_DEBUG_EXTENSION("sourceDebugExtension"),
+
+        /**
          * Enables the hot-swap agent
          */
         HOT_SWAP("hotSwap"),
