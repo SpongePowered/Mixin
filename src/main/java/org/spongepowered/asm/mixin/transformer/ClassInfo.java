@@ -1563,7 +1563,8 @@ public class ClassInfo extends TreeInfo {
                 ClassNode classNode = TreeInfo.getClassNode(className);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
-                ex.printStackTrace();
+                ClassInfo.logger.warn("Error loading class: {}", className);
+//                ex.printStackTrace();
             }
 
             // Put null in the cache if load failed

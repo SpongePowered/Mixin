@@ -128,7 +128,9 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         String desc = target.findDescriptor(targetMember);
         if (desc == null) {
             Kind error = this.mixin.isMultiTarget() ? Kind.ERROR : Kind.WARNING;
-            if (target.isImaginary()) {
+            if (target.isSimulated()) {
+                elem.printMessage(this.ap, Kind.NOTE, elem + " target '" + reference + "' in @Pseudo mixin will not be obfuscated");
+            } else if (target.isImaginary()) {
                 elem.printMessage(this.ap, error, elem + " target requires method signature because enclosing type information for " 
                         + target + " is unavailable");
             } else if (!Constants.CTOR.equals(targetMember.name)) {
@@ -138,16 +140,20 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         }
         
         String targetName = elem + " target " + targetMember.name;
-        MappingMethod targetMethod = new MappingMethod(target.getName(), targetMember.name, desc);
+        MappingMethod targetMethod = target.getMappingMethod(targetMember.name, desc);
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         if (obfData.isEmpty()) {
-            Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
-            return new Message(error, "No obfuscation mapping for " + targetName, elem.getElement(), elem.getAnnotation());
+            if (target.isSimulated()) {
+                obfData = this.obf.getDataProvider().getRemappedMethod(targetMethod);
+            } else {
+                Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
+                return new Message(error, "No obfuscation mapping for " + targetName, elem.getElement(), elem.getAnnotation());
+            }
         }
         
         try {
             // If the original owner is unspecified, and the mixin is multi-target, we strip the owner from the obf mappings
-            if (targetMember.owner == null && this.mixin.isMultiTarget()) {
+            if ((targetMember.owner == null && this.mixin.isMultiTarget()) || target.isSimulated()) {
                 obfData = AnnotatedMixinElementHandler.<MappingMethod>stripOwnerData(obfData);
             }
             this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, obfData);

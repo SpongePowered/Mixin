@@ -166,7 +166,11 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
-            elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
+            if (target.isSimulated()) {
+                elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
+            } else {
+                elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
+            }
             return;
         }
 

@@ -140,6 +140,15 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     public ObfuscationData<MappingMethod> getObfMethod(MemberInfo method) {
+        return this.getRemappedMethod(method, Constants.CTOR.equals(method.name));
+    }
+    
+    @Override
+    public ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method) {
+        return this.getRemappedMethod(method, true);
+    }
+
+    private ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method, boolean remapDescriptor) {
         ObfuscationData<MappingMethod> data = new ObfuscationData<MappingMethod>();
         
         for (ObfuscationEnvironment env : this.environments) {
@@ -149,7 +158,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
             }
         }
         
-        if (!data.isEmpty() || !Constants.CTOR.equals(method.name)) {
+        if (!data.isEmpty() || !remapDescriptor) {
             return data;
         }
         
@@ -163,6 +172,15 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     public ObfuscationData<MappingMethod> getObfMethod(MappingMethod method) {
+        return this.getRemappedMethod(method, Constants.CTOR.equals(method.getSimpleName()));
+    }
+    
+    @Override
+    public ObfuscationData<MappingMethod> getRemappedMethod(MappingMethod method) {
+        return this.getRemappedMethod(method, true);
+    }
+
+    private ObfuscationData<MappingMethod> getRemappedMethod(MappingMethod method, boolean remapDescriptor) {
         ObfuscationData<MappingMethod> data = new ObfuscationData<MappingMethod>();
         
         for (ObfuscationEnvironment env : this.environments) {
@@ -172,7 +190,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
             }
         }
         
-        if (!data.isEmpty() || !Constants.CTOR.equals(method.getSimpleName())) {
+        if (!data.isEmpty() || !remapDescriptor) {
             return data;
         }
         

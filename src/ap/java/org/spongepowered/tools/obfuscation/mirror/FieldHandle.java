@@ -24,14 +24,17 @@
  */
 package org.spongepowered.tools.obfuscation.mirror;
 
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 
+import com.google.common.base.Strings;
+
 /**
  * Retrieved from a {@link TypeHandle} when searching for fields
  */
-public class FieldHandle {
+public class FieldHandle extends MemberHandle<MappingField> {
     
     /**
      * Actual element, can be null
@@ -43,12 +46,29 @@ public class FieldHandle {
      * specialised type
      */
     private final boolean rawType;
+    
+    public FieldHandle(TypeElement owner, VariableElement element) {
+        this(TypeUtils.getInternalName(owner), element);
+    }
 
-    public FieldHandle(VariableElement element) {
-        this(element, false);
+    public FieldHandle(String owner, VariableElement element) {
+        this(owner, element, false);
     }
     
-    public FieldHandle(VariableElement element, boolean rawType) {
+    public FieldHandle(TypeElement owner, VariableElement element, boolean rawType) {
+        this(TypeUtils.getInternalName(owner), element, rawType);
+    }
+    
+    public FieldHandle(String owner, VariableElement element, boolean rawType) {
+        this(owner, element, rawType, TypeUtils.getName(element), TypeUtils.getInternalName(element));
+    }
+    
+    protected FieldHandle(String owner, String name, String desc) {
+        this(owner, null, false, name, desc);
+    }
+    
+    private FieldHandle(String owner, VariableElement element, boolean rawType, String name, String desc) {
+        super(owner, name, desc);
         this.element = element;
         this.rawType = rawType;
     }
@@ -75,8 +95,17 @@ public class FieldHandle {
         return this.rawType;
     }
 
-    public MappingField asMapping() {
-        return new MappingField(null, this.element.getSimpleName().toString(), TypeUtils.getInternalName(this.element));
+    @Override
+    public MappingField asMapping(boolean includeOwner) {
+        return new MappingField(includeOwner ? this.getOwner() : null, this.getName(), this.getDesc());
+    }
+
+    @Override
+    public String toString() {
+        String owner = this.getOwner() != null ? "L" + this.getOwner() + ";" : "";
+        String name = Strings.nullToEmpty(this.getName());
+        String desc = Strings.nullToEmpty(this.getDesc());
+        return String.format("%s%s:%s", owner, name, desc);
     }
     
 }

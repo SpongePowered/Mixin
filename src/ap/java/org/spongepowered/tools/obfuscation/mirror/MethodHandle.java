@@ -25,25 +25,37 @@
 package org.spongepowered.tools.obfuscation.mirror;
 
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+
+import com.google.common.base.Strings;
 
 /**
  * Retrieved from a {@link TypeHandle} when searching for methods
  */
-public class MethodHandle {
+public class MethodHandle extends MemberHandle<MappingMethod> {
     
     /**
      * Actual element, can be null
      */
     private final ExecutableElement element;
 
-    public MethodHandle(ExecutableElement element) {
-        this.element = element;
+    public MethodHandle(TypeElement owner, ExecutableElement element) {
+        this(TypeUtils.getInternalName(owner), element);
+    }
+    
+    public MethodHandle(String owner, ExecutableElement element) {
+        this(owner, TypeUtils.getName(element), TypeUtils.getDescriptor(element));
+    }
+    
+    protected MethodHandle(String owner, String name, String desc) {
+        this(owner, null, name, desc);
     }
 
-    public String getName() {
-        return this.element != null ? this.element.getSimpleName().toString() : null;
+    private MethodHandle(String owner, ExecutableElement element, String name, String desc) {
+        super(owner, name, desc);
+        this.element = element;
     }
     
     /**
@@ -60,8 +72,16 @@ public class MethodHandle {
         return this.element;
     }
 
-    public MappingMethod asMapping() {
-        return new MappingMethod(null, this.element.getSimpleName().toString(), TypeUtils.getDescriptor(this.element));
+    @Override
+    public MappingMethod asMapping(boolean includeOwner) {
+        return new MappingMethod(includeOwner ? this.getOwner() : null, this.getName(), this.getDesc());
     }
 
+    @Override
+    public String toString() {
+        String owner = this.getOwner() != null ? "L" + this.getOwner() + ";" : "";
+        String name = Strings.nullToEmpty(this.getName());
+        String desc = Strings.nullToEmpty(this.getDesc());
+        return String.format("%s%s%s", owner, name, desc);
+    }
 }

@@ -40,6 +40,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -109,21 +110,21 @@ public class TypeHandle {
      * @see java.lang.Object#toString()
      */
     @Override
-    public String toString() {
+    public final String toString() {
         return this.name.replace('/', '.');
     }
     
     /**
      * Returns the fully qualified class name
      */
-    public String getName() {
+    public final String getName() {
         return this.name;
     }
     
     /**
      * Returns the enclosing package element
      */
-    public PackageElement getPackage() {
+    public final PackageElement getPackage() {
         return this.pkg;
     }
 
@@ -133,16 +134,23 @@ public class TypeHandle {
     public TypeElement getElement() {
         return this.element;
     }
+    
+    /**
+     * Returns the actual element (returns null for imaginary elements)
+     */
+    protected TypeElement getTargetElement() {
+        return this.element;
+    }
 
     public AnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
-        return AnnotationHandle.of(this.element, annotationClass);
+        return AnnotationHandle.of(this.getTargetElement(), annotationClass);
     }
 
     /**
      * Returns enclosed elements (methods, fields, etc.)
      */
-    public List<? extends Element> getEnclosedElements() {
-        return this.element != null ? this.element.getEnclosedElements() : Collections.<Element>emptyList();
+    public final List<? extends Element> getEnclosedElements() {
+        return TypeHandle.getEnclosedElements(this.getTargetElement());
     }
     
     /**
@@ -150,27 +158,8 @@ public class TypeHandle {
      * 
      * @param kind types of element to return
      */
-    @SuppressWarnings("unchecked")
     public <T extends Element> List<T> getEnclosedElements(ElementKind... kind) {
-        if (kind == null || kind.length < 1) {
-            return (List<T>)this.getEnclosedElements();
-        }
-        
-        if (this.element == null) {
-            return Collections.<T>emptyList();
-        }
-        
-        Builder<T> list = ImmutableList.<T>builder();
-        for (Element elem : this.element.getEnclosedElements()) {
-            for (ElementKind ek : kind) {
-                if (elem.getKind() == ek) {
-                    list.add((T)elem);
-                    break;
-                }
-            }
-        }
-
-        return list.build();
+        return TypeHandle.getEnclosedElements(this.getTargetElement(), kind);
     }
 
     /**
@@ -178,7 +167,7 @@ public class TypeHandle {
      * imaginary type
      */
     public TypeMirror getType() {
-        return this.element != null ? this.element.asType() : null;
+        return this.getTargetElement() != null ? this.getTargetElement().asType() : null;
     }
     
     /**
@@ -186,11 +175,12 @@ public class TypeHandle {
      * class does not have a superclass
      */
     public TypeHandle getSuperclass() {
-        if (this.element == null) {
+        TypeElement targetElement = this.getTargetElement();
+        if (targetElement == null) {
             return null;
         }
         
-        TypeMirror superClass = this.element.getSuperclass();
+        TypeMirror superClass = targetElement.getSuperclass();
         if (superClass == null || superClass.getKind() == TypeKind.NONE) {
             return null;
         }
@@ -199,12 +189,12 @@ public class TypeHandle {
     }
     
     public List<TypeHandle> getInterfaces() {
-        if (this.element == null) {
+        if (this.getTargetElement() == null) {
             return Collections.<TypeHandle>emptyList();
         }
         
         Builder<TypeHandle> list = ImmutableList.<TypeHandle>builder();
-        for (TypeMirror iface : this.element.getInterfaces()) {
+        for (TypeMirror iface : this.getTargetElement().getInterfaces()) {
             list.add(new TypeHandle((DeclaredType)iface));
         }
         
@@ -215,21 +205,41 @@ public class TypeHandle {
      * Get whether the element is probably public
      */
     public boolean isPublic() {
-        return this.element != null ? this.element.getModifiers().contains(Modifier.PUBLIC) : false;
+        return this.getTargetElement() != null ? this.getTargetElement().getModifiers().contains(Modifier.PUBLIC) : false;
     }
     
     /**
      * Get whether the element is imaginary (inaccessible via mirror)
      */
     public boolean isImaginary() {
-        return this.element == null;
+        return this.getTargetElement() == null;
     }
     
-    public TypeReference getReference() {
+    /**
+     * Get whether this handle is simulated
+     */
+    public boolean isSimulated() {
+        return false;
+    }
+    
+    public final TypeReference getReference() {
         if (this.reference == null) {
             this.reference = new TypeReference(this);
         }
         return this.reference;
+    }
+
+    /**
+     * Return a method as a remapping candidate, usually returns a method owned
+     * by this class but for simulated handles we resolve the reference in the
+     * class hierarchy of the simulated target (eg. self)
+     * 
+     * @param name Method name
+     * @param desc Method descriptor
+     * @return
+     */
+    public MappingMethod getMappingMethod(String name, String desc) {
+        return new MappingMethod(this.getName(), name, desc);
     }
 
     public String findDescriptor(MemberInfo memberInfo) {
@@ -252,7 +262,7 @@ public class TypeHandle {
      * @param element Element to match
      * @return handle to the discovered field if matched or null if no match
      */
-    public FieldHandle findField(VariableElement element) {
+    public final FieldHandle findField(VariableElement element) {
         return this.findField(element, true);
     }
     
@@ -263,7 +273,7 @@ public class TypeHandle {
      * @param element Element to match
      * @return handle to the discovered field if matched or null if no match
      */
-    public FieldHandle findField(VariableElement element, boolean caseSensitive) {
+    public final FieldHandle findField(VariableElement element, boolean caseSensitive) {
         return this.findField(element.getSimpleName().toString(), TypeUtils.getTypeName(element.asType()), caseSensitive);
     }
     
@@ -275,7 +285,7 @@ public class TypeHandle {
      * @param type Field descriptor (java-style)
      * @return handle to the discovered field if matched or null if no match
      */
-    public FieldHandle findField(String name, String type) {
+    public final FieldHandle findField(String name, String type) {
         return this.findField(name, type, true);
     }
     
@@ -291,10 +301,10 @@ public class TypeHandle {
         String rawType = TypeUtils.stripGenerics(type);
 
         for (VariableElement field : this.<VariableElement>getEnclosedElements(ElementKind.FIELD)) {
-            if (this.compareElement(field, name, type, caseSensitive)) {
-                return new FieldHandle(field);
-            } else if (this.compareElement(field, name, rawType, caseSensitive)) {
-                return new FieldHandle(field, true);
+            if (TypeHandle.compareElement(field, name, type, caseSensitive)) {
+                return new FieldHandle(this.getTargetElement(), field);
+            } else if (TypeHandle.compareElement(field, name, rawType, caseSensitive)) {
+                return new FieldHandle(this.getTargetElement(), field, true);
             }                
         }
         
@@ -308,7 +318,7 @@ public class TypeHandle {
      * @param element Element to match
      * @return handle to the discovered method if matched or null if no match
      */
-    public MethodHandle findMethod(ExecutableElement element) {
+    public final MethodHandle findMethod(ExecutableElement element) {
         return this.findMethod(element, true);
     }
 
@@ -319,7 +329,7 @@ public class TypeHandle {
      * @param element Element to match
      * @return handle to the discovered method if matched or null if no match
      */
-    public MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
+    public final MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
         return this.findMethod(element.getSimpleName().toString(), TypeUtils.getJavaSignature(element), caseSensitive);
     }
 
@@ -331,7 +341,7 @@ public class TypeHandle {
      * @param signature Method signature
      * @return handle to the discovered method if matched or null if no match
      */
-    public MethodHandle findMethod(String name, String signature) {
+    public final MethodHandle findMethod(String name, String signature) {
         return this.findMethod(name, signature, true);
     }
     
@@ -343,28 +353,57 @@ public class TypeHandle {
      * @param signature Method signature
      * @return handle to the discovered method if matched or null if no match
      */
-    public MethodHandle findMethod(String name, String signature, boolean caseSensitive) {
+    public MethodHandle findMethod(String name, String signature, boolean matchCase) {
         String rawSignature = TypeUtils.stripGenerics(signature);
+        return TypeHandle.findMethod(this.getTargetElement(), name, signature, rawSignature, matchCase);
+    }
 
-        for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
-            if (this.compareElement(method, name, signature, caseSensitive) || this.compareElement(method, name, rawSignature, caseSensitive)) {
-                return new MethodHandle(method);
+    protected static MethodHandle findMethod(TypeElement target, String name, String signature, String rawSignature, boolean matchCase) {
+        for (ExecutableElement method : TypeHandle.<ExecutableElement>getEnclosedElements(target, ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
+            if (TypeHandle.compareElement(method, name, signature, matchCase) || TypeHandle.compareElement(method, name, rawSignature, matchCase)) {
+                return new MethodHandle(target, method);
             }
         }
-        
         return null;
     }
     
-    private boolean compareElement(Element elem, String name, String type, boolean caseSensitive) {
+    protected static boolean compareElement(Element elem, String name, String type, boolean matchCase) {
         try {
             String elementName = elem.getSimpleName().toString();
             String elementType = TypeUtils.getJavaSignature(elem);
             String rawElementType = TypeUtils.stripGenerics(elementType);
-            boolean compared = caseSensitive ? name.equals(elementName) : name.equalsIgnoreCase(elementName);
+            boolean compared = matchCase ? name.equals(elementName) : name.equalsIgnoreCase(elementName);
             return compared && (type.length() == 0 || type.equals(elementType) || type.equals(rawElementType));
         } catch (NullPointerException ex) {
             return false;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static <T extends Element> List<T> getEnclosedElements(TypeElement targetElement, ElementKind... kind) {
+        if (kind == null || kind.length < 1) {
+            return (List<T>)TypeHandle.getEnclosedElements(targetElement);
+        }
+        
+        if (targetElement == null) {
+            return Collections.<T>emptyList();
+        }
+        
+        Builder<T> list = ImmutableList.<T>builder();
+        for (Element elem : targetElement.getEnclosedElements()) {
+            for (ElementKind ek : kind) {
+                if (elem.getKind() == ek) {
+                    list.add((T)elem);
+                    break;
+                }
+            }
+        }
+
+        return list.build();
+    }
+
+    protected static List<? extends Element> getEnclosedElements(TypeElement targetElement) {
+        return targetElement != null ? targetElement.getEnclosedElements() : Collections.<Element>emptyList();
     }
 
 }

@@ -22,33 +22,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.tools.obfuscation.mirror;
 
-import javax.lang.model.type.TypeMirror;
-
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.asm.obfuscation.mapping.IMapping;
 
 /**
- * Manager object which cann supply {@link TypeHandle} instances
+ * Abstract base class for element handles
+ * 
+ * @param <T> mapping type
  */
-public interface ITypeHandleProvider {
-
-    /**
-     * Generate a type handle for the specified type
-     * 
-     * @param name Type name (class name)
-     * @return A new type handle or null if the type could not be found
-     */
-    public abstract TypeHandle getTypeHandle(String name);
-
-    /**
-     * Generate a type handle for the specified type, simulate the target using
-     * the supplied type
-     * 
-     * @param name Type name (class name)
-     * @param simulatedTarget Simulation target
-     * @return A new type handle
-     */
-    public abstract TypeHandle getSimulatedHandle(String name, TypeMirror simulatedTarget);
+public abstract class MemberHandle<T extends IMapping<T>> {
     
+    private final String owner;
+    
+    private final String name;
+    
+    private final String desc;
+
+    protected MemberHandle(String owner, String name, String desc) {
+        this.owner = owner;
+        this.name = name;
+        this.desc = desc;
+    }
+    
+    public final String getOwner() {
+        return this.owner;
+    }
+    
+    public final String getName() {
+        return this.name;
+    }
+    
+    public final String getDesc() {
+        return this.desc;
+    }
+
+    public abstract T asMapping(boolean includeOwner);
 }

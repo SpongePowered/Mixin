@@ -38,6 +38,7 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementAccessor;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementInvoker;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjectionPoint;
@@ -112,6 +113,14 @@ class AnnotatedMixin {
      * True if we will actually process remappings for this mixin
      */
     private final boolean remap;
+    
+    /**
+     * True if the target class is allowed to not exist at compile time, we will
+     * simulate the target in order to do as much validation as is feasible.
+     * 
+     * <p>Implies <tt>remap=false</tt></p>
+     */
+    private final boolean virtual;
  
     /**
      * Overwrite handler
@@ -145,9 +154,11 @@ class AnnotatedMixin {
         this.messager = ap;
         this.mixin = type;
         this.handle = new TypeHandle(type);
+        this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         this.primaryTarget = this.initTargets();
+//        this.remap = !this.virtual && this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
         
         this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
@@ -193,7 +204,9 @@ class AnnotatedMixin {
                 if (this.targets.contains(type)) {
                     continue;
                 }
-                if (type == null) {
+                if (this.virtual) {
+                    type = this.typeProvider.getSimulatedHandle(privateTarget, this.mixin.asType());
+                } else if (type == null) {
                     this.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " could not be found", this);
                     return null;
                 } else if (type.isPublic()) {

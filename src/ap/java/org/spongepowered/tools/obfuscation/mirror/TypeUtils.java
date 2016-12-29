@@ -53,8 +53,15 @@ public abstract class TypeUtils {
     // No instances for you
     private TypeUtils() {}
 
-    public static PackageElement getPackage(TypeElement elem) {
-        Element parent = elem.getEnclosingElement();
+    public static PackageElement getPackage(TypeMirror type) {
+        if (!(type instanceof DeclaredType)) {
+            return null;
+        }
+        return TypeUtils.getPackage((TypeElement)((DeclaredType)type).asElement());
+    }
+    
+    public static PackageElement getPackage(TypeElement type) {
+        Element parent = type.getEnclosingElement();
         while (parent != null && !(parent instanceof PackageElement)) {
             parent = parent.getEnclosingElement();
         }
@@ -89,7 +96,7 @@ public abstract class TypeUtils {
                 desc.append(TypeUtils.getTypeName(arg.asType()));
                 extra = true;
             }
-            desc.append(')').append(method.getReturnType().toString());
+            desc.append(')').append(TypeUtils.getTypeName(method.getReturnType()));
             return desc.toString();
         }
         return TypeUtils.getTypeName(element.asType());
@@ -141,8 +148,20 @@ public abstract class TypeUtils {
     private static String getTypeName(TypeElement elem) {
         return TypeUtils.getInternalName(elem).replace('/', '.');
     }
+    
+    public static String getName(VariableElement field) {
+        return field != null ? field.getSimpleName().toString() : null;
+    }
+    
+    public static String getName(ExecutableElement method) {
+        return method != null ? method.getSimpleName().toString() : null;
+    }
 
     public static String getDescriptor(ExecutableElement method) {
+        if (method == null) {
+            return null;
+        }
+        
         StringBuilder signature = new StringBuilder();
         
         for (VariableElement var : method.getParameters()) {
@@ -154,6 +173,9 @@ public abstract class TypeUtils {
     }
     
     public static String getInternalName(VariableElement var) {
+        if (var == null) {
+            return null;
+        }
         return TypeUtils.getInternalName(var.asType());
     }
     
@@ -220,6 +242,9 @@ public abstract class TypeUtils {
     }
 
     public static String getInternalName(TypeElement elem) {
+        if (elem == null) {
+            return null;
+        }
         StringBuilder reference = new StringBuilder();
         reference.append(elem.getSimpleName());
         Element parent = elem.getEnclosingElement();

@@ -82,9 +82,21 @@ public interface IObfuscationDataProvider {
     public abstract ObfuscationData<MappingMethod> getObfMethod(MemberInfo method);
 
     /**
+     * Get an obfuscation mapping for a method if an explicit mapping exists.
+     * Where no direct mapping exists, remap the descriptor of the method only.
+     */
+    public abstract ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method);
+
+    /**
      * Get an obfuscation mapping for a method
      */
     public abstract ObfuscationData<MappingMethod> getObfMethod(MappingMethod method);
+
+    /**
+     * Get an obfuscation mapping for a method if an explicit mapping exists.
+     * Where no direct mapping exists, remap the descriptor of the method only.
+     */
+    public abstract ObfuscationData<MappingMethod> getRemappedMethod(MappingMethod method);
 
     /**
      * Attempts to resolve an obfuscated field by recursively enumerating

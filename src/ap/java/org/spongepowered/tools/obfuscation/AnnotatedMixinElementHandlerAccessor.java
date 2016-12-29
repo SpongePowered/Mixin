@@ -185,7 +185,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return;
         }
 
-        ObfuscationData<MappingField> obfData = this.obf.getDataProvider().getObfField(targetField.asMapping().move(target.getName()));
+        ObfuscationData<MappingField> obfData = this.obf.getDataProvider().getObfField(targetField.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
             elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
@@ -209,7 +209,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return;
         }
         
-        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod.asMapping().move(target.getName()));
+        ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
             elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);

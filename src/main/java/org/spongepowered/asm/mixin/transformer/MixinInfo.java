@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
@@ -682,6 +683,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final int priority;
     
     /**
+     * True if the mixin is annotated with {@link Pseudo} 
+     */
+    private final boolean virtual;
+    
+    /**
      * Mixin targets, read from the {@link Mixin} annotation on the mixin class
      */
     private final List<ClassInfo> targetClasses;
@@ -770,6 +776,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         // Read the class bytes and transform
         try {
             this.priority = this.readPriority(this.pendingState.getClassNode());
+            this.virtual = this.readPseudo(this.pendingState.getClassNode());
             this.targetClasses = this.readTargetClasses(this.pendingState.getClassNode(), suppressPlugin);
             this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         } catch (InvalidMixinException ex) {
@@ -864,11 +871,15 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private ClassInfo getTarget(String targetName, boolean checkPublic) throws InvalidMixinException {
         ClassInfo targetInfo = ClassInfo.forName(targetName);
         if (targetInfo == null) {
-            this.handleTargetError(String.format("@Mixin target %s was not found %s", targetName, this));
+            if (this.isVirtual()) {
+                this.logger.debug("Skipping virtual target {} for {}", targetName, this);
+            } else {
+                this.handleTargetError(String.format("@Mixin target %s was not found %s", targetName, this));
+            }
             return null;
         }
         this.type.validateTarget(targetName, targetInfo);
-        if (checkPublic && targetInfo.isPublic()) {
+        if (checkPublic && targetInfo.isPublic() && !this.isVirtual()) {
             this.handleTargetError(String.format("@Mixin target %s is public in %s and should be specified in value", targetName, this));
         }
         return targetInfo;
@@ -901,7 +912,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
         return priority == null ? this.parent.getDefaultMixinPriority() : priority.intValue();
     }
-    
+
+    protected boolean readPseudo(ClassNode classNode) {
+        return ASMHelper.getInvisibleAnnotation(classNode, Pseudo.class) != null;
+    }
+
     private boolean isReloading() {
         return this.pendingState instanceof Reloaded;
     }
@@ -990,6 +1005,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     public boolean isUnique() {
         return this.getState().isUnique();
+    }
+    
+    public boolean isVirtual() {
+        return this.virtual;
     }
 
     /**

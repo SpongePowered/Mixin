@@ -123,6 +123,10 @@ public class SignaturePrinter {
         }
     }
     
+    public String getFormattedArgs() {
+        return this.appendArgs(new StringBuilder(), true).toString();
+    }
+    
     public String getReturnType() {
         return SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified);
     }

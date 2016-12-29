@@ -62,11 +62,12 @@ import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator.ValidationPass;
-import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeReference;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
+import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandleSimulated;
+import org.spongepowered.tools.obfuscation.mirror.TypeReference;
 import org.spongepowered.tools.obfuscation.struct.Message;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
@@ -586,6 +587,24 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
         }
         
         return null;
+    }
+    
+    /**
+     * Returns a simulated TypeHandle for a non-existing type
+     */
+    @Override
+    public TypeHandle getSimulatedHandle(String name, TypeMirror simulatedTarget) {
+        name = name.replace('/', '.');
+        int lastDotPos = name.lastIndexOf('.');
+        if (lastDotPos > -1) {
+            String pkg = name.substring(0, lastDotPos);
+            PackageElement packageElement = this.processingEnv.getElementUtils().getPackageElement(pkg);
+            if (packageElement != null) {
+                return new TypeHandleSimulated(packageElement, name, simulatedTarget);
+            }
+        }
+
+        return new TypeHandleSimulated(name, simulatedTarget);
     }
 
     /* (non-Javadoc)
