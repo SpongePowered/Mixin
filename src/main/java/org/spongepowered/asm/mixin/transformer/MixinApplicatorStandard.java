@@ -264,7 +264,8 @@ class MixinApplicatorStandard {
             throw new InvalidMixinException(current, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst applying the mixin class: "
                     + ex.getMessage(), ex);
         }
-        
+
+        this.applySourceMap(this.context);
         this.context.processDebugTasks();
     }
 
@@ -898,6 +899,10 @@ class MixinApplicatorStandard {
             throw new InvalidMixinException(mixin, 
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
         }
+    }
+
+    protected void applySourceMap(TargetClassContext context) {
+        this.targetClass.sourceDebug = context.getSourceMap().toString();
     }
 
     /**

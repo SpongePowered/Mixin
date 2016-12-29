@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**
@@ -64,6 +65,11 @@ class TargetClassContext {
      * Target class metadata 
      */
     private final ClassInfo classInfo;
+
+    /**
+     * Source map that is generated for target class
+     */
+    private final SourceMap sourceMap;
     
     /**
      * Mixins to apply 
@@ -98,6 +104,8 @@ class TargetClassContext {
         this.classNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
         this.mixins = mixins;
+        this.sourceMap = new SourceMap(classNode.sourceFile);
+        this.sourceMap.addFile(this.classNode);
     }
     
     @Override
@@ -167,6 +175,13 @@ class TargetClassContext {
      */
     public SortedSet<MixinInfo> getMixins() {
         return this.mixins;
+    }
+
+    /**
+     * Get the source map that is generated for the target class
+     */
+    public SourceMap getSourceMap() {
+        return this.sourceMap;
     }
 
     MethodNode findAliasedMethod(Deque<String> aliases, String desc) {
