@@ -25,15 +25,20 @@
 package org.spongepowered.asm.mixin.refmap;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 
 import net.minecraft.launchwrapper.Launch;
 
@@ -61,6 +66,11 @@ public final class ReferenceMapper implements Serializable {
      */
     public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true);
     
+    /**
+     * Log even more things
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
+
     /**
      * "Default" mappings. The set of mappings to use as "default" is specified
      * by the AP. Each entry is keyed by the owning mixin, with the value map
@@ -210,16 +220,21 @@ public final class ReferenceMapper implements Serializable {
     /**
      * Read a new refmap from the specified resource
      * 
-     * @param resource Resource to read from
+     * @param resourcePath Resource to read from
      * @return new refmap or {@link #DEFAULT_MAPPER} if reading fails
      */
-    public static ReferenceMapper read(String resource) {
+    public static ReferenceMapper read(String resourcePath) {
         Reader reader = null;
         try {
-            reader = new InputStreamReader(Launch.classLoader.getResourceAsStream(resource));
-            return ReferenceMapper.read(reader);
+            InputStream resource = Launch.classLoader.getResourceAsStream(resourcePath);
+            if (resource != null) {
+                reader = new InputStreamReader(resource);
+                return ReferenceMapper.readJson(reader);
+            }
+        } catch (JsonParseException ex) {
+            ReferenceMapper.logger.error("Invalid REFMAP JSON in " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } catch (Exception ex) {
-            return ReferenceMapper.DEFAULT_MAPPER;
+            ReferenceMapper.logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } finally {
             if (reader != null) {
                 try {
@@ -229,6 +244,8 @@ public final class ReferenceMapper implements Serializable {
                 }
             }
         }
+        
+        return ReferenceMapper.DEFAULT_MAPPER;
     }
     
     /**
@@ -239,10 +256,14 @@ public final class ReferenceMapper implements Serializable {
      */
     public static ReferenceMapper read(Reader reader) {
         try {
-            return new Gson().fromJson(reader, ReferenceMapper.class);
+            return ReferenceMapper.readJson(reader);
         } catch (Exception ex) {
             return ReferenceMapper.DEFAULT_MAPPER;
         }
+    }
+
+    private static ReferenceMapper readJson(Reader reader) {
+        return new Gson().fromJson(reader, ReferenceMapper.class);
     }
     
 }
