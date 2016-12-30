@@ -355,6 +355,7 @@ public class CallbackInjector extends Injector {
     private void inject(final Callback callback) {
         if (this.localCapture.isPrintLocals()) {
             this.printLocals(callback);
+            this.info.addCallbackInvocation(this.methodNode);
             return;
         }
         
