@@ -382,6 +382,7 @@ public class RedirectInjector extends InvokeInjector {
             this.throwException(insns, "java/lang/NullPointerException", this.annotationType + " constructor handler " + this
                     + " returned null for " + newNode.desc.replace('/', '.'));
             insns.add(nullCheckSucceeded);
+            target.addToStack(1);
         } else {
             // Result is not assigned, so just pop it from the operand stack
             insns.add(new InsnNode(Opcodes.POP));
