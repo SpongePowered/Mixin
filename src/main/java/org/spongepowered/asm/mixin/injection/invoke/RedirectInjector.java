@@ -24,16 +24,29 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.lib.tree.JumpInsnNode;
+import org.spongepowered.asm.lib.tree.LabelNode;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.lib.tree.TypeInsnNode;
+import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
@@ -80,6 +93,9 @@ import com.google.common.primitives.Ints;
  */
 public class RedirectInjector extends InvokeInjector {
     
+    private static final String KEY_NOMINATORS = "nominators";
+    private static final String KEY_WILD = "wildcard";
+
     /**
      * Meta decoration object for redirector target nodes
      */
@@ -108,8 +124,21 @@ public class RedirectInjector extends InvokeInjector {
         
     }
     
+    /**
+     * Meta decoration for wildcard ctor redirects
+     */
+    class ConstructorRedirectData {
+        
+        public static final String KEY = "ctor";
+        
+        public int injected = 0;
+        
+    }
+    
     protected Meta meta;
 
+    private Map<BeforeNew, ConstructorRedirectData> ctorRedirectors = new HashMap<BeforeNew, ConstructorRedirectData>();
+    
     /**
      * @param info Injection info
      */
@@ -135,8 +164,9 @@ public class RedirectInjector extends InvokeInjector {
     }
 
     @Override
-    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn) {
+    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn, Set<InjectionPoint> nominators) {
         InjectionNode node = target.injectionNodes.get(insn);
+        ConstructorRedirectData ctorData = null;
         
         if (node != null ) {
             Meta other = node.getDecoration(Meta.KEY);
@@ -153,7 +183,29 @@ public class RedirectInjector extends InvokeInjector {
             }
         }
         
-        myNodes.add(target.injectionNodes.add(insn).decorate(Meta.KEY, this.meta));
+        for (InjectionPoint ip : nominators) {
+            if (ip instanceof BeforeNew && !((BeforeNew)ip).hasDescriptor()) {
+                ctorData = this.getCtorRedirect((BeforeNew)ip);
+            }
+        }
+        
+        InjectionNode targetNode = target.injectionNodes.add(insn);
+        targetNode.decorate(Meta.KEY, this.meta);
+        targetNode.decorate(RedirectInjector.KEY_NOMINATORS, nominators);
+        if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
+            targetNode.decorate(RedirectInjector.KEY_WILD, Boolean.valueOf(ctorData != null));
+            targetNode.decorate(ConstructorRedirectData.KEY, ctorData);
+        }
+        myNodes.add(targetNode);
+    }
+
+    private ConstructorRedirectData getCtorRedirect(BeforeNew ip) {
+        ConstructorRedirectData ctorRedirect = this.ctorRedirectors.get(ip);
+        if (ctorRedirect == null) {
+            ctorRedirect = new ConstructorRedirectData();
+            this.ctorRedirectors.put(ip, ctorRedirect);
+        }
+        return ctorRedirect;
     }
 
     @Override
@@ -198,6 +250,18 @@ public class RedirectInjector extends InvokeInjector {
             return false;
         }
         return true;
+    }
+    
+    @Override
+    protected void postInject(Target target, InjectionNode node) {
+        super.postInject(target, node);
+        if (node.getOriginalTarget() instanceof TypeInsnNode && node.getOriginalTarget().getOpcode() == Opcodes.NEW) {
+            ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
+            boolean wildcard = node.<Boolean>getDecoration(RedirectInjector.KEY_WILD).booleanValue();
+            if (wildcard && meta.injected == 0) {
+              throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
+            }
+        }
     }
     
     /**
@@ -341,18 +405,32 @@ public class RedirectInjector extends InvokeInjector {
     }
 
     protected void injectAtConstructor(Target target, InjectionNode node) {
+        ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
+        boolean wildcard = node.<Boolean>getDecoration(RedirectInjector.KEY_WILD).booleanValue();
+        
         final TypeInsnNode newNode = (TypeInsnNode)node.getCurrentTarget();
         final AbstractInsnNode dupNode = target.get(target.indexOf(newNode) + 1);
         final MethodInsnNode initNode = this.findInitNode(target, newNode);
         
         if (initNode == null) {
-            throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
+            if (!wildcard) {
+                throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
+            }
+            return;
         }
         
         // True if the result of the object construction is being assigned
         boolean isAssigned = dupNode.getOpcode() == Opcodes.DUP;
         String desc = initNode.desc.replace(")V", ")L" + newNode.desc + ";");
-        boolean withArgs = this.checkDescriptor(desc, target, "constructor");
+        boolean withArgs = false;
+        try {
+            withArgs = this.checkDescriptor(desc, target, "constructor");
+        } catch (InvalidInjectionException ex) {
+            if (!wildcard) {
+                throw ex;
+            }
+            return;
+        }
         
         if (isAssigned) {
             target.removeNode(dupNode);
@@ -389,6 +467,7 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         target.replaceNode(initNode, insns);
+        meta.injected++;
     }
 
     protected MethodInsnNode findInitNode(Target target, TypeInsnNode newNode) {

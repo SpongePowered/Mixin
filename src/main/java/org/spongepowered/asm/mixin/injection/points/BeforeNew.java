@@ -24,15 +24,20 @@
  */
 package org.spongepowered.asm.mixin.injection.points;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.ListIterator;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Strings;
 
@@ -43,7 +48,7 @@ import com.google.common.base.Strings;
  * {@link org.spongepowered.asm.mixin.injection.At At}:</p>
  * 
  * <dl>
- *   <dt><em>named argument</em> class</dt>
+ *   <dt><em>named argument</em> class (or specify using <tt>target</tt></dt>
  *   <dd>The value of the NEW node to look for, the fully-qualified class name
  *   </dd>
  *   <dt>ordinal</dt>
@@ -51,14 +56,27 @@ import com.google.common.base.Strings;
  *   opcode appears 3 times in the method and you want to match the 3rd then you
  *   can specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed).
  *   The default value is <b>-1</b> which supresses ordinal matching</dd>
+ *   <dt>target</dt>
+ *   <dd>Target class can also be specified in <tt>target</tt> which also
+ *   supports specifying the exact signature of the constructor to target. In
+ *   this case the <em>target type</em> is specified as the return type of the
+ *   constructor (in place of the usual <tt>V</tt> (void)) and no owner or name
+ *   should be specified (they are ignored).</dd>
  * </dl>
  * 
  * <p>Examples:</p>
  * <blockquote><pre>
+ *   // Find all NEW opcodes for <tt>String</tt>
  *   &#064;At(value = "NEW", args = "class=java/lang/String")</pre>
  * </blockquote> 
  * <blockquote><pre>
+ *   // Find all NEW opcodes for <tt>String</tt>
  *   &#064;At(value = "NEW", target = "java/lang/String"</pre>
+ * </blockquote> 
+ * <blockquote><pre>
+ *   // Find all NEW opcodes for <tt>String</tt> which are constructed using the
+ *   // ctor which takes an array of <tt>char</tt>
+ *   &#064;At(value = "NEW", target = "([C)Ljava/lang/String;"</pre>
  * </blockquote> 
  * 
  * <p>Note that like all standard injection points, this class matches the insn
@@ -73,7 +91,12 @@ public class BeforeNew extends InjectionPoint {
     /**
      * Class name we're looking for
      */
-    private final String className;
+    private final String target;
+    
+    /**
+     * Ctor descriptor we're looking for 
+     */
+    private final String desc;
 
     /**
      * Ordinal value
@@ -82,32 +105,65 @@ public class BeforeNew extends InjectionPoint {
 
     public BeforeNew(InjectionPointData data) {
         this.ordinal = data.getOrdinal();
-        this.className = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
+        String target = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
+        MemberInfo member = MemberInfo.parseAndValidate(target, data.getMixin());
+        this.target = member.toCtorType();
+        this.desc = member.toCtorDesc();
+    }
+    
+    public boolean hasDescriptor() {
+        return this.desc != null;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
         boolean found = false;
         int ordinal = 0;
 
+        Collection<TypeInsnNode> newNodes = new ArrayList<TypeInsnNode>();
+        Collection<AbstractInsnNode> candidates = (Collection<AbstractInsnNode>) (this.desc != null ? newNodes : nodes);
         ListIterator<AbstractInsnNode> iter = insns.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
 
             if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW && this.matchesOwner((TypeInsnNode) insn)) {
                 if (this.ordinal == -1 || this.ordinal == ordinal) {
-                    nodes.add(insn);
-                    found = true;
+                    candidates.add(insn);
+                    found = this.desc == null;
                 }
 
                 ordinal++;
+            }
+        }
+        
+        if (this.desc != null) {
+            for (TypeInsnNode newNode : newNodes) {
+                if (this.findCtor(insns, newNode)) {
+                    nodes.add(newNode);
+                    found = true;
+                }
             }
         }
 
         return found;
     }
 
+    protected boolean findCtor(InsnList insns, TypeInsnNode newNode) {
+        int indexOf = insns.indexOf(newNode);
+        for (Iterator<AbstractInsnNode> iter = insns.iterator(indexOf); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc) && methodNode.desc.equals(this.desc)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean matchesOwner(TypeInsnNode insn) {
-        return this.className == null || this.className.equals(insn.desc);
+        return this.target == null || this.target.equals(insn.desc);
     }
 }

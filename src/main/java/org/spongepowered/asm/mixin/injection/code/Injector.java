@@ -26,8 +26,10 @@ package org.spongepowered.asm.mixin.injection.code;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -56,6 +58,20 @@ import com.google.common.base.Joiner;
  * Base class for bytecode injectors
  */
 public abstract class Injector {
+    
+    /**
+     * A nominated target node
+     */
+    class TargetNode {
+        
+        final AbstractInsnNode node;
+        
+        final Set<InjectionPoint> nominators = new HashSet<InjectionPoint>();
+
+        TargetNode(AbstractInsnNode node) {
+            this.node = node;
+        }
+    }
     
     /**
      * Log more things
@@ -133,13 +149,13 @@ public abstract class Injector {
         this.sanityCheck(target, injectionPoints);
 
         List<InjectionNode> myNodes = new ArrayList<InjectionNode>();
-        for (AbstractInsnNode node : this.findTargetNodes(target.method, injectionPoints)) {
-            this.addTargetNode(target, myNodes, node);
+        for (TargetNode node : this.findTargetNodes(target.method, injectionPoints)) {
+            this.addTargetNode(target, myNodes, node.node, node.nominators);
         }
         return myNodes;
     }
 
-    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node) {
+    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
         myNodes.add(target.injectionNodes.add(node));
     }
     
@@ -153,6 +169,10 @@ public abstract class Injector {
             }
             this.inject(target, node);
         }
+        
+        for (InjectionNode node : nodes) {
+            this.postInject(target, node);
+        }
     }
 
     /**
@@ -164,8 +184,8 @@ public abstract class Injector {
      *      annotations on the callback method
      * @return Target insn nodes in the target method
      */
-    protected Set<AbstractInsnNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
-        Set<AbstractInsnNode> targetNodes = new HashSet<AbstractInsnNode>();
+    private Collection<TargetNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
+        Map<AbstractInsnNode, TargetNode> targetNodes = new HashMap<AbstractInsnNode, TargetNode>();
 
         // Defensive objects, so that injectionPoint instances can't modify our working copies
         ReadOnlyInsnList insns = new ReadOnlyInsnList(into.instructions);
@@ -174,12 +194,19 @@ public abstract class Injector {
         for (InjectionPoint injectionPoint : injectionPoints) {
             nodes.clear();
             if (this.findTargetNodes(into, injectionPoint, insns, nodes)) {
-                targetNodes.addAll(nodes);
+                for (AbstractInsnNode node : nodes) {
+                    TargetNode target = targetNodes.get(node);
+                    if (target == null) {
+                        target = new TargetNode(node);
+                        targetNodes.put(node, target);
+                    }
+                    target.nominators.add(injectionPoint);
+                }
             }
         }
         
         insns.dispose();
-        return targetNodes;
+        return targetNodes.values();
     }
 
     protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
@@ -193,6 +220,10 @@ public abstract class Injector {
     }
 
     protected abstract void inject(Target target, InjectionNode node);
+
+    protected void postInject(Target target, InjectionNode node) {
+        // stub
+    }
 
     /**
      * Invoke the handler method

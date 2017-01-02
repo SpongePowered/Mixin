@@ -68,7 +68,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
         /**
          * Injector decorations on this node
          */
-        private Map<Object, Object> decorations;
+        private Map<String, Object> decorations;
         
         /**
          * Create a new node wrapper for the specified target node
@@ -144,9 +144,9 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * @param key meta key
          * @param value meta value
          */
-        public <K, V> InjectionNode decorate(K key, V value) {
+        public <V> InjectionNode decorate(String key, V value) {
             if (this.decorations == null) {
-                this.decorations = new HashMap<Object, Object>();
+                this.decorations = new HashMap<String, Object>();
             }
             this.decorations.put(key, value);
             return this;
@@ -169,7 +169,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * @return decoration value or null if absent
          */
         @SuppressWarnings("unchecked")
-        public <K, V> V getDecoration(K key) {
+        public <V> V getDecoration(String key) {
             return (V) (this.decorations == null ? null : this.decorations.get(key));
         }
 
@@ -186,7 +186,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          */
         @Override
         public String toString() {
-            return String.format("InjectionNode[%s]", ASMHelper.getNodeDescriptionForDebug(this.currentTarget));
+            return String.format("InjectionNode[%s]", ASMHelper.getNodeDescriptionForDebug(this.currentTarget).replaceAll("\\s+", " "));
         }
         
     }

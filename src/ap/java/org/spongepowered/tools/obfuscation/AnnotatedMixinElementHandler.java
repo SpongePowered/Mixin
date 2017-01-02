@@ -33,7 +33,6 @@ import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
@@ -42,15 +41,14 @@ import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
-import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
 /**
  * Base class for module for {@link AnnotatedMixin} which handle different
@@ -301,56 +299,6 @@ abstract class AnnotatedMixinElementHandler {
             }
         }
         return this.mappings;
-    }
-    
-    protected final boolean remapReference(String key, String reference, Element element, AnnotationHandle inject, AnnotationHandle at) {
-        if (reference == null) {
-            return false;
-        }
-        
-        String annotation = "@At(" + key + ")";
-        MemberInfo targetMember = MemberInfo.parse(reference);
-        if (!targetMember.isFullyQualified()) {
-            String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
-            this.ap.printMessage(Kind.ERROR, annotation + " is not fully qualified, " + missing, element, inject.asMirror());
-            return false;
-        }
-        
-        try {
-            targetMember.validate();
-        } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), element, inject.asMirror());
-        }
-        
-        try {
-            if (targetMember.isField()) {
-                ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
-                if (obfFieldData.isEmpty()) {
-                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + annotation + " '" + reference + "'", element,
-                            inject.asMirror());
-                    return false;
-                }
-                this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
-            } else {
-                ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
-                if (obfMethodData.isEmpty()) {
-                    if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
-                        this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + annotation + " '" + reference + "'", element,
-                                inject.asMirror());
-                        return false;
-                    }
-                }
-                this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, targetMember, obfMethodData);
-            }
-        } catch (ReferenceConflictException ex) {
-            // Since references are fully-qualified, it shouldn't be possible for there to be multiple mappings, however
-            // we catch and log the error in case something weird happens in the mapping provider
-            this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + annotation + ": " + reference + " -> "
-                    + ex.getNew() + " previously defined as " + ex.getOld(), element, inject.asMirror());
-            return false;
-        }
-        
-        return true;
     }
 
     protected final void addFieldMappings(String mcpName, String mcpSignature, ObfuscationData<MappingField> obfData) {

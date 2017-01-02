@@ -36,6 +36,8 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
 
+import com.google.common.base.Strings;
+
 /**
  * <p>Information bundle about a member (method or field) parsed from a String
  * token in another annotation, this is used where target members need to be
@@ -102,6 +104,11 @@ public class MemberInfo {
      * Force this member to report as a field
      */
     private final boolean forceField;
+    
+    /**
+     * The actual String value passed into the {@link #parse} method 
+     */
+    private final String unparsed;
 
     /**
      * ctor
@@ -149,6 +156,19 @@ public class MemberInfo {
      * @param matchAll True to match all matching members, not just the first
      */
     public MemberInfo(String name, String owner, String desc, boolean matchAll) {
+        this(name, owner, desc, matchAll, null);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param desc Member descriptor, can be null
+     * @param matchAll True to match all matching members, not just the first
+     */
+    public MemberInfo(String name, String owner, String desc, boolean matchAll, String unparsed) {
         if (owner != null && owner.contains(".")) {
             throw new IllegalArgumentException("Attempt to instance a MemberInfo with an invalid owner format");
         }
@@ -158,6 +178,7 @@ public class MemberInfo {
         this.desc = desc;
         this.matchAll = matchAll;
         this.forceField = false;
+        this.unparsed = unparsed;
     }
     
     /**
@@ -169,6 +190,7 @@ public class MemberInfo {
     public MemberInfo(AbstractInsnNode insn) {
         this.matchAll = false;
         this.forceField = false;
+        this.unparsed = null;
         
         if (insn instanceof MethodInsnNode) {
             MethodInsnNode methodNode = (MethodInsnNode) insn;
@@ -196,6 +218,7 @@ public class MemberInfo {
         this.desc = mapping.getDesc();
         this.matchAll = false;
         this.forceField = mapping.getType() == IMapping.Type.FIELD;
+        this.unparsed = null;
     }
     
     /**
@@ -209,6 +232,7 @@ public class MemberInfo {
         this.desc = method.getDesc();
         this.matchAll = remapped.matchAll;
         this.forceField = false;
+        this.unparsed = null;
     }
 
     /**
@@ -223,6 +247,7 @@ public class MemberInfo {
         this.desc = original.desc;
         this.matchAll = original.matchAll;
         this.forceField = original.forceField;
+        this.unparsed = null;
     }
     
     /* (non-Javadoc)
@@ -265,6 +290,47 @@ public class MemberInfo {
         return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
+    public String toCtorType() {
+        if (this.unparsed == null) {
+            return null;
+        }
+        
+        String returnType = this.getReturnType();
+        if (returnType != null) {
+            return returnType;
+        }
+
+        if (this.owner != null) {
+            return this.owner;
+        }
+
+        if (this.name != null && this.desc == null) {
+            return this.name;
+        }
+
+        return this.desc != null ? this.desc : this.unparsed;
+    }
+
+    public String toCtorDesc() {
+        if (this.desc != null && this.desc.startsWith("(") && this.desc.indexOf(')') > -1) {
+            return this.desc.substring(0, this.desc.indexOf(')') + 1) + "V";
+        }
+
+        return null;
+    }
+    
+    public String getReturnType() {
+        if (this.desc == null || this.desc.indexOf(')') == -1 || this.desc.indexOf('(') != 0 ) {
+            return null;
+        }
+        
+        String returnType = this.desc.substring(this.desc.indexOf(')') + 1);
+        if (returnType.startsWith("L") && returnType.endsWith(";")) {
+            return returnType.substring(1, returnType.length() - 1);
+        }
+        return returnType;
+    }
+
     public IMapping<?> asMapping() {
         return this.isField() ? this.asFieldMapping() : this.asMethodMapping();
     }
@@ -503,16 +569,15 @@ public class MemberInfo {
     /**
      * Parse a MemberInfo from a string
      * 
-     * @param name String to parse MemberInfo from
+     * @param input String to parse MemberInfo from
      * @param refMapper Reference mapper to use
      * @param mixinClass Mixin class to use for remapping
      * @return parsed MemberInfo
      */
-    private static MemberInfo parse(String name, ReferenceMapper refMapper, String mixinClass) {
+    private static MemberInfo parse(String input, ReferenceMapper refMapper, String mixinClass) {
         String desc = null;
         String owner = null;
-        
-        name = name.replaceAll("\\s", "");
+        String name = Strings.nullToEmpty(input).replaceAll("\\s", "");
 
         if (refMapper != null) {
             name = refMapper.remap(mixinClass, name);
@@ -538,6 +603,11 @@ public class MemberInfo {
             name = name.substring(0, colonPos);
         }
         
+        if ((name.indexOf('/') > -1 || name.indexOf('.') > -1) && owner == null) {
+            owner = name;
+            name = "";
+        }
+        
         boolean matchAll = name.endsWith("*");
         if (matchAll) {
             name = name.substring(0, name.length() - 1);
@@ -547,10 +617,15 @@ public class MemberInfo {
             name = null;
         }
         
-        return new MemberInfo(name, owner, desc, matchAll);
+        return new MemberInfo(name, owner, desc, matchAll, input);
     }
 
     public static MemberInfo fromMapping(IMapping<?> mapping) {
         return new MemberInfo(mapping);
+    }
+    
+    public static void main(String[] args) {
+        MemberInfo m = MemberInfo.parseAndValidate(null); //"(Lfoo;III)Lfoo/bar/qcv;");
+        System.err.printf(">> [%s] [%s]\n", m.toCtorType(), m.toCtorDesc());
     }
 }

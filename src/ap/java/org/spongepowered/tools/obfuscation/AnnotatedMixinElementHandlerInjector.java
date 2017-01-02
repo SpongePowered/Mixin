@@ -32,6 +32,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
@@ -75,6 +76,8 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         private final AnnotationHandle at;
         
+        private Map<String, String> args;
+        
         public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at) {
             super(element, inject);
             this.at = at;
@@ -84,6 +87,24 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             return this.at;
         }
         
+        public String getAtArg(String key) {
+            if (this.args == null) {
+                this.args = new HashMap<String, String>();
+                for (String arg : this.at.<String>getList("args")) {
+                    if (arg == null) {
+                        continue;
+                    }
+                    int eqPos = arg.indexOf('=');
+                    if (eqPos > -1) {
+                        this.args.put(arg.substring(0, eqPos), arg.substring(eqPos + 1));
+                    } else {
+                        this.args.put(arg, "");
+                    }
+                }
+            }
+            
+            return this.args.get(key);
+        }
     }
     
     AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
@@ -181,31 +202,95 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         String type = elem.getAt().<String>getValue("value");
         String target = elem.getAt().<String>getValue("target");
-        int remapped = this.remapReference(type + ".<target>", target, elem.getElement(), elem.getAnnotation(), elem.getAt()) ? 1 : 0;
+        int remapped = 0;
         
-        // Pattern for replacing references in args, not used yet
-//        if ("SOMETYPE".equals(type)) {
-//            Map<String, String> args = InjectorHandler.getAtArgs(e.getAt());
-//            this.remapReference(type + ".args[target]", args.get("target"));
-//        }
+        if ("NEW".equals(type)) {
+            remapped += this.remapNewTarget("@At(" + type + ".<target>)", target, elem) ? 1 : 0;
+            remapped += this.remapNewTarget("@At(" + type + ".args[class])", elem.getAtArg("class"), elem) ? 1 : 0;
+        } else {
+            remapped += this.remapReference("@At(" + type + ".<target>)", target, elem) ? 1 : 0;
+        }
         
         return remapped;
     }
-
-    static Map<String, String> getAtArgs(AnnotationHandle at) {
-        Map<String, String> args = new HashMap<String, String>();
-        for (String arg : at.<String>getList("args")) {
-            if (arg == null) {
-                continue;
-            }
-            int eqPos = arg.indexOf('=');
-            if (eqPos > -1) {
-                args.put(arg.substring(0, eqPos), arg.substring(eqPos + 1));
-            } else {
-                args.put(arg, "");
-            }
+    
+    protected final boolean remapNewTarget(String subject, String reference, AnnotatedElementInjectionPoint elem) {
+        if (reference == null) {
+            return false;
         }
-        return args;
+
+        MemberInfo member = MemberInfo.parse(reference);
+        String target = member.toCtorType();
+        
+        if (target != null) {
+            String desc = member.toCtorDesc();
+            MappingMethod m = new MappingMethod(target, ".", desc != null ? desc : "()V");
+            ObfuscationData<MappingMethod> remapped = this.obf.getDataProvider().getRemappedMethod(m);
+            if (remapped.isEmpty()) {
+                this.ap.printMessage(Kind.WARNING, "Cannot find class mapping for " + subject + " '" + target + "'", elem.getElement(),
+                        elem.getAnnotation().asMirror());
+                return false;
+            }
+
+            ObfuscationData<String> mappings = new ObfuscationData<String>();
+            for (ObfuscationType type : remapped) {
+                MappingMethod mapping = remapped.get(type);
+                mappings.add(type, mapping.getDesc().replace(")V", ")L" + mapping.getOwner() + ";"));
+            }
+            
+            this.obf.getReferenceManager().addClassMapping(this.classRef, reference, mappings);
+        }        
+
+        return true;
+    }
+    
+    protected final boolean remapReference(String subject, String reference, AnnotatedElementInjectionPoint elem) {
+        if (reference == null) {
+            return false;
+        }
+        
+        MemberInfo targetMember = MemberInfo.parse(reference);
+        if (!targetMember.isFullyQualified()) {
+            String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
+            this.ap.printMessage(Kind.ERROR, subject + " is not fully qualified, " + missing, elem.getElement(), elem.getAnnotation().asMirror());
+            return false;
+        }
+        
+        try {
+            targetMember.validate();
+        } catch (InvalidMemberDescriptorException ex) {
+            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAnnotation().asMirror());
+        }
+        
+        try {
+            if (targetMember.isField()) {
+                ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
+                if (obfFieldData.isEmpty()) {
+                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
+                            elem.getAnnotation().asMirror());
+                    return false;
+                }
+                this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
+            } else {
+                ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
+                if (obfMethodData.isEmpty()) {
+                    if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
+                        this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + subject + " '" + reference + "'", elem.getElement(),
+                                elem.getAnnotation().asMirror());
+                        return false;
+                    }
+                }
+                this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, targetMember, obfMethodData);
+            }
+        } catch (ReferenceConflictException ex) {
+            // Since references are fully-qualified, it shouldn't be possible for there to be multiple mappings, however
+            // we catch and log the error in case something weird happens in the mapping provider
+            this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + subject + ": " + reference + " -> "
+                    + ex.getNew() + " previously defined as " + ex.getOld(), elem.getElement(), elem.getAnnotation().asMirror());
+            return false;
+        }
+        
+        return true;
     }
 
 }
