@@ -160,11 +160,11 @@ public class SourceMap {
             this.name = name;
         }
 
-        public File addFile(String fileName, int lineOffset, int size, String sourceFileName, String sourceFilePath) {
-            File file = this.files.get(fileName);
+        public File addFile(int lineOffset, int size, String sourceFileName, String sourceFilePath) {
+            File file = this.files.get(sourceFilePath);
             if (file == null) {
                 file = new File(this.files.size() + 1, lineOffset, size, sourceFileName, sourceFilePath);
-                this.files.put(fileName, file);
+                this.files.put(sourceFilePath, file);
             }
             return file;
         }
@@ -222,29 +222,21 @@ public class SourceMap {
     }
     
     public File addFile(String stratumName, ClassNode classNode) {
-        return this.addFile(stratumName, classNode, classNode.sourceFile);
+        return this.addFile(stratumName, classNode.sourceFile, classNode.name + ".java", ASMHelper.getMaxLineNumber(classNode, 500, 50));
     }
     
-    public File addFile(ClassNode classNode, String name) {
-        return this.addFile(this.defaultStratum, classNode, name);
+    public File addFile( String sourceFileName, String sourceFilePath, int size) {
+        return this.addFile(this.defaultStratum, sourceFileName, sourceFilePath, size);
     }
     
-    public File addFile(String stratumName, ClassNode classNode, String name) {
-        return this.addFile(stratumName, name, classNode.sourceFile, classNode.name + ".java", ASMHelper.getMaxLineNumber(classNode, 500, 50));
-    }
-    
-    public File addFile(String fileName, String sourceFileName, String sourceFilePath, int size) {
-        return this.addFile(this.defaultStratum, fileName, sourceFileName, sourceFilePath, size);
-    }
-    
-    public File addFile(String stratumName, String fileName, String sourceFileName, String sourceFilePath, int size) {
+    public File addFile(String stratumName, String sourceFileName, String sourceFilePath, int size) {
         Stratum stratum = this.strata.get(stratumName);
         if (stratum == null) {
             stratum = new Stratum(stratumName);
             this.strata.put(stratumName, stratum);
         }
         
-        File file = stratum.addFile(fileName, this.nextLineOffset, size, sourceFileName, sourceFilePath);
+        File file = stratum.addFile(this.nextLineOffset, size, sourceFileName, sourceFilePath);
         this.nextLineOffset += size;
         return file;
     }

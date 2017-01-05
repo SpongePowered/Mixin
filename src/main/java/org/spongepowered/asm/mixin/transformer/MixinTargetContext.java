@@ -172,7 +172,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.classNode = classNode;
         this.targetClass = context;
         this.targetClassInfo = ClassInfo.forName(this.targetClass.getName());
-        this.stratum = context.getSourceMap().addFile(this.classNode, mixin.getName());
+        this.stratum = context.getSourceMap().addFile(this.classNode);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.targetClass.getClassNode().superName);
         this.sessionId = context.getSessionId();
