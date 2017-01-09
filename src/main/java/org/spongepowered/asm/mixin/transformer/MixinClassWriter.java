@@ -49,28 +49,27 @@ public class MixinClassWriter extends ClassWriter {
      */
     @Override
     protected String getCommonSuperClass(final String type1, final String type2) {
-        ClassInfo c = ClassInfo.forName(type1);
-        ClassInfo d = ClassInfo.forName(type2);
+        ClassInfo t1 = ClassInfo.forName(type1);
+        ClassInfo t2 = ClassInfo.forName(type2);
         
-        if (c.hasSuperClass(d)) {
+        if (t1.hasSuperClass(t2)) {
             return type2;
         }
-        if (d.hasSuperClass(c)) {
+        if (t2.hasSuperClass(t1)) {
             return type1;
         }
-        if (c.isInterface() || d.isInterface()) {
+        if (t1.isInterface() || t2.isInterface()) {
             return MixinClassWriter.JAVA_LANG_OBJECT;
         }
         
         do {
-            c = c.getSuperClass();
-            if (c == null) {
+            t1 = t1.getSuperClass();
+            if (t1 == null) {
                 return MixinClassWriter.JAVA_LANG_OBJECT;
             }
-            
-        } while (!d.hasSuperClass(c));
+        } while (!t2.hasSuperClass(t1));
         
-        return c.getName();
+        return t1.getName();
     }
 
 }

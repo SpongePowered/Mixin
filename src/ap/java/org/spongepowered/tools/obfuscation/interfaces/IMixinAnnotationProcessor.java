@@ -35,6 +35,29 @@ import org.spongepowered.asm.util.ITokenProvider;
 public interface IMixinAnnotationProcessor extends Messager, IOptionProvider {
 
     /**
+     * Detected compiler argument, specifies the behaviour of some operations
+     * for compatibility purposes.
+     */
+    public static enum CompilerEnvironment {
+        
+        /**
+         * Default environment
+         */
+        JAVAC,
+        
+        /**
+         * Eclipse 
+         */
+        JDT
+        
+    }
+
+    /**
+     * Get the detected compiler environment
+     */
+    public abstract CompilerEnvironment getCompilerEnvironment();
+
+    /**
      * Get the underlying processing environment
      */
     public abstract ProcessingEnvironment getProcessingEnvironment();

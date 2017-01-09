@@ -27,9 +27,13 @@ package org.spongepowered.tools.obfuscation;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
@@ -37,9 +41,10 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.CompilerEnvironment;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
-import org.spongepowered.tools.obfuscation.struct.Message;
+import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
 
 /**
  * A module for {@link AnnotatedMixin} whic handles injectors
@@ -51,15 +56,19 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
      */
     static class AnnotatedElementInjector extends AnnotatedElement<ExecutableElement> {
         
-        private final boolean shouldRemap;
+        private final InjectorRemap state;
 
-        public AnnotatedElementInjector(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
+        public AnnotatedElementInjector(ExecutableElement element, AnnotationHandle annotation, InjectorRemap shouldRemap) {
             super(element, annotation);
-            this.shouldRemap = shouldRemap;
+            this.state = shouldRemap;
         }
         
         public boolean shouldRemap() {
-            return this.shouldRemap;
+            return this.state.shouldRemap();
+        }
+        
+        public void addMessage(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation) {
+            this.state.addMessage(kind, msg, element, annotation);
         }
         
         @Override
@@ -78,9 +87,12 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         private Map<String, String> args;
         
-        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at) {
+        private final InjectorRemap state;
+
+        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at, InjectorRemap state) {
             super(element, inject);
             this.at = at;
+            this.state = state;
         }
         
         public AnnotationHandle getAt() {
@@ -105,13 +117,17 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             
             return this.args.get(key);
         }
+        
+        public void notifyRemapped() {
+            this.state.notifyRemapped();
+        }
     }
     
     AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
-    public Message registerInjector(AnnotatedElementInjector elem) {
+    public void registerInjector(AnnotatedElementInjector elem) {
         if (this.mixin.isInterface()) {
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
@@ -119,7 +135,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         String reference = elem.getAnnotation().<String>getValue("method");
         MemberInfo targetMember = MemberInfo.parse(reference);
         if (targetMember.name == null) {
-            return null;
+            return;
         }
 
         try {
@@ -133,19 +149,17 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         }
         
         if (!elem.shouldRemap()) {
-            return null;
+            return;
         }
         
         for (TypeHandle target : this.mixin.getTargets()) {
-            Message message = this.registerInjector(elem, reference, targetMember, target);
-            if (message != null) {
-                return message;
+            if (!this.registerInjector(elem, reference, targetMember, target)) {
+                break;
             }
         }
-        return null;
     }
 
-    private Message registerInjector(AnnotatedElementInjector elem, String reference, MemberInfo targetMember, TypeHandle target) {
+    private boolean registerInjector(AnnotatedElementInjector elem, String reference, MemberInfo targetMember, TypeHandle target) {
         String desc = target.findDescriptor(targetMember);
         if (desc == null) {
             Kind error = this.mixin.isMultiTarget() ? Kind.ERROR : Kind.WARNING;
@@ -157,7 +171,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             } else if (!Constants.CTOR.equals(targetMember.name)) {
                 elem.printMessage(this.ap, error, "Unable to determine signature for " + elem + " target method");
             }
-            return null;
+            return true;
         }
         
         String targetName = elem + " target " + targetMember.name;
@@ -168,7 +182,8 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 obfData = this.obf.getDataProvider().getRemappedMethod(targetMethod);
             } else {
                 Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
-                return new Message(error, "No obfuscation mapping for " + targetName, elem.getElement(), elem.getAnnotation());
+                elem.addMessage(error, "No obfuscation mapping for " + targetName, elem.getElement(), elem.getAnnotation());
+                return false;
             }
         }
         
@@ -184,39 +199,36 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                     + ex.getNew() + " previously defined as " + ex.getOld());
         }
         
-        return null;
+        return true;
     }
 
     /**
      * Register a {@link org.spongepowered.asm.mixin.injection.At} annotation
      * and process the references
      */
-    public int registerInjectionPoint(AnnotatedElementInjectionPoint elem) {
+    public void registerInjectionPoint(AnnotatedElementInjectionPoint elem, String format) {
         if (this.mixin.isInterface()) {
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
         if (!elem.getAt().getBoolean("remap", true)) {
-            return 0;
+            return;
         }
         
-        String type = elem.getAt().<String>getValue("value");
+        String type = InjectionPointData.parseType(elem.getAt().<String>getValue("value"));
         String target = elem.getAt().<String>getValue("target");
-        int remapped = 0;
         
         if ("NEW".equals(type)) {
-            remapped += this.remapNewTarget("@At(" + type + ".<target>)", target, elem) ? 1 : 0;
-            remapped += this.remapNewTarget("@At(" + type + ".args[class])", elem.getAtArg("class"), elem) ? 1 : 0;
+            this.remapNewTarget(String.format(format, type + ".<target>"), target, elem);
+            this.remapNewTarget(String.format(format, type + ".args[class]"), elem.getAtArg("class"), elem);
         } else {
-            remapped += this.remapReference("@At(" + type + ".<target>)", target, elem) ? 1 : 0;
+            this.remapReference(String.format(format, type + ".<target>"), target, elem);
         }
-        
-        return remapped;
     }
     
-    protected final boolean remapNewTarget(String subject, String reference, AnnotatedElementInjectionPoint elem) {
+    protected final void remapNewTarget(String subject, String reference, AnnotatedElementInjectionPoint elem) {
         if (reference == null) {
-            return false;
+            return;
         }
 
         MemberInfo member = MemberInfo.parse(reference);
@@ -229,7 +241,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             if (remapped.isEmpty()) {
                 this.ap.printMessage(Kind.WARNING, "Cannot find class mapping for " + subject + " '" + target + "'", elem.getElement(),
                         elem.getAnnotation().asMirror());
-                return false;
+                return;
             }
 
             ObfuscationData<String> mappings = new ObfuscationData<String>();
@@ -245,7 +257,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.obf.getReferenceManager().addClassMapping(this.classRef, reference, mappings);
         }        
 
-        return true;
+        elem.notifyRemapped();
     }
     
     protected final boolean remapReference(String subject, String reference, AnnotatedElementInjectionPoint elem) {
@@ -253,17 +265,20 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             return false;
         }
         
+        // JDT supports hanging the error on the @At annotation directly, doing this in javac doesn't work 
+        AnnotationMirror errorsOn = (this.ap.getCompilerEnvironment() == CompilerEnvironment.JDT ? elem.getAt() : elem.getAnnotation()).asMirror();
+        
         MemberInfo targetMember = MemberInfo.parse(reference);
         if (!targetMember.isFullyQualified()) {
-            String missing = "missing " + (targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature");
-            this.ap.printMessage(Kind.ERROR, subject + " is not fully qualified, " + missing, elem.getElement(), elem.getAnnotation().asMirror());
+            String missing = targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature";
+            this.ap.printMessage(Kind.ERROR, subject + " is not fully qualified, missing " + missing, elem.getElement(), errorsOn);
             return false;
         }
         
         try {
             targetMember.validate();
         } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAnnotation().asMirror());
+            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), errorsOn);
         }
         
         try {
@@ -271,7 +286,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
                 if (obfFieldData.isEmpty()) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
-                            elem.getAnnotation().asMirror());
+                            errorsOn);
                     return false;
                 }
                 this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
@@ -280,7 +295,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 if (obfMethodData.isEmpty()) {
                     if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                         this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + subject + " '" + reference + "'", elem.getElement(),
-                                elem.getAnnotation().asMirror());
+                                errorsOn);
                         return false;
                     }
                 }
@@ -290,7 +305,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             // Since references are fully-qualified, it shouldn't be possible for there to be multiple mappings, however
             // we catch and log the error in case something weird happens in the mapping provider
             this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + subject + ": " + reference + " -> "
-                    + ex.getNew() + " previously defined as " + ex.getOld(), elem.getElement(), elem.getAnnotation().asMirror());
+                    + ex.getNew() + " previously defined as " + ex.getOld(), elem.getElement(), errorsOn);
             return false;
         }
         

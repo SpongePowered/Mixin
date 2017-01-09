@@ -54,7 +54,7 @@ class ReadOnlyInsnList extends InsnList {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void set(AbstractInsnNode location, AbstractInsnNode insn) {
+    public final void set(AbstractInsnNode location, AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -65,7 +65,7 @@ class ReadOnlyInsnList extends InsnList {
      *      #add(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void add(AbstractInsnNode insn) {
+    public final void add(AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -75,7 +75,7 @@ class ReadOnlyInsnList extends InsnList {
      * @see org.objectweb.asm.tree.InsnList#add(org.objectweb.asm.tree.InsnList)
      */
     @Override
-    public void add(InsnList insns) {
+    public final void add(InsnList insns) {
         throw new UnsupportedOperationException();
     }
 
@@ -86,7 +86,7 @@ class ReadOnlyInsnList extends InsnList {
      *      #insert(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void insert(AbstractInsnNode insn) {
+    public final void insert(AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -97,7 +97,7 @@ class ReadOnlyInsnList extends InsnList {
      *      #insert(org.objectweb.asm.tree.InsnList)
      */
     @Override
-    public void insert(InsnList insns) {
+    public final void insert(InsnList insns) {
         throw new UnsupportedOperationException();
     }
 
@@ -109,7 +109,7 @@ class ReadOnlyInsnList extends InsnList {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void insert(AbstractInsnNode location, AbstractInsnNode insn) {
+    public final void insert(AbstractInsnNode location, AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -121,7 +121,7 @@ class ReadOnlyInsnList extends InsnList {
      *      org.objectweb.asm.tree.InsnList)
      */
     @Override
-    public void insert(AbstractInsnNode location, InsnList insns) {
+    public final void insert(AbstractInsnNode location, InsnList insns) {
         throw new UnsupportedOperationException();
     }
 
@@ -133,7 +133,7 @@ class ReadOnlyInsnList extends InsnList {
      *      org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void insertBefore(AbstractInsnNode location, AbstractInsnNode insn) {
+    public final void insertBefore(AbstractInsnNode location, AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -145,7 +145,7 @@ class ReadOnlyInsnList extends InsnList {
      *      org.objectweb.asm.tree.InsnList)
      */
     @Override
-    public void insertBefore(AbstractInsnNode location, InsnList insns) {
+    public final void insertBefore(AbstractInsnNode location, InsnList insns) {
         throw new UnsupportedOperationException();
     }
 
@@ -156,7 +156,7 @@ class ReadOnlyInsnList extends InsnList {
      *      #remove(org.objectweb.asm.tree.AbstractInsnNode)
      */
     @Override
-    public void remove(AbstractInsnNode insn) {
+    public final void remove(AbstractInsnNode insn) {
         throw new UnsupportedOperationException();
     }
 
@@ -258,7 +258,7 @@ class ReadOnlyInsnList extends InsnList {
      * @see org.objectweb.asm.tree.InsnList#resetLabels()
      */
     @Override
-    public void resetLabels() {
+    public final void resetLabels() {
         this.insnList.resetLabels();
     }
 }

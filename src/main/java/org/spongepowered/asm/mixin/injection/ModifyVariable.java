@@ -77,6 +77,14 @@ public @interface ModifyVariable {
     public String method();
     
     /**
+     * A {@link Slice} annotation which describes the method bisection used in
+     * the {@link #at} query for this injector.
+     * 
+     * @return slice
+     */
+    public Slice slice() default @Slice;
+
+    /**
      * An {@link At} annotation which describes the {@link InjectionPoint} in
      * the target method. The specified {@link InjectionPoint} <i>must only</i>
      * return {@link org.spongepowered.asm.lib.tree.MethodInsnNode} instances

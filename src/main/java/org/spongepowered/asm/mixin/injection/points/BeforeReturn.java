@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
 /**
@@ -64,9 +65,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  *   &#064;At("RETURN")</pre>
  * </blockquote>
  */
+@AtCode("RETURN")
 public class BeforeReturn extends InjectionPoint {
-
-    public static final String CODE = "RETURN";
 
     /**
      * Ordinal of the target insn
@@ -74,6 +74,8 @@ public class BeforeReturn extends InjectionPoint {
     private final int ordinal;
 
     public BeforeReturn(InjectionPointData data) {
+        super(data);
+
         this.ordinal = data.getOrdinal();
     }
 

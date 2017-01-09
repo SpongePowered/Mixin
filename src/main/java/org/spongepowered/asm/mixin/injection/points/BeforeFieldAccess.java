@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.injection.points;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
 /**
@@ -62,10 +63,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
  * specifier to adjust the matched opcode as necessary.</p>
  */
+@AtCode("FIELD")
 public class BeforeFieldAccess extends BeforeInvoke {
-
-    @SuppressWarnings("hiding")
-    public static final String CODE = "FIELD";
 
     private final int opcode;
 

@@ -32,6 +32,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.JumpInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
 /**
@@ -66,9 +67,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
  * specifier to adjust the matched opcode as necessary.</p>
  */
+@AtCode("JUMP")
 public class JumpInsnPoint extends InjectionPoint {
-
-    public static final String CODE = "JUMP";
 
     private final int opCode;
 

@@ -140,17 +140,17 @@ public abstract class Injector {
     /**
      * ...
      * 
-     * @param target Target method to inject into
+     * @param injectorTarget Target method to inject into
      * @param injectionPoints InjectionPoint instances which will identify
      *      target insns in the target method 
      * @return discovered injection points
      */
-    public final List<InjectionNode> find(Target target, List<InjectionPoint> injectionPoints) {
-        this.sanityCheck(target, injectionPoints);
+    public final List<InjectionNode> find(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
+        this.sanityCheck(injectorTarget.getTarget(), injectionPoints);
 
         List<InjectionNode> myNodes = new ArrayList<InjectionNode>();
-        for (TargetNode node : this.findTargetNodes(target.method, injectionPoints)) {
-            this.addTargetNode(target, myNodes, node.node, node.nominators);
+        for (TargetNode node : this.findTargetNodes(injectorTarget, injectionPoints)) {
+            this.addTargetNode(injectorTarget.getTarget(), myNodes, node.node, node.nominators);
         }
         return myNodes;
     }
@@ -179,33 +179,31 @@ public abstract class Injector {
      * Use the supplied InjectionPoints to find target insns in the target
      * method
      * 
-     * @param into Target method
+     * @param target.method Target method
      * @param injectionPoints List of injection points parsed from At
      *      annotations on the callback method
      * @return Target insn nodes in the target method
      */
-    private Collection<TargetNode> findTargetNodes(MethodNode into, List<InjectionPoint> injectionPoints) {
+    private Collection<TargetNode> findTargetNodes(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
         Map<AbstractInsnNode, TargetNode> targetNodes = new HashMap<AbstractInsnNode, TargetNode>();
 
-        // Defensive objects, so that injectionPoint instances can't modify our working copies
-        ReadOnlyInsnList insns = new ReadOnlyInsnList(into.instructions);
         Collection<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
 
         for (InjectionPoint injectionPoint : injectionPoints) {
             nodes.clear();
-            if (this.findTargetNodes(into, injectionPoint, insns, nodes)) {
+
+            if (this.findTargetNodes(injectorTarget.getMethod(), injectionPoint, injectorTarget.getSlice(injectionPoint), nodes)) {
                 for (AbstractInsnNode node : nodes) {
-                    TargetNode target = targetNodes.get(node);
-                    if (target == null) {
-                        target = new TargetNode(node);
-                        targetNodes.put(node, target);
+                    TargetNode targetNode = targetNodes.get(node);
+                    if (targetNode == null) {
+                        targetNode = new TargetNode(node);
+                        targetNodes.put(node, targetNode);
                     }
-                    target.nominators.add(injectionPoint);
+                    targetNode.nominators.add(injectionPoint);
                 }
             }
         }
         
-        insns.dispose();
         return targetNodes.values();
     }
 

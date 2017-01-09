@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 
 /**
@@ -65,10 +66,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  * {@link org.spongepowered.asm.mixin.injection.At#shift shift} specifier to
  * adjust the matched opcode as necessary.</p>
  */
+@AtCode("INVOKE_ASSIGN")
 public class AfterInvoke extends BeforeInvoke {
-
-    @SuppressWarnings("hiding")
-    public static final String CODE = "INVOKE_ASSIGN";
 
     public AfterInvoke(InjectionPointData data) {
         super(data);

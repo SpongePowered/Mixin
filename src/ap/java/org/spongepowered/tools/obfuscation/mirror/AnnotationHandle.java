@@ -36,6 +36,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * A wrapper for {@link AnnotationMirror} which provides a more convenient way
  * to access annotation values.
@@ -142,6 +144,25 @@ public class AnnotationHandle {
     }
 
     /**
+     * Get an annotation value as an annotation handle
+     * 
+     * @param key
+     * @return
+     */
+    public AnnotationHandle getAnnotation(String key) {
+        Object value = this.getValue(key);
+        if (value instanceof AnnotationMirror) {
+            return AnnotationHandle.of((AnnotationMirror)value);
+        } else if (value instanceof AnnotationValue) {
+            Object mirror = ((AnnotationValue)value).getValue();
+            if (mirror instanceof AnnotationMirror) {
+                return AnnotationHandle.of((AnnotationMirror)mirror);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Retrieve the annotation value as a list with values of the specified
      * type. Returns an empty list if the value is not present or not set.
      * 
@@ -171,16 +192,22 @@ public class AnnotationHandle {
      * @return list of annotations
      */
     public List<AnnotationHandle> getAnnotationList(String key) {
-        List<AnnotationValue> list = this.<List<AnnotationValue>>getValue(key, null);
-        if (list == null) {
+        Object val = this.getValue(key, null);
+        if (val == null) {
             return Collections.<AnnotationHandle>emptyList();
         }
         
+        // Fix for JDT, single values are just returned as a bare AnnotationMirror
+        if (val instanceof AnnotationMirror) {
+            return ImmutableList.<AnnotationHandle>of(AnnotationHandle.of((AnnotationMirror)val)); 
+        }
+        
+        @SuppressWarnings("unchecked") List<AnnotationValue> list = (List<AnnotationValue>)val;
         List<AnnotationHandle> annotations = new ArrayList<AnnotationHandle>(list.size());
         for (AnnotationValue value : list) {
             annotations.add(new AnnotationHandle((AnnotationMirror)value.getValue()));
         }
-        return annotations;
+        return Collections.<AnnotationHandle>unmodifiableList(annotations);
     }
 
     protected AnnotationValue getAnnotationValue(String key) {

@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
@@ -64,9 +65,8 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
  * specifier to adjust the matched opcode as necessary.</p>
  */
+@AtCode("INVOKE")
 public class BeforeInvoke extends InjectionPoint {
-
-    public static final String CODE = "INVOKE";
 
     protected final MemberInfo target;
 
@@ -87,6 +87,8 @@ public class BeforeInvoke extends InjectionPoint {
     protected final String className;
 
     public BeforeInvoke(InjectionPointData data) {
+        super(data);
+        
         this.target = data.getTarget();
         this.ordinal = data.getOrdinal();
         this.logging = data.get("log", false);

@@ -27,18 +27,31 @@ package org.spongepowered.asm.mixin.injection.struct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
+import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 
 /**
  * Data read from an {@link org.spongepowered.asm.mixin.injection.At} annotation
  * and passed into an InjectionPoint ctor
  */
 public class InjectionPointData {
+    
+    /**
+     * Regex for recognising at declarations
+     */
+    private static final Pattern AT_PATTERN = InjectionPointData.createPattern(); 
 
     /**
      * K/V arguments parsed from the "args" node in the {@link At} annotation 
@@ -53,22 +66,37 @@ public class InjectionPointData {
     /**
      * Injector callback
      */
-    private MethodNode method;
+    private final MethodNode method;
 
     /**
      * Parent annotation
      */
-    private AnnotationNode parent;
+    private final AnnotationNode parent;
 
     /**
      * At arg 
      */
-    private String at;
+    private final String at;
+
+    /**
+     * Parsed from the at argument, the injector type (shortcode or class name)
+     */
+    private final String type;
+
+    /**
+     * Selector parsed from the at argument, only used by slices  
+     */
+    private final Selector selector;
 
     /**
      * Target 
      */
     private final String target;
+    
+    /**
+     * Slice id specified in the annotation, only used by slices 
+     */
+    private final String slice;
     
     /**
      * Ordinal 
@@ -79,14 +107,15 @@ public class InjectionPointData {
      * Opcode 
      */
     private final int opcode;
-
+    
     public InjectionPointData(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
-            int ordinal, int opcode) {
+            String slice, int ordinal, int opcode) {
         this.mixin = mixin;
         this.method = method;
         this.parent = parent;
         this.at = at;
         this.target = target;
+        this.slice = Strings.nullToEmpty(slice);
         this.ordinal = Math.max(-1, ordinal);
         this.opcode = opcode;
         
@@ -95,6 +124,10 @@ public class InjectionPointData {
         this.args.put("target", target);
         this.args.put("ordinal", String.valueOf(ordinal));
         this.args.put("opcode", String.valueOf(opcode));
+
+        Matcher matcher = InjectionPointData.AT_PATTERN.matcher(at);
+        this.type = InjectionPointData.parseType(matcher, at);
+        this.selector = InjectionPointData.parseSelector(matcher);
     }
 
     private void parseArgs(List<String> args) {
@@ -112,6 +145,18 @@ public class InjectionPointData {
             }
         }
     }
+
+    public String getAt() {
+        return this.at;
+    }
+    
+    public String getType() {
+        return this.type;
+    }
+    
+    public Selector getSelector() {
+        return this.selector;
+    }
     
     public MixinTargetContext getMixin() {
         return this.mixin;
@@ -123,6 +168,18 @@ public class InjectionPointData {
     
     public AnnotationNode getParent() {
         return this.parent;
+    }
+    
+    public String getSlice() {
+        return this.slice;
+    }
+    
+    public Type getReturnType() {
+        return Type.getReturnType(this.method.desc);
+    }
+    
+    public LocalVariableDiscriminator getLocalVariableDiscriminator() {
+        return LocalVariableDiscriminator.parse(this.parent);
     }
 
     public String get(String key, String defaultValue) {
@@ -192,4 +249,27 @@ public class InjectionPointData {
         }
         return defaultOpcode;
     }
+    
+    @Override
+    public String toString() {
+        return this.type;
+    }
+
+    private static Pattern createPattern() {
+        return Pattern.compile(String.format("^([^:]+):?(%s)?$", Joiner.on('|').join(Selector.values())));
+    }
+
+    private static String parseType(Matcher matcher, String at) {
+        return matcher.matches() ? matcher.group(1) : at;
+    }
+
+    private static Selector parseSelector(Matcher matcher) {
+        return matcher.matches() && matcher.group(2) != null ? Selector.valueOf(matcher.group(2)) : Selector.DEFAULT;
+    }
+
+    public static String parseType(String at) {
+        Matcher matcher = InjectionPointData.AT_PATTERN.matcher(at);
+        return InjectionPointData.parseType(matcher, at);
+    }
+    
 }

@@ -35,6 +35,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.Constants;
@@ -84,9 +85,8 @@ import com.google.common.base.Strings;
  * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
  * specifier to adjust the matched opcode as necessary.</p>
  */
+@AtCode("NEW")
 public class BeforeNew extends InjectionPoint {
-
-    public static final String CODE = "NEW";
 
     /**
      * Class name we're looking for
@@ -104,6 +104,8 @@ public class BeforeNew extends InjectionPoint {
     private final int ordinal;
 
     public BeforeNew(InjectionPointData data) {
+        super(data);
+        
         this.ordinal = data.getOrdinal();
         String target = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
         MemberInfo member = MemberInfo.parseAndValidate(target, data.getMixin());
