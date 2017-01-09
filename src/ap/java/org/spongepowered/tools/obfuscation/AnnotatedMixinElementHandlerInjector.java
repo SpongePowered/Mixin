@@ -235,7 +235,11 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             ObfuscationData<String> mappings = new ObfuscationData<String>();
             for (ObfuscationType type : remapped) {
                 MappingMethod mapping = remapped.get(type);
-                mappings.add(type, mapping.getDesc().replace(")V", ")L" + mapping.getOwner() + ";"));
+                if (desc == null) {
+                    mappings.add(type, mapping.getOwner());
+                } else {
+                    mappings.add(type, mapping.getDesc().replace(")V", ")L" + mapping.getOwner() + ";"));
+                }
             }
             
             this.obf.getReferenceManager().addClassMapping(this.classRef, reference, mappings);
