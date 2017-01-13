@@ -161,8 +161,12 @@ dependencies {
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
     compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 
-    compile 'net.minecraft:launchwrapper:1.11'
-    agentCompile 'net.minecraft:launchwrapper:1.11'
+    compile('net.minecraft:launchwrapper:1.11') {
+        exclude module: 'lwjgl'
+    }
+    agentCompile('net.minecraft:launchwrapper:1.11') {
+        exclude module: 'lwjgl'
+    }
     
     // asm bridge
     compile 'org.ow2.asm:asm-commons:5.0.3'
@@ -262,6 +266,8 @@ shadowJar  {
         include(dependency('commons-io:commons-io'))
         include(dependency('net.minecraftforge.srg2source:Srg2Source'))
         include(dependency('net.sf.jopt-simple:jopt-simple'))
+        include(dependency('org.apache.logging.log4j:log4j-core'))
+        include(dependency('org.apache.logging.log4j:log4j-api'))
     }
     classifier = 'processor'
 }

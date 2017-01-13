@@ -64,6 +64,14 @@ public @interface Inject {
     public String method();
     
     /**
+     * Array of {@link Slice} annotations which describe the method bisections
+     * used in the {@link #at} queries for this injector.
+     * 
+     * @return slices
+     */
+    public Slice[] slice() default {};
+    
+    /**
      * Array of {@link At} annotations which describe the
      * {@link InjectionPoint}s in the target method. Allows one or more
      * callbacks to be injected in the target method.

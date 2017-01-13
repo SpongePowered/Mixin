@@ -52,7 +52,7 @@ import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
-import org.spongepowered.tools.obfuscation.struct.Message;
+import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
 
 /**
  * Information about a mixin stored during processing
@@ -331,12 +331,32 @@ class AnnotatedMixin {
         this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowMethod(method, shadow, shouldRemap));
     }
 
-    public Message registerInjector(ExecutableElement method, AnnotationHandle inject, boolean shouldRemap) {
-        return this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, shouldRemap));
+    public void registerInjector(ExecutableElement method, AnnotationHandle inject, InjectorRemap remap) {
+        this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, remap));
+        
+        List<AnnotationHandle> ats = inject.getAnnotationList("at");
+        for (AnnotationHandle at : ats) {
+            this.registerInjectionPoint(method, inject, at, remap, "@At(%s)");
+        }
+        
+        List<AnnotationHandle> slices = inject.getAnnotationList("slice");
+        for (AnnotationHandle slice : slices) {
+            String id = slice.<String>getValue("id", "");
+            
+            AnnotationHandle from = slice.getAnnotation("from");
+            if (from != null) {
+                this.registerInjectionPoint(method, inject, from, remap, "@Slice[" + id + "](from=@At(%s))");
+            }
+            
+            AnnotationHandle to = slice.getAnnotation("to");
+            if (to != null) {
+                this.registerInjectionPoint(method, inject, to, remap, "@Slice[" + id + "](to=@At(%s))");
+            }
+        }
     }
 
-    public int registerInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at) {
-        return this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at));
+    public void registerInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at, InjectorRemap remap, String format) {
+        this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at, remap), format);
     }
 
     public void registerAccessor(ExecutableElement element, AnnotationHandle accessor) {

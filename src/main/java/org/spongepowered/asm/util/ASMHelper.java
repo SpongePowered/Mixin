@@ -200,10 +200,12 @@ public class ASMHelper {
     }
 
     public static String getNodeDescriptionForDebug(AbstractInsnNode node) {
-        String out = String.format("%-14s ", node.getClass().getSimpleName().replace("Node", ""));
         if (node instanceof LabelNode) {
-            out += String.format("[%s]", ((LabelNode)node).getLabel());
-        } else if (node instanceof JumpInsnNode) {
+            return String.format("[%s]", ((LabelNode)node).getLabel());
+        }
+        
+        String out = String.format("   %-14s ", node.getClass().getSimpleName().replace("Node", ""));
+        if (node instanceof JumpInsnNode) {
             out += String.format("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
         } else if (node instanceof VarInsnNode) {
             out += String.format("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
@@ -215,11 +217,13 @@ public class ASMHelper {
             out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
         } else if (node instanceof LineNumberNode) {
             LineNumberNode ln = (LineNumberNode)node;
-            out += String.format("LINE=%d LABEL=[%s]", ln.line, ln.start.getLabel());
+            out += String.format("LINE=[%d] LABEL=[%s]", ln.line, ln.start.getLabel());
         } else if (node instanceof LdcInsnNode) {
             out += (((LdcInsnNode)node).cst);
         } else if (node instanceof IntInsnNode) {
             out += (((IntInsnNode)node).operand);
+        } else if (node instanceof FrameNode) {
+            out += String.format("[%s] ", ASMHelper.getOpcodeName(((FrameNode)node).type, "H_INVOKEINTERFACE", -1));
         } else {
             out += String.format("[%s] ", ASMHelper.getOpcodeName(node));
         }
@@ -247,12 +251,16 @@ public class ASMHelper {
      *      the {@link Opcodes} class have the same value as opcodes
      */
     public static String getOpcodeName(int opcode) {
-        if (opcode > 0) {
+        return ASMHelper.getOpcodeName(opcode, "UNINITIALIZED_THIS", 1);
+    }
+
+    private static String getOpcodeName(int opcode, String start, int min) {
+        if (opcode >= min) {
             boolean found = false;
             
             try {
                 for (java.lang.reflect.Field f : Opcodes.class.getDeclaredFields()) {
-                    if (!found && f.getName() != "UNINITIALIZED_THIS") {
+                    if (!found && !f.getName().equals(start)) {
                         continue;
                     }
                     found = true;
@@ -265,7 +273,7 @@ public class ASMHelper {
             }
         }        
         
-        return opcode >= 0 ? String.valueOf(opcode) : "";
+        return opcode >= 0 ? String.valueOf(opcode) : "UNKNOWN";
     }
 
     /**
@@ -406,6 +414,7 @@ public class ASMHelper {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
+    @SuppressWarnings("unchecked")
     public static AnnotationNode getSingleVisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return ASMHelper.getSingleAnnotation(method.visibleAnnotations, annotationClasses);
     }
@@ -418,6 +427,7 @@ public class ASMHelper {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
+    @SuppressWarnings("unchecked")
     public static AnnotationNode getSingleInvisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return ASMHelper.getSingleAnnotation(method.invisibleAnnotations, annotationClasses);
     }
@@ -512,7 +522,7 @@ public class ASMHelper {
         return null;
     }
 
-    private static AnnotationNode getSingleAnnotation(List<AnnotationNode> annotations, Class<? extends Annotation>... annotationClasses) {
+    private static AnnotationNode getSingleAnnotation(List<AnnotationNode> annotations, Class<? extends Annotation>[] annotationClasses) {
         List<AnnotationNode> nodes = new ArrayList<AnnotationNode>();
         for (Class<? extends Annotation> annotationClass : annotationClasses) {
             AnnotationNode annotation = ASMHelper.getAnnotation(annotations, Type.getDescriptor(annotationClass));

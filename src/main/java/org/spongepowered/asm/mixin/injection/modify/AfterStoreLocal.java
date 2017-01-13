@@ -25,10 +25,9 @@
 package org.spongepowered.asm.mixin.injection.modify;
 
 import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
  * <p>This injection point is a companion for the {@link ModifyVariable}
@@ -69,13 +68,11 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  * <p><b>Important Note:</b> Unlike other standard injection points, this class
  * matches the insn immediately <b>after</b> the matching point.</p>
  */
+@AtCode("STORE")
 public class AfterStoreLocal extends BeforeLoadLocal {
 
-    @SuppressWarnings("hiding")
-    public static final String CODE = "STORE";
-
-    public AfterStoreLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator local, InjectionPointData data) {
-        super(mixin, returnType, local, data, Opcodes.ISTORE, true);
+    public AfterStoreLocal(InjectionPointData data) {
+        super(data, Opcodes.ISTORE, true);
     }
     
 }

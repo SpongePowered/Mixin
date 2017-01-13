@@ -29,6 +29,7 @@ import java.util.Collection;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.LdcInsnNode;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
@@ -80,10 +81,8 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
  * specifier to adjust the matched opcode as necessary.</p>
  */
+@AtCode("INVOKE_STRING")
 public class BeforeStringInvoke extends BeforeInvoke {
-
-    @SuppressWarnings("hiding")
-    public static final String CODE = "INVOKE_STRING";
 
     private static final String STRING_VOID_SIG = "(Ljava/lang/String;)V";
 

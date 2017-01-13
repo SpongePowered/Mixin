@@ -68,7 +68,7 @@ import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandleSimulated;
 import org.spongepowered.tools.obfuscation.mirror.TypeReference;
-import org.spongepowered.tools.obfuscation.struct.Message;
+import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
 import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
@@ -81,28 +81,15 @@ import com.google.common.collect.ImmutableList;
 class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
     
     private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
-
-    /**
-     * Detected compiler argument, specifies the behaviour of some operations
-     * for compatibility purposes.
-     */
-    static enum CompilerEnvironment {
-        /**
-         * Default environment
-         */
-        JAVAC,
-        
-        /**
-         * Eclipse 
-         */
-        JDT
-    }
     
     /**
      * Singleton instances for each ProcessingEnvironment
      */
     private static Map<ProcessingEnvironment, AnnotatedMixins> instances = new HashMap<ProcessingEnvironment, AnnotatedMixins>();
     
+    /**
+     * Detected compiler environment
+     */
     private final CompilerEnvironment env;
 
     /**
@@ -218,6 +205,11 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
     @Override
     public ProcessingEnvironment getProcessingEnvironment() {
         return this.processingEnv;
+    }
+    
+    @Override
+    public CompilerEnvironment getCompilerEnvironment() {
+        return this.env;
     }
 
     @Override
@@ -444,42 +436,9 @@ class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITyp
             return;
         }
 
-        boolean remap = this.shouldRemap(mixinClass, inject);
-        Message errorMessage = mixinClass.registerInjector(method, inject, remap);
-        int remappedAts = 0;
-        if (remap) {
-            Object ats = inject.getValue("at");
-            
-            if (ats instanceof List) {
-                List<?> annotationList = (List<?>)ats;
-                for (Object at : annotationList) {
-                    // Fix for JDT
-                    if (at instanceof AnnotationValue) {
-                        at = ((AnnotationValue)at).getValue();
-                    }
-                    if (at instanceof AnnotationMirror) {
-                        remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)at));
-                    } else {
-                        this.printMessage(Kind.WARNING, "No annotation mirror on " + at.getClass().getName());
-                    }
-                }
-            } else if (ats instanceof AnnotationMirror) {
-                remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)ats));
-            } else if (ats instanceof AnnotationValue) {
-                // Fix for JDT
-                Object mirror = ((AnnotationValue)ats).getValue();
-                if (mirror instanceof AnnotationMirror) {
-                    remappedAts += mixinClass.registerInjectionPoint(method, inject, AnnotationHandle.of((AnnotationMirror)mirror));
-                }
-            }
-        }
-        
-        // The annotation was *not* marked as remap=false and failed so we
-        // checked for remappable @At annotations, if that failed as well then
-        // we raise the original error.
-        if (remappedAts == 0 && errorMessage != null) {
-            errorMessage.sendTo(this);
-        }
+        InjectorRemap remap = new InjectorRemap(this.shouldRemap(mixinClass, inject));
+        mixinClass.registerInjector(method, inject, remap);
+        remap.dispatchPendingMessages(this);
     }
     
     /**

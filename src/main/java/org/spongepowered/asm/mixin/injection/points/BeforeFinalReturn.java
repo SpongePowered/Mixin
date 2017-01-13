@@ -25,34 +25,68 @@
 package org.spongepowered.asm.mixin.injection.points;
 
 import java.util.Collection;
+import java.util.ListIterator;
 
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
- * <p>This injection point simply returns the first instruction in the target
- * method body, allowing the injection to be placed at the "head" of the target
- * method. It accepts no parameters and only returns a single insn in all
- * circumstances.</p>
+ * <p>This injection point searches for the last RETURN opcode in the target
+ * method and returns it. Note that the last RETURN opcode may not correspond to
+ * the notional "bottom" of a method in the original Java source, since
+ * conditional expressions can cause the bytecode emitted to differ
+ * significantly in order from the original Java.</p>
  * 
  * <p>Example:</p>
  * <blockquote><pre>
- *   &#064;At("HEAD")</pre>
- * </blockquote> 
+ *   &#064;At(value = "TAIL")</pre>
+ * </blockquote>
+ * <p>Note that if <em>value</em> is the only parameter specified, it can be
+ * omitted:</p> 
+ * <blockquote><pre>
+ *   &#064;At("TAIL")</pre>
+ * </blockquote>
  */
-@AtCode("HEAD")
-public class MethodHead extends InjectionPoint {
+@AtCode("TAIL")
+public class BeforeFinalReturn extends InjectionPoint {
 
-    public MethodHead(InjectionPointData data) {
+    private final MixinTargetContext mixin;
+
+    public BeforeFinalReturn(InjectionPointData data) {
         super(data);
+        
+        this.mixin = data.getMixin();
     }
 
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
-        nodes.add(insns.getFirst());
+        AbstractInsnNode ret = null;
+        
+        // RETURN opcode varies based on return type, thus we calculate what opcode we're actually looking for by inspecting the target method
+        int returnOpcode = Type.getReturnType(desc).getOpcode(Opcodes.IRETURN);
+
+        ListIterator<AbstractInsnNode> iter = insns.iterator();
+        while (iter.hasNext()) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof InsnNode && insn.getOpcode() == returnOpcode) {
+                ret = insn;
+            }
+        }
+
+        // WAT?
+        if (ret == null) {
+            throw new InvalidInjectionException(this.mixin, "TAIL could not locate a valid RETURN in the target method!");
+        }
+        
+        nodes.add(ret);
         return true;
     }
 }

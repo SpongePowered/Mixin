@@ -78,6 +78,15 @@ public @interface At {
     public String value();
     
     /**
+     * For {@link Inject} queries, this specifies the ID of the slice to use for
+     * this query. For other injector types it is ignored because only one slice
+     * is supported.
+     * 
+     * @return
+     */
+    public String slice() default "";
+    
+    /**
      * Shift type for returned opcodes. For example use {@link At.Shift#AFTER
      * AFTER} with an INVOKE InjectionPoint to move the returned opcodes to
      * <i>after</i> the invoation. Use {@link At.Shift#BY BY} in conjunction
@@ -153,5 +162,3 @@ public @interface At {
      */
     public boolean remap() default true;
 }
-
-

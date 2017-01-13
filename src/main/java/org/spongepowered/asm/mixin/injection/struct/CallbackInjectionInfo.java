@@ -33,6 +33,8 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 
+import com.google.common.base.Strings;
+
 /**
  * Information about a callback to inject, usually specified by {@link Inject}
  */
@@ -49,6 +51,11 @@ public class CallbackInjectionInfo extends InjectionInfo {
         String identifier = ASMHelper.<String>getAnnotationValue(injectAnnotation, "id", "");
         
         return new CallbackInjector(this, cancellable, locals, identifier);
+    }
+    
+    @Override
+    public String getSliceId(String id) {
+        return Strings.nullToEmpty(id);
     }
     
 }

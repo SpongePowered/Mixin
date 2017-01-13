@@ -31,11 +31,11 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector.ContextualInjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
  * <p>This injection point is a companion for the {@link ModifyVariable}
@@ -72,6 +72,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  *   &#064;At("LOAD")</pre>
  * </blockquote>
  */
+@AtCode("LOAD")
 public class BeforeLoadLocal extends ContextualInjectionPoint {
     
     /**
@@ -142,8 +143,6 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
         
     }
 
-    public static final String CODE = "LOAD";
-    
     /**
      * Return type of the handler, also the type of the local variable we're
      * interested in
@@ -170,17 +169,17 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
      * opcode, used by {@link AfterStoreLocal}.
      */
     private boolean opcodeAfter;
-
-    public BeforeLoadLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator discriminator, InjectionPointData data) {
-        this(mixin, returnType, discriminator, data, Opcodes.ILOAD, false);
+    
+    protected BeforeLoadLocal(InjectionPointData data) {
+        this(data, Opcodes.ILOAD, false);
     }
     
-    protected BeforeLoadLocal(MixinTargetContext mixin, Type returnType, LocalVariableDiscriminator discriminator, InjectionPointData data,
+    protected BeforeLoadLocal(InjectionPointData data,
             int opcode, boolean opcodeAfter) {
-        super(mixin);
-        this.returnType = returnType;
-        this.discriminator = discriminator;
-        this.opcode = data.getOpcode(returnType.getOpcode(opcode));
+        super(data.getMixin());
+        this.returnType = data.getReturnType();
+        this.discriminator = data.getLocalVariableDiscriminator();
+        this.opcode = data.getOpcode(this.returnType.getOpcode(opcode));
         this.ordinal = data.getOrdinal();
         this.opcodeAfter = opcodeAfter;
     }

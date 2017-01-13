@@ -22,38 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.asm.mixin.injection.throwables;
 
-import java.util.Collection;
-
-import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * Thrown when an injector slice fails a state check, for example if a slice
+ * selector fails or a slice is negative in size
  */
-public interface IMixinValidator {
+public class InvalidSliceException extends InvalidInjectionException {
+
+    private static final long serialVersionUID = 1L;
     
-    /**
-     * Validation pass
-     */
-    public enum ValidationPass {
-        EARLY,
-        LATE
+    public InvalidSliceException(IReferenceMapperContext context, String message) {
+        super(context, message);
     }
-    
-    /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * @param pass current validation pass
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
-     * 
-     * @return False to halt processing of further validators
-     */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets);
+
+    public InvalidSliceException(InjectionInfo info, String message) {
+        super(info, message);
+    }
+
+    public InvalidSliceException(IReferenceMapperContext context, Throwable cause) {
+        super(context, cause);
+    }
+
+    public InvalidSliceException(InjectionInfo info, Throwable cause) {
+        super(info, cause);
+    }
+
+    public InvalidSliceException(IReferenceMapperContext context, String message, Throwable cause) {
+        super(context, message, cause);
+    }
+
+    public InvalidSliceException(InjectionInfo info, String message, Throwable cause) {
+        super(info, message, cause);
+    }
+
 }

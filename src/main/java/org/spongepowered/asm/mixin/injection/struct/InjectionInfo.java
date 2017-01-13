@@ -49,6 +49,9 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
+import org.spongepowered.asm.mixin.injection.code.MethodSlice;
+import org.spongepowered.asm.mixin.injection.code.MethodSlices;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
@@ -73,6 +76,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
      */
     protected final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
     
+    /**
+     * Method slice descriptors parsed from the annotation
+     */
+    protected final MethodSlices slices;
+
     /**
      * Injection points parsed from
      * {@link org.spongepowered.asm.mixin.injection.At} annotations
@@ -124,6 +132,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
         this.isStatic = ASMHelper.methodIsStatic(method);
+        this.slices = MethodSlices.parse(this);
         this.readAnnotation();
     }
 
@@ -176,12 +185,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
     }
 
     protected void parseInjectionPoints(List<AnnotationNode> ats) {
-        for (AnnotationNode at : ats) {
-            InjectionPoint injectionPoint = InjectionPoint.parse(this.mixin, this.method, this.annotation, at);
-            if (injectionPoint != null) {
-                this.injectionPoints.add(injectionPoint);
-            }
-        }
+        this.injectionPoints.addAll(InjectionPoint.parse(this.mixin, this.method, this.annotation, ats));
     }
 
     protected void parseRequirements() {
@@ -220,7 +224,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
         this.targetNodes.clear();
         for (MethodNode targetMethod : this.targets) {
             Target target = this.mixin.getTargetMethod(targetMethod);
-            this.targetNodes.put(target, this.injector.find(target, this.injectionPoints));
+            InjectorTarget injectorTarget = new InjectorTarget(this, target);
+            this.targetNodes.put(target, this.injector.find(injectorTarget, this.injectionPoints));
+            injectorTarget.dispose();
         }
     }
     
@@ -276,6 +282,25 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
         return this.targets;
     }
     
+    /**
+     * Get the slice descriptors
+     */
+    public MethodSlice getSlice(String id) {
+        return this.slices.get(this.getSliceId(id));
+    }
+    
+    /**
+     * Return the mapped slice id for the specified ID. Injectors which only
+     * support use of a single slice will always return the default id (an empty
+     * string)
+     * 
+     * @param id
+     * @return mapped id
+     */
+    public String getSliceId(String id) {
+        return "";
+    }
+
     /**
      * Get the injected callback count
      * 
