@@ -127,8 +127,32 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 public @interface Slice {
     
     /**
-     * The identifier for this slice (if omitted, this slice becomes the <em>
-     * default slice</em> and applies to all undecorated {@link At} queries.
+     * The identifier for this slice, specified using the {@link At#slice} value
+     * (if omitted, this slice becomes the <em>default slice</em> and applies to
+     * all undecorated {@link At} queries).
+     * 
+     * <p>This value can be safely ignored for injector types which only accept
+     * a single query (eg. {@link Redirect} and others). However since
+     * {@link Inject} injectors can have multiple {@link At} queries, it may be
+     * desirable to have multiple slices as well. When specifying multiple
+     * slices, each should be designed a unique <tt>id</tt> which can then be
+     * referenced in the corresponding <tt>At</tt>.</p>
+     * 
+     * <p>There are no specifications or restrictions for valid <tt>id</tt>s,
+     * however it is recommended that the <tt>id</tt> in some way describe the
+     * slice, thus allowing the <tt>At</tt> query to be read without necessarily
+     * reading the slice itself. For example, if the slice is selecting <em>all
+     * instructions before the first call to some method <tt>init</tt></em>,
+     * then using an id <tt>&quot;beforeInit</tt> makes sense. Using <em>before,
+     * after</em> and <em>between</em> prefixes as a loose standard is
+     * considered good practice.</p>
+     * 
+     * <p>This value defaults to an empty string, the empty string is used as a
+     * default identifier throughout the injection subsystem, and any {@link At}
+     * which doesn't specify a slice explicitly will use this identifer.
+     * Specifying <tt>id</tt> or <tt>slice</tt> for injectors which only support
+     * a single slice is ignored internally, so you may use this field to give a
+     * descriptive name to the slice if you wish.</p>
      * 
      * @return The identifier for this slice
      */

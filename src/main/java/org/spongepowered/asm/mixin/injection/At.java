@@ -82,7 +82,9 @@ public @interface At {
      * this query. For other injector types it is ignored because only one slice
      * is supported.
      * 
-     * @return
+     * <p>For more details see the {@link Slice#id}</p>
+     * 
+     * @return the slice identifier, or empty string to use the default slice
      */
     public String slice() default "";
     
