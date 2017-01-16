@@ -57,6 +57,7 @@ import org.spongepowered.asm.mixin.throwables.ClassAlreadyLoadedException;
 import org.spongepowered.asm.mixin.throwables.MixinApplyError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.throwables.MixinPrepareError;
+import org.spongepowered.asm.mixin.transformer.MixinConfig.IListener;
 import org.spongepowered.asm.mixin.transformer.MixinTransformerModuleCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.debug.IDecompiler;
 import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
@@ -296,12 +297,97 @@ public class MixinTransformer extends TreeTransformer {
         }
     }
     
+    /**
+     * Debug exporter
+     */
+    static class Exporter {
+        
+        /**
+         * Directory to export classes to when debug.export is enabled
+         */
+        private final File classExportDir = new File(MixinTransformer.DEBUG_OUTPUT, "class");
+        
+        /**
+         * Runtime decompiler for exported classes 
+         */
+        private final IDecompiler decompiler;
+        
+        Exporter() {
+            this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
+
+            try {
+                FileUtils.deleteDirectory(this.classExportDir);
+            } catch (IOException ex) {
+                MixinTransformer.logger.warn("Error cleaning class output directory: {}", ex.getMessage());
+            }
+        }
+        
+        private IDecompiler initDecompiler(File outputPath) {
+            MixinEnvironment env = MixinEnvironment.getCurrentEnvironment();
+            if (!env.getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
+                return null;
+            }
+            
+            try {
+                boolean as = env.getOption(Option.DEBUG_EXPORT_DECOMPILE_THREADED);
+                MixinTransformer.logger.info("Attempting to load Fernflower decompiler{}", as ? " (Threaded mode)" : "");
+                String className = "org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + (as ? "Async" : "");
+                @SuppressWarnings("unchecked")
+                Class<? extends IDecompiler> clazz =
+                    (Class<? extends IDecompiler>)Class.forName(className);
+                Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
+                IDecompiler decompiler = ctor.newInstance(outputPath);
+                MixinTransformer.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
+                        as ? " in a separate thread" : "");
+                return decompiler;
+            } catch (Throwable th) {
+                MixinTransformer.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
+                        th.getClass().getSimpleName(), th.getMessage());
+            }
+            return null;
+        }
+
+        private String prepareFilter(String filter) {
+            filter = "^\\Q" + filter.replace("**", "\201").replace("*", "\202").replace("?", "\203") + "\\E$";
+            return filter.replace("\201", "\\E.*\\Q").replace("\202", "\\E[^\\.]+\\Q").replace("\203", "\\E.\\Q").replace("\\Q\\E", "");
+        }
+
+        private boolean applyFilter(String filter, String subject) {
+            return Pattern.compile(this.prepareFilter(filter), Pattern.CASE_INSENSITIVE).matcher(subject).matches();
+        }
+
+        void export(String transformedName, boolean force, byte[] bytes) {
+            // Export transformed class for debugging purposes
+            MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
+            if (force || environment.getOption(Option.DEBUG_EXPORT)) {
+                String filter = environment.getOptionValue(Option.DEBUG_EXPORT_FILTER);
+                if (force || filter == null || this.applyFilter(filter, transformedName)) {
+                    File outputFile = this.dumpClass(transformedName.replace('.', '/'), bytes);
+                    if (this.decompiler != null) {
+                        this.decompiler.decompile(outputFile);
+                    }
+                }
+            }
+        }
+
+        File dumpClass(String fileName, byte[] bytes) {
+            File outputFile = new File(this.classExportDir, fileName + ".class");
+            try {
+                FileUtils.writeByteArrayToFile(outputFile, bytes);
+            } catch (IOException ex) {
+                // don't care
+            }
+            return outputFile;
+        }
+
+    }
+    
     static final File DEBUG_OUTPUT = new File(Constants.DEBUG_OUTPUT_PATH);
     
     /**
      * Log all the things
      */
-    private final Logger logger = LogManager.getLogger("mixin");
+    static final Logger logger = LogManager.getLogger("mixin");
     
     /**
      * All mixin configuration bundles
@@ -317,11 +403,6 @@ public class MixinTransformer extends TreeTransformer {
      * Transformer modules
      */
     private final List<IMixinTransformerModule> modules = new ArrayList<IMixinTransformerModule>();
-
-    /**
-     * Current environment 
-     */
-    private MixinEnvironment currentEnvironment;
     
     /**
      * Re-entrance detector
@@ -334,7 +415,27 @@ public class MixinTransformer extends TreeTransformer {
      * circumvent mixin application
      */
     private final String sessionId = UUID.randomUUID().toString();
+
+    /**
+     * Export manager
+     */
+    private final Exporter exporter;
     
+    /**
+     * Hot-Swap agent
+     */
+    private final IHotSwap hotSwapper;
+    
+    /**
+     * Postprocessor for passthrough 
+     */
+    private final MixinPostProcessor postProcessor;
+
+    /**
+     * Current environment 
+     */
+    private MixinEnvironment currentEnvironment;
+
     /**
      * Logging level for verbose messages 
      */
@@ -344,21 +445,6 @@ public class MixinTransformer extends TreeTransformer {
      * Handling an error state, do not process further mixins
      */
     private boolean errorState = false; 
-    
-    /**
-     * Directory to export classes to when debug.export is enabled
-     */
-    private final File classExportDir = new File(MixinTransformer.DEBUG_OUTPUT, "class");
-    
-    /**
-     * Runtime decompiler for exported classes 
-     */
-    private final IDecompiler decompiler;
-
-    /**
-     * Hot-Swap agent
-     */
-    private final IHotSwap hotSwapper;
 
     /**
      * ctor 
@@ -376,38 +462,9 @@ public class MixinTransformer extends TreeTransformer {
         
         TreeInfo.setLock(this.lock);
         
-        this.decompiler = this.initDecompiler(new File(MixinTransformer.DEBUG_OUTPUT, "java"));
+        this.exporter = new Exporter();
         this.hotSwapper = this.initHotSwapper();
-
-        try {
-            FileUtils.deleteDirectory(this.classExportDir);
-        } catch (IOException ex) {
-            this.logger.warn("Error cleaning class output directory: {}", ex.getMessage());
-        }
-    }
-    
-    private IDecompiler initDecompiler(File outputPath) {
-        MixinEnvironment env = MixinEnvironment.getCurrentEnvironment();
-        if (!env.getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
-            return null;
-        }
-        
-        try {
-            boolean as = env.getOption(Option.DEBUG_EXPORT_DECOMPILE_THREADED);
-            this.logger.info("Attempting to load Fernflower decompiler{}", as ? " (Threaded mode)" : "");
-            @SuppressWarnings("unchecked")
-            Class<? extends IDecompiler> clazz =
-                (Class<? extends IDecompiler>)Class.forName("org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + (as ? "Async" : ""));
-            Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
-            IDecompiler decompiler = ctor.newInstance(outputPath);
-            this.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
-                    as ? " in a separate thread" : "");
-            return decompiler;
-        } catch (Throwable th) {
-            this.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
-                    th.getClass().getSimpleName(), th.getMessage());
-        }
-        return null;
+        this.postProcessor = new MixinPostProcessor();
     }
 
     private IHotSwap initHotSwapper() {
@@ -416,14 +473,14 @@ public class MixinTransformer extends TreeTransformer {
         }
 
         try {
-            this.logger.info("Attempting to load Hot-Swap agent");
+            MixinTransformer.logger.info("Attempting to load Hot-Swap agent");
             @SuppressWarnings("unchecked")
             Class<? extends IHotSwap> clazz =
                     (Class<? extends IHotSwap>)Class.forName("org.spongepowered.tools.agent.MixinAgent");
             Constructor<? extends IHotSwap> ctor = clazz.getDeclaredConstructor(MixinTransformer.class);
             return ctor.newInstance(this);
         } catch (Throwable th) {
-            this.logger.info("Hot-swap agent could not be loaded, hot swapping of mixins won't work. {}: {}",
+            MixinTransformer.logger.info("Hot-swap agent could not be loaded, hot swapping of mixins won't work. {}: {}",
                     th.getClass().getSimpleName(), th.getMessage());
         }
 
@@ -483,14 +540,17 @@ public class MixinTransformer extends TreeTransformer {
         }
         
         try {
+            if (this.postProcessor.canTransform(transformedName)) {
+                byte[] bytes = this.postProcessor.transform(name, transformedName, basicClass);
+                this.exporter.export(transformedName, false, bytes);
+                return bytes;
+            }
+
             SortedSet<MixinInfo> mixins = null;
             boolean invalidRef = false;
             
             for (MixinConfig config : this.configs) {
                 if (config.packageMatch(transformedName)) {
-                    if (config.canPassThrough(transformedName)) {
-                        return this.passThrough(config, name, transformedName, basicClass);
-                    }
                     invalidRef = true;
                     continue;
                 }
@@ -512,7 +572,7 @@ public class MixinTransformer extends TreeTransformer {
             if (mixins != null) {
                 // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
                 if (locked) {
-                    this.logger.warn("Re-entrance detected, this will cause serious problems.", new MixinException());
+                    MixinTransformer.logger.warn("Re-entrance detected, this will cause serious problems.", new MixinException());
                     throw new MixinApplyError("Re-entrance error.");
                 }
 
@@ -561,7 +621,7 @@ public class MixinTransformer extends TreeTransformer {
 
     private void select(MixinEnvironment environment) {
         this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
-        this.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
+        MixinTransformer.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
         long startTime = System.currentTimeMillis();
         
         this.selectConfigs(environment);
@@ -573,7 +633,7 @@ public class MixinTransformer extends TreeTransformer {
         if (elapsedTime > 0.25D) {
             String elapsed = new DecimalFormat("###0.000").format(elapsedTime);
             String perMixinTime = new DecimalFormat("###0.0").format((elapsedTime / totalMixins) * 1000.0);
-            this.logger.log(this.verboseLoggingLevel, "Prepared {} mixins in {} sec ({} msec avg.)", totalMixins, elapsed, perMixinTime);
+            MixinTransformer.logger.log(this.verboseLoggingLevel, "Prepared {} mixins in {} sec ({} msec avg.)", totalMixins, elapsed, perMixinTime);
         }
     }
 
@@ -589,12 +649,12 @@ public class MixinTransformer extends TreeTransformer {
                 MixinConfig config = handle.get();
                 if (config.select(environment)) {
                     iter.remove();
-                    this.logger.log(this.verboseLoggingLevel, "Selecting config {}", config);
+                    MixinTransformer.logger.log(this.verboseLoggingLevel, "Selecting config {}", config);
                     config.onSelect();
                     this.pendingConfigs.add(config);
                 }
             } catch (Exception ex) {
-                this.logger.warn(String.format("Failed to select mixin config: %s", handle), ex);
+                MixinTransformer.logger.warn(String.format("Failed to select mixin config: %s", handle), ex);
             }
         }
         
@@ -629,15 +689,32 @@ public class MixinTransformer extends TreeTransformer {
     private int prepareConfigs(MixinEnvironment environment) {
         int totalMixins = 0;
         
+        final IHotSwap hotSwapper = this.hotSwapper;
+        for (MixinConfig config : this.pendingConfigs) {
+            config.addListener(this.postProcessor);
+            if (hotSwapper != null) {
+                config.addListener(new IListener() {
+                    @Override
+                    public void onPrepare(MixinInfo mixin) {
+                        hotSwapper.registerMixinClass(mixin.getClassName());
+                    }
+                    @Override
+                    public void onInit(MixinInfo mixin) {
+                    }
+                });
+            }
+        }
+        
         for (MixinConfig config : this.pendingConfigs) {
             try {
-                this.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getDeclaredMixinCount());
-                config.prepare(this.hotSwapper);
+                MixinTransformer.logger.log(this.verboseLoggingLevel, "Preparing {} ({})", config, config.getDeclaredMixinCount());
+                config.prepare();
                 totalMixins += config.getMixinCount();
             } catch (InvalidMixinException ex) {
                 this.handleMixinPrepareError(config, ex, environment);
             } catch (Exception ex) {
-                this.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + ex.getMessage(), ex);
+                String message = ex.getMessage();
+                MixinTransformer.logger.error("Error encountered whilst initialising mixin config '" + config.getName() + "': " + message, ex);
             }
         }
         
@@ -659,11 +736,12 @@ public class MixinTransformer extends TreeTransformer {
 
         for (MixinConfig config : this.pendingConfigs) {
             try {
-                config.postInitialise(this.hotSwapper);
+                config.postInitialise();
             } catch (InvalidMixinException ex) {
                 this.handleMixinPrepareError(config, ex, environment);
             } catch (Exception ex) {
-                this.logger.error("Error encountered during mixin config postInit step'" + config.getName() + "': " + ex.getMessage(), ex);
+                String message = ex.getMessage();
+                MixinTransformer.logger.error("Error encountered during mixin config postInit step'" + config.getName() + "': " + message, ex);
             }
         }
         
@@ -672,21 +750,6 @@ public class MixinTransformer extends TreeTransformer {
         this.pendingConfigs.clear();
         
         return totalMixins;
-    }
-
-    /**
-     * Pass a class through a specific config, used to access classes within a
-     * mixin package through a pinhole
-     * 
-     * @param config 
-     * @param name original class name
-     * @param transformedName deobfuscated class name
-     * @param basicClass class bytecode
-     * @return public-ified class bytecode
-     */
-    private byte[] passThrough(MixinConfig config, String name, String transformedName, byte[] basicClass) {
-        ClassNode classNode = config.passThrough(transformedName, this.readClass(basicClass, true));
-        return this.writeClass(transformedName, classNode, false);
     }
 
     /**
@@ -702,7 +765,7 @@ public class MixinTransformer extends TreeTransformer {
         try {
             this.postApply(context);
         } catch (ValidationFailedException ex) {
-            this.logger.info(ex.getMessage());
+            MixinTransformer.logger.info(ex.getMessage());
             // If verify is enabled and failed, write out the bytecode to allow us to inspect it
             if (context.isExportForced() || MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT)) {
                 this.writeClass(context);
@@ -756,7 +819,7 @@ public class MixinTransformer extends TreeTransformer {
         IMixinInfo mixin = ex.getMixin();
         
         if (mixin == null) {
-            this.logger.error("InvalidMixinException has no mixin!", ex);
+            MixinTransformer.logger.error("InvalidMixinException has no mixin!", ex);
             throw ex;
         }
         
@@ -789,7 +852,7 @@ public class MixinTransformer extends TreeTransformer {
             }
         }
         
-        this.logger.log(action.logLevel, errorPhase.getLogMessage(context, ex, mixin), ex);
+        MixinTransformer.logger.log(action.logLevel, errorPhase.getLogMessage(context, ex, mixin), ex);
         
         this.errorState = false;
 
@@ -803,7 +866,7 @@ public class MixinTransformer extends TreeTransformer {
         
         for (String handlerClassName : Mixins.getErrorHandlerClasses()) {
             try {
-                this.logger.info("Instancing error handler class {}", handlerClassName);
+                MixinTransformer.logger.info("Instancing error handler class {}", handlerClassName);
                 Class<?> handlerClass = Class.forName(handlerClassName, true, Launch.classLoader);
                 IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.newInstance();
                 if (handler != null) {
@@ -817,15 +880,6 @@ public class MixinTransformer extends TreeTransformer {
         return handlers;
     }
 
-    private String prepareFilter(String filter) {
-        filter = "^\\Q" + filter.replace("**", "\201").replace("*", "\202").replace("?", "\203") + "\\E$";
-        return filter.replace("\201", "\\E.*\\Q").replace("\202", "\\E[^\\.]+\\Q").replace("\203", "\\E.\\Q").replace("\\Q\\E", "");
-    }
-
-    private boolean applyFilter(String filter, String subject) {
-        return Pattern.compile(this.prepareFilter(filter), Pattern.CASE_INSENSITIVE).matcher(subject).matches();
-    }
-
     private byte[] writeClass(TargetClassContext context) {
         return this.writeClass(context.getClassName(), context.getClassNode(), context.isExportForced());
     }
@@ -833,35 +887,14 @@ public class MixinTransformer extends TreeTransformer {
     private byte[] writeClass(String transformedName, ClassNode targetClass, boolean forceExport) {
         // Collapse tree to bytes
         byte[] bytes = this.writeClass(targetClass);
-        
-        // Export transformed class for debugging purposes
-        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
-        if (forceExport || environment.getOption(Option.DEBUG_EXPORT)) {
-            String filter = environment.getOptionValue(Option.DEBUG_EXPORT_FILTER);
-            if (forceExport || filter == null || this.applyFilter(filter, transformedName)) {
-                File outputFile = this.dumpClass(transformedName.replace('.', '/'), bytes);
-                if (this.decompiler != null) {
-                    this.decompiler.decompile(outputFile);
-                }
-            }
-        }
-        
+        this.exporter.export(transformedName, forceExport, bytes);
         return bytes;
     }
 
     private void dumpClassOnFailure(String className, byte[] bytes, MixinEnvironment env) {
         if (env.getOption(Option.DUMP_TARGET_ON_FAILURE)) {
-            this.dumpClass(className.replace('.', '/') + ".target", bytes);
+            this.exporter.dumpClass(className.replace('.', '/') + ".target", bytes);
         }
     }
 
-    private File dumpClass(String fileName, byte[] bytes) {
-        File outputFile = new File(this.classExportDir, fileName + ".class");
-        try {
-            FileUtils.writeByteArrayToFile(outputFile, bytes);
-        } catch (IOException ex) {
-            // don't care
-        }
-        return outputFile;
-    }
 }

@@ -107,7 +107,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     /**
      * Pattern for matching accessor names (for inflector)
      */
-    protected static final Pattern PATTERN_ACCESSOR = Pattern.compile("^(get|set|is|invoke|call)(([A-Z])(.*))$");
+    protected static final Pattern PATTERN_ACCESSOR = Pattern.compile("^(get|set|is|invoke|call)(([A-Z])(.*?))(_\\$md.*)$");
     
     /**
      * Accessor method argument types (raw, from method)
@@ -337,7 +337,8 @@ public class AccessorInfo extends SpecialMethodInfo {
             return candidates.get(0);
         }
         
-        throw new InvalidAccessorException(this, "Multiple candidates were found matching " + this.target + " in " + this.classNode.name
+        String number = candidates.size() == 0 ? "No" : "Multiple";
+        throw new InvalidAccessorException(this, number + " candidates were found matching " + this.target + " in " + this.classNode.name
                 + " for " + this);
     }
     

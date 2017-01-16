@@ -41,10 +41,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
-import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -53,7 +50,6 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
-import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.VersionNumber;
 
@@ -80,6 +76,27 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
     }
     
+    /**
+     * Callback listener for certain mixin init steps
+     */
+    interface IListener {
+
+        /**
+         * Called when a mixin has been successfully prepared
+         * 
+         * @param mixin mixin which was prepared
+         */
+        public abstract void onPrepare(MixinInfo mixin);
+
+        /**
+         * Called when a mixin has completed post-initialisation
+         * 
+         * @param mixin mixin which completed postinit
+         */
+        public abstract void onInit(MixinInfo mixin);
+
+    }
+
     /**
      * Global order of mixin configs, used to determine ordering between configs
      * with equivalent priority
@@ -110,16 +127,6 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * All mixins loaded by this config 
      */
     private final transient List<MixinInfo> mixins = new ArrayList<MixinInfo>();
-    
-    /**
-     * Synthetic inner classes for mixins in this set
-     */
-    private final transient Set<String> syntheticInnerClasses = new HashSet<String>();
-    
-    /**
-     * Accessor mixins in this set
-     */
-    private final transient Set<String> passThroughClasses = new HashSet<String>();
     
     /**
      * Marshal 
@@ -218,6 +225,8 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     private final transient int order = MixinConfig.configOrder++;
     
+    private final transient List<IListener> listeners = new ArrayList<IListener>();
+    
 //    /**
 //     * Phase selector
 //     */
@@ -264,7 +273,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Spawn via GSON, no public ctor for you 
      */
     private MixinConfig() {}
-
+    
     /**
      * Called immediately after deserialisation
      * 
@@ -349,6 +358,15 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         return true;
     }
+    
+    /**
+     * Add a new listener
+     * 
+     * @param listener listener to add
+     */
+    void addListener(IListener listener) {
+        this.listeners.add(listener);
+    }
 
     /**
      * Initialise the config once it's selected
@@ -399,20 +417,20 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em> methods.
      * </p>
      */
-    void prepare(IHotSwap hotSwapper) {
+    void prepare() {
         if (this.prepared) {
             return;
         }
         this.prepared = true;
         
-        this.prepareMixins(this.mixinClasses, false, hotSwapper);
+        this.prepareMixins(this.mixinClasses, false);
         
         switch (this.env.getSide()) {
             case CLIENT:
-                this.prepareMixins(this.mixinClassesClient, false, hotSwapper);
+                this.prepareMixins(this.mixinClassesClient, false);
                 break;
             case SERVER:
-                this.prepareMixins(this.mixinClassesServer, false, hotSwapper);
+                this.prepareMixins(this.mixinClassesServer, false);
                 break;
             case UNKNOWN:
                 //$FALL-THROUGH$
@@ -422,18 +440,18 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
     
-    void postInitialise(IHotSwap hotSwapper) {
+    void postInitialise() {
         if (this.plugin != null) {
             List<String> pluginMixins = this.plugin.getMixins();
-            this.prepareMixins(pluginMixins, true, hotSwapper);
+            this.prepareMixins(pluginMixins, true);
         }
         
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
             MixinInfo mixin = iter.next();
             try {
                 mixin.validate();
-                for (String innerClass : mixin.getSyntheticInnerClasses()) {
-                    this.syntheticInnerClasses.add(innerClass.replace('/', '.'));
+                for (IListener listener : this.listeners) {
+                    listener.onInit(mixin);
                 }
             } catch (InvalidMixinException ex) {
                 this.logger.error(ex.getMixin() + ": " + ex.getMessage(), ex);
@@ -457,7 +475,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
 
-    private void prepareMixins(List<String> mixinClasses, boolean suppressPlugin, IHotSwap hotSwapper) {
+    private void prepareMixins(List<String> mixinClasses, boolean suppressPlugin) {
         if (mixinClasses == null) {
             return;
         }
@@ -480,11 +498,8 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                         this.mixinsFor(targetClassName).add(mixin);
                         this.unhandledTargets.add(targetClassName);
                     }
-                    if (hotSwapper != null) {
-                        hotSwapper.registerMixinClass(mixin.getClassName());
-                    }
-                    if (mixin.isLoadable()) {
-                        this.passThroughClasses.add(mixin.getClassName());
+                    for (IListener listener : this.listeners) {
+                        listener.onPrepare(mixin);
                     }
                     this.mixins.add(mixin);
                 }
@@ -681,55 +696,6 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     public boolean packageMatch(String className) {
         return className.startsWith(this.mixinPackage);
-    }
-
-    /**
-     * Get whether the specified class is a synthetic inner class for this
-     * config
-     * 
-     * @param className Class name to check
-     * @return True if the specified class name is in this config's passthrough
-     *      set
-     */
-    public boolean canPassThrough(String className) {
-        return this.syntheticInnerClasses.contains(className) || this.passThroughClasses.contains(className);
-    }
-
-    public ClassNode passThrough(String className, ClassNode passThroughClassNode) {
-        if (this.syntheticInnerClasses.contains(className)) {
-            return this.passThroughSyntheticInner(passThroughClassNode);
-        }
-        
-        return passThroughClassNode;
-    }
-
-    /**
-     * "Pass through" a synthetic inner class. Transforms package-private
-     * members in the class into public so that they are accessible from their
-     * new home in the target class
-     * 
-     * @param classNode Class to pass through as tree
-     * @return transformed class
-     */
-    private ClassNode passThroughSyntheticInner(ClassNode classNode) {
-        // Make the class public
-        classNode.access |= Opcodes.ACC_PUBLIC;
-        
-        // Make package-private fields public
-        for (FieldNode field : classNode.fields) {
-            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                field.access |= Opcodes.ACC_PUBLIC;
-            }
-        }
-        
-        // Make package-private methods public
-        for (MethodNode method : classNode.methods) {
-            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                method.access |= Opcodes.ACC_PUBLIC;
-            }
-        }
-        
-        return classNode;
     }
 
     /**

@@ -159,7 +159,6 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.classVersion();
 
-
     /**
      * ctor
      * 
@@ -1006,8 +1005,8 @@ public class MixinTargetContext implements IReferenceMapperContext {
         this.mixin.postApply(transformedName, targetClass);
     }
     
-    public String getUniqueName(MethodNode method) {
-        return this.targetClass.getUniqueName(method);
+    public String getUniqueName(MethodNode method, boolean preservePrefix) {
+        return this.targetClass.getUniqueName(method, preservePrefix);
     }
 
     public String getUniqueName(FieldNode field) {

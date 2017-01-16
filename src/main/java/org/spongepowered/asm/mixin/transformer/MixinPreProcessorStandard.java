@@ -37,6 +37,7 @@ import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -89,6 +90,8 @@ class MixinPreProcessorStandard {
      */
     protected final MixinClassNode classNode;
     
+    protected final MixinEnvironment env;
+    
     private final boolean verboseLogging, strictUnique;
     
     private boolean prepared, attached;
@@ -96,9 +99,9 @@ class MixinPreProcessorStandard {
     MixinPreProcessorStandard(MixinInfo mixin, MixinClassNode classNode) {
         this.mixin = mixin;
         this.classNode = classNode;
-        MixinEnvironment env = mixin.getParent().getEnvironment();
-        this.verboseLogging = env.getOption(Option.DEBUG_VERBOSE);
-        this.strictUnique = env.getOption(Option.DEBUG_UNIQUE);
+        this.env = mixin.getParent().getEnvironment();
+        this.verboseLogging = this.env.getOption(Option.DEBUG_VERBOSE);
+        this.strictUnique = this.env.getOption(Option.DEBUG_UNIQUE);
     }
 
     /**
@@ -251,19 +254,32 @@ class MixinPreProcessorStandard {
         return this.attachAccessorMethod(context, mixinMethod, Accessor.class) || this.attachAccessorMethod(context, mixinMethod, Invoker.class);
     }
 
-    private boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+    protected boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
         AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type);
         if (annotation == null) {
             return false;
         }
         
+        String description = "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name;
         Method method = this.getSpecialMethod(mixinMethod, type);
-        if (!method.isAbstract()) {
-            throw new InvalidAccessorException(context, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " is not abstract");
-        }
+        if (MixinEnvironment.getCompatibilityLevel().isAtLeast(CompatibilityLevel.JAVA_8) && method.isStatic()) {
+            if (this.mixin.getTargets().size() > 1) {
+                throw new InvalidAccessorException(context, description + " in multi-target mixin is invalid. Mixin must have exactly 1 target.");
+            }
+            
+            String uniqueName = context.getUniqueName(mixinMethod, true);
+            MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique method {}{} to {} in {}",
+                    mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+            mixinMethod.name = method.renameTo(uniqueName);
 
-        if (method.isStatic()) {
-            throw new InvalidAccessorException(context, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name + " cannot be static");
+        } else {
+            if (!method.isAbstract()) {
+                throw new InvalidAccessorException(context, description + " is not abstract");
+            }
+    
+            if (method.isStatic()) {
+                throw new InvalidAccessorException(context, description + " cannot be static");
+            }
         }
         
         context.addAccessorMethod(mixinMethod, type);
@@ -356,7 +372,7 @@ class MixinPreProcessorStandard {
         }
         
         if ((mixinMethod.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) != 0) {
-            String uniqueName = context.getUniqueName(mixinMethod);
+            String uniqueName = context.getUniqueName(mixinMethod, false);
             MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique method {}{} to {} in {}",
                     mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
             mixinMethod.name = method.renameTo(uniqueName);

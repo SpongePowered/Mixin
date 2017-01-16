@@ -241,9 +241,10 @@ class TargetClassContext {
         return target;
     }
     
-    public String getUniqueName(MethodNode method) {
+    public String getUniqueName(MethodNode method, boolean preservePrefix) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
-        return String.format("md%s$%s$%s", this.sessionId.substring(30), method.name, uniqueIndex);
+        String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
+        return String.format(pattern, this.sessionId.substring(30), method.name, uniqueIndex);
     }
 
     public String getUniqueName(FieldNode field) {

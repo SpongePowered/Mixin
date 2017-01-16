@@ -1007,8 +1007,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         return this.getState().isUnique();
     }
     
+    /**
+     * True if this mixin is decorated with {@link Pseudo}
+     */
     public boolean isVirtual() {
         return this.virtual;
+    }
+    
+    /**
+     * True if the mixin class is actually class-loadable
+     */
+    public boolean isAccessor() {
+        return this.type instanceof SubType.Accessor;
     }
 
     /**
