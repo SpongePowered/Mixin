@@ -72,7 +72,7 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
         if (this.isInstanceMethod) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
-        ASMHelper.loadArgs(this.argTypes, method.instructions, 1);
+        ASMHelper.loadArgs(this.argTypes, method.instructions, this.isInstanceMethod ? 1 : 0);
         boolean isPrivate = ASMHelper.hasFlag(this.targetMethod, Opcodes.ACC_PRIVATE);
         int opcode = this.isInstanceMethod ? (isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL) : Opcodes.INVOKESTATIC;
         method.instructions.add(new MethodInsnNode(opcode, this.info.getClassNode().name, this.targetMethod.name, this.targetMethod.desc, false));
