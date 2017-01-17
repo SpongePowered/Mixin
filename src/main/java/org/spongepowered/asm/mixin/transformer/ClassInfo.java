@@ -53,6 +53,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.ClassSignature;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -629,6 +630,11 @@ public class ClassInfo extends TreeInfo {
      * Outer class reference, not initialised until required
      */
     private ClassInfo outerClass;
+    
+    /**
+     * Class signature, lazy-loaded where possible
+     */
+    private ClassSignature signature;
 
     /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
@@ -703,10 +709,12 @@ public class ClassInfo extends TreeInfo {
         this.isProbablyStatic = isProbablyStatic;
         this.outerName = outerName;
         this.methodMapper = new MethodMapper(MixinEnvironment.getCurrentEnvironment(), this);
+        this.signature = ClassSignature.ofLazy(classNode);
     }
 
     void addInterface(String iface) {
         this.interfaces.add(iface);
+        this.getSignature().addInterface(iface);
     }
 
     void addMethod(MethodNode method) {
@@ -855,6 +863,15 @@ public class ClassInfo extends TreeInfo {
         }
 
         return this.outerClass;
+    }
+    
+    /**
+     * Return the class signature
+     * 
+     * @return signature as a {@link ClassSignature} instance
+     */
+    public ClassSignature getSignature() {
+        return this.signature.wake();
     }
 
     /**

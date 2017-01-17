@@ -105,7 +105,7 @@ public class InjectorTarget {
      * Get the slice instructions for the specified 
      * 
      * @param injectionPoint
-     * @return
+     * @return slice
      */
     public InsnList getSlice(InjectionPoint injectionPoint) {
         return this.getSlice(injectionPoint.getSlice());

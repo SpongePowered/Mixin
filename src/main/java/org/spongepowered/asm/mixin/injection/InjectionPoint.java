@@ -452,10 +452,8 @@ public abstract class InjectionPoint {
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation
      * 
-     * @param mixin Data for the mixin containing the annotation, used to obtain
+     * @param info Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
-     * @param method The annotated handler method
-     * @param parent The parent annotation which owns this {@link At} annotation
      * @param at {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed

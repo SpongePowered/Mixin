@@ -41,6 +41,8 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Label;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
+import org.spongepowered.asm.lib.signature.SignatureReader;
+import org.spongepowered.asm.lib.signature.SignatureVisitor;
 import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
@@ -277,6 +279,7 @@ class MixinApplicatorStandard {
     protected final void applyMixin(MixinTargetContext mixin, ApplicatorPass pass) {
         switch (pass) {
             case MAIN:
+                this.applySignature(mixin);
                 this.applyInterfaces(mixin);
                 this.applyAttributes(mixin);
                 this.applyAnnotations(mixin);
@@ -298,6 +301,10 @@ class MixinApplicatorStandard {
                 // wat?
                 throw new IllegalStateException("Invalid pass specified " + pass);
         }
+    }
+
+    protected void applySignature(MixinTargetContext mixin) {
+        this.context.mergeSignature(mixin.getSignature());
     }
 
     /**
@@ -440,6 +447,12 @@ class MixinApplicatorStandard {
         
         this.targetClass.methods.add(method);
         mixin.addMergedMethod(method);
+        
+        if (method.signature != null) {
+            SignatureVisitor sv = mixin.getSignature().getRemapper();
+            new SignatureReader(method.signature).accept(sv);
+            method.signature = sv.toString();
+        }
     }
 
     /**

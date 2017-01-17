@@ -40,6 +40,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.ClassSignature;
 
 /**
  * Struct for containing target class information during mixin application
@@ -70,6 +71,11 @@ class TargetClassContext {
      * Source map that is generated for target class
      */
     private final SourceMap sourceMap;
+    
+    /**
+     * Target class signature 
+     */
+    private final ClassSignature signature;
     
     /**
      * Mixins to apply 
@@ -103,6 +109,7 @@ class TargetClassContext {
         this.className = name;
         this.classNode = classNode;
         this.classInfo = ClassInfo.fromClassNode(classNode);
+        this.signature = this.classInfo.getSignature();
         this.mixins = mixins;
         this.sourceMap = new SourceMap(classNode.sourceFile);
         this.sourceMap.addFile(this.classNode);
@@ -113,75 +120,84 @@ class TargetClassContext {
         return this.className;
     }
     
-    public boolean isApplied() {
+    boolean isApplied() {
         return this.applied;
     }
     
-    public boolean isExportForced() {
+    boolean isExportForced() {
         return this.forceExport;
     }
     
     /**
      * Get the transformer session ID
      */
-    public String getSessionId() {
+    String getSessionId() {
         return this.sessionId;
     }
     
     /**
      * Get the internal class name
      */
-    public String getName() {
+    String getName() {
         return this.classNode.name;
     }
     
     /**
      * Get the class name
      */
-    public String getClassName() {
+    String getClassName() {
         return this.className;
     }
 
     /**
      * Get the class tree
      */
-    public ClassNode getClassNode() {
+    ClassNode getClassNode() {
         return this.classNode;
     }
 
     /**
      * Get the class methods (from the tree)
      */
-    public List<MethodNode> getMethods() {
+    List<MethodNode> getMethods() {
         return this.classNode.methods;
     }
     
     /**
      * Get the class fields (from the tree)
      */
-    public List<FieldNode> getFields() {
+    List<FieldNode> getFields() {
         return this.classNode.fields;
     }
 
     /**
      * Get the target class metadata
      */
-    public ClassInfo getClassInfo() {
+    ClassInfo getClassInfo() {
         return this.classInfo;
     }
     
     /**
      * Get the mixins for this target class
      */
-    public SortedSet<MixinInfo> getMixins() {
+    SortedSet<MixinInfo> getMixins() {
         return this.mixins;
     }
 
     /**
      * Get the source map that is generated for the target class
      */
-    public SourceMap getSourceMap() {
+    SourceMap getSourceMap() {
         return this.sourceMap;
+    }
+    
+    /**
+     * Merge the supplied signature into this class's signature
+     * 
+     * @param signature signature to merge
+     */
+    void mergeSignature(ClassSignature signature) {
+        this.signature.merge(signature);
     }
 
     MethodNode findAliasedMethod(Deque<String> aliases, String desc) {
@@ -227,7 +243,7 @@ class TargetClassContext {
      * @param method method to get a target handle for
      * @return new or existing target handle for the supplied method
      */
-    public Target getTargetMethod(MethodNode method) {
+    Target getTargetMethod(MethodNode method) {
         if (!this.classNode.methods.contains(method)) {
             throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
         }
@@ -241,13 +257,13 @@ class TargetClassContext {
         return target;
     }
     
-    public String getUniqueName(MethodNode method, boolean preservePrefix) {
+    String getUniqueName(MethodNode method, boolean preservePrefix) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
         String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
         return String.format(pattern, this.sessionId.substring(30), method.name, uniqueIndex);
     }
 
-    public String getUniqueName(FieldNode field) {
+    String getUniqueName(FieldNode field) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
         return String.format("fd%s$%s$%s", this.sessionId.substring(30), field.name, uniqueIndex);
     }
@@ -255,13 +271,15 @@ class TargetClassContext {
     /**
      * Apply mixins to this class
      */
-    public void applyMixins() {
+    void applyMixins() {
         if (this.applied) {
             throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
         MixinApplicatorStandard applicator = this.createApplicator();
         applicator.apply(this.mixins);
+        
+        this.classNode.signature = this.signature.toString();
     }
 
     private MixinApplicatorStandard createApplicator() {
@@ -271,11 +289,10 @@ class TargetClassContext {
         return new MixinApplicatorStandard(this);
     }
 
-
     /**
      * Process {@link Debug} annotations on the class after application
      */
-    public void processDebugTasks() {
+    void processDebugTasks() {
         if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
             return;
         }

@@ -107,7 +107,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     /**
      * Pattern for matching accessor names (for inflector)
      */
-    protected static final Pattern PATTERN_ACCESSOR = Pattern.compile("^(get|set|is|invoke|call)(([A-Z])(.*?))(_\\$md.*)$");
+    protected static final Pattern PATTERN_ACCESSOR = Pattern.compile("^(get|set|is|invoke|call)(([A-Z])(.*?))(_\\$md.*)?$");
     
     /**
      * Accessor method argument types (raw, from method)
