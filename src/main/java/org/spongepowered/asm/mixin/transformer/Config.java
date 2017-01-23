@@ -59,6 +59,13 @@ public class Config {
     }
 
     /**
+     * Get whether config has been visited
+     */
+    public boolean isVisited() {
+        return this.config.isVisited();
+    }
+
+    /**
      * Get API-level config view
      */
     public IMixinConfig getConfig() {

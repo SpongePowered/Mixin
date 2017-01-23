@@ -444,7 +444,12 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Handling an error state, do not process further mixins
      */
-    private boolean errorState = false; 
+    private boolean errorState = false;
+    
+    /**
+     * Number of classes transformed in the current phase
+     */
+    private int transformedCount = 0;
 
     /**
      * ctor 
@@ -530,9 +535,9 @@ public class MixinTransformer extends TreeTransformer {
         
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
-        if (this.currentEnvironment != environment && !locked) {
+        if (!locked) {
             try {
-                this.select(environment);
+                this.checkSelect(environment);
             } catch (Exception ex) {
                 this.lock.pop();
                 throw new MixinException(ex);
@@ -585,6 +590,7 @@ public class MixinTransformer extends TreeTransformer {
                     ClassNode targetClassNode = this.readClass(basicClass, true);
                     TargetClassContext context = new TargetClassContext(this.sessionId, transformedName, targetClassNode, mixins);
                     basicClass = this.applyMixins(context);
+                    this.transformedCount++;
                 } catch (InvalidMixinException th) {
                     this.dumpClassOnFailure(transformedName, basicClass, environment);
                     this.handleMixinApplyError(transformedName, th, environment);
@@ -619,15 +625,32 @@ public class MixinTransformer extends TreeTransformer {
         return targets;
     }
 
+    private void checkSelect(MixinEnvironment environment) {
+        if (this.currentEnvironment != environment) {
+            this.select(environment);
+            return;
+        }
+        
+        int unvisitedCount = Mixins.getUnvisitedCount();
+        if (unvisitedCount > 0 && this.transformedCount == 0) {
+            this.select(environment);
+        }
+    }
+
     private void select(MixinEnvironment environment) {
         this.verboseLoggingLevel = (environment.getOption(Option.DEBUG_VERBOSE)) ? Level.INFO : Level.DEBUG;
-        MixinTransformer.logger.log(this.verboseLoggingLevel, "Preparing mixins for {}", environment);
+        if (this.transformedCount > 0) {
+            MixinTransformer.logger.log(this.verboseLoggingLevel, "Ending {}, applied {} mixins", this.currentEnvironment, this.transformedCount);
+        }
+        String action = this.currentEnvironment == environment ? "Checking for additional" : "Preparing";
+        MixinTransformer.logger.log(this.verboseLoggingLevel, "{} mixins for {}", action, environment);
         long startTime = System.currentTimeMillis();
         
         this.selectConfigs(environment);
         this.selectModules(environment);
         int totalMixins = this.prepareConfigs(environment);
         this.currentEnvironment = environment;
+        this.transformedCount = 0;
         
         double elapsedTime = (System.currentTimeMillis() - startTime) * 0.001D;
         if (elapsedTime > 0.25D) {

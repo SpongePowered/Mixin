@@ -105,6 +105,9 @@ public class MixinPlatformManager {
         } catch (URISyntaxException ex) {
             ex.printStackTrace();
         }
+        
+        // Do an early scan to ensure preinit mixins are discovered
+        this.scanClasspath();
     }
     
     public Collection<String> getPhaseProviderClasses() {

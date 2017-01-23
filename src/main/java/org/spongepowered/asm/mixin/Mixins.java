@@ -106,6 +106,31 @@ public final class Mixins {
     }
     
     /**
+     * Get the number of "unvisited" configurations available. This is the
+     * number of configurations which have been added since the last selection
+     * attempt.
+     * 
+     * <p>If the transformer has already entered a phase but no mixins have yet
+     * been applied, it is safe to visit any additional configs which were
+     * registered in the mean time and may wish to apply to the current phase.
+     * This is particularly true during the PREINIT phase, which by necessity
+     * must start as soon as the first class is transformed after bootstrapping,
+     * but may not have any valid mixins until later in the actual preinit
+     * process due to the order in which things are discovered.
+     * 
+     * @return unvisited config count
+     */
+    public static int getUnvisitedCount() {
+        int count = 0;
+        for (Config config : Mixins.getConfigs()) {
+            if (!config.isVisited()) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    /**
      * Get current pending configs set, only configs which have yet to be
      * consumed are present in this set
      */

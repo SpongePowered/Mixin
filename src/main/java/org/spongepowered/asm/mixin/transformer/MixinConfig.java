@@ -268,6 +268,11 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Keep track of initialisation state 
      */
     private transient boolean prepared = false;
+    
+    /**
+     * Track whether this mixin has been evaluated for selection yet 
+     */
+    private transient boolean visited = false;
 
     /**
      * Spawn via GSON, no public ctor for you 
@@ -602,7 +607,13 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
 
     // AMS - temp
     public boolean select(MixinEnvironment environment) {
+        this.visited = true;
         return this.env == environment;
+    }
+    
+    // AMS - temp
+    boolean isVisited() {
+        return this.visited;
     }
     
     /**
