@@ -82,6 +82,11 @@ public abstract class MemberRef {
         public String getName() {
             return this.insn.name;
         }
+        
+        @Override
+        public void setName(String name) {
+            this.insn.name = name;
+        }
 
         @Override
         public String getDesc() {
@@ -137,7 +142,12 @@ public abstract class MemberRef {
         public String getName() {
             return this.insn.name;
         }
-
+        
+        @Override
+        public void setName(String name) {
+            this.insn.name = name;
+        }
+        
         @Override
         public String getDesc() {
             return this.insn.desc;
@@ -236,6 +246,11 @@ public abstract class MemberRef {
         }
 
         @Override
+        public void setName(String name) {
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), name, this.handle.getDesc());
+        }
+
+        @Override
         public String getDesc() {
             return this.handle.getDesc();
         }
@@ -280,6 +295,13 @@ public abstract class MemberRef {
      * @return Name of this member.
      */
     public abstract String getName();
+    
+    /**
+     * Rename this member.
+     *
+     * @param name New name for this member.
+     */
+    public abstract void setName(String name);
 
     /**
      * Descriptor of this member.

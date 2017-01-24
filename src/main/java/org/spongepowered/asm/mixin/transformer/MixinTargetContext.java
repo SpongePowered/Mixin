@@ -470,6 +470,12 @@ public class MixinTargetContext implements IReferenceMapperContext {
         
         if (fieldRef.getOwner().equals(this.getClassRef())) {
             fieldRef.setOwner(this.targetClass.getName());
+            
+            Field field = this.mixin.getClassInfo().findField(fieldRef.getName(), fieldRef.getDesc(), ClassInfo.INCLUDE_ALL);
+            // Fixes a problem with Forge not remapping static field references properly
+            if (field != null && field.isRenamed() && field.getOriginalName().equals(fieldRef.getName()) && field.isStatic()) {
+                fieldRef.setName(field.getName());
+            }
         } else {
             ClassInfo fieldOwner = ClassInfo.forName(fieldRef.getOwner());
             if (fieldOwner.isMixin()) {
