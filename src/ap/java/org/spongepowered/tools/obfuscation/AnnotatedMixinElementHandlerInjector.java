@@ -260,9 +260,9 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         elem.notifyRemapped();
     }
     
-    protected final boolean remapReference(String subject, String reference, AnnotatedElementInjectionPoint elem) {
+    protected final void remapReference(String subject, String reference, AnnotatedElementInjectionPoint elem) {
         if (reference == null) {
-            return false;
+            return;
         }
         
         // JDT supports hanging the error on the @At annotation directly, doing this in javac doesn't work 
@@ -272,7 +272,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         if (!targetMember.isFullyQualified()) {
             String missing = targetMember.owner == null ? (targetMember.desc == null ? "owner and signature" : "owner") : "signature";
             this.ap.printMessage(Kind.ERROR, subject + " is not fully qualified, missing " + missing, elem.getElement(), errorsOn);
-            return false;
+            return;
         }
         
         try {
@@ -287,7 +287,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 if (obfFieldData.isEmpty()) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
                             errorsOn);
-                    return false;
+                    return;
                 }
                 this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
             } else {
@@ -296,7 +296,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                     if (targetMember.owner == null || !targetMember.owner.startsWith("java/lang/")) {
                         this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + subject + " '" + reference + "'", elem.getElement(),
                                 errorsOn);
-                        return false;
+                        return;
                     }
                 }
                 this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, targetMember, obfMethodData);
@@ -306,10 +306,10 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             // we catch and log the error in case something weird happens in the mapping provider
             this.ap.printMessage(Kind.ERROR, "Unexpected reference conflict for " + subject + ": " + reference + " -> "
                     + ex.getNew() + " previously defined as " + ex.getOld(), elem.getElement(), errorsOn);
-            return false;
+            return;
         }
         
-        return true;
+        elem.notifyRemapped();
     }
 
 }
