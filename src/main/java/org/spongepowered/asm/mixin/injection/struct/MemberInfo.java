@@ -28,7 +28,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
@@ -541,7 +541,7 @@ public class MemberInfo {
      * @param context Context to use for reference mapping
      * @return parsed MemberInfo
      */
-    public static MemberInfo parseAndValidate(String string, IReferenceMapperContext context) throws InvalidMemberDescriptorException {
+    public static MemberInfo parseAndValidate(String string, IMixinContext context) throws InvalidMemberDescriptorException {
         return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef()).validate();
     }
     
@@ -562,7 +562,7 @@ public class MemberInfo {
      * @param context Context to use for reference mapping
      * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String string, IReferenceMapperContext context) {
+    public static MemberInfo parse(String string, IMixinContext context) {
         return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef());
     }
     

@@ -56,8 +56,7 @@ import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
 import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.ASMHelper;
 
 import com.google.common.base.Joiner;
@@ -416,32 +415,32 @@ public abstract class InjectionPoint {
      * Parse a collection of InjectionPoints from the supplied {@link At}
      * annotations
      * 
-     * @param info Data for the mixin containing the annotation, used to obtain
+     * @param owner Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
      * @param ats {@link At} annotations to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static List<InjectionPoint> parse(SpecialMethodInfo info, List<AnnotationNode> ats) {
-        return InjectionPoint.parse(info.getContext(), info.getMethod(), info.getAnnotation(), ats);
+    public static List<InjectionPoint> parse(IInjectionPointContext owner, List<AnnotationNode> ats) {
+        return InjectionPoint.parse(owner.getContext(), owner.getMethod(), owner.getAnnotation(), ats);
     }
     
     /**
      * Parse a collection of InjectionPoints from the supplied {@link At}
      * annotations
      * 
-     * @param mixin Data for the mixin containing the annotation, used to obtain
-     *      the refmap, amongst other things
+     * @param context Data for the mixin containing the annotation, used to
+     *      obtain the refmap, amongst other things
      * @param method The annotated handler method
      * @param parent The parent annotation which owns this {@link At} annotation
      * @param ats {@link At} annotations to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static List<InjectionPoint> parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, List<AnnotationNode> ats) {
+    public static List<InjectionPoint> parse(IMixinContext context, MethodNode method, AnnotationNode parent, List<AnnotationNode> ats) {
         Builder<InjectionPoint> injectionPoints = ImmutableList.<InjectionPoint>builder();
         for (AnnotationNode at : ats) {
-            InjectionPoint injectionPoint = InjectionPoint.parse(mixin, method, parent, at);
+            InjectionPoint injectionPoint = InjectionPoint.parse(context, method, parent, at);
             if (injectionPoint != null) {
                 injectionPoints.add(injectionPoint);
             }
@@ -452,30 +451,30 @@ public abstract class InjectionPoint {
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation
      * 
-     * @param info Data for the mixin containing the annotation, used to obtain
+     * @param owner Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
      * @param at {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(SpecialMethodInfo info, At at) {
-        return InjectionPoint.parse(info.getContext(), info.getMethod(), info.getAnnotation(), at.value(), at.shift(), at.by(),
+    public static InjectionPoint parse(IInjectionPointContext owner, At at) {
+        return InjectionPoint.parse(owner.getContext(), owner.getMethod(), owner.getAnnotation(), at.value(), at.shift(), at.by(),
                 Arrays.asList(at.args()), at.target(), at.slice(), at.ordinal(), at.opcode());
     }
 
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation
      * 
-     * @param mixin Data for the mixin containing the annotation, used to obtain
-     *      the refmap, amongst other things
+     * @param context Data for the mixin containing the annotation, used to
+     *      obtain the refmap, amongst other things
      * @param method The annotated handler method
      * @param parent The parent annotation which owns this {@link At} annotation
      * @param at {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, At at) {
-        return InjectionPoint.parse(mixin, method, parent, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.slice(),
+    public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, At at) {
+        return InjectionPoint.parse(context, method, parent, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.slice(),
                 at.ordinal(), at.opcode());
     }
     
@@ -483,29 +482,29 @@ public abstract class InjectionPoint {
      * Parse an InjectionPoint from the supplied {@link At} annotation supplied
      * as an AnnotationNode instance
      * 
-     * @param info Data for the mixin containing the annotation, used to obtain
+     * @param owner Data for the mixin containing the annotation, used to obtain
      *      the refmap, amongst other things
      * @param node {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(SpecialMethodInfo info, AnnotationNode node) {
-        return InjectionPoint.parse(info.getContext(), info.getMethod(), info.getAnnotation(), node);
+    public static InjectionPoint parse(IInjectionPointContext owner, AnnotationNode node) {
+        return InjectionPoint.parse(owner.getContext(), owner.getMethod(), owner.getAnnotation(), node);
     }
 
     /**
      * Parse an InjectionPoint from the supplied {@link At} annotation supplied
      * as an AnnotationNode instance
      * 
-     * @param mixin Data for the mixin containing the annotation, used to obtain
-     *      the refmap, amongst other things
+     * @param context Data for the mixin containing the annotation, used to
+     *      obtain the refmap, amongst other things
      * @param method The annotated handler method
      * @param parent The parent annotation which owns this {@link At} annotation
      * @param node {@link At} annotation to parse information from
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, AnnotationNode node) {
+    public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, AnnotationNode node) {
         String at = ASMHelper.<String>getAnnotationValue(node, "value");
         List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
         String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
@@ -519,15 +518,15 @@ public abstract class InjectionPoint {
             args = ImmutableList.<String>of();
         }
 
-        return InjectionPoint.parse(mixin, method, parent, at, shift, by, args, target, slice, ordinal, opcode);
+        return InjectionPoint.parse(context, method, parent, at, shift, by, args, target, slice, ordinal, opcode);
     }
 
     /**
      * Parse and instantiate an InjectionPoint from the supplied information.
      * Returns null if an InjectionPoint could not be created.
      * 
-     * @param mixin Data for the mixin containing the annotation, used to obtain
-     *      the refmap, amongst other things
+     * @param context Data for the mixin containing the annotation, used to
+     *      obtain the refmap, amongst other things
      * @param method The annotated handler method
      * @param parent The parent annotation which owns this {@link At} annotation
      * @param at Injection point specifier
@@ -541,16 +540,16 @@ public abstract class InjectionPoint {
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
-    public static InjectionPoint parse(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
+    public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
             List<String> args, String target, String slice, int ordinal, int opcode) {
-        InjectionPointData data = new InjectionPointData(mixin, method, parent, at, args, target, slice, ordinal, opcode);
-        Class<? extends InjectionPoint> ipClass = findClass(mixin, data);
-        InjectionPoint point = InjectionPoint.create(mixin, data, ipClass);
+        InjectionPointData data = new InjectionPointData(context, method, parent, at, args, target, slice, ordinal, opcode);
+        Class<? extends InjectionPoint> ipClass = findClass(context, data);
+        InjectionPoint point = InjectionPoint.create(context, data, ipClass);
         return InjectionPoint.shift(point, shift, by);
     }
 
     @SuppressWarnings("unchecked")
-    private static Class<? extends InjectionPoint> findClass(MixinTargetContext mixin, InjectionPointData data) {
+    private static Class<? extends InjectionPoint> findClass(IMixinContext context, InjectionPointData data) {
         String type = data.getType();
         Class<? extends InjectionPoint> ipClass = InjectionPoint.types.get(type);
         if (ipClass == null) {
@@ -559,29 +558,29 @@ public abstract class InjectionPoint {
                     ipClass = (Class<? extends InjectionPoint>)Class.forName(type);
                     InjectionPoint.types.put(type, ipClass);
                 } catch (Exception ex) {
-                    throw new InvalidInjectionException(mixin, data + " could not be loaded or is not a valid InjectionPoint", ex);
+                    throw new InvalidInjectionException(context, data + " could not be loaded or is not a valid InjectionPoint", ex);
                 }
             } else {
-                throw new InvalidInjectionException(mixin, data + " is not a valid injection point specifier");
+                throw new InvalidInjectionException(context, data + " is not a valid injection point specifier");
             }
         }
         return ipClass;
     }
     
-    private static InjectionPoint create(MixinTargetContext mixin, InjectionPointData data, Class<? extends InjectionPoint> ipClass) {
+    private static InjectionPoint create(IMixinContext context, InjectionPointData data, Class<? extends InjectionPoint> ipClass) {
         Constructor<? extends InjectionPoint> ipCtor = null;
         try {
             ipCtor = ipClass.getDeclaredConstructor(InjectionPointData.class);
             ipCtor.setAccessible(true);
         } catch (NoSuchMethodException ex) {
-            throw new InvalidInjectionException(mixin, ipClass.getName() + " must contain a constructor which accepts an InjectionPointData", ex);
+            throw new InvalidInjectionException(context, ipClass.getName() + " must contain a constructor which accepts an InjectionPointData", ex);
         }
 
         InjectionPoint point = null;
         try {
             point = ipCtor.newInstance(data);
         } catch (Exception ex) {
-            throw new InvalidInjectionException(mixin, "Error whilst instancing injection point " + ipClass.getName() + " for " + data.getAt(), ex);
+            throw new InvalidInjectionException(context, "Error whilst instancing injection point " + ipClass.getName() + " for " + data.getAt(), ex);
         }
         
         return point;

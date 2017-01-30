@@ -27,12 +27,14 @@ package org.spongepowered.asm.mixin.struct;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
  * Information about a special mixin method such as an injector or accessor
  */
-public abstract class SpecialMethodInfo {
+public abstract class SpecialMethodInfo implements IInjectionPointContext {
 
     /**
      * Annotation on the method
@@ -66,7 +68,8 @@ public abstract class SpecialMethodInfo {
      * 
      * @return the target context
      */
-    public final MixinTargetContext getContext() {
+    @Override
+    public final IMixinContext getContext() {
         return this.mixin;
     }
     
@@ -75,6 +78,7 @@ public abstract class SpecialMethodInfo {
      *  
      * @return The annotation which this InjectionInfo was created from 
      */
+    @Override
     public final AnnotationNode getAnnotation() {
         return this.annotation;
     }
@@ -93,6 +97,7 @@ public abstract class SpecialMethodInfo {
      * 
      * @return injector method
      */
+    @Override
     public final MethodNode getMethod() {
         return this.method;
     }

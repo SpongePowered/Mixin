@@ -55,16 +55,16 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+import org.spongepowered.asm.mixin.transformer.meta.SourceMap.File;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
-import org.spongepowered.asm.mixin.transformer.meta.SourceMap.File;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
@@ -77,7 +77,7 @@ import org.spongepowered.asm.util.Constants;
  * context-sensitive operations such as re-targetting method and field accesses
  * in the mixin to the appropriate members in the target class hierarchy. 
  */
-public class MixinTargetContext implements IReferenceMapperContext {
+public class MixinTargetContext implements IMixinContext {
     
     /**
      * Logger
@@ -230,6 +230,15 @@ public class MixinTargetContext implements IReferenceMapperContext {
      */
     public MixinEnvironment getEnvironment() {
         return this.mixin.getParent().getEnvironment();
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IMixinContext
+     *      #getOption(org.spongepowered.asm.mixin.MixinEnvironment.Option)
+     */
+    @Override
+    public boolean getOption(Option option) {
+        return this.getEnvironment().getOption(option);
     }
 
     /**
@@ -813,6 +822,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * @param method method to get a target handle for
      * @return new or existing target handle for the supplied method
      */
+    @Override
     public Target getTargetMethod(MethodNode method) {
         return this.targetClass.getTargetMethod(method);
     }
@@ -886,7 +896,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapperContext
+     * @see org.spongepowered.asm.mixin.refmap.IMixinContext
      *      #getMixin()
      */
     @Override
@@ -906,6 +916,7 @@ public class MixinTargetContext implements IReferenceMapperContext {
      * 
      * @return the priority (only meaningful in relation to other mixins)
      */
+    @Override
     public int getPriority() {
         return this.mixin.getPriority();
     }

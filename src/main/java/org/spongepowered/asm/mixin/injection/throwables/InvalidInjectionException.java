@@ -25,7 +25,7 @@
 package org.spongepowered.asm.mixin.injection.throwables;
 
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
 /**
@@ -38,7 +38,7 @@ public class InvalidInjectionException extends InvalidMixinException {
     
     private final InjectionInfo info;
 
-    public InvalidInjectionException(IReferenceMapperContext context, String message) {
+    public InvalidInjectionException(IMixinContext context, String message) {
         super(context, message);
         this.info = null;
     }
@@ -48,7 +48,7 @@ public class InvalidInjectionException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidInjectionException(IReferenceMapperContext context, Throwable cause) {
+    public InvalidInjectionException(IMixinContext context, Throwable cause) {
         super(context, cause);
         this.info = null;
     }
@@ -58,7 +58,7 @@ public class InvalidInjectionException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidInjectionException(IReferenceMapperContext context, String message, Throwable cause) {
+    public InvalidInjectionException(IMixinContext context, String message, Throwable cause) {
         super(context, message, cause);
         this.info = null;
     }

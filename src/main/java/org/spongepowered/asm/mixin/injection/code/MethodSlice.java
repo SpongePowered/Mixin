@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.Slice;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
 import org.spongepowered.asm.util.ASMHelper;
@@ -293,7 +292,7 @@ public class MethodSlice {
     /**
      * Owner of this slice
      */
-    private final InjectionInfo info;
+    private final ISliceContext owner;
     
     /**
      * Slice ID as declared, slice ID in the parent {@link MethodSlices}
@@ -321,17 +320,17 @@ public class MethodSlice {
     /**
      * ctor
      * 
-     * @param info owner
+     * @param owner owner
      * @param id declared id
      * @param from start point, may be null as long as {@link #to} is not null
      * @param to end point, may be null as long as {@link #from} is not null
      */
-    private MethodSlice(InjectionInfo info, String id, InjectionPoint from, InjectionPoint to) {
+    private MethodSlice(ISliceContext owner, String id, InjectionPoint from, InjectionPoint to) {
         if (from == null && to == null) {
-            throw new InvalidSliceException(info, String.format("%s is redundant. No 'from' or 'to' value specified", this));
+            throw new InvalidSliceException(owner, String.format("%s is redundant. No 'from' or 'to' value specified", this));
         }
 
-        this.info = info;
+        this.owner = owner;
         this.id = Strings.nullToEmpty(id);
         this.from = from;
         this.to = to;
@@ -357,7 +356,7 @@ public class MethodSlice {
         int end = this.find(method, this.to, max, this.name + "(to)");
         
         if (start > end) {
-            throw new InvalidSliceException(this.info, String.format("%s is negative size. Range(%d -> %d)", this.describe(), start, end));
+            throw new InvalidSliceException(this.owner, String.format("%s is negative size. Range(%d -> %d)", this.describe(), start, end));
         }
         
         if (start < 0 || end < 0 || start > max || end > max) {
@@ -392,7 +391,7 @@ public class MethodSlice {
         boolean result = injectionPoint.find(method.desc, insns, nodes);
         Selector select = injectionPoint.getSelector();
         if (nodes.size() != 1 && select == Selector.ONE) {
-            throw new InvalidSliceException(this.info, String.format("%s requires 1 result but found %d", this.describe(description), nodes.size()));
+            throw new InvalidSliceException(this.owner, String.format("%s requires 1 result but found %d", this.describe(description), nodes.size()));
         }
         
         if (!result) {
@@ -415,13 +414,13 @@ public class MethodSlice {
     }
 
     private String describe(String description) {
-        return MethodSlice.describeSlice(description, this.info);
+        return MethodSlice.describeSlice(description, this.owner);
     }
 
-    private static String describeSlice(String description, InjectionInfo info) {
-        String annotation = ASMHelper.getSimpleName(info.getAnnotation());
-        MethodNode method = info.getMethod();
-        return String.format("%s->%s(%s)::%s%s", info.getContext(), annotation, description, method.name, method.desc);
+    private static String describeSlice(String description, ISliceContext owner) {
+        String annotation = ASMHelper.getSimpleName(owner.getAnnotation());
+        MethodNode method = owner.getMethod();
+        return String.format("%s->%s(%s)::%s%s", owner.getContext(), annotation, description, method.name, method.desc);
     }
 
     private static String getSliceName(String id) {
@@ -431,20 +430,20 @@ public class MethodSlice {
     /**
      * Parses the supplied annotation into a MethodSlice
      * 
-     * @param info Owner injection info
+     * @param owner Owner injection info
      * @param slice Annotation to parse
      * @return parsed MethodSlice
      */
-    public static MethodSlice parse(InjectionInfo info, Slice slice) {
+    public static MethodSlice parse(ISliceContext owner, Slice slice) {
         String id = slice.id();
         
         At from = slice.from();
         At to = slice.to();
         
-        InjectionPoint fromPoint = from != null ? InjectionPoint.parse(info, from) : null;
-        InjectionPoint toPoint = to != null ? InjectionPoint.parse(info, to) : null;
+        InjectionPoint fromPoint = from != null ? InjectionPoint.parse(owner, from) : null;
+        InjectionPoint toPoint = to != null ? InjectionPoint.parse(owner, to) : null;
         
-        return new MethodSlice(info, id, fromPoint, toPoint);
+        return new MethodSlice(owner, id, fromPoint, toPoint);
     }
 
     /**
@@ -454,7 +453,7 @@ public class MethodSlice {
      * @param node Annotation to parse
      * @return parsed MethodSlice
      */
-    public static MethodSlice parse(InjectionInfo info, AnnotationNode node) {
+    public static MethodSlice parse(ISliceContext info, AnnotationNode node) {
         String id = ASMHelper.<String>getAnnotationValue(node, "id");
         
         AnnotationNode from = ASMHelper.<AnnotationNode>getAnnotationValue(node, "from");

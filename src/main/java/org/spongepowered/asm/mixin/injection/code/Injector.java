@@ -162,7 +162,7 @@ public abstract class Injector {
     public final void inject(Target target, List<InjectionNode> nodes) {
         for (InjectionNode node : nodes) {
             if (node.isRemoved()) {
-                if (this.info.getContext().getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+                if (this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
                     Injector.logger.warn("Target node for {} was removed by a previous injector in {}", this.info, target);
                 }
                 continue;

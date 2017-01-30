@@ -24,8 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.throwables;
 
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.injection.code.ISliceContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 /**
  * Thrown when an injector slice fails a state check, for example if a slice
@@ -35,28 +35,28 @@ public class InvalidSliceException extends InvalidInjectionException {
 
     private static final long serialVersionUID = 1L;
     
-    public InvalidSliceException(IReferenceMapperContext context, String message) {
+    public InvalidSliceException(IMixinContext context, String message) {
         super(context, message);
     }
 
-    public InvalidSliceException(InjectionInfo info, String message) {
-        super(info, message);
+    public InvalidSliceException(ISliceContext owner, String message) {
+        super(owner.getContext(), message);
     }
 
-    public InvalidSliceException(IReferenceMapperContext context, Throwable cause) {
+    public InvalidSliceException(IMixinContext context, Throwable cause) {
         super(context, cause);
     }
 
-    public InvalidSliceException(InjectionInfo info, Throwable cause) {
-        super(info, cause);
+    public InvalidSliceException(ISliceContext owner, Throwable cause) {
+        super(owner.getContext(), cause);
     }
 
-    public InvalidSliceException(IReferenceMapperContext context, String message, Throwable cause) {
+    public InvalidSliceException(IMixinContext context, String message, Throwable cause) {
         super(context, message, cause);
     }
 
-    public InvalidSliceException(InjectionInfo info, String message, Throwable cause) {
-        super(info, message, cause);
+    public InvalidSliceException(ISliceContext owner, String message, Throwable cause) {
+        super(owner.getContext(), message, cause);
     }
 
 }

@@ -24,12 +24,15 @@
  */
 package org.spongepowered.asm.mixin.refmap;
 
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 
 /**
  * Context for performing reference mapping
  */
-public interface IReferenceMapperContext {
+public interface IMixinContext {
     
     /**
      * Get the mixin info
@@ -49,5 +52,11 @@ public interface IReferenceMapperContext {
      * @return ReferenceMapper instance (can be null)
      */
     public abstract ReferenceMapper getReferenceMapper();
+
+    public abstract boolean getOption(Option option);
+
+    public abstract int getPriority();
+
+    public abstract Target getTargetMethod(MethodNode into);
 
 }

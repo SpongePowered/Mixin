@@ -38,7 +38,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
@@ -209,7 +209,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     }
 
     public static String inflectTarget(String accessorName, AccessorType accessorType, String accessorDescription,
-            IReferenceMapperContext context, boolean verbose) {
+            IMixinContext context, boolean verbose) {
         Matcher nameMatcher = AccessorInfo.PATTERN_ACCESSOR.matcher(accessorName);
         if (nameMatcher.matches()) {
             String prefix = nameMatcher.group(1);

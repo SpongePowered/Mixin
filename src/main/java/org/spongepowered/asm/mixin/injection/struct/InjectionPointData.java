@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -61,7 +61,7 @@ public class InjectionPointData {
     /**
      * Mixin 
      */
-    private final MixinTargetContext mixin;
+    private final IMixinContext mixin;
     
     /**
      * Injector callback
@@ -108,7 +108,7 @@ public class InjectionPointData {
      */
     private final int opcode;
     
-    public InjectionPointData(MixinTargetContext mixin, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
+    public InjectionPointData(IMixinContext mixin, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
             String slice, int ordinal, int opcode) {
         this.mixin = mixin;
         this.method = method;
@@ -158,7 +158,7 @@ public class InjectionPointData {
         return this.selector;
     }
     
-    public MixinTargetContext getMixin() {
+    public IMixinContext getMixin() {
         return this.mixin;
     }
     

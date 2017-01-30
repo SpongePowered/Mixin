@@ -29,11 +29,14 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorType;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -42,15 +45,15 @@ import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
 import com.google.common.base.Strings;
 
 /**
  * A module for {@link AnnotatedMixin} which handles accessors
  */
-public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler implements IReferenceMapperContext {
+public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler implements IMixinContext {
 
     /**
      * Accessor element
@@ -154,6 +157,21 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     @Override
     public IMixinInfo getMixin() {
         throw new UnsupportedOperationException("MixinInfo not available at compile time");
+    }
+    
+    @Override
+    public boolean getOption(Option option) {
+        throw new UnsupportedOperationException("Options not available at compile time");
+    }
+    
+    @Override
+    public int getPriority() {
+        throw new UnsupportedOperationException("Priority not available at compile time");
+    }
+    
+    @Override
+    public Target getTargetMethod(MethodNode into) {
+        throw new UnsupportedOperationException("Target not available at compile time");
     }
 
     public void registerAccessor(AnnotatedElementAccessor elem) {

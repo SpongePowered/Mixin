@@ -36,7 +36,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 /**
  * <p>This injection point searches for the last RETURN opcode in the target
@@ -58,7 +58,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 @AtCode("TAIL")
 public class BeforeFinalReturn extends InjectionPoint {
 
-    private final MixinTargetContext mixin;
+    private final IMixinContext mixin;
 
     public BeforeFinalReturn(InjectionPointData data) {
         super(data);

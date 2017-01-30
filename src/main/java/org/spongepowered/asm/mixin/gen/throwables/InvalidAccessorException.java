@@ -25,7 +25,7 @@
 package org.spongepowered.asm.mixin.gen.throwables;
 
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
 /**
@@ -37,7 +37,7 @@ public class InvalidAccessorException extends InvalidMixinException {
 
     private final AccessorInfo info;
 
-    public InvalidAccessorException(IReferenceMapperContext context, String message) {
+    public InvalidAccessorException(IMixinContext context, String message) {
         super(context, message);
         this.info = null;
     }
@@ -47,7 +47,7 @@ public class InvalidAccessorException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidAccessorException(IReferenceMapperContext context, Throwable cause) {
+    public InvalidAccessorException(IMixinContext context, Throwable cause) {
         super(context, cause);
         this.info = null;
     }
@@ -57,7 +57,7 @@ public class InvalidAccessorException extends InvalidMixinException {
         this.info = info;
     }
 
-    public InvalidAccessorException(IReferenceMapperContext context, String message, Throwable cause) {
+    public InvalidAccessorException(IMixinContext context, String message, Throwable cause) {
         super(context, message, cause);
         this.info = null;
     }

@@ -414,7 +414,6 @@ public class ASMHelper {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
-    @SuppressWarnings("unchecked")
     public static AnnotationNode getSingleVisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return ASMHelper.getSingleAnnotation(method.visibleAnnotations, annotationClasses);
     }
@@ -427,7 +426,6 @@ public class ASMHelper {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
-    @SuppressWarnings("unchecked")
     public static AnnotationNode getSingleInvisibleAnnotation(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return ASMHelper.getSingleAnnotation(method.invisibleAnnotations, annotationClasses);
     }

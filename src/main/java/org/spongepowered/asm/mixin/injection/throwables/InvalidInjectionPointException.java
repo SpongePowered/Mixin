@@ -25,7 +25,7 @@
 package org.spongepowered.asm.mixin.injection.throwables;
 
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 /**
  * Thrown when an injection point cannot be parsed due to invalid data
@@ -34,7 +34,7 @@ public class InvalidInjectionPointException extends InvalidInjectionException {
 
     private static final long serialVersionUID = 2L;
     
-    public InvalidInjectionPointException(IReferenceMapperContext context, String format, Object... args) {
+    public InvalidInjectionPointException(IMixinContext context, String format, Object... args) {
         super(context, String.format(format, args));
     }
     
@@ -42,7 +42,7 @@ public class InvalidInjectionPointException extends InvalidInjectionException {
         super(info, String.format(format, args));
     }
     
-    public InvalidInjectionPointException(IReferenceMapperContext context, Throwable cause, String format, Object... args) {
+    public InvalidInjectionPointException(IMixinContext context, Throwable cause, String format, Object... args) {
         super(context, String.format(format, args), cause);
     }
 

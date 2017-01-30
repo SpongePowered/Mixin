@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -73,9 +73,9 @@ public class ModifyVariableInjector extends Injector {
      */
     abstract static class ContextualInjectionPoint extends InjectionPoint {
         
-        protected final MixinTargetContext mixin;
+        protected final IMixinContext mixin;
 
-        ContextualInjectionPoint(MixinTargetContext mixin) {
+        ContextualInjectionPoint(IMixinContext mixin) {
             this.mixin = mixin;
         }
 
@@ -111,7 +111,8 @@ public class ModifyVariableInjector extends Injector {
     @Override
     protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
         if (injectionPoint instanceof ContextualInjectionPoint) {
-            return ((ContextualInjectionPoint)injectionPoint).find(this.info.getContext().getTargetMethod(into), nodes);
+            Target target = this.info.getContext().getTargetMethod(into);
+            return ((ContextualInjectionPoint)injectionPoint).find(target, nodes);
         }
         return injectionPoint.find(into.desc, insns, nodes);
     }

@@ -48,12 +48,14 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.code.ISliceContext;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.code.MethodSlice;
 import org.spongepowered.asm.mixin.injection.code.MethodSlices;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
@@ -64,7 +66,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * Contructs information about an injection from an {@link Inject} annotation
  * and allows the injection to be processed.
  */
-public abstract class InjectionInfo extends SpecialMethodInfo {
+public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceContext {
     
     /**
      * Annotated method is static 
@@ -438,7 +440,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo {
         return "handler";
     }
 
-    static String describeInjector(MixinTargetContext mixin, AnnotationNode annotation, MethodNode method) {
+    static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
         return String.format("%s->@%s::%s%s", mixin.toString(), ASMHelper.getSimpleName(annotation), method.name, method.desc);
     }
 

@@ -25,7 +25,7 @@
 package org.spongepowered.asm.mixin.transformer.throwables;
 
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 /**
  * Exception thrown for bad states when parsing/loading interface mixins
@@ -38,7 +38,7 @@ public class InvalidInterfaceMixinException extends InvalidMixinException {
         super(mixin, message);
     }
 
-    public InvalidInterfaceMixinException(IReferenceMapperContext context, String message) {
+    public InvalidInterfaceMixinException(IMixinContext context, String message) {
         super(context, message);
     }
 
@@ -46,7 +46,7 @@ public class InvalidInterfaceMixinException extends InvalidMixinException {
         super(mixin, cause);
     }
 
-    public InvalidInterfaceMixinException(IReferenceMapperContext context, Throwable cause) {
+    public InvalidInterfaceMixinException(IMixinContext context, Throwable cause) {
         super(context, cause);
     }
 
@@ -54,7 +54,7 @@ public class InvalidInterfaceMixinException extends InvalidMixinException {
         super(mixin, message, cause);
     }
 
-    public InvalidInterfaceMixinException(IReferenceMapperContext context, String message, Throwable cause) {
+    public InvalidInterfaceMixinException(IMixinContext context, String message, Throwable cause) {
         super(context, message, cause);
     }
 

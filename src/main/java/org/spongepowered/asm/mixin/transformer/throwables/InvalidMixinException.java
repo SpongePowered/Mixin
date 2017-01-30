@@ -25,7 +25,7 @@
 package org.spongepowered.asm.mixin.transformer.throwables;
 
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapperContext;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
@@ -42,7 +42,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
-    public InvalidMixinException(IReferenceMapperContext context, String message) {
+    public InvalidMixinException(IMixinContext context, String message) {
         this(context.getMixin(), message);
     }
 
@@ -51,7 +51,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
 
-    public InvalidMixinException(IReferenceMapperContext context, Throwable cause) {
+    public InvalidMixinException(IMixinContext context, Throwable cause) {
         this(context.getMixin(), cause);
     }
     
@@ -60,7 +60,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
-    public InvalidMixinException(IReferenceMapperContext context, String message, Throwable cause) {
+    public InvalidMixinException(IMixinContext context, String message, Throwable cause) {
         super(message, cause);
         this.mixin = context.getMixin();
     }
