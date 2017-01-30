@@ -4,5 +4,5 @@ notifications:
 install: true
 matrix:
   include:
-  - jdk: openjdk8
+  - jdk: oraclejdk8
     script: gradle build
