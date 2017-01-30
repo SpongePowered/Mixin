@@ -121,9 +121,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
         if (insn instanceof LdcInsnNode) {
             LdcInsnNode node = (LdcInsnNode) insn;
             if (node.cst instanceof String && this.ldcValue.equals(node.cst)) {
-                if (this.logging) {
-                    this.logger.info("{} > found a matching LDC with value {}", this.className, node.cst);
-                }
+                this.log("{} > found a matching LDC with value {}", this.className, node.cst);
                 this.foundLdc = true;
                 return;
             }
@@ -134,9 +132,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
 
     @Override
     protected boolean matchesInsn(MemberInfo nodeInfo, int ordinal) {
-        if (this.logging) {
-            this.logger.info("{} > > found LDC \"{}\" = {}", this.className, this.ldcValue, this.foundLdc);
-        }
+        this.log("{} > > found LDC \"{}\" = {}", this.className, this.ldcValue, this.foundLdc);
         return this.foundLdc && super.matchesInsn(nodeInfo, ordinal);
     }
 }

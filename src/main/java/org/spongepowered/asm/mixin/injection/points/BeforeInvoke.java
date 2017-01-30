@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
@@ -41,13 +42,11 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
  * INVOKESPECIAL opcodes matching its arguments and returns a list of insns
  * immediately prior to matching instructions. It accepts the following
- * parameters from {@link org.spongepowered.asm.mixin.injection.At At}:</p>
+ * parameters from {@link At}:</p>
  * 
  * <dl>
  *   <dt>target</dt>
- *   <dd>A
- *   {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo}
- *   which identifies the target method</dd>
+ *   <dd>A {@link MemberInfo MemberInfo} which identifies the target method</dd>
  *   <dt>ordinal</dt>
  *   <dd>The ordinal position of the method invocation to match. For example if
  *   the method is invoked 3 times and you want to match the 3rd then you can
@@ -62,8 +61,8 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  * 
  * <p>Note that like all standard injection points, this class matches the insn
  * itself, putting the injection point immediately <em>before</em> the access in
- * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
- * specifier to adjust the matched opcode as necessary.</p>
+ * question. Use {@link At#shift} specifier to adjust the matched opcode as
+ * necessary.</p>
  */
 @AtCode("INVOKE")
 public class BeforeInvoke extends InjectionPoint {
@@ -78,35 +77,39 @@ public class BeforeInvoke extends InjectionPoint {
     protected final int ordinal;
 
     /**
+     * Class name (description) for debug logging
+     */
+    protected final String className;
+
+    /**
      * True to turn on strategy debugging to the console
      */
-    protected boolean logging = false;
+    private boolean log = false;
 
-    protected final Logger logger = LogManager.getLogger("mixin");
-
-    protected final String className;
+    private final Logger logger = LogManager.getLogger("mixin");
 
     public BeforeInvoke(InjectionPointData data) {
         super(data);
         
         this.target = data.getTarget();
         this.ordinal = data.getOrdinal();
-        this.logging = data.get("log", false);
-        this.className = this.getClass().getSimpleName();
+        this.log = data.get("log", false);
+        this.className = this.getClassName();
+    }
+
+    private String getClassName() {
+        AtCode atCode = this.getClass().<AtCode>getAnnotation(AtCode.class);
+        return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase());
     }
 
     public BeforeInvoke setLogging(boolean logging) {
-        this.logging = logging;
+        this.log = logging;
         return this;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.mumfrey.liteloader.transformers.event.InjectionStrategy
-     *      #findInjectionPoint(java.lang.String,
-     *      org.objectweb.asm.tree.InsnList,
-     *      com.mumfrey.liteloader.transformers.event.Event,
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.InjectionPoint
+     *      #find(java.lang.String, org.spongepowered.asm.lib.tree.InsnList,
      *      java.util.Collection)
      */
     @Override
@@ -114,9 +117,7 @@ public class BeforeInvoke extends InjectionPoint {
         int ordinal = 0;
         boolean found = false;
 
-        if (this.logging) {
-             this.logger.info("{} is searching for an injection point in method with descriptor {}", this.className, desc);
-        }
+        this.log("{} is searching for an injection point in method with descriptor {}", this.className, desc);
 
         ListIterator<AbstractInsnNode> iter = insns.iterator();
         while (iter.hasNext()) {
@@ -124,20 +125,13 @@ public class BeforeInvoke extends InjectionPoint {
 
             if (this.matchesInsn(insn)) {
                 MemberInfo nodeInfo = new MemberInfo(insn);
-
-                if (this.logging) {
-                    this.logger.info("{} is considering insn {}", this.className, nodeInfo);
-                }
+                this.log("{} is considering insn {}", this.className, nodeInfo);
 
                 if (this.target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
-                    if (this.logging) {
-                        this.logger.info("{} > found a matching insn, checking preconditions...", this.className);
-                    }
+                    this.log("{} > found a matching insn, checking preconditions...", this.className);
                     
                     if (this.matchesInsn(nodeInfo, ordinal)) {
-                        if (this.logging) {
-                            this.logger.info("{} > > > found a matching insn at ordinal {}", this.className, ordinal);
-                        }
+                        this.log("{} > > > found a matching insn at ordinal {}", this.className, ordinal);
                         
                         found |= this.addInsn(insns, nodes, insn);
 
@@ -170,9 +164,14 @@ public class BeforeInvoke extends InjectionPoint {
     }
 
     protected boolean matchesInsn(MemberInfo nodeInfo, int ordinal) {
-        if (this.logging) {
-            this.logger.info("{} > > comparing target ordinal {} with current ordinal {}", this.className, this.ordinal, ordinal);
-        }
+        this.log("{} > > comparing target ordinal {} with current ordinal {}", this.className, this.ordinal, ordinal);
         return this.ordinal == -1 || this.ordinal == ordinal;
     }
+    
+    protected void log(String message, Object... params) {
+        if (this.log) {
+            this.logger.info(message, params);
+        }
+    }
+    
 }

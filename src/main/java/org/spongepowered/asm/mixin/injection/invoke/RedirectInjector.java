@@ -46,6 +46,7 @@ import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -95,6 +96,7 @@ public class RedirectInjector extends InvokeInjector {
     
     private static final String KEY_NOMINATORS = "nominators";
     private static final String KEY_WILD = "wildcard";
+    private static final String KEY_FUZZ = "fuzz";
 
     /**
      * Meta decoration object for redirector target nodes
@@ -167,6 +169,7 @@ public class RedirectInjector extends InvokeInjector {
     protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn, Set<InjectionPoint> nominators) {
         InjectionNode node = target.injectionNodes.get(insn);
         ConstructorRedirectData ctorData = null;
+        int fuzz = BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT;
         
         if (node != null ) {
             Meta other = node.getDecoration(Meta.KEY);
@@ -186,6 +189,8 @@ public class RedirectInjector extends InvokeInjector {
         for (InjectionPoint ip : nominators) {
             if (ip instanceof BeforeNew && !((BeforeNew)ip).hasDescriptor()) {
                 ctorData = this.getCtorRedirect((BeforeNew)ip);
+            } else if (ip instanceof BeforeFieldAccess) {
+                fuzz = ((BeforeFieldAccess)ip).getFuzzFactor();
             }
         }
         
@@ -195,6 +200,8 @@ public class RedirectInjector extends InvokeInjector {
         if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
             targetNode.decorate(RedirectInjector.KEY_WILD, Boolean.valueOf(ctorData != null));
             targetNode.decorate(ConstructorRedirectData.KEY, ctorData);
+        } else {
+            targetNode.decorate(RedirectInjector.KEY_FUZZ, Integer.valueOf(fuzz));
         }
         myNodes.add(targetNode);
     }
@@ -305,7 +312,7 @@ public class RedirectInjector extends InvokeInjector {
     }
 
     /**
-     * Redirect a field get or set operation
+     * Redirect a field get or set operation, or an array element access
      */
     private void injectAtFieldAccess(Target target, InjectionNode node) {
         final FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
@@ -313,7 +320,78 @@ public class RedirectInjector extends InvokeInjector {
         final boolean staticField = opCode == Opcodes.GETSTATIC || opCode == Opcodes.PUTSTATIC;
         final Type ownerType = Type.getType("L" + fieldNode.owner + ";");
         final Type fieldType = Type.getType(fieldNode.desc);
+        
+        int targetDimensions = (fieldType.getSort() == Type.ARRAY) ? fieldType.getDimensions() : 0;
+        int handlerDimensions = (this.returnType.getSort() == Type.ARRAY) ? this.returnType.getDimensions() : 0;
+        
+        if (handlerDimensions > targetDimensions) {
+            throw new InvalidInjectionException(this.info, "Dimensionality of handler method is greater than target array on " + this);
+        } else if (handlerDimensions == 0 && targetDimensions > 0) {
+            int fuzz = node.<Integer>getDecoration(RedirectInjector.KEY_FUZZ).intValue();
+            this.injectAtArrayField(target, fieldNode, opCode, ownerType, fieldType, fuzz);
+        } else {
+            this.injectAtScalarField(target, fieldNode, opCode, staticField, ownerType, fieldType);
+        }
+    }
 
+    /**
+     * Redirect an array element access
+     */
+    private void injectAtArrayField(Target target, FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType, int fuzz) {
+        Type elementType = fieldType.getElementType();
+        if (opCode != Opcodes.GETSTATIC && opCode != Opcodes.GETFIELD) {
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + ASMHelper.getOpcodeName(opCode) + " for array access " + this.info);
+        } else if (this.returnType.getSort() != Type.VOID) {
+            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IALOAD), fuzz);
+            this.injectAtGetArray(target, fieldNode, varNode, ownerType, fieldType);
+        } else {
+            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IASTORE), fuzz);
+            this.injectAtSetArray(target, fieldNode, varNode, ownerType, fieldType);
+        }
+    }
+    
+    /**
+     * Array element read (xALOAD)
+     */
+    private void injectAtGetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
+        String handlerDesc = ASMHelper.generateDescriptor(this.returnType, (Object[])RedirectInjector.getArrayArgs(fieldType));
+        boolean withArgs = this.checkDescriptor(handlerDesc, target, "array getter");
+        this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
+    }
+
+    /**
+     * Array element write (xASTORE)
+     */
+    private void injectAtSetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
+        String handlerDesc = ASMHelper.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, fieldType.getElementType()));
+        boolean withArgs = this.checkDescriptor(handlerDesc, target, "array setter");
+        this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
+    }
+
+    /**
+     * The code for actually redirecting the array element is the same
+     * regardless of whether it's a read or write because it just depends on the
+     * actual handler signature, the correct arguments are already on the stack
+     * thanks to the nature of xALOAD and xASTORE.
+     */
+    public void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs) {
+        if (!this.isStatic) {
+            target.insns.insertBefore(fieldNode, new VarInsnNode(Opcodes.ALOAD, 0));
+            target.addToStack(1);
+        }
+        
+        InsnList invokeInsns = new InsnList();
+        if (withArgs) {
+            this.pushArgs(target.arguments, invokeInsns, target.argIndices, 0, target.arguments.length);
+            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+        }
+        target.replaceNode(varNode, this.invokeHandler(invokeInsns), invokeInsns);
+    }
+
+    /**
+     * Redirect a field get or set
+     */
+    public void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, boolean staticField, Type ownerType, Type fieldType) {
         AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
         if (opCode == Opcodes.GETSTATIC || opCode == Opcodes.GETFIELD) {
@@ -321,7 +399,7 @@ public class RedirectInjector extends InvokeInjector {
         } else if (opCode == Opcodes.PUTSTATIC || opCode == Opcodes.PUTFIELD) {
             invoke = this.injectAtPutField(insns, target, fieldNode, staticField, ownerType, fieldType);
         } else {
-            throw new InvalidInjectionException(this.info, "Unspported opcode " + opCode + " on FieldInsnNode for " + this.info);
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + ASMHelper.getOpcodeName(opCode) + " for " + this.info);
         }
         
         target.replaceNode(fieldNode, invoke, insns);
@@ -483,4 +561,14 @@ public class RedirectInjector extends InvokeInjector {
         }
         return null;
     }
+    
+    private static Type[] getArrayArgs(Type fieldType, Type... extra) {
+        int dimensions = fieldType.getDimensions() + 1;
+        Type[] args = new Type[dimensions + extra.length];
+        for (int i = 0; i < args.length; i++) {
+            args[i] = i == 0 ? fieldType : i < dimensions ? Type.INT_TYPE : extra[dimensions - i];
+        }
+        return args;
+    }
+
 }

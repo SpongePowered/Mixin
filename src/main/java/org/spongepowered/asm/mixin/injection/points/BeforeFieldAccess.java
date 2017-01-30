@@ -24,24 +24,31 @@
  */
 package org.spongepowered.asm.mixin.injection.points;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
+import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.util.ASMHelper;
 
 /**
  * <p>This injection point searches for GETFIELD and PUTFIELD (and static
  * equivalent) opcodes matching its arguments and returns a list of insns
  * immediately prior to matching instructions. It accepts the following
- * parameters from {@link org.spongepowered.asm.mixin.injection.At At}:
+ * parameters from {@link At}:
  * </p>
  * 
  * <dl>
  *   <dt>target</dt>
- *   <dd>A
- *   {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo}
- *   which identifies the target field.</dd>
+ *   <dd>A {@link MemberInfo MemberInfo} which identifies the target field.</dd>
  *   <dt>opcode</dt>
  *   <dd>The {@link Opcodes opcode} of the field access, must be one of
  *   GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.</dd>
@@ -58,23 +65,113 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  * </pre>
  * </blockquote>
  * 
+ * <p>Matching array access:<p>
+ * <p>For array fields, it is possible to match field accesses followed by a
+ * corresponding array element <em>get</em> or <em>set</em> operation. To enable
+ * this behaviour specify the <tt>array</tt> named-argument with the desired
+ * operation:</p> 
+ * 
+ * <blockquote><pre>
+ *   &#064;At(value = "FIELD", target="myIntArray:[I", args = "array=get")
+ * </pre>
+ * </blockquote>
+ * 
+ * <p>See {@link Redirect} for information on array element redirection.</p>
+ * 
  * <p>Note that like all standard injection points, this class matches the insn
  * itself, putting the injection point immediately <em>before</em> the access in
- * question. Use {@link org.spongepowered.asm.mixin.injection.At#shift shift}
- * specifier to adjust the matched opcode as necessary.</p>
+ * question. Use {@link At#shift} specifier to adjust the matched opcode as
+ * necessary.</p>
  */
 @AtCode("FIELD")
 public class BeforeFieldAccess extends BeforeInvoke {
+    
+    public static final int ARRAY_SEARCH_FUZZ_DEFAULT = 8;
 
+    /**
+     * Explicit opcode to search for, this should be omitted if searching for an
+     * array access
+     */
     private final int opcode;
+    
+    /**
+     * Array opcode (base, eg. IALOAD, IASTORE) - will be translated to target
+     * type by individual searches
+     */
+    private final int arrOpcode;
+    
+    /**
+     * Array opcode search range ('fuzz factor'), 1 to 32 opcodes, default 8
+     */
+    private final int fuzzFactor;
 
     public BeforeFieldAccess(InjectionPointData data) {
         super(data);
         this.opcode = data.getOpcode(-1, Opcodes.GETFIELD, Opcodes.PUTFIELD, Opcodes.GETSTATIC, Opcodes.PUTSTATIC, -1);
+        
+        String array = data.get("array", "");
+        this.arrOpcode = "get".equalsIgnoreCase(array) ? Opcodes.IALOAD : "set".equalsIgnoreCase(array) ? Opcodes.IASTORE : 0;
+        this.fuzzFactor = Math.min(Math.max(data.get("fuzz", BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT), 1), 32);
+    }
+    
+    public int getFuzzFactor() {
+        return this.fuzzFactor;
     }
 
     @Override
     protected boolean matchesInsn(AbstractInsnNode insn) {
-        return insn instanceof FieldInsnNode && (((FieldInsnNode) insn).getOpcode() == this.opcode || this.opcode == -1);
+        if (insn instanceof FieldInsnNode && (((FieldInsnNode) insn).getOpcode() == this.opcode || this.opcode == -1)) {
+            if (this.arrOpcode == 0) {
+                return true;
+            }
+            
+            if (insn.getOpcode() != Opcodes.GETSTATIC && insn.getOpcode() != Opcodes.GETFIELD) {
+                return false;
+            }
+            
+            return Type.getType(((FieldInsnNode)insn).desc).getSort() == Type.ARRAY;
+        }
+        
+        return false;
     }
+    
+    @Override
+    protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
+        if (this.arrOpcode > 0) {
+            FieldInsnNode fieldInsn = (FieldInsnNode)insn;
+            int accOpcode = Type.getType(fieldInsn.desc).getElementType().getOpcode(this.arrOpcode);
+            this.log("{} > > > > searching for array access opcode {} fuzz={}", this.className, ASMHelper.getOpcodeName(accOpcode), this.fuzzFactor);
+            
+            if (BeforeFieldAccess.findArrayNode(insns, fieldInsn, accOpcode, this.fuzzFactor) == null) {
+                this.log("{} > > > > > failed to locate matching insn", this.className);
+                return false;
+            }
+        }
+        
+        this.log("{} > > > > > adding matching insn", this.className);
+
+        return super.addInsn(insns, nodes, insn);
+    }
+    
+    public static AbstractInsnNode findArrayNode(InsnList insns, FieldInsnNode fieldNode, int opcode, int searchRange) {
+        int pos = 0;
+        for (Iterator<AbstractInsnNode> iter = insns.iterator(insns.indexOf(fieldNode) + 1); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn.getOpcode() == opcode) {
+                return insn;
+            } else if (insn.getOpcode() == Opcodes.ARRAYLENGTH && pos == 0) {
+                return null;
+            } else if (insn instanceof FieldInsnNode) {
+                FieldInsnNode field = (FieldInsnNode) insn;
+                if (field.desc.equals(fieldNode.desc) && field.name.equals(fieldNode.name) && field.owner.equals(fieldNode.owner)) {
+                    return null;
+                }
+            }
+            if (pos++ > searchRange) {
+                return null;
+            }
+        }
+        return null;
+    }
+    
 }

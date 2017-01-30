@@ -30,6 +30,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
@@ -85,7 +86,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * 
  * <table width="100%">
  *   <tr>
- *     <th>Operation (OPCODE)</th>
+ *     <th width="25%">Operation (OPCODE)</th>
  *     <th>Handler signature</th>
  *   </tr>
  *   <tr>
@@ -103,7 +104,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  *   </tr>
  *   <tr>
  *     <td>Write instance field (<tt>PUTFIELD</tt>)</td>
- *     <td><code>private void getFieldValue(<b>OwnerType</b>
+ *     <td><code>private void setFieldValue(<b>OwnerType</b>
  *     owner, <b>FieldType</b> value)</code></td>
  *   </tr>
  * </table>
@@ -112,6 +113,48 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * addition to the arguments being passed to the method call (for example in
  * the code above this would be the <em>someInt</em> and <em>someString</em>
  * arguments) by appending the arguments to the method signature.</p>
+ * 
+ * <h4>Array Element Access Redirect Mode</h4>
+ * 
+ * <p>For fields of an array type, it is possible to redirect the access to the
+ * actual array field itself using the behaviour above. However it is also
+ * possible to redirect access to individual array elements. Consider the
+ * following example:</p>
+ * 
+ * <blockquote><pre>
+ *   private String[] strings = { "foo", "bar", "baz" };
+ * 
+ *   public void print(int index) {
+ *     System.err.println(this.strings[index]);
+ *   }</pre>
+ * </blockquote>
+ * 
+ * <p>It may be desirable to redirect the access to this array element. To do
+ * so, declare a redirect handler which takes the array and the index (or
+ * <em>indices</em>, for multi-dimensional arrays) and returns <em>the element
+ * type</em> (in this case <tt>String</tt>) as follows:</p>
+ * 
+ * <table width="100%">
+ *   <tr>
+ *     <th width="25%">Operation</th>
+ *     <th>Handler signature</th>
+ *   </tr>
+ *   <tr>
+ *     <td>Read element</td>
+ *     <td><code>private <b>ElementType</b> getElement(<b>ElementType</b>[]
+ *          array, int index)</code></td>
+ *   </tr>
+ *   <tr>
+ *     <td>Write element</td>
+ *     <td><code>private void setElement(<b>ElementType</b>[] array, int index,
+ *          ElementType value)</code></td>
+ *   </tr>
+ * </table>
+ * 
+ * <p>The handler receives a reference to the array itself (read from the field)
+ * and the indices being accessed. See the
+ * {@link BeforeFieldAccess BeforeFieldAccess args} for details
+ * on matching array accesses using the <tt>FIELD</tt> injection point.</p>
  * 
  * <h4>Constructor Redirect Mode</h4>
  * 
