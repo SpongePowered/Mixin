@@ -49,6 +49,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.VersionNumber;
@@ -73,6 +74,9 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         @SerializedName("defaultGroup")
         String defaultGroup = "default";
+        
+        @SerializedName("injectionPoints")
+        List<String> injectionPoints;
         
     }
     
@@ -293,6 +297,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         this.name = name;
         this.env = this.parseSelector(this.selector, fallbackEnvironment);
         this.initCompatibilityLevel();
+        this.initInjectionPoints();
         return this.checkVersion();
     }
 
@@ -345,6 +350,26 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             }
         }
         return fallbackEnvironment;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void initInjectionPoints() {
+        if (this.injectorOptions.injectionPoints == null) {
+            return;
+        }
+        
+        for (String injectionPoint : this.injectorOptions.injectionPoints) {
+            try {
+                Class<?> injectionPointClass = Class.forName(injectionPoint, true, Launch.classLoader);
+                if (InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
+                    InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
+                } else {
+                    this.logger.error("Unable to register injection point {} for {}, class must extend InjectionPoint", injectionPointClass, this);
+                }
+            } catch (Throwable th) {
+                this.logger.catching(th);
+            }
+        }
     }
 
     private boolean checkVersion() throws MixinInitialisationError {
