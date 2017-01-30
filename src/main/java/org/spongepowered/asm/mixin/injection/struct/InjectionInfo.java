@@ -287,6 +287,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     /**
      * Get the slice descriptors
      */
+    @Override
     public MethodSlice getSlice(String id) {
         return this.slices.get(this.getSliceId(id));
     }

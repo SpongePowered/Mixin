@@ -31,4 +31,6 @@ import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
  */
 public interface ISliceContext extends IInjectionPointContext {
 
+    public abstract MethodSlice getSlice(String id);
+
 }

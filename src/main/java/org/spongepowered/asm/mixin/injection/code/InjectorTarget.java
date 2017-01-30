@@ -30,7 +30,6 @@ import java.util.Map;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 
 /**
@@ -42,7 +41,7 @@ public class InjectorTarget {
     /**
      * Owner injector
      */
-    private final InjectionInfo info;
+    private final ISliceContext context;
 
     /**
      * Cache of slices
@@ -57,11 +56,11 @@ public class InjectorTarget {
     /**
      * ctor
      * 
-     * @param info owner
+     * @param context owner
      * @param target target
      */
-    public InjectorTarget(InjectionInfo info, Target target) {
-        this.info = info;
+    public InjectorTarget(ISliceContext context, Target target) {
+        this.context = context;
         this.target = target;
     }
     
@@ -88,7 +87,7 @@ public class InjectorTarget {
     public InsnList getSlice(String id) {
         ReadOnlyInsnList slice = this.cache.get(id);
         if (slice == null) {
-            MethodSlice sliceInfo = this.info.getSlice(id);
+            MethodSlice sliceInfo = this.context.getSlice(id);
             if (sliceInfo != null) {
                 slice = sliceInfo.getSlice(this.target.method);
             } else {
