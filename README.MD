@@ -1,4 +1,4 @@
-### [![Build Status](https://travis-ci.org/SpongePowered/Mixin.svg?branch=master)](https://travis-ci.org/SpongePowered/Mixin)
+### [![Build Status](http://ci.liteloader.com/view/Other/job/Mixin/badge/icon)](http://ci.liteloader.com/view/Other/job/Mixin/lastSuccessfulBuild/)
 
 ![Mixin Logo](docs/logo.png?raw=true)
 
