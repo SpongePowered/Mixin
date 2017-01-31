@@ -59,6 +59,11 @@ public final class Mixins {
     
     private Mixins() {}
     
+    /**
+     * Add multiple configurations
+     * 
+     * @param configFiles config resources to add
+     */
     public static void addConfigurations(String... configFiles) {
         MixinEnvironment fallback = MixinEnvironment.getDefaultEnvironment();
         for (String configFile : configFiles) {

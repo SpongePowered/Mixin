@@ -35,12 +35,13 @@ import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer.MappingSet;
 public interface IMappingWriter {
 
     /**
-     * Receives 
+     * Instruct this writer to write the supplied collection of field and method
+     * mappings to the output resource
      * 
-     * @param output
-     * @param type
-     * @param fields
-     * @param methods
+     * @param output path to output resource
+     * @param type obfuscation type to write
+     * @param fields field mappings
+     * @param methods method mappings
      */
     public abstract void write(String output, ObfuscationType type, MappingSet<MappingField> fields, MappingSet<MappingMethod> methods);
 

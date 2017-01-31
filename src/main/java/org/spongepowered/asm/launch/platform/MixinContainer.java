@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.Blackboard;
 
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -41,7 +42,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class MixinContainer {
 
-    public static final List<String> agentClasses = new ArrayList<String>();
+    private static final List<String> agentClasses = new ArrayList<String>();
     
     static {
         Blackboard.put(Blackboard.Keys.AGENTS, MixinContainer.agentClasses);
@@ -79,6 +80,9 @@ public class MixinContainer {
         return this.uri;
     }
 
+    /**
+     * Get phase provider names from all agents in this container
+     */
     public Collection<String> getPhaseProviders() {
         List<String> phaseProviders = new ArrayList<String>();
         for (IMixinPlatformAgent agent : this.agents) {
@@ -91,7 +95,7 @@ public class MixinContainer {
     }
 
     /**
-     * 
+     * Prepare agents in this container
      */
     public void prepare() {
         for (IMixinPlatformAgent agent : this.agents) {
@@ -100,6 +104,10 @@ public class MixinContainer {
         }
     }
     
+    /**
+     * If this container is the primary container, initialise agents in this
+     * container as primary
+     */
     public void initPrimaryContainer() {
         for (IMixinPlatformAgent agent : this.agents) {
             this.logger.debug("Processing launch tasks for {}", agent);
@@ -108,7 +116,9 @@ public class MixinContainer {
     }
 
     /**
-     * @param classLoader
+     * Notify all agents to inject into classLoader
+     * 
+     * @param classLoader classLoader to injec
      */
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
         for (IMixinPlatformAgent agent : this.agents) {
@@ -117,6 +127,13 @@ public class MixinContainer {
         }
     }
 
+    /**
+     * Analogue of {@link ITweaker#getLaunchTarget}, queries all agents and
+     * returns first valid launch target. Returns null if no agents have launch
+     * target.
+     * 
+     * @return launch target from agent or null
+     */
     public String getLaunchTarget() {
         for (IMixinPlatformAgent agent : this.agents) {
             String launchTarget = agent.getLaunchTarget();

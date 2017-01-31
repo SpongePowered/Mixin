@@ -176,8 +176,8 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
     
     protected BeforeLoadLocal(InjectionPointData data,
             int opcode, boolean opcodeAfter) {
-        super(data.getMixin());
-        this.returnType = data.getReturnType();
+        super(data.getContext());
+        this.returnType = data.getMethodReturnType();
         this.discriminator = data.getLocalVariableDiscriminator();
         this.opcode = data.getOpcode(this.returnType.getOpcode(opcode));
         this.ordinal = data.getOrdinal();

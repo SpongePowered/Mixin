@@ -58,12 +58,12 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 @AtCode("TAIL")
 public class BeforeFinalReturn extends InjectionPoint {
 
-    private final IMixinContext mixin;
+    private final IMixinContext context;
 
     public BeforeFinalReturn(InjectionPointData data) {
         super(data);
         
-        this.mixin = data.getMixin();
+        this.context = data.getContext();
     }
 
     @Override
@@ -83,7 +83,7 @@ public class BeforeFinalReturn extends InjectionPoint {
 
         // WAT?
         if (ret == null) {
-            throw new InvalidInjectionException(this.mixin, "TAIL could not locate a valid RETURN in the target method!");
+            throw new InvalidInjectionException(this.context, "TAIL could not locate a valid RETURN in the target method!");
         }
         
         nodes.add(ret);

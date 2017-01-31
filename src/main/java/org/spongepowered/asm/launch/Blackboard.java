@@ -55,21 +55,52 @@ public final class Blackboard {
     
     private Blackboard() {}
     
+    /**
+     * Get a value from the blackboard and duck-type it to the specified type
+     * 
+     * @param key blackboard key
+     * @return value
+     * @param <T> duck type
+     */
     @SuppressWarnings("unchecked")
     public static <T> T get(String key) {
         return (T)Launch.blackboard.get(key);
     }
 
+    /**
+     * Put the specified value onto the blackboard
+     * 
+     * @param key blackboard key
+     * @param value new value
+     */
     public static void put(String key, Object value) {
         Launch.blackboard.put(key, value);
     }
     
+    /**
+     * Get the value from the blackboard but return <tt>defaultValue</tt> if the
+     * specified key is not set.
+     * 
+     * @param key blackboard key
+     * @param defaultValue value to return if the key is not set or is null
+     * @return value from blackboard or default value
+     * @param <T> duck type
+     */
     @SuppressWarnings("unchecked")
     public static <T> T get(String key, T defaultValue) {
         Object value = Launch.blackboard.get(key);
         return value != null ? (T)value : defaultValue;
     }
     
+    /**
+     * Get a string from the blackboard, returns default value if not set or
+     * null.
+     * 
+     * @param key blackboard key
+     * @param defaultValue default value to return if the specified key is not
+     *      set or is null
+     * @return value from blackboard or default
+     */
     public static String getString(String key, String defaultValue) {
         Object value = Launch.blackboard.get(key);
         return value != null ? value.toString() : defaultValue;

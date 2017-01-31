@@ -72,9 +72,9 @@ public final class ConstraintParser {
      *   <dd><em>Greater than or equal to</em> 1234 (equivalent to <code>1234
      *     &gt;</code>)</dd>
      *   <dt><pre>(1234-1300)</pre></dt>
-     *   <dd>Value must be <em>between</dd> 1234 and 1300 (inclusive) 
+     *   <dd>Value must be <em>between</em> 1234 and 1300 (inclusive)</dd> 
      *   <dt><pre>(1234+10)</pre></dt>
-     *   <dd>Value must be <em>between</dd> 1234 and 1234+10 (1234-1244
+     *   <dd>Value must be <em>between</em> 1234 and 1234+10 (1234-1244
      *     inclusive)</dd>
      * </dl>
      * 
@@ -220,6 +220,13 @@ public final class ConstraintParser {
             return this.max;
         }
         
+        /**
+         * Checks the current token against the environment and throws a
+         * {@link ConstraintViolationException} if the constraint is invalid
+         * 
+         * @param environment environment to fetch constraints
+         * @throws ConstraintViolationException if constraint is not valid
+         */
         public void check(ITokenProvider environment) throws ConstraintViolationException {
             if (this != Constraint.NONE) {
                 Integer value = environment.getToken(this.token);
@@ -240,6 +247,10 @@ public final class ConstraintParser {
             }
         }
         
+        /**
+         * Gets a human-readable description of the range expressed by this
+         * constraint
+         */
         public String getRangeHumanReadable() {
             if (this.min == Integer.MIN_VALUE && this.max == Integer.MAX_VALUE) {
                 return "ANY VALUE";
@@ -262,6 +273,14 @@ public final class ConstraintParser {
     private ConstraintParser() {
     }
 
+    /**
+     * Parse the supplied expression as a constraint and returns a new
+     * Constraint. Returns {@link Constraint#NONE} if the constraint could not
+     * be parsed or is empty.
+     * 
+     * @param expr constraint expression to parse
+     * @return parsed constraint
+     */
     public static Constraint parse(String expr) {
         if (expr == null || expr.length() == 0) {
             return Constraint.NONE;
@@ -281,6 +300,15 @@ public final class ConstraintParser {
         return head != null ? head : Constraint.NONE;
     }
 
+    /**
+     * Parse a constraint expression on the supplied annotation as a constraint
+     * and returns a new Constraint. Returns {@link Constraint#NONE} if the
+     * constraint could not be parsed or is empty.
+     * 
+     * @param annotation annotation containing the constraint expression to
+     *      parse
+     * @return parsed constraint
+     */
     public static Constraint parse(AnnotationNode annotation) {
         String constraints = ASMHelper.getAnnotationValue(annotation, "constraints", "");
         return ConstraintParser.parse(constraints);

@@ -53,6 +53,13 @@ public abstract class TypeUtils {
     // No instances for you
     private TypeUtils() {}
 
+    /**
+     * If the supplied type is a {@link DeclaredType}, return the package in
+     * which it is declared
+     * 
+     * @param type type to find package for
+     * @return package for supplied type or null
+     */
     public static PackageElement getPackage(TypeMirror type) {
         if (!(type instanceof DeclaredType)) {
             return null;
@@ -60,6 +67,11 @@ public abstract class TypeUtils {
         return TypeUtils.getPackage((TypeElement)((DeclaredType)type).asElement());
     }
     
+    /**
+     * Return the package in which the specified type element is declared
+     * @param type type to find package for
+     * @return package for supplied type or null
+     */
     public static PackageElement getPackage(TypeElement type) {
         Element parent = type.getEnclosingElement();
         while (parent != null && !(parent instanceof PackageElement)) {
@@ -68,22 +80,80 @@ public abstract class TypeUtils {
         return (PackageElement)parent;
     }
 
-    public static String getElementType(Element parent) {
-        if (parent instanceof TypeElement) {
+    /**
+     * Convenience method to convert element to string representation for error
+     * messages
+     * 
+     * @param element Element to inspect
+     * @return string representation of element name
+     */
+    public static String getElementType(Element element) {
+        if (element instanceof TypeElement) {
             return "TypeElement";
-        } else if (parent instanceof ExecutableElement) {
+        } else if (element instanceof ExecutableElement) {
             return "ExecutableElement";
-        } else if (parent instanceof VariableElement) {
+        } else if (element instanceof VariableElement) {
             return "VariableElement";
-        } else if (parent instanceof PackageElement) {
+        } else if (element instanceof PackageElement) {
             return "PackageElement";
-        } else if (parent instanceof TypeParameterElement) {
+        } else if (element instanceof TypeParameterElement) {
             return "TypeParameterElement";
         }
         
-        return parent.getClass().getSimpleName();
+        return element.getClass().getSimpleName();
+    }
+
+    /**
+     * Strip generic arguments from the supplied type descriptor
+     * 
+     * @param type type descriptor
+     * @return type descriptor with generic args removed
+     */
+    public static String stripGenerics(String type) {
+        StringBuilder sb = new StringBuilder();
+        for (int pos = 0, depth = 0; pos < type.length(); pos++) {
+            char c = type.charAt(pos);
+            if (c == '<') {
+                depth++;
+            }
+            if (depth == 0) {
+                sb.append(c);
+            } else if (c == '>') {
+                depth--;
+            }
+        }
+        return sb.toString();
     }
     
+    /**
+     * Get the name of the specified field
+     * 
+     * @param field field element
+     * @return field name
+     */
+    public static String getName(VariableElement field) {
+        return field != null ? field.getSimpleName().toString() : null;
+    }
+    
+    /**
+     * Get the name of the specified method
+     * 
+     * @param method method element
+     * @return method name
+     */
+    public static String getName(ExecutableElement method) {
+        return method != null ? method.getSimpleName().toString() : null;
+    }
+
+    /**
+     * Get a java-style signature for the specified element (return type follows
+     * args) eg:
+     * 
+     * <pre>(int,int)boolean</pre>
+     * 
+     * @param element element to generate descriptor for
+     * @return descriptor
+     */
     public static String getJavaSignature(Element element) {
         if (element instanceof ExecutableElement) {
             ExecutableElement method = (ExecutableElement)element;
@@ -102,32 +172,12 @@ public abstract class TypeUtils {
         return TypeUtils.getTypeName(element.asType());
     }
 
-    public static String stripGenerics(String type) {
-        StringBuilder sb = new StringBuilder();
-        for (int pos = 0, depth = 0; pos < type.length(); pos++) {
-            char c = type.charAt(pos);
-            if (c == '<') {
-                depth++;
-            }
-            if (depth == 0) {
-                sb.append(c);
-            } else if (c == '>') {
-                depth--;
-            }
-        }
-        return sb.toString();
-    }
-    
-    public static String getDescriptor(Element elem) {
-        if (elem instanceof ExecutableElement) {
-            return TypeUtils.getDescriptor((ExecutableElement)elem);
-        } else if (elem instanceof VariableElement) {
-            return TypeUtils.getInternalName((VariableElement)elem);
-        }
-        
-        return TypeUtils.getInternalName(elem.asType());
-    }
-
+    /**
+     * Get the type name for the specified type
+     * 
+     * @param type type mirror
+     * @return type name
+     */
     public static String getTypeName(TypeMirror type) {
         switch (type.getKind()) {
             case ARRAY:    return TypeUtils.getTypeName(((ArrayType)type).getComponentType()) + "[]";
@@ -138,25 +188,41 @@ public abstract class TypeUtils {
         }
     }
 
+    /**
+     * Get the type name for the specified type
+     * 
+     * @param type type mirror
+     * @return type name
+     */
     public static String getTypeName(DeclaredType type) {
         if (type == null) {
             return TypeUtils.OBJECT_SIG;
         }
-        return TypeUtils.getTypeName((TypeElement)type.asElement());
+        return TypeUtils.getInternalName((TypeElement)type.asElement()).replace('/', '.');
     }
 
-    private static String getTypeName(TypeElement elem) {
-        return TypeUtils.getInternalName(elem).replace('/', '.');
-    }
-    
-    public static String getName(VariableElement field) {
-        return field != null ? field.getSimpleName().toString() : null;
-    }
-    
-    public static String getName(ExecutableElement method) {
-        return method != null ? method.getSimpleName().toString() : null;
+    /**
+     * Get a bytecode-style descriptor for the specified element 
+     * 
+     * @param element element to generate descriptor for
+     * @return descriptor
+     */
+    public static String getDescriptor(Element element) {
+        if (element instanceof ExecutableElement) {
+            return TypeUtils.getDescriptor((ExecutableElement)element);
+        } else if (element instanceof VariableElement) {
+            return TypeUtils.getInternalName((VariableElement)element);
+        }
+        
+        return TypeUtils.getInternalName(element.asType());
     }
 
+    /**
+     * Get a bytecode-style descriptor for the specified method 
+     * 
+     * @param method method to generate descriptor for
+     * @return descriptor
+     */
     public static String getDescriptor(ExecutableElement method) {
         if (method == null) {
             return null;
@@ -172,13 +238,25 @@ public abstract class TypeUtils {
         return String.format("(%s)%s", signature, returnType);
     }
     
-    public static String getInternalName(VariableElement var) {
-        if (var == null) {
+    /**
+     * Get a bytecode-style descriptor for the specified field 
+     * 
+     * @param field field to generate descriptor for
+     * @return descriptor
+     */
+    public static String getInternalName(VariableElement field) {
+        if (field == null) {
             return null;
         }
-        return TypeUtils.getInternalName(var.asType());
+        return TypeUtils.getInternalName(field.asType());
     }
     
+    /**
+     * Get a bytecode-style descriptor for the specified type 
+     * 
+     * @param type type to generate descriptor for
+     * @return descriptor
+     */
     public static String getInternalName(TypeMirror type) {
         switch (type.getKind()) {
             case ARRAY:    return "[" + TypeUtils.getInternalName(((ArrayType)type).getComponentType());
@@ -199,6 +277,43 @@ public abstract class TypeUtils {
         }
 
         throw new IllegalArgumentException("Unable to parse type symbol " + type + " with " + type.getKind() + " to equivalent bytecode type");
+    }
+
+    /**
+     * Get a bytecode-style name for the specified type
+     * 
+     * @param type type to get name for
+     * @return bytecode-style name
+     */
+    public static String getInternalName(DeclaredType type) {
+        if (type == null) {
+            return TypeUtils.OBJECT_REF;
+        }
+        return TypeUtils.getInternalName((TypeElement)type.asElement());
+    }
+
+    /**
+     * Get a bytecode-style name for the specified type element
+     * 
+     * @param element type element to get name for
+     * @return bytecode-style name
+     */
+    public static String getInternalName(TypeElement element) {
+        if (element == null) {
+            return null;
+        }
+        StringBuilder reference = new StringBuilder();
+        reference.append(element.getSimpleName());
+        Element parent = element.getEnclosingElement();
+        while (parent != null) {
+            if (parent instanceof TypeElement) {
+                reference.insert(0, "$").insert(0, parent.getSimpleName());
+            } else if (parent instanceof PackageElement) {
+                reference.insert(0, "/").insert(0, ((PackageElement)parent).getQualifiedName().toString().replace('.', '/'));
+            }
+            parent = parent.getEnclosingElement();
+        }
+        return reference.toString();
     }
     
     private static DeclaredType getUpperBound(TypeMirror type) {
@@ -234,31 +349,14 @@ public abstract class TypeUtils {
         return null;
     }
 
-    public static String getInternalName(DeclaredType type) {
-        if (type == null) {
-            return TypeUtils.OBJECT_REF;
-        }
-        return TypeUtils.getInternalName((TypeElement)type.asElement());
-    }
-
-    public static String getInternalName(TypeElement elem) {
-        if (elem == null) {
-            return null;
-        }
-        StringBuilder reference = new StringBuilder();
-        reference.append(elem.getSimpleName());
-        Element parent = elem.getEnclosingElement();
-        while (parent != null) {
-            if (parent instanceof TypeElement) {
-                reference.insert(0, "$").insert(0, parent.getSimpleName());
-            } else if (parent instanceof PackageElement) {
-                reference.insert(0, "/").insert(0, ((PackageElement)parent).getQualifiedName().toString().replace('.', '/'));
-            }
-            parent = parent.getEnclosingElement();
-        }
-        return reference.toString();
-    }
-
+    /**
+     * Get whether the target type is assignable to the specified superclass
+     * 
+     * @param processingEnv processing environment
+     * @param targetType target type to check
+     * @param superClass superclass type to check
+     * @return true if targetType is assignable to superClass
+     */
     public static boolean isAssignable(ProcessingEnvironment processingEnv, TypeMirror targetType, TypeMirror superClass) {
         boolean assignable = processingEnv.getTypeUtils().isAssignable(targetType, superClass);
         if (!assignable && targetType instanceof DeclaredType && superClass instanceof DeclaredType) {

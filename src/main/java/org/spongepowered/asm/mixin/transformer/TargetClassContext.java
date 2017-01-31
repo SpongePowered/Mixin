@@ -218,8 +218,8 @@ class TargetClassContext {
     /**
      * Finds a field in the target class
      * 
-     * @param aliases 
-     * @param desc
+     * @param aliases aliases for the field
+     * @param desc field descriptor
      * @return Target field  or null if not found
      */
     FieldNode findAliasedField(Deque<String> aliases, String desc) {

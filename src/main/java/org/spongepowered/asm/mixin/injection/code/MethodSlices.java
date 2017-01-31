@@ -39,7 +39,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * be different to declared slice ids because they are mapped by the underlying
  * injector. Some injectors only support a single slice.
  */
-public class MethodSlices {
+public final class MethodSlices {
     
     /**
      * Injector which owns this collection of slices
@@ -63,7 +63,7 @@ public class MethodSlices {
     /**
      * Add a slice to this collection
      * 
-     * @param slice
+     * @param slice slice to add
      */
     private void add(MethodSlice slice) {
         String id = this.info.getSliceId(slice.getId());

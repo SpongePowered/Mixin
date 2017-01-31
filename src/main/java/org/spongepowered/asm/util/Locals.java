@@ -54,13 +54,17 @@ import org.spongepowered.asm.util.throwables.LVTGeneratorException;
 /**
  * Utility methods for working with local variables using ASM
  */
-public class Locals {
+public final class Locals {
 
     /**
      * Cached local variable lists, to avoid having to recalculate them
      * (expensive) if multiple injectors are working with the same method
      */
     private static final Map<String, List<LocalVariableNode>> calculatedLocalVariables = new HashMap<String, List<LocalVariableNode>>();
+    
+    private Locals() {
+        // utility class
+    }
 
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList for each
@@ -70,6 +74,7 @@ public class Locals {
      *      RETURN values in locals)
      * @param insns Instruction List to inject into
      * @param pos Start position
+     * @param limit maximum number of locals to consume
      */
     public static void loadLocals(Type[] locals, InsnList insns, int pos, int limit) {
         for (; pos < locals.length && limit > 0; pos++) {

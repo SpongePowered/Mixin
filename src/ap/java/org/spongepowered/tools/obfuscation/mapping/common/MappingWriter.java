@@ -52,6 +52,11 @@ public abstract class MappingWriter implements IMappingWriter {
 
     /**
      * Open a writer for an output file
+     * 
+     * @param fileName output file name (resource path)
+     * @param description description of file being requested, for logging
+     * @return new PrintWriter for opened resource
+     * @throws IOException if the resource cannot be opened
      */
     protected PrintWriter openFileWriter(String fileName, String description) throws IOException {
         if (fileName.matches("^.*[\\\\/:].*$")) {

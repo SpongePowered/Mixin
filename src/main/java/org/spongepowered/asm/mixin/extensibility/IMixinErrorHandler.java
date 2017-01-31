@@ -57,6 +57,9 @@ public interface IMixinErrorHandler {
          */
         ERROR(Level.FATAL);
         
+        /**
+         * Logging level for the specified error action
+         */
         public final Level logLevel;
 
         private ErrorAction(Level logLevel) {

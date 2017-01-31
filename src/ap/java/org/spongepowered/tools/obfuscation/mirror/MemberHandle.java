@@ -57,5 +57,12 @@ public abstract class MemberHandle<T extends IMapping<T>> {
         return this.desc;
     }
 
+    /**
+     * Return this handle as a mapping
+     * 
+     * @param includeOwner include the owner in the generated mapping, false to
+     *      only include name and desc
+     * @return this handle as a mapping of appropriate type
+     */
     public abstract T asMapping(boolean includeOwner);
 }

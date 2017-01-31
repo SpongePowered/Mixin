@@ -104,7 +104,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
 
             if (this.log) {
                 BeforeConstant.logger.info("BeforeConstant is searching for an constants in method with descriptor {}", desc);
-           }
+            }
             
             ListIterator<AbstractInsnNode> iter = insns.iterator();
             for (int ordinal = 0; iter.hasNext();) {
@@ -118,7 +118,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
                     }
                     if (this.ordinal == -1 || this.ordinal == ordinal) {
                         if (this.log) {
-                            BeforeConstant.logger.info("      BeforeConstant found {}", ASMHelper.getNodeDescriptionForDebug(insn).trim());
+                            BeforeConstant.logger.info("      BeforeConstant found {}", ASMHelper.describeNode(insn).trim());
                         }
                         nodes.add(insn);
                         found = true;

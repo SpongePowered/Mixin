@@ -123,14 +123,25 @@ public class SignaturePrinter {
         }
     }
     
+    /**
+     * Return only the arguments portion of this signature as a Java-style block
+     */
     public String getFormattedArgs() {
         return this.appendArgs(new StringBuilder(), true).toString();
     }
     
+    /**
+     * Get string representation of this signature's return type
+     */
     public String getReturnType() {
         return SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified);
     }
 
+    /**
+     * Set modifiers on this signature using the supplied method node
+     * 
+     * @param method method node to read modifiers from
+     */
     public void setModifiers(MethodNode method) {
         String returnType = SignaturePrinter.getTypeName(Type.getReturnType(method.desc), false, this.fullyQualified);
         if ((method.access & Opcodes.ACC_PUBLIC) != 0) {
@@ -144,25 +155,50 @@ public class SignaturePrinter {
         }
     }
     
+    /**
+     * Set modifiers on this signature explicitly. Use the special token
+     * <tt>${returnType}</tt> to insert the return type into the modifier
+     * string.
+     * 
+     * @param modifiers modifiers to prepend
+     * @return fluent interface
+     */
     public SignaturePrinter setModifiers(String modifiers) {
         this.modifiers = modifiers.replace("${returnType}", this.getReturnType());
         return this;
     }
     
+    /**
+     * Set whether this signature generates fully-qualified class output, mainly
+     * used when generating signatures for Mirror
+     * 
+     * @param fullyQualified new value for fully-qualified
+     * @return fluent interface
+     */
     public SignaturePrinter setFullyQualified(boolean fullyQualified) {
         this.fullyQualified = fullyQualified;
         return this;
     }
     
+    /**
+     * Get whether this printer will fully-qualify class names in generated
+     * signatures
+     */
     public boolean isFullyQualified() {
         return this.fullyQualified;
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
     @Override
     public String toString() {
         return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(this.name), false).toString();
     }
     
+    /**
+     * Return this signature in descriptor format (return type after args)
+     */
     public String toDescriptor() {
         StringBuilder args = this.appendArgs(new StringBuilder(), true);
         return args.append(SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified)).toString();

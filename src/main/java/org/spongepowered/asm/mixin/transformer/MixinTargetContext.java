@@ -180,21 +180,29 @@ public class MixinTargetContext implements IMixinContext {
     }
     
     /**
-     * @param method
+     * Add a shadow method to this mixin context, called by the preprocessor
+     * 
+     * @param method shadow method to add
      */
     void addShadowMethod(MethodNode method) {
         this.shadowMethods.add(method);
     }
     
     /**
-     * @param fieldNode
+     * Add a shadow field to this mixin context, called by the preprocessor
+     * 
+     * @param fieldNode field node
+     * @param fieldInfo field info
      */
     void addShadowField(FieldNode fieldNode, Field fieldInfo) {
         this.shadowFields.put(fieldNode, fieldInfo);
     }
     
     /**
-     * @param method
+     * Add an accessor method to this mixin context, called by the preprocessor
+     * 
+     * @param method method to add
+     * @param type annotation type
      */
     void addAccessorMethod(MethodNode method, Class<? extends Annotation> type) {
         this.accessors.add(AccessorInfo.of(this, method, type));
@@ -203,7 +211,7 @@ public class MixinTargetContext implements IMixinContext {
     /**
      * Callback from the applicator which notifies us that a method was merged
      * 
-     * @param method
+     * @param method merged method
      */
     void addMergedMethod(MethodNode method) {
         this.mergedMethods.add(method);
@@ -1032,10 +1040,26 @@ public class MixinTargetContext implements IMixinContext {
         this.mixin.postApply(transformedName, targetClass);
     }
     
+    /**
+     * Obtain a unique name for the specified method from the target class
+     * context
+     * 
+     * @param method method to obtain a name for
+     * @param preservePrefix true to preserve the method prefix (decorate as 
+     *      postfix) otherwise decorates as infix
+     * @return unique method name
+     */
     public String getUniqueName(MethodNode method, boolean preservePrefix) {
         return this.targetClass.getUniqueName(method, preservePrefix);
     }
 
+    /**
+     * Obtain a unique name for the specified field from the target class
+     * context
+     * 
+     * @param field field to obtain a name for
+     * @return unique field name
+     */
     public String getUniqueName(FieldNode field) {
         return this.targetClass.getUniqueName(field);
     }
@@ -1077,6 +1101,10 @@ public class MixinTargetContext implements IMixinContext {
         this.injectors.clear();
     }
 
+    /**
+     * Expand accessor methods mixed into the target class by populating the
+     * method bodies
+     */
     public List<MethodNode> generateAccessors() {
         for (AccessorInfo accessor : this.accessors) {
             accessor.locate();

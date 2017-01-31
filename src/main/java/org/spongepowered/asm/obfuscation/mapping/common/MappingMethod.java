@@ -95,6 +95,13 @@ public class MappingMethod implements IMapping<MappingMethod> {
         return new MappingMethod(this.getOwner(), this.getSimpleName(), this.getDesc());
     }
     
+    /**
+     * Return a clone of this mapping with the supplied prefix added. Returns
+     * this object if the prefix matches the existing name.
+     * 
+     * @param prefix prefix to prepend
+     * @return cloned mapping
+     */
     public MappingMethod addPrefix(String prefix) {
         String simpleName = this.getSimpleName();
         if (simpleName == null || simpleName.startsWith(prefix)) {

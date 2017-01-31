@@ -55,7 +55,8 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
      * in the mixin are then tested for remapability based on the strategy
      * defined in the soft-implements decoration
      * 
-     * @param implementsAnnotation
+     * @param implementsAnnotation the &#064;Implements annotation on the
+     *      element
      */
     public void process(AnnotationHandle implementsAnnotation) {
         if (!this.mixin.remap()) {

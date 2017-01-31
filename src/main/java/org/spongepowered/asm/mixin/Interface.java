@@ -79,6 +79,9 @@ public @interface Interface {
             this.forceRemap = forceRemap;
         }
         
+        /**
+         * Returns whether this remap type should force remapping
+         */
         public boolean forceRemap() {
             return this.forceRemap;
         }

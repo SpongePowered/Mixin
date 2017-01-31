@@ -95,6 +95,57 @@
     <module name="JavadocType">
       <property name="scope" value="package"/>
     </module>
+    <module name="JavadocMethod">
+      <metadata name="net.sf.eclipsecs.core.comment" value="Package members"/>
+      <property name="scope" value="package"/>
+      <property name="allowMissingParamTags" value="true"/>
+      <property name="allowMissingThrowsTags" value="true"/>
+      <property name="allowMissingReturnTag" value="true"/>
+      <property name="allowMissingJavadoc" value="true"/>
+      <property name="allowMissingPropertyJavadoc" value="true"/>
+      <property name="suppressLoadErrors" value="true"/>
+      <property name="tokens" value="METHOD_DEF"/>
+    </module>
+    <module name="JavadocTagContinuationIndentation">
+      <property name="offset" value="5"/>
+    </module>
+    <module name="JavadocMethod">
+      <metadata name="net.sf.eclipsecs.core.comment" value="Public members"/>
+      <property name="scope" value="public"/>
+      <property name="excludeScope" value="package"/>
+      <property name="allowMissingThrowsTags" value="true"/>
+      <property name="allowMissingReturnTag" value="true"/>
+      <property name="allowMissingPropertyJavadoc" value="true"/>
+      <property name="suppressLoadErrors" value="true"/>
+      <property name="tokens" value="METHOD_DEF"/>
+    </module>
+    <module name="NonEmptyAtclauseDescription"/>
+    <module name="JavadocVariable">
+      <property name="scope" value="public"/>
+      <property name="ignoreNamePattern" value="^[A-Z_]+$"/>
+      <message key="javadoc.missing" value="Missing a Javadoc comment on public field."/>
+    </module>
+    <module name="AtclauseOrder"/>
+    <module name="JavadocParagraph"/>
+    <module name="JavadocStyle">
+      <property name="scope" value="public"/>
+      <property name="checkFirstSentence" value="false"/>
+    </module>
+    <module name="IllegalImport">
+      <property name="illegalPkgs" value="org.objectweb.asm"/>
+    </module>
+    <module name="FinalClass"/>
+    <module name="HideUtilityClassConstructor"/>
+    <module name="TypecastParenPad">
+      <property name="tokens" value="RPAREN,TYPECAST"/>
+    </module>
+    <module name="ConstantName">
+      <property name="applyToProtected" value="false"/>
+      <property name="applyToPackage" value="false"/>
+      <property name="applyToPrivate" value="false"/>
+    </module>
+    <module name="MethodName"/>
+    <module name="UncommentedMain"/>
   </module>
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>

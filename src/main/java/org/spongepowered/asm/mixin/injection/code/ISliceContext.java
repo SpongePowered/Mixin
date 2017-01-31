@@ -31,6 +31,14 @@ import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
  */
 public interface ISliceContext extends IInjectionPointContext {
 
+    /**
+     * Fetch slice with the specified id from this context, the slice id may be
+     * transformed internally by the context according to restrictions on the
+     * injector itself
+     * 
+     * @param id slice id to fetch
+     * @return method slice matching query
+     */
     public abstract MethodSlice getSlice(String id);
 
 }

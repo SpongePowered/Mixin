@@ -100,7 +100,7 @@ public class TypeHandle {
     /**
      * Ctor for real elements, instanced via a type mirror
      * 
-     * @param type
+     * @param type type
      */
     public TypeHandle(DeclaredType type) {
         this((TypeElement)type.asElement());
@@ -142,6 +142,13 @@ public class TypeHandle {
         return this.element;
     }
 
+    /**
+     * Get an annotation handle for the specified annotation on this type
+     * 
+     * @param annotationClass type of annotation to search for
+     * @return new annotation handle, call <tt>exists</tt> on the returned
+     *      handle to determine whether the annotation is present
+     */
     public AnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
         return AnnotationHandle.of(this.getTargetElement(), annotationClass);
     }
@@ -157,6 +164,7 @@ public class TypeHandle {
      * Returns enclosed elements (methods, fields, etc.) of a particular type
      * 
      * @param kind types of element to return
+     * @param <T> list element type
      */
     public <T extends Element> List<T> getEnclosedElements(ElementKind... kind) {
         return TypeHandle.getEnclosedElements(this.getTargetElement(), kind);
@@ -188,6 +196,9 @@ public class TypeHandle {
         return new TypeHandle((DeclaredType)superClass);
     }
     
+    /**
+     * Get interfaces directly implemented by this type
+     */
     public List<TypeHandle> getInterfaces() {
         if (this.getTargetElement() == null) {
             return Collections.<TypeHandle>emptyList();
@@ -222,6 +233,9 @@ public class TypeHandle {
         return false;
     }
     
+    /**
+     * Get the TypeReference for this type, used for serialisation
+     */
     public final TypeReference getReference() {
         if (this.reference == null) {
             this.reference = new TypeReference(this);
@@ -236,12 +250,18 @@ public class TypeHandle {
      * 
      * @param name Method name
      * @param desc Method descriptor
-     * @return
+     * @return this handle as a mapping method
      */
     public MappingMethod getMappingMethod(String name, String desc) {
         return new MappingMethod(this.getName(), name, desc);
     }
 
+    /**
+     * Find a descriptor for the supplied MemberInfo
+     * 
+     * @param memberInfo MemberInfo to use as search term
+     * @return descriptor or null if no matching member could be located
+     */
     public String findDescriptor(MemberInfo memberInfo) {
         String desc = memberInfo.desc;
         if (desc == null) {
@@ -271,6 +291,7 @@ public class TypeHandle {
      * of the supplied element
      * 
      * @param element Element to match
+     * @param caseSensitive True if case-sensitive comparison should be used
      * @return handle to the discovered field if matched or null if no match
      */
     public final FieldHandle findField(VariableElement element, boolean caseSensitive) {
@@ -295,6 +316,7 @@ public class TypeHandle {
      * 
      * @param name Field name to search for
      * @param type Field descriptor (java-style)
+     * @param caseSensitive True if case-sensitive comparison should be used
      * @return handle to the discovered field if matched or null if no match
      */
     public FieldHandle findField(String name, String type, boolean caseSensitive) {
@@ -327,6 +349,7 @@ public class TypeHandle {
      * type of the supplied element
      * 
      * @param element Element to match
+     * @param caseSensitive True if case-sensitive comparison should be used
      * @return handle to the discovered method if matched or null if no match
      */
     public final MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
@@ -351,6 +374,7 @@ public class TypeHandle {
      * 
      * @param name Method name to search for
      * @param signature Method signature
+     * @param matchCase True if case-sensitive comparison should be used
      * @return handle to the discovered method if matched or null if no match
      */
     public MethodHandle findMethod(String name, String signature, boolean matchCase) {

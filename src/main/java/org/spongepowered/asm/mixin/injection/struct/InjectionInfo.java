@@ -261,6 +261,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
     }
     
+    /**
+     * Callback from injector which notifies us that a callback was injected. No
+     * longer used.
+     * 
+     * @param target target into which the injector injected
+     */
     public void notifyInjected(Target target) {
 //        this.targets.remove(target.method);
     }
@@ -297,7 +303,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * support use of a single slice will always return the default id (an empty
      * string)
      * 
-     * @param id
+     * @param id slice id
      * @return mapped id
      */
     public String getSliceId(String id) {
@@ -386,6 +392,15 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
     }
     
+    /**
+     * Parse an injector from the specified method (if an injector annotation is
+     * present). If no injector annotation is present then <tt>null</tt> is
+     * returned.
+     * 
+     * @param mixin context
+     * @param method mixin method
+     * @return parsed InjectionInfo or null
+     */
     public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(mixin.getMixin(), method);
         
@@ -408,6 +423,15 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         return null;
     }
 
+    /**
+     * Returns any injector annotation found on the specified method. If
+     * multiple matching annotations are found then an exception is thrown. If
+     * no annotations are present then <tt>null</tt> is returned.
+     * 
+     * @param mixin context
+     * @param method mixin method
+     * @return annotation or null
+     */
     @SuppressWarnings("unchecked")
     public static AnnotationNode getInjectorAnnotation(IMixinInfo mixin, MethodNode method) {
         AnnotationNode annotation = null;
@@ -426,6 +450,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         return annotation;
     }
 
+    /**
+     * Get the conform prefix for an injector handler by type
+     * 
+     * @param annotation Annotation to inspect
+     * @return conform prefix
+     */
     public static String getInjectorPrefix(AnnotationNode annotation) {
         if (annotation != null) {
             if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {

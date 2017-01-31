@@ -60,7 +60,8 @@ public abstract class MixinPlatformAgentAbstract implements IMixinPlatformAgent 
     /**
      * Create a new platform agent for the specified URI
      * 
-     * @param uri
+     * @param manager platform manager
+     * @param uri URI of the resource for this agent
      */
     public MixinPlatformAgentAbstract(MixinPlatformManager manager, URI uri) {
         this.manager = manager;

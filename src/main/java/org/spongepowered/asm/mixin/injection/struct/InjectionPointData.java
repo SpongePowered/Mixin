@@ -34,6 +34,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
@@ -61,7 +62,7 @@ public class InjectionPointData {
     /**
      * Mixin 
      */
-    private final IMixinContext mixin;
+    private final IMixinContext context;
     
     /**
      * Injector callback
@@ -108,9 +109,9 @@ public class InjectionPointData {
      */
     private final int opcode;
     
-    public InjectionPointData(IMixinContext mixin, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
+    public InjectionPointData(IMixinContext context, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
             String slice, int ordinal, int opcode) {
-        this.mixin = mixin;
+        this.context = context;
         this.method = method;
         this.parent = parent;
         this.at = at;
@@ -146,101 +147,165 @@ public class InjectionPointData {
         }
     }
 
+    /**
+     * Get the <tt>at</tt> value on the injector
+     */
     public String getAt() {
         return this.at;
     }
     
+    /**
+     * Get the parsed constructor <tt>type</tt> for this injector
+     */
     public String getType() {
         return this.type;
     }
     
+    /**
+     * Get the selector value parsed from the injector
+     */
     public Selector getSelector() {
         return this.selector;
     }
     
-    public IMixinContext getMixin() {
-        return this.mixin;
+    /**
+     * Get the context
+     */
+    public IMixinContext getContext() {
+        return this.context;
     }
     
+    /**
+     * Get the annotated method
+     */
     public MethodNode getMethod() {
         return this.method;
     }
     
+    /**
+     * Get the return type of the annotated method
+     */
+    public Type getMethodReturnType() {
+        return Type.getReturnType(this.method.desc);
+    }
+    
+    /**
+     * Get the root annotation (eg. {@link Inject})
+     */
     public AnnotationNode getParent() {
         return this.parent;
     }
     
+    /**
+     * Get the slice id specified on the injector
+     */
     public String getSlice() {
         return this.slice;
-    }
-    
-    public Type getReturnType() {
-        return Type.getReturnType(this.method.desc);
     }
     
     public LocalVariableDiscriminator getLocalVariableDiscriminator() {
         return LocalVariableDiscriminator.parse(this.parent);
     }
 
+    /**
+     * Get the supplied value from the named args, return defaultValue if the
+     * arg is not set
+     * 
+     * @param key argument name
+     * @param defaultValue value to return if the arg is not set
+     * @return argument value or default if not set
+     */
     public String get(String key, String defaultValue) {
         String value = this.args.get(key);
         return value != null ? value : defaultValue;
     }
     
+    /**
+     * Get the supplied value from the named args, return defaultValue if the
+     * arg is not set
+     * 
+     * @param key argument name
+     * @param defaultValue value to return if the arg is not set
+     * @return argument value or default if not set
+     */
     public int get(String key, int defaultValue) {
-        return this.parseInt(this.get(key, String.valueOf(defaultValue)), defaultValue);
+        return InjectionPointData.parseInt(this.get(key, String.valueOf(defaultValue)), defaultValue);
     }
     
+    /**
+     * Get the supplied value from the named args, return defaultValue if the
+     * arg is not set
+     * 
+     * @param key argument name
+     * @param defaultValue value to return if the arg is not set
+     * @return argument value or default if not set
+     */
     public boolean get(String key, boolean defaultValue) {
-        return this.parseBoolean(this.get(key, String.valueOf(defaultValue)), defaultValue);
+        return InjectionPointData.parseBoolean(this.get(key, String.valueOf(defaultValue)), defaultValue);
     }
 
+    /**
+     * Get the supplied value from the named args as a {@link MemberInfo},
+     * throws an exception if the argument cannot be parsed as a MemberInfo.
+     * 
+     * @param key argument name
+     * @return argument value as a MemberInfo
+     */
     public MemberInfo get(String key) {
         try {
-            return MemberInfo.parseAndValidate(this.get(key, ""), this.mixin);
+            return MemberInfo.parseAndValidate(this.get(key, ""), this.context);
         } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionPointException(this.mixin, "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
-                    this.at, key, this.target, InjectionInfo.describeInjector(this.mixin, this.parent, this.method));
+            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
+                    this.at, key, this.target, InjectionInfo.describeInjector(this.context, this.parent, this.method));
         }
     }
     
-    private int parseInt(String string, int defaultValue) {
-        try {
-            return Integer.parseInt(string);
-        } catch (Exception ex) {
-            return defaultValue;
-        }
-    }
-    
-    private boolean parseBoolean(String string, boolean defaultValue) {
-        try {
-            return Boolean.parseBoolean(string);
-        } catch (Exception ex) {
-            return defaultValue;
-        }
-    }
-    
+    /**
+     * Get the target value specified on the injector
+     */
     public MemberInfo getTarget() {
         try {
-            return MemberInfo.parseAndValidate(this.target, this.mixin);
+            return MemberInfo.parseAndValidate(this.target, this.context);
         } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionPointException(this.mixin, "Failed parsing @At(\"%s\") descriptor \"%s\" on %s",
-                    this.at, this.target, InjectionInfo.describeInjector(this.mixin, this.parent, this.method));
+            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\") descriptor \"%s\" on %s",
+                    this.at, this.target, InjectionInfo.describeInjector(this.context, this.parent, this.method));
         }
     }
     
+    /**
+     * Get the ordinal specified on the injection point
+     */
     public int getOrdinal() {
         return this.ordinal;
     }
     
+    /**
+     * Get the opcode specified on the injection point
+     */
     public int getOpcode() {
         return this.opcode;
     }
     
+    /**
+     * Get the opcode specified on the injection point or return the default if
+     * no opcode was specified
+     * 
+     * @param defaultOpcode opcode to return if none specified
+     * @return opcode or default
+     */
     public int getOpcode(int defaultOpcode) {
         return this.opcode > 0 ? this.opcode : defaultOpcode;
     }
     
+    /**
+     * Get the opcode specified on the injection point or return the default if
+     * no opcode was specified or if the specified opcode does not appear in the
+     * supplied list of valid opcodes
+     * 
+     * @param defaultOpcode opcode to return if none specified
+     * @param validOpcodes valid opcodes
+     * @return opcode or default
+     */
     public int getOpcode(int defaultOpcode, int... validOpcodes) {
         for (int validOpcode : validOpcodes) {
             if (this.opcode == validOpcode) {
@@ -259,6 +324,17 @@ public class InjectionPointData {
         return Pattern.compile(String.format("^([^:]+):?(%s)?$", Joiner.on('|').join(Selector.values())));
     }
 
+    /**
+     * Parse a constructor type from the supplied <tt>at</tt> string
+     * 
+     * @param at at to parse
+     * @return parsed constructor type
+     */
+    public static String parseType(String at) {
+        Matcher matcher = InjectionPointData.AT_PATTERN.matcher(at);
+        return InjectionPointData.parseType(matcher, at);
+    }
+
     private static String parseType(Matcher matcher, String at) {
         return matcher.matches() ? matcher.group(1) : at;
     }
@@ -266,10 +342,21 @@ public class InjectionPointData {
     private static Selector parseSelector(Matcher matcher) {
         return matcher.matches() && matcher.group(2) != null ? Selector.valueOf(matcher.group(2)) : Selector.DEFAULT;
     }
-
-    public static String parseType(String at) {
-        Matcher matcher = InjectionPointData.AT_PATTERN.matcher(at);
-        return InjectionPointData.parseType(matcher, at);
+    
+    private static int parseInt(String string, int defaultValue) {
+        try {
+            return Integer.parseInt(string);
+        } catch (Exception ex) {
+            return defaultValue;
+        }
     }
     
+    private static boolean parseBoolean(String string, boolean defaultValue) {
+        try {
+            return Boolean.parseBoolean(string);
+        } catch (Exception ex) {
+            return defaultValue;
+        }
+    }
+
 }

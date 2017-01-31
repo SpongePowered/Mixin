@@ -174,6 +174,11 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         throw new UnsupportedOperationException("Target not available at compile time");
     }
 
+    /**
+     * Register a new accessor
+     * 
+     * @param elem accessor element
+     */
     public void registerAccessor(AnnotatedElementAccessor elem) {
         if (elem.getAccessorType() == null) {
             elem.printMessage(this.ap, Kind.WARNING, "Unsupported accessor type");

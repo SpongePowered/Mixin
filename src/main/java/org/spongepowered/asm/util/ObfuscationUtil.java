@@ -54,10 +54,24 @@ public abstract class ObfuscationUtil {
     
     private ObfuscationUtil() {}
     
+    /**
+     * Map a descriptor using the supplied rempper
+     * 
+     * @param desc descriptor to remap
+     * @param remapper remapper to use
+     * @return mapped descriptor
+     */
     public static String mapDescriptor(String desc, IClassRemapper remapper) {
         return ObfuscationUtil.remapDescriptor(desc, remapper, false);
     }
     
+    /**
+     * Unmap (inverse of map) a descriptor using the supplied rempper
+     * 
+     * @param desc descriptor to unmap
+     * @param remapper remapper to use
+     * @return unmapped descriptor
+     */
     public static String unmapDescriptor(String desc, IClassRemapper remapper) {
         return ObfuscationUtil.remapDescriptor(desc, remapper, true);
     }

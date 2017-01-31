@@ -63,7 +63,7 @@ import com.google.common.collect.ImmutableSet;
  * information needed to support more complex mixin behaviour such as detached
  * superclass and mixin inheritance.
  */
-public class ClassInfo extends TreeInfo {
+public final class ClassInfo extends TreeInfo {
 
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
@@ -137,10 +137,16 @@ public class ClassInfo extends TreeInfo {
             this.searchType = searchType;
         }
 
+        /**
+         * Return the next traversal type for this traversal type
+         */
         public Traversal next() {
             return this.next;
         }
 
+        /**
+         * Return whether this traversal type allows traversal
+         */
         public boolean canTraverse() {
             return this.traverse;
         }
@@ -158,10 +164,19 @@ public class ClassInfo extends TreeInfo {
 
         private static final String[] FRAMETYPES = { "NEW", "FULL", "APPEND", "CHOP", "SAME", "SAME1" };
 
+        /**
+         * Frame index
+         */
         public final int index;
 
+        /**
+         * Frame type
+         */
         public final int type;
 
+        /**
+         * Frame local count
+         */
         public final int locals;
 
         FrameData(int index, int type, int locals) {
@@ -338,7 +353,7 @@ public class ClassInfo extends TreeInfo {
         }
 
         /**
-         * @param name
+         * @param name new name
          * @return the passed-in argument, for fluency
          */
         public String renameTo(String name) {
@@ -964,7 +979,7 @@ public class ClassInfo extends TreeInfo {
      *
      * @param superClass Name of the superclass to search for in the hierarchy
      * @return true if the specified class appears in the class's hierarchy
-     * anywhere
+     *      anywhere
      */
     public boolean hasSuperClass(String superClass) {
         return this.hasSuperClass(superClass, Traversal.NONE);
@@ -976,7 +991,7 @@ public class ClassInfo extends TreeInfo {
      * @param superClass Name of the superclass to search for in the hierarchy
      * @param traversal Traversal type to allow during this lookup
      * @return true if the specified class appears in the class's hierarchy
-     * anywhere
+     *      anywhere
      */
     public boolean hasSuperClass(String superClass, Traversal traversal) {
         if (ClassInfo.JAVA_LANG_OBJECT.equals(superClass)) {
@@ -991,7 +1006,7 @@ public class ClassInfo extends TreeInfo {
      *
      * @param superClass Superclass to search for in the hierarchy
      * @return true if the specified class appears in the class's hierarchy
-     * anywhere
+     *      anywhere
      */
     public boolean hasSuperClass(ClassInfo superClass) {
         return this.hasSuperClass(superClass, Traversal.NONE);
@@ -1003,7 +1018,7 @@ public class ClassInfo extends TreeInfo {
      * @param superClass Superclass to search for in the hierarchy
      * @param traversal Traversal type to allow during this lookup
      * @return true if the specified class appears in the class's hierarchy
-     * anywhere
+     *      anywhere
      */
     public boolean hasSuperClass(ClassInfo superClass, Traversal traversal) {
         if (ClassInfo.OBJECT == superClass) {

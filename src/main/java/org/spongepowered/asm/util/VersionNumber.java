@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  * </code> format as a sequence of four shorts packed into a long. This is to
  * facilitate meaningful comparison between version numbers.
  */
-public class VersionNumber implements Comparable<VersionNumber>, Serializable {
+public final class VersionNumber implements Comparable<VersionNumber>, Serializable {
     
     private static final long serialVersionUID = 1L;
 
@@ -46,7 +46,7 @@ public class VersionNumber implements Comparable<VersionNumber>, Serializable {
     /**
      * Regex for matching a version number specified as a string
      */
-    private static final Pattern versionNumberPattern =
+    private static final Pattern PATTERN =
             Pattern.compile("^(\\d{1,5})(?:\\.(\\d{1,5})(?:\\.(\\d{1,5})(?:\\.(\\d{1,5}))?)?)?(-[a-zA-Z0-9_\\-]+)?$");
     
     /**
@@ -190,7 +190,7 @@ public class VersionNumber implements Comparable<VersionNumber>, Serializable {
             return defaultVersion;
         }
         
-        Matcher versionNumberPatternMatcher = VersionNumber.versionNumberPattern.matcher(version);
+        Matcher versionNumberPatternMatcher = VersionNumber.PATTERN.matcher(version);
         if (!versionNumberPatternMatcher.matches()) {
             return defaultVersion;
         }

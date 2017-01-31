@@ -32,7 +32,7 @@ public interface IHotSwap {
     /**
      * Registers a mixin class with the agent.
      *
-     * This is needed as the mixin needs to be loaded to be redefined.
+     * <p>This is needed as the mixin needs to be loaded to be redefined.</p>
      *
      * @param name Fully qualified name of the mixin class
      */
@@ -41,8 +41,8 @@ public interface IHotSwap {
     /**
      * Registers a class targeted by at least one mixin.
      *
-     * This is used to rollback the target class to a state before the mixin's
-     * where applied.
+     * <p>This is used to rollback the target class to a state before the
+     * mixin's were applied.</p>
      *
      * @param name Name of the class
      * @param bytecode Bytecode of the class before mixin's have been applied

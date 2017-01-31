@@ -50,24 +50,39 @@ import com.google.common.primitives.Ints;
 /**
  * Utility methods for working with ASM
  */
-public class ASMHelper {
+public final class ASMHelper {
 
+    /**
+     * Integer constant opcodes
+     */
     public static final int[] CONSTANTS_INT = {
         Opcodes.ICONST_M1, Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5
     };
 
+    /**
+     * Float constant opcodes 
+     */
     public static final int[] CONSTANTS_FLOAT = {
         Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2
     };
     
+    /**
+     * Double constant opcodes
+     */
     public static final int[] CONSTANTS_DOUBLE = {
         Opcodes.DCONST_0, Opcodes.DCONST_1
     };
     
+    /**
+     * Long constant opcodes
+     */
     public static final int[] CONSTANTS_LONG = {
         Opcodes.LCONST_0, Opcodes.LCONST_1
     };
     
+    /**
+     * All constant opcodes 
+     */
     public static final int[] CONSTANTS_ALL = {
         Opcodes.ACONST_NULL,
         Opcodes.ICONST_M1,
@@ -90,15 +105,19 @@ public class ASMHelper {
     };
     
     private static final String[] CONSTANTS_TYPES = {
-            null,
-            "I",
-            "I", "I", "I", "I", "I", "I",
-            "J", "J",
-            "F", "F", "F", 
-            "D", "D",
-            "I", //"B",
-            "I", //"S"
+        null,
+        "I",
+        "I", "I", "I", "I", "I", "I",
+        "J", "J",
+        "F", "F", "F", 
+        "D", "D",
+        "I", //"B",
+        "I", //"S"
     };
+    
+    private ASMHelper() {
+        // utility class
+    }
 
     /**
      * Finds a method given the method descriptor
@@ -173,7 +192,7 @@ public class ASMHelper {
         System.err.printf("%s%s\n", method.name, method.desc);
         int i = 0;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
-            System.err.printf("[%4d] %s\n", i++, ASMHelper.getNodeDescriptionForDebug(iter.next()));
+            System.err.printf("[%4d] %s\n", i++, ASMHelper.describeNode(iter.next()));
         }
     }
 
@@ -196,10 +215,20 @@ public class ASMHelper {
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
-        System.err.printf("%s\n", ASMHelper.getNodeDescriptionForDebug(node));
+        System.err.printf("%s\n", ASMHelper.describeNode(node));
     }
 
-    public static String getNodeDescriptionForDebug(AbstractInsnNode node) {
+    /**
+     * Gets a description of the supplied node for debugging purposes
+     * 
+     * @param node node to describe
+     * @return human-readable description of node
+     */
+    public static String describeNode(AbstractInsnNode node) {
+        if (node == null) {
+            return String.format("   %-14s ", "null");
+        }
+        
         if (node instanceof LabelNode) {
             return String.format("[%s]", ((LabelNode)node).getLabel());
         }
@@ -645,10 +674,22 @@ public class ASMHelper {
         return Enum.valueOf(enumClass, value[1]);
     }
 
+    /**
+     * Returns true if the supplied method node is static
+     * 
+     * @param method method node
+     * @return true if the method has the {@link Opcodes#ACC_STATIC} flag
+     */
     public static boolean methodIsStatic(MethodNode method) {
         return (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
     
+    /**
+     * Returns true if the supplied field node is static
+     * 
+     * @param field field node
+     * @return true if the field has the {@link Opcodes#ACC_STATIC} flag
+     */
     public static boolean fieldIsStatic(FieldNode field) {
         return (field.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
@@ -733,6 +774,14 @@ public class ASMHelper {
         }
     }
     
+    /**
+     * Clones all of the labels in the source instruction list and returns the
+     * clones in a map of old label -&gt; new label. This is used to facilitate
+     * the use of {@link AbstractInsnNode#clone}.
+     * 
+     * @param source instruction list
+     * @return map of existing labels to their cloned counterparts
+     */
     public static Map<LabelNode, LabelNode> cloneLabels(InsnList source) {
         Map<LabelNode, LabelNode> labels = new HashMap<LabelNode, LabelNode>();
         
@@ -747,8 +796,13 @@ public class ASMHelper {
     }
     
     /**
-     * @param returnType
-     * @param args
+     * Generate a bytecode descriptor from the supplied tokens. Each token can
+     * be a {@link Type}, a {@link Class} or otherwise is converted in-place by
+     * calling {@link Object#toString toString}.
+     * 
+     * @param returnType object representing the method return type, can be
+     *      <tt>null</tt> for <tt>void</tt>
+     * @param args objects representing argument types
      */
     public static String generateDescriptor(Object returnType, Object... args) {
         StringBuilder sb = new StringBuilder().append('(');
@@ -761,7 +815,10 @@ public class ASMHelper {
     }
 
     /**
-     * @param arg
+     * Converts the supplied object to a descriptor component, used by
+     * {@link #generateDescriptor}.
+     * 
+     * @param arg object to convert
      */
     private static String toDescriptor(Object arg) {
         if (arg instanceof String) {
@@ -774,18 +831,46 @@ public class ASMHelper {
         return arg == null ? "" : arg.toString();
     }
 
+    /**
+     * Returns the simple name of an annotation, mainly used for printing
+     * annotation names in error messages/user-facing strings
+     * 
+     * @param annotationType annotation
+     * @return annotation's simple name
+     */
     public static String getSimpleName(Class<? extends Annotation> annotationType) {
         return annotationType.getSimpleName();
     }
     
+    /**
+     * Returns the simple name of an annotation, mainly used for printing
+     * annotation names in error messages/user-facing strings
+     * 
+     * @param annotation annotation node
+     * @return annotation's simple name
+     */
     public static String getSimpleName(AnnotationNode annotation) {
         return ASMHelper.getSimpleName(annotation.desc);
     }
 
+    /**
+     * Returns the simple name from an object type descriptor (in L...; format)
+     * 
+     * @param desc type descriptor
+     * @return "simple" name
+     */
     public static String getSimpleName(String desc) {
-        return desc.substring(desc.lastIndexOf('/') + 1).replace(";", "");
+        int pos = Math.max(desc.lastIndexOf('/'), 0);
+        return desc.substring(pos + 1).replace(";", "");
     }
 
+    /**
+     * Gets whether the supplied instruction is a constant instruction (eg. 
+     * <tt>ICONST_1</tt>)
+     * 
+     * @param insn instruction to check
+     * @return true if the supplied instruction is a constant
+     */
     public static boolean isConstant(AbstractInsnNode insn) {
         if (insn == null) {
             return false;
@@ -793,6 +878,14 @@ public class ASMHelper {
         return Ints.contains(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
     }
 
+    /**
+     * If the supplied instruction is a constant, returns the constant value
+     * from the instruction
+     * 
+     * @param insn constant instruction to process
+     * @return the constant value or <tt>null</tt> if the value cannot be parsed
+     *      (or is null)
+     */
     public static Object getConstant(AbstractInsnNode insn) {
         if (insn == null) {
             return null;
@@ -810,6 +903,13 @@ public class ASMHelper {
         return index < 0 ? null : ASMHelper.CONSTANTS_VALUES[index];
     }
 
+    /**
+     * Returns the {@link Type} of a particular constant instruction's payload 
+     * 
+     * @param insn constant instruction
+     * @return type of constant or <tt>null</tt> if it cannot be parsed (or is
+     *      null)
+     */
     public static Type getConstantType(AbstractInsnNode insn) {
         if (insn == null) {
             return null;
@@ -838,8 +938,8 @@ public class ASMHelper {
     /**
      * Check whether the specified flag is set on the specified class
      * 
-     * @param classNode
-     * @param flag 
+     * @param classNode class node
+     * @param flag flag to check
      * @return True if the specified flag is set in this method's access flags
      */
     public static boolean hasFlag(ClassNode classNode, int flag) {
@@ -849,8 +949,8 @@ public class ASMHelper {
     /**
      * Check whether the specified flag is set on the specified method
      * 
-     * @param method
-     * @param flag 
+     * @param method method node
+     * @param flag flag to check
      * @return True if the specified flag is set in this method's access flags
      */
     public static boolean hasFlag(MethodNode method, int flag) {
@@ -860,8 +960,8 @@ public class ASMHelper {
     /**
      * Check whether the specified flag is set on the specified field
      * 
-     * @param field
-     * @param flag 
+     * @param field field node
+     * @param flag flag to check
      * @return True if the specified flag is set in this field's access flags
      */
     public static boolean hasFlag(FieldNode field, int flag) {

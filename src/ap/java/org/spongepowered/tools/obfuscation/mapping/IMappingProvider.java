@@ -54,8 +54,9 @@ public interface IMappingProvider {
      * Called multiple times by the environment. This method will be called for
      * each input file specified by the user. 
      * 
-     * @param input
-     * @throws IOException
+     * @param input input file to read
+     * @throws IOException if an error occurs reading the input file or the file
+     *      does not exist or cannot be opened
      */
     public abstract void read(File input) throws IOException;
 

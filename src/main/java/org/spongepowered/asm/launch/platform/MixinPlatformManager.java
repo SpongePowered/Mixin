@@ -110,6 +110,9 @@ public class MixinPlatformManager {
         this.scanClasspath();
     }
     
+    /**
+     * Get the phase provider classes from the primary container
+     */
     public Collection<String> getPhaseProviderClasses() {
         Collection<String> phaseProviders = this.primaryContainer.getPhaseProviders();
         if (phaseProviders != null) {
@@ -119,6 +122,13 @@ public class MixinPlatformManager {
         return Collections.<String>emptyList();
     }
 
+    /**
+     * Add a new URI to this platform and return the new container (or an
+     * existing container if the URI was previously registered)
+     * 
+     * @param uri URI to add
+     * @return container for specified URI
+     */
     public final MixinContainer addContainer(URI uri) {
         MixinContainer existingContainer = this.containers.get(uri);
         if (existingContainer != null) {
@@ -135,6 +145,11 @@ public class MixinPlatformManager {
         return container;
     }
 
+    /**
+     * Prepare all containers in this platform
+     * 
+     * @param args command-line arguments from tweaker
+     */
     public final void prepare(List<String> args) {
         this.prepared = true;
         for (MixinContainer container : this.containers.values()) {
@@ -165,6 +180,12 @@ public class MixinPlatformManager {
         }
     }
 
+    /**
+     * Initialise the primary container and dispatch injectIntoClassLoader to
+     * all containers
+     * 
+     * @param classLoader classloader to inject into
+     */
     public final void injectIntoClassLoader(LaunchClassLoader classLoader) {
         if (this.injected) {
             return;
@@ -213,6 +234,10 @@ public class MixinPlatformManager {
         }
     }
 
+    /**
+     * Queries all containers for launch target, returns null if no containers
+     * specify a launch target
+     */
     public String getLaunchTarget() {
         for (MixinContainer container : this.containers.values()) {
             String mainClass = container.getLaunchTarget();

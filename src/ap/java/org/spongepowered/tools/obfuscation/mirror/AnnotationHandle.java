@@ -42,7 +42,7 @@ import com.google.common.collect.ImmutableList;
  * A wrapper for {@link AnnotationMirror} which provides a more convenient way
  * to access annotation values.
  */
-public class AnnotationHandle {
+public final class AnnotationHandle {
     
     /**
      * Annotation being wrapped
@@ -92,6 +92,7 @@ public class AnnotationHandle {
      * @param key key
      * @param defaultValue value to return if the key is not set or not present
      * @return value or default if not set
+     * @param <T> duck type
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T> T getValue(String key, T defaultValue) {
@@ -114,6 +115,7 @@ public class AnnotationHandle {
     /**
      * Get the annotation value or return null if not present or not set
      * 
+     * @param <T> duck type
      * @return value or null if not present or not set
      */
     public <T> T getValue() {
@@ -125,6 +127,7 @@ public class AnnotationHandle {
      * present or not set
      * 
      * @param key key to fetch
+     * @param <T> duck type
      * @return value or null if not present or not set
      */
     public <T> T getValue(String key) {
@@ -146,8 +149,8 @@ public class AnnotationHandle {
     /**
      * Get an annotation value as an annotation handle
      * 
-     * @param key
-     * @return
+     * @param key key to search for in the value map
+     * @return value or <tt>null</tt> if not set
      */
     public AnnotationHandle getAnnotation(String key) {
         Object value = this.getValue(key);
@@ -166,6 +169,7 @@ public class AnnotationHandle {
      * Retrieve the annotation value as a list with values of the specified
      * type. Returns an empty list if the value is not present or not set.
      * 
+     * @param <T> list element duck type
      * @return list of values
      */
     public <T> List<T> getList() {
@@ -178,6 +182,7 @@ public class AnnotationHandle {
      * present or not set.
      * 
      * @param key key to fetch
+     * @param <T> list element duck type
      * @return list of values
      */
     public <T> List<T> getList(String key) {
@@ -259,10 +264,25 @@ public class AnnotationHandle {
         return null;
     }
     
+    /**
+     * Returns a new annotation handle for the supplied annotation mirror
+     * 
+     * @param annotation annotation mirror to wrap (can be null)
+     * @return new annotation handle
+     */
     public static AnnotationHandle of(AnnotationMirror annotation) {
         return new AnnotationHandle(annotation);
     }
 
+    /**
+     * Returns a new annotation handle for the specified annotation on the
+     * supplied element, consumers should call {@link #exists} in order to check
+     * whether the requested annotation is present.
+     * 
+     * @param elem element
+     * @param annotationClass annotation class to search for
+     * @return new annotation handle
+     */
     public static AnnotationHandle of(Element elem, Class<? extends Annotation> annotationClass) {
         return new AnnotationHandle(AnnotationHandle.getAnnotation(elem, annotationClass));
     }

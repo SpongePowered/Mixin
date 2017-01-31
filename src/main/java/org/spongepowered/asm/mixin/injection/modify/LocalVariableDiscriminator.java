@@ -210,7 +210,7 @@ public class LocalVariableDiscriminator {
     private final Set<String> names;
 
     /**
-     * @param argsOnly 
+     * @param argsOnly true to only search within the method arguments
      * @param ordinal target variable ordinal
      * @param index target variable index
      * @param names target variable names
@@ -271,6 +271,15 @@ public class LocalVariableDiscriminator {
         return this.ordinal < 0 && this.index < context.baseArgIndex && this.names.isEmpty();
     }
 
+    /**
+     * Find a matching local variable in the specified target 
+     * 
+     * @param returnType variable tyoe
+     * @param argsOnly only match in the method args
+     * @param target target method
+     * @param node current instruction
+     * @return index of local or -1 if not matched
+     */
     public int findLocal(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
         try {
             return this.findLocal(new Context(returnType, argsOnly, target, node));
@@ -279,6 +288,12 @@ public class LocalVariableDiscriminator {
         }
     }
     
+    /**
+     * Find a local variable for the specified context
+     * 
+     * @param context search context
+     * @return index of local or -1 if not found
+     */
     public int findLocal(Context context) {
         if (this.isImplicit(context)) {
             return this.findImplicitLocal(context);
@@ -286,6 +301,14 @@ public class LocalVariableDiscriminator {
         return this.findExplicitLocal(context);
     }
 
+    /**
+     * Find an implicit local, this means that we expect exactly 1 variable with
+     * the specified type in scope, if more than one is found then we throw an
+     * {@link InvalidImplicitDiscriminatorException}
+     * 
+     * @param context search context
+     * @return local variable index
+     */
     private int findImplicitLocal(final Context context) {
         int found = 0;
         int count = 0;
@@ -305,6 +328,13 @@ public class LocalVariableDiscriminator {
         throw new InvalidImplicitDiscriminatorException("Found " + count + " candidate variables but exactly 1 is required.");
     }
 
+    /**
+     * Find an explicit local variable in the local variable table. Returns -1
+     * if no variables match the discriminator
+     * 
+     * @param context search context
+     * @return variable index or -1 if not found
+     */
     private int findExplicitLocal(final Context context) {
         for (int index = context.baseArgIndex; index < context.locals.length; index++) {
             Local local = context.locals[index];
@@ -331,6 +361,12 @@ public class LocalVariableDiscriminator {
         return -1;
     }
     
+    /**
+     * Parse a local variable discriminator from the supplied annotation
+     * 
+     * @param annotation annotation to parse
+     * @return discriminator configured using values from the annoation
+     */
     public static LocalVariableDiscriminator parse(AnnotationNode annotation) {
         boolean argsOnly = ASMHelper.<Boolean>getAnnotationValue(annotation, "argsOnly", Boolean.FALSE).booleanValue();
         int ordinal = ASMHelper.<Integer>getAnnotationValue(annotation, "ordinal", -1);

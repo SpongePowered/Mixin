@@ -37,7 +37,7 @@ import java.util.jar.Manifest;
  * "Main" attribute cache for a URI container, mainly to avoid constantly
  * opening jar files just to read odd values out of the manifest.
  */
-class MainAttributes {
+final class MainAttributes {
     
     private static final Map<URI, MainAttributes> instances = new HashMap<URI, MainAttributes>();
     

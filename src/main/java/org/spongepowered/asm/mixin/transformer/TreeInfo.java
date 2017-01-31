@@ -104,7 +104,7 @@ abstract class TreeInfo {
      * @param name Original class name
      * @param transformedName Name of the class to load
      * @return raw class bytecode
-     * @throws IOException
+     * @throws IOException if an error occurs reading the class bytes
      */
     private static byte[] getClassBytes(String name, String transformedName) throws IOException {
         byte[] classBytes = Launch.classLoader.getClassBytes(name);
@@ -130,9 +130,9 @@ abstract class TreeInfo {
      * Since we obtain the class bytes with getClassBytes(), we need to apply
      * the transformers ourself
      * 
-     * @param name
-     * @param transformedName
-     * @param basicClass
+     * @param name class name
+     * @param transformedName transformed class name
+     * @param basicClass input class bytes
      * @return class bytecode after processing by all registered transformers
      *      except the excluded transformers
      */

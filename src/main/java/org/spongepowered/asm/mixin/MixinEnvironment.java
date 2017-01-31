@@ -75,7 +75,7 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Environment phase, deliberately not implemented as an enum
      */
-    public static class Phase {
+    public static final class Phase {
         
         /**
          * Not initialised phase 
@@ -132,6 +132,13 @@ public final class MixinEnvironment implements ITokenProvider {
             return this.name;
         }
 
+        /**
+         * Get a phase by name, returns <tt>null</tt> if no phases exist with
+         * the specified name
+         * 
+         * @param name phase name to lookup
+         * @return phase object or <tt>null</tt> if non existent
+         */
         public static Phase forName(String name) {
             for (Phase phase : Phase.phases) {
                 if (phase.name.equals(name)) {
@@ -527,8 +534,14 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     public static enum CompatibilityLevel {
         
+        /**
+         * Java 6 and above
+         */
         JAVA_6(6, Opcodes.V1_6, false),
         
+        /**
+         * Java 7 and above
+         */
         JAVA_7(7, Opcodes.V1_7, false) {
 
             @Override
@@ -538,6 +551,9 @@ public final class MixinEnvironment implements ITokenProvider {
             
         },
         
+        /**
+         * Java 8 and above
+         */
         JAVA_8(8, Opcodes.V1_8, true) {
 
             @Override
@@ -566,22 +582,46 @@ public final class MixinEnvironment implements ITokenProvider {
             this.maxCompatibleLevel = maxCompatibleLevel;
         }
 
+        /**
+         * Get whether this compatibility level is supported in the current
+         * environment
+         */
         boolean isSupported() {
             return true;
         }
         
+        /**
+         * Class version expected at this compatibility level
+         */
         public int classVersion() {
             return this.classVersion;
         }
         
+        /**
+         * Get whether this environment supports non-abstract methods in
+         * interfaces, true in Java 1.8 and above
+         */
         public boolean supportsMethodsInInterfaces() {
             return this.supportsMethodsInInterfaces;
         }
         
+        /**
+         * Get whether this level is the same or greater than the specified
+         * level
+         * 
+         * @param level level to compare to
+         * @return true if this level is equal or higher the supplied level
+         */
         public boolean isAtLeast(CompatibilityLevel level) {
-            return this.ver >= level.ver; 
+            return level == null || this.ver >= level.ver; 
         }
         
+        /**
+         * Get whether this level can be elevated to the specified level
+         * 
+         * @param level desired level
+         * @return true if this level supports elevation
+         */
         public boolean canElevateTo(CompatibilityLevel level) {
             if (level == null || this.maxCompatibleLevel == null) {
                 return true;
@@ -589,6 +629,12 @@ public final class MixinEnvironment implements ITokenProvider {
             return level.ver <= this.maxCompatibleLevel.ver;
         }
         
+        /**
+         * True if this level can support the specified level
+         * 
+         * @param level desired level
+         * @return true if the other level can be elevated to this level
+         */
         public boolean canSupport(CompatibilityLevel level) {
             if (level == null) {
                 return true;
@@ -925,7 +971,7 @@ public final class MixinEnvironment implements ITokenProvider {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends IEnvironmentTokenProvider> providerClass =
-                    (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, Launch.classLoader);
+                        (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, Launch.classLoader);
                 IEnvironmentTokenProvider provider = providerClass.newInstance();
                 this.registerTokenProvider(provider);
             } catch (Throwable th) {
@@ -1079,7 +1125,7 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Set the obfuscation context
      * 
-     * @param context
+     * @param context new context
      */
     public void setObfuscationContext(String context) {
         this.obfuscationContext = context;
@@ -1305,7 +1351,7 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Internal callback
      * 
-     * @param phase
+     * @param phase phase to go to 
      */
     static void gotoPhase(Phase phase) {
         if (phase == null || phase.ordinal < 0) {

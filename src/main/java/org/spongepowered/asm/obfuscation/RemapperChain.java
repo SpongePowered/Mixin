@@ -42,6 +42,12 @@ public class RemapperChain implements IRemapper {
         return String.format("RemapperChain[%d]", this.remappers.size());
     }
     
+    /**
+     * Add a new remapper to this chain
+     * 
+     * @param remapper remapper to add
+     * @return fluent interface
+     */
     public RemapperChain add(IRemapper remapper) {
         this.remappers.add(remapper);
         return this;

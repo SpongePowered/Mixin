@@ -102,6 +102,12 @@ public class BeforeInvoke extends InjectionPoint {
         return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase());
     }
 
+    /**
+     * Set the logging state for this injector
+     * 
+     * @param logging logging state
+     * @return fluent interface
+     */
     public BeforeInvoke setLogging(boolean logging) {
         this.log = logging;
         return this;

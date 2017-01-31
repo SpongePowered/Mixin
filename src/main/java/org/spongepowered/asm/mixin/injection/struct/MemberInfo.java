@@ -282,6 +282,9 @@ public class MemberInfo {
         return this.owner + "/" + this.name;
     }
     
+    /**
+     * Returns this MemberInfo as a java-style descriptor 
+     */
     public String toDescriptor() {
         if (this.desc == null) {
             return "";
@@ -290,6 +293,9 @@ public class MemberInfo {
         return new SignaturePrinter(this).setFullyQualified(true).toDescriptor();
     }
     
+    /**
+     * Returns the <em>constructor type</em> represented by this MemberInfo
+     */
     public String toCtorType() {
         if (this.unparsed == null) {
             return null;
@@ -311,6 +317,10 @@ public class MemberInfo {
         return this.desc != null ? this.desc : this.unparsed;
     }
 
+    /**
+     * Returns the <em>constructor descriptor</em> represented by this
+     * MemberInfo, returns null if no descriptor is present.
+     */
     public String toCtorDesc() {
         if (this.desc != null && this.desc.startsWith("(") && this.desc.indexOf(')') > -1) {
             return this.desc.substring(0, this.desc.indexOf(')') + 1) + "V";
@@ -319,6 +329,11 @@ public class MemberInfo {
         return null;
     }
     
+    /**
+     * Get the return type for this MemberInfo, if the decriptor is present,
+     * returns null if the descriptor is absent or if this MemberInfo represents
+     * a field
+     */
     public String getReturnType() {
         if (this.desc == null || this.desc.indexOf(')') == -1 || this.desc.indexOf('(') != 0 ) {
             return null;
@@ -331,10 +346,17 @@ public class MemberInfo {
         return returnType;
     }
 
+    /**
+     * Returns this MemberInfo as a {@link MappingField} or
+     * {@link MappingMethod}
+     */
     public IMapping<?> asMapping() {
         return this.isField() ? this.asFieldMapping() : this.asMethodMapping();
     }
     
+    /**
+     * Returns this MemberInfo as a mapping method
+     */
     public MappingMethod asMethodMapping() {
         if (!this.isFullyQualified()) {
             throw new MixinException("Cannot convert unqualified reference " + this + " to MethodMapping");
@@ -347,6 +369,9 @@ public class MemberInfo {
         return new MappingMethod(this.owner, this.name, this.desc);
     }
     
+    /**
+     * Returns this MemberInfo as a mapping field
+     */
     public MappingField asFieldMapping() {
         if (!this.isField()) {
             throw new MixinException("Cannot convert non-field reference " + this + " to FieldMapping");
@@ -620,12 +645,14 @@ public class MemberInfo {
         return new MemberInfo(name, owner, desc, matchAll, input);
     }
 
+    /**
+     * Return the supplied mapping parsed as a MemberInfo
+     * 
+     * @param mapping mapping to parse
+     * @return new MemberInfo
+     */
     public static MemberInfo fromMapping(IMapping<?> mapping) {
         return new MemberInfo(mapping);
     }
-    
-    public static void main(String[] args) {
-        MemberInfo m = MemberInfo.parseAndValidate(null); //"(Lfoo;III)Lfoo/bar/qcv;");
-        System.err.printf(">> [%s] [%s]\n", m.toCtorType(), m.toCtorDesc());
-    }
+
 }

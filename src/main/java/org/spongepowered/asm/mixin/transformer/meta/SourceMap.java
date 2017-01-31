@@ -135,6 +135,11 @@ public class SourceMap {
             }
         }
 
+        /**
+         * Append lines representing this File to the supplied StringBuilder
+         * 
+         * @param sb StringBuilder to append to
+         */
         public void appendLines(StringBuilder sb) {
             sb.append("1#").append(this.id)         // Map line number 1 (onwards) in file number <index>
               .append(",").append(this.size)        // repeated <file.size> times (eg. lines 1 to <file.size + 1>)
@@ -217,18 +222,48 @@ public class SourceMap {
         return this.sourceFile.replace(".java", "$mixin.java");
     }
     
+    /**
+     * Add a file to this SourceMap in the default stratum
+     * 
+     * @param classNode class node to read details from
+     * @return new File
+     */
     public File addFile(ClassNode classNode) {
         return this.addFile(this.defaultStratum, classNode);
     }
     
+    /**
+     * Add a file to this SourceMap in the specified stratum
+     * 
+     * @param stratumName name of the stratum to add to
+     * @param classNode class node to read file details from
+     * @return new File
+     */
     public File addFile(String stratumName, ClassNode classNode) {
         return this.addFile(stratumName, classNode.sourceFile, classNode.name + ".java", ASMHelper.getMaxLineNumber(classNode, 500, 50));
     }
     
-    public File addFile( String sourceFileName, String sourceFilePath, int size) {
+    /**
+     * Add a file to this SourceMap in the default stratum
+     * 
+     * @param sourceFileName source filename
+     * @param sourceFilePath path to source file
+     * @param size number of lines to allocate
+     * @return new File
+     */
+    public File addFile(String sourceFileName, String sourceFilePath, int size) {
         return this.addFile(this.defaultStratum, sourceFileName, sourceFilePath, size);
     }
     
+    /**
+     * Add a file to this SourceMap in the specified stratum
+     * 
+     * @param stratumName name of the stratum to add to
+     * @param sourceFileName source filename
+     * @param sourceFilePath path to source file
+     * @param size number of lines to allocate
+     * @return new File
+     */
     public File addFile(String stratumName, String sourceFileName, String sourceFilePath, int size) {
         Stratum stratum = this.strata.get(stratumName);
         if (stratum == null) {

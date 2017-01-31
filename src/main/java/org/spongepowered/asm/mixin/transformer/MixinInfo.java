@@ -479,7 +479,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         /**
          * True if this mixin class can actually be classloaded
          * 
-         * @return
+         * @return whether this subtype is directly classloadable (supports
+         *      classloader pinholing)
          */
         boolean isLoadable() {
             return false;
@@ -488,8 +489,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         /**
          * Validate a single target before adding
          * 
-         * @param targetName
-         * @param targetInfo
+         * @param targetName target class name
+         * @param targetInfo information about the target class
          */
         void validateTarget(String targetName, ClassInfo targetInfo) {
             boolean targetIsInterface = targetInfo.isInterface();
@@ -740,11 +741,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Internal ctor, called by {@link MixinConfig}
      * 
-     * @param parent
-     * @param mixinName
-     * @param runTransformers
-     * @param plugin 
-     * @param suppressPlugin 
+     * @param parent configuration which owns this mixin, the parent
+     * @param mixinName name of this mixin (class name stub)
+     * @param runTransformers true if this mixin should run transformers on its
+     *      bytecode when loading
+     * @param plugin mixin config companion plugin, may be null
+     * @param suppressPlugin true to suppress the plugin from filtering targets
+     *      of this mixin
      */
     MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin) {
         this.parent = parent;
@@ -805,8 +808,8 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Read the target class names from the {@link Mixin} annotation
      * 
-     * @param classNode
-     * @param suppressPlugin 
+     * @param classNode mixin classnode
+     * @param suppressPlugin true to suppress plugin filtering targets
      * @return target class list read from classNode
      */
     protected List<ClassInfo> readTargetClasses(MixinClassNode classNode, boolean suppressPlugin) {
@@ -896,7 +899,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Read the priority from the {@link Mixin} annotation
      * 
-     * @param classNode
+     * @param classNode mixin classnode
      * @return priority read from classNode
      */
     protected int readPriority(ClassNode classNode) {
@@ -1092,7 +1095,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Get a new mixin target context object for the specified target
      * 
-     * @param target
+     * @param target target class context
      * @return new context
      */
     MixinTargetContext createContextFor(TargetClassContext target) {
@@ -1101,10 +1104,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
 
     /**
-     * @param mixinClassName
-     * @param runTransformers
-     * @return
-     * @throws ClassNotFoundException 
+     * Load the mixin class bytes
+     * 
+     * @param mixinClassName mixin class name
+     * @param runTransformers true to run transformers on the loaded bytecode
+     * @return mixin bytecode
+     * @throws ClassNotFoundException if the mixin bytes could not be found
      */
     private byte[] loadMixinClass(String mixinClassName, boolean runTransformers) throws ClassNotFoundException {
         byte[] mixinBytes = null;

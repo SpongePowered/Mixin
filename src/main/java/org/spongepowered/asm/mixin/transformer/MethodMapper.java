@@ -74,6 +74,13 @@ public class MethodMapper {
         return this.info;
     }
     
+    /**
+     * Conforms an injector handler method
+     * 
+     * @param mixin owner mixin
+     * @param handler annotated injector handler method
+     * @param method method in target
+     */
     public void remapHandlerMethod(MixinInfo mixin, MethodNode handler, Method method) {
         if (!(handler instanceof MixinMethodNode) || !((MixinMethodNode)handler).isInjector()) {
             return;
@@ -92,6 +99,12 @@ public class MethodMapper {
         handler.name = method.renameTo(handlerName);
     }
     
+    /**
+     * Get the name for a handler method provided a source mixin method
+     * 
+     * @param method mixin method
+     * @return conformed handler name
+     */
     public String getHandlerName(MixinMethodNode method) {
         String prefix = InjectionInfo.getInjectorPrefix(method.getInjectorAnnotation());
         String classUID = MethodMapper.getClassUID(method.getOwner().getClassRef());

@@ -108,11 +108,14 @@ public class BeforeNew extends InjectionPoint {
         
         this.ordinal = data.getOrdinal();
         String target = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
-        MemberInfo member = MemberInfo.parseAndValidate(target, data.getMixin());
+        MemberInfo member = MemberInfo.parseAndValidate(target, data.getContext());
         this.target = member.toCtorType();
         this.desc = member.toCtorDesc();
     }
     
+    /**
+     * Returns whether this injection point has a constructor descriptor defined
+     */
     public boolean hasDescriptor() {
         return this.desc != null;
     }

@@ -110,6 +110,14 @@ public class CallbackInfo implements Cancellable {
         return CallbackInfo.class.getName();
     }
 
+    /**
+     * Gets the {@link CallbackInfo} class name to use for the specified return
+     * type. Currently returns {@link CallbackInfo} for void types and
+     * {@link CallbackInfoReturnable} for non-void types.
+     * 
+     * @param returnType return type of the target method
+     * @return CallbackInfo class name to use
+     */
     public static String getCallInfoClassName(Type returnType) {
         return (returnType.equals(Type.VOID_TYPE) ? CallbackInfo.class.getName() : CallbackInfoReturnable.class.getName()).replace('.', '/');
     }

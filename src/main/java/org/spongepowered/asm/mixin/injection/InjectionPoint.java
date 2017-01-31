@@ -600,6 +600,12 @@ public abstract class InjectionPoint {
         return point;
     }
 
+    /**
+     * Register an injection point class. The supplied class must be decorated
+     * with an {@link AtCode} annotation for registration purposes.
+     * 
+     * @param type injection point type to register
+     */
     public static void register(Class<? extends InjectionPoint> type) {
         AtCode code = type.<AtCode>getAnnotation(AtCode.class);
         if (code == null) {

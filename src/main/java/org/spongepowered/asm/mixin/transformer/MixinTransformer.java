@@ -333,8 +333,7 @@ public class MixinTransformer extends TreeTransformer {
                 MixinTransformer.logger.info("Attempting to load Fernflower decompiler{}", as ? " (Threaded mode)" : "");
                 String className = "org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + (as ? "Async" : "");
                 @SuppressWarnings("unchecked")
-                Class<? extends IDecompiler> clazz =
-                    (Class<? extends IDecompiler>)Class.forName(className);
+                Class<? extends IDecompiler> clazz = (Class<? extends IDecompiler>)Class.forName(className);
                 Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
                 IDecompiler decompiler = ctor.newInstance(outputPath);
                 MixinTransformer.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
@@ -779,7 +778,7 @@ public class MixinTransformer extends TreeTransformer {
      * Apply mixins for specified target class to the class described by the
      * supplied byte array.
      * 
-     * @param context 
+     * @param context target class context
      * @return class bytecode after application of mixins
      */
     private byte[] applyMixins(TargetClassContext context) {

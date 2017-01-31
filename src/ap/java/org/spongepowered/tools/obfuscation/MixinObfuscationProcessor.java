@@ -59,6 +59,8 @@ public abstract class MixinObfuscationProcessor extends AbstractProcessor {
 
     /**
      * Searches and catalogues all annotated mixin classes
+     * 
+     * @param roundEnv round environment
      */
     protected void processMixins(RoundEnvironment roundEnv) {
         this.mixins.onPassStarted();

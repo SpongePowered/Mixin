@@ -486,7 +486,7 @@ public class PrettyPrinter {
      * <code>printer.table("Column 1", 30, "Column 2", 20, Alignment.RIGHT);
      * </code>
      * 
-     * @param format
+     * @param format format string, see description
      * @return fluent interface
      */
     public PrettyPrinter table(Object... format) {

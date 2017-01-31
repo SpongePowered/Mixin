@@ -42,14 +42,29 @@ import com.google.common.collect.ImmutableList.Builder;
  */
 public final class ObfuscationType {
     
+    /**
+     * Available obfuscation types indexed by key
+     */
     private static final Map<String, ObfuscationType> types = new LinkedHashMap<String, ObfuscationType>();
     
+    /**
+     * Key for this type
+     */
     private final String key;
 
+    /**
+     * Descriptor contains the majority of the metadata for the obfuscation type
+     */
     private final ObfuscationTypeDescriptor descriptor;
     
+    /**
+     * Annotation Processor
+     */
     private final IMixinAnnotationProcessor ap;
     
+    /**
+     * Option provider
+     */
     private final IOptionProvider options;
     
     private ObfuscationType(ObfuscationTypeDescriptor descriptor, IMixinAnnotationProcessor ap) {
@@ -59,6 +74,9 @@ public final class ObfuscationType {
         this.options = ap;
     }
     
+    /**
+     * Create obfuscation environment instance for this obfuscation type
+     */
     public final ObfuscationEnvironment createEnvironment() {
         try {
             Class<? extends ObfuscationEnvironment> cls = this.descriptor.getEnvironmentType();
@@ -88,16 +106,25 @@ public final class ObfuscationType {
         return this.ap;
     }
     
+    /**
+     * Get whether this is ithe default obfuscation environment
+     */
     public boolean isDefault() {
         String defaultEnv = this.options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
         return (defaultEnv == null && this.key.equals(ObfuscationServiceMCP.SEARGE))
                 || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase()));
     }
     
+    /**
+     * Get whether this obfuscation type has data available
+     */
     public boolean isSupported() {
         return this.getInputFileNames().size() > 0;
     }
     
+    /**
+     * Get the input file names specified for this obfuscation type
+     */
     public List<String> getInputFileNames() {
         Builder<String> builder = ImmutableList.<String>builder();
         
@@ -116,24 +143,44 @@ public final class ObfuscationType {
         return builder.build();
     }
     
+    /**
+     * Get the output filenames specified for this obfuscation type
+     */
     public String getOutputFileName() {
         return this.options.getOption(this.descriptor.getOutputFileOption());
     }
 
+    /**
+     * All available obfuscation types
+     */
     public static Iterable<ObfuscationType> types() {
         return ObfuscationType.types.values();
     }
     
-    public static ObfuscationType create(ObfuscationTypeDescriptor config, IMixinAnnotationProcessor ap) {
-        String key = config.getKey();
+    /**
+     * Create a new obfuscation type from the supplied descriptor
+     * 
+     * @param descriptor obfuscation type metadata
+     * @param ap annotation processor
+     * @return new obfuscation type
+     */
+    public static ObfuscationType create(ObfuscationTypeDescriptor descriptor, IMixinAnnotationProcessor ap) {
+        String key = descriptor.getKey();
         if (ObfuscationType.types.containsKey(key)) {
             throw new IllegalArgumentException("Obfuscation type with key " + key + " was already registered");
         }
-        ObfuscationType type = new ObfuscationType(config, ap);
+        ObfuscationType type = new ObfuscationType(descriptor, ap);
         ObfuscationType.types.put(key, type);
         return type;
     }
     
+    /**
+     * Retrieve an obfuscation type by key
+     * 
+     * @param key obfuscation type key to retrieve
+     * @return obfuscation type or <tt>null</tt> if no matching type is
+     *      available
+     */
     public static ObfuscationType get(String key) {
         ObfuscationType type = ObfuscationType.types.get(key);
         if (type == null) {

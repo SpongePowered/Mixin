@@ -153,6 +153,9 @@ public final class LaunchClassLoaderUtil {
         }
     }
     
+    /**
+     * Get the classloader exclusions from the target classloader
+     */
     public Set<String> getClassLoaderExceptions() {
         if (this.classLoaderExceptions != null) {
             return this.classLoaderExceptions;
@@ -160,6 +163,9 @@ public final class LaunchClassLoaderUtil {
         return Collections.<String>emptySet();
     }
     
+    /**
+     * Get the transformer exclusions from the target classloader
+     */
     public Set<String> getTransformerExceptions() {
         if (this.transformerExceptions != null) {
             return this.transformerExceptions;

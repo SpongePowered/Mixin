@@ -43,8 +43,10 @@ public interface IObfuscationDataProvider {
      * owner class.
      * 
      * @param targetMember Member to search for
+     * @param <T> the type of the obfuscation mapping (MappingMethod for methods
      * @return ObfuscationData with remapped owner class corresponding to the
      *      original owner class
+     *      or String for fields)     
      */
     public abstract <T> ObfuscationData<T> getObfEntryRecursive(MemberInfo targetMember);
 
@@ -52,7 +54,9 @@ public interface IObfuscationDataProvider {
      * Resolves a field or method reference to an ObfuscationData set
      * 
      * @param targetMember member to search for
+     * @param <T> the type of the obfuscation mapping (MappingMethod for methods
      * @return obfuscation data (by type) for the supplied member
+     *      or String for fields)     
      */
     public abstract <T> ObfuscationData<T> getObfEntry(MemberInfo targetMember);
     
@@ -60,7 +64,9 @@ public interface IObfuscationDataProvider {
      * Resolves a field or method reference to an ObfuscationData set
      * 
      * @param mapping member to search for
+     * @param <T> the type of the obfuscation mapping (MappingMethod for methods
      * @return obfuscation data (by type) for the supplied member
+     *      or String for fields)     
      */
     public abstract <T> ObfuscationData<T> getObfEntry(IMapping<T> mapping);
 
@@ -78,23 +84,31 @@ public interface IObfuscationDataProvider {
 
     /**
      * Get an obfuscation mapping for a method
+     * 
+     * @param method method to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingMethod> getObfMethod(MemberInfo method);
 
     /**
      * Get an obfuscation mapping for a method if an explicit mapping exists.
      * Where no direct mapping exists, remap the descriptor of the method only.
+     * 
+     * @param method method to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method);
 
     /**
      * Get an obfuscation mapping for a method
+     * 
+     * @param method method to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingMethod> getObfMethod(MappingMethod method);
 
     /**
      * Get an obfuscation mapping for a method if an explicit mapping exists.
      * Where no direct mapping exists, remap the descriptor of the method only.
+     * 
+     * @param method method to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingMethod> getRemappedMethod(MappingMethod method);
 
@@ -112,21 +126,29 @@ public interface IObfuscationDataProvider {
 
     /**
      * Get an obfuscation mapping for a field
+     * 
+     * @param field field to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingField> getObfField(MemberInfo field);
 
     /**
      * Get an obfuscation mapping for a field
+     * 
+     * @param field field to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<MappingField> getObfField(MappingField field);
 
     /**
      * Get an obfuscation mapping for a class
+     * 
+     * @param type class type to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<String> getObfClass(TypeHandle type);
 
     /**
      * Get an obfuscation mapping for a class
+     * 
+     * @param className class name to fetch obfuscation mapping for
      */
     public abstract ObfuscationData<String> getObfClass(String className);
 

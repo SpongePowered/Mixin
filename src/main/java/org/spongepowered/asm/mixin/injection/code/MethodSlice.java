@@ -46,7 +46,7 @@ import com.google.common.base.Strings;
 /**
  * Stores information about a defined method slice for a particular injector.
  */
-public class MethodSlice {
+public final class MethodSlice {
     
     /**
      * A read-only wrapper for an {@link InsnList} which only allows the segment

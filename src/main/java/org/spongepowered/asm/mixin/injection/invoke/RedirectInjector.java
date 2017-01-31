@@ -266,7 +266,7 @@ public class RedirectInjector extends InvokeInjector {
             ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
             boolean wildcard = node.<Boolean>getDecoration(RedirectInjector.KEY_WILD).booleanValue();
             if (wildcard && meta.injected == 0) {
-              throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
+                throw new InvalidInjectionException(this.info, this.annotationType + " ctor invocation was not found in " + target);
             }
         }
     }
@@ -317,7 +317,6 @@ public class RedirectInjector extends InvokeInjector {
     private void injectAtFieldAccess(Target target, InjectionNode node) {
         final FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
         final int opCode = fieldNode.getOpcode();
-        final boolean staticField = opCode == Opcodes.GETSTATIC || opCode == Opcodes.PUTSTATIC;
         final Type ownerType = Type.getType("L" + fieldNode.owner + ";");
         final Type fieldType = Type.getType(fieldNode.desc);
         
@@ -330,7 +329,7 @@ public class RedirectInjector extends InvokeInjector {
             int fuzz = node.<Integer>getDecoration(RedirectInjector.KEY_FUZZ).intValue();
             this.injectAtArrayField(target, fieldNode, opCode, ownerType, fieldType, fuzz);
         } else {
-            this.injectAtScalarField(target, fieldNode, opCode, staticField, ownerType, fieldType);
+            this.injectAtScalarField(target, fieldNode, opCode, ownerType, fieldType);
         }
     }
 
@@ -373,6 +372,12 @@ public class RedirectInjector extends InvokeInjector {
      * regardless of whether it's a read or write because it just depends on the
      * actual handler signature, the correct arguments are already on the stack
      * thanks to the nature of xALOAD and xASTORE.
+     * 
+     * @param target target method
+     * @param fieldNode field node
+     * @param varNode array access node
+     * @param withArgs true if the descriptor includes captured arguments from
+     *      the target method signature
      */
     public void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs) {
         if (!this.isStatic) {
@@ -390,14 +395,20 @@ public class RedirectInjector extends InvokeInjector {
 
     /**
      * Redirect a field get or set
+     * 
+     * @param target target method
+     * @param fieldNode field access node
+     * @param opCode field access type
+     * @param ownerType type of the field owner
+     * @param fieldType field type
      */
-    public void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, boolean staticField, Type ownerType, Type fieldType) {
+    public void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType) {
         AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
         if (opCode == Opcodes.GETSTATIC || opCode == Opcodes.GETFIELD) {
-            invoke = this.injectAtGetField(insns, target, fieldNode, staticField, ownerType, fieldType);
+            invoke = this.injectAtGetField(insns, target, fieldNode, opCode == Opcodes.GETSTATIC, ownerType, fieldType);
         } else if (opCode == Opcodes.PUTSTATIC || opCode == Opcodes.PUTFIELD) {
-            invoke = this.injectAtPutField(insns, target, fieldNode, staticField, ownerType, fieldType);
+            invoke = this.injectAtPutField(insns, target, fieldNode, opCode == Opcodes.PUTSTATIC, ownerType, fieldType);
         } else {
             throw new InvalidInjectionException(this.info, "Unspported opcode " + ASMHelper.getOpcodeName(opCode) + " for " + this.info);
         }
@@ -466,6 +477,12 @@ public class RedirectInjector extends InvokeInjector {
     /**
      * Check that the handler descriptor matches the calculated descriptor for
      * the access being redirected.
+     * 
+     * @param desc computed descriptor
+     * @param target target method
+     * @param type redirector type in human-readable text, for error messages
+     * @return true if the descriptor was found and includes target method args,
+     *      false if the descriptor was found and does not capture target args
      */
     protected boolean checkDescriptor(String desc, Target target, String type) {
         if (this.methodNode.desc.equals(desc)) {

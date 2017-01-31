@@ -310,7 +310,7 @@ class MixinApplicatorStandard {
     /**
      * Mixin interfaces implemented by the mixin class onto the target class
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyInterfaces(MixinTargetContext mixin) {
         for (String interfaceName : mixin.getInterfaces()) {
@@ -324,7 +324,7 @@ class MixinApplicatorStandard {
     /**
      * Mixin misc attributes from mixin class onto the target class
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyAttributes(MixinTargetContext mixin) {
         if (mixin.shouldSetSourceFile()) {
@@ -336,7 +336,7 @@ class MixinApplicatorStandard {
     /**
      * Mixin class-level annotations on the mixin into the target class
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyAnnotations(MixinTargetContext mixin) {
         ClassNode sourceClass = mixin.getClassNode();
@@ -349,7 +349,7 @@ class MixinApplicatorStandard {
      * fields so that transformMethod can rename field references in the method
      * body.
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyFields(MixinTargetContext mixin) {
         this.mergeShadowFields(mixin);
@@ -384,7 +384,7 @@ class MixinApplicatorStandard {
     /**
      * Mixin methods from the mixin class into the target class
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyMethods(MixinTargetContext mixin) {
         for (MethodNode shadow : mixin.getShadowMethods()) {
@@ -413,7 +413,7 @@ class MixinApplicatorStandard {
             this.mergeMethod(mixin, mixinMethod);
         } else if (Constants.CLINIT.equals(mixinMethod.name)) {
             // Class initialiser insns get appended
-            this.appendInsns(mixinMethod);
+            this.appendInsns(mixin, mixinMethod);
         }
     }
 
@@ -576,9 +576,10 @@ class MixinApplicatorStandard {
      * Handles appending instructions from the source method to the target
      * method. Both methods must return void
      * 
-     * @param method
+     * @param mixin mixin target context 
+     * @param method source method
      */
-    protected final void appendInsns(MethodNode method) {
+    protected final void appendInsns(MixinTargetContext mixin, MethodNode method) {
         if (Type.getReturnType(method.desc) != Type.VOID_TYPE) {
             throw new IllegalArgumentException("Attempted to merge insns from a method which does not return void");
         }
@@ -611,7 +612,7 @@ class MixinApplicatorStandard {
      * (Attempts to) find and patch field initialisers from the mixin into the
      * target class
      * 
-     * @param mixin
+     * @param mixin mixin target context
      */
     protected void applyInitialisers(MixinTargetContext mixin) {
         // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
@@ -662,7 +663,7 @@ class MixinApplicatorStandard {
      * Identifies line numbers in the supplied ctor which correspond to the
      * start and end of the method body.
      * 
-     * @param ctor
+     * @param ctor constructor to scan
      * @return range indicating the line numbers of the specified constructor
      *      and the position of the superclass ctor invocation
      */
@@ -706,14 +707,16 @@ class MixinApplicatorStandard {
      * Get insns corresponding to the instance initialiser (hopefully) from the
      * supplied constructor.
      * 
-     * TODO Potentially rewrite this to be less horrible.
-     * 
-     * @param mixin
-     * @param ctor
+     * @param mixin mixin target context
+     * @param ctor constructor to inspect
      * @return initialiser bytecode extracted from the supplied constructor, or
      *      null if the constructor range could not be parsed
      */
     protected final Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
+        //
+        // TODO Potentially rewrite this to be less horrible.
+        //
+        
         // Find the range of line numbers which corresponds to the constructor body
         Range init = this.getConstructorRange(ctor);
         if (!init.isValid()) {
@@ -781,8 +784,9 @@ class MixinApplicatorStandard {
     /**
      * Inject initialiser code into the target constructor
      * 
-     * @param ctor
-     * @param initialiser
+     * @param mixin mixin target context
+     * @param ctor target constructor
+     * @param initialiser initialiser instructions
      */
     protected final void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
         Map<LabelNode, LabelNode> labels = ASMHelper.cloneLabels(ctor.instructions);
@@ -901,8 +905,8 @@ class MixinApplicatorStandard {
     /**
      * Check visibility before merging a mixin method
      * 
-     * @param mixin
-     * @param mixinMethod
+     * @param mixin mixin target context
+     * @param mixinMethod method to check
      */
     protected void checkMethodVisibility(MixinTargetContext mixin, MethodNode mixinMethod) {
         if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)

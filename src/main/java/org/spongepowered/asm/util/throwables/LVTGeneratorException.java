@@ -27,8 +27,8 @@ package org.spongepowered.asm.util.throwables;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Exception thrown when something goes horribly wrong whilst <s>summoning the
- * antichrist</s> generating the LVT for a target method.
+ * Exception thrown when something goes horribly wrong whilst <del>summoning the
+ * antichrist</del> generating the LVT for a target method.
  */
 public class LVTGeneratorException extends MixinException {
 

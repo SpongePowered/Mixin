@@ -65,7 +65,7 @@ import org.spongepowered.asm.util.ASMHelper;
  * </pre>
  * </blockquote>
  * 
- * <p>Matching array access:<p>
+ * <p>Matching array access:</p>
  * <p>For array fields, it is possible to match field accesses followed by a
  * corresponding array element <em>get</em> or <em>set</em> operation. To enable
  * this behaviour specify the <tt>array</tt> named-argument with the desired
@@ -86,6 +86,9 @@ import org.spongepowered.asm.util.ASMHelper;
 @AtCode("FIELD")
 public class BeforeFieldAccess extends BeforeInvoke {
     
+    /**
+     * Default fuzz factor for searching for array access opcodes
+     */
     public static final int ARRAY_SEARCH_FUZZ_DEFAULT = 8;
 
     /**
@@ -153,6 +156,20 @@ public class BeforeFieldAccess extends BeforeInvoke {
         return super.addInsn(insns, nodes, insn);
     }
     
+    /**
+     * Searches for an array access instruction in the supplied instruction list
+     * which is within <tt>searchRange</tt> instructions of the supplied field
+     * instruction. Searching halts if the search range is exhausted, if an
+     * {@link Opcodes#ARRAYLENGTH} opcode is encountered immediately after the
+     * specified access, if a matching field access is found, or if the end of 
+     * the method is reached.
+     * 
+     * @param insns Instruction list to search
+     * @param fieldNode Field instruction to search from
+     * @param opcode array access opcode to search for
+     * @param searchRange search range
+     * @return matching opcode or <tt>null</tt> if not matched
+     */
     public static AbstractInsnNode findArrayNode(InsnList insns, FieldInsnNode fieldNode, int opcode, int searchRange) {
         int pos = 0;
         for (Iterator<AbstractInsnNode> iter = insns.iterator(insns.indexOf(fieldNode) + 1); iter.hasNext();) {

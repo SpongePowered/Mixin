@@ -73,15 +73,15 @@ public class ModifyVariableInjector extends Injector {
      */
     abstract static class ContextualInjectionPoint extends InjectionPoint {
         
-        protected final IMixinContext mixin;
+        protected final IMixinContext context;
 
-        ContextualInjectionPoint(IMixinContext mixin) {
-            this.mixin = mixin;
+        ContextualInjectionPoint(IMixinContext context) {
+            this.context = context;
         }
 
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
-            throw new InvalidInjectionException(this.mixin, "STORE injection point must be used in conjunction with @ModifyVariable");
+            throw new InvalidInjectionException(this.context, "STORE injection point must be used in conjunction with @ModifyVariable");
         }
 
         abstract boolean find(Target target, Collection<AbstractInsnNode> nodes);
@@ -100,7 +100,8 @@ public class ModifyVariableInjector extends Injector {
 
     /**
      * @param info Injection info
-     * @param print
+     * @param print True to print this injector's discovered LVT
+     * @param discriminator discriminator
      */
     public ModifyVariableInjector(InjectionInfo info, boolean print, LocalVariableDiscriminator discriminator) {
         super(info);

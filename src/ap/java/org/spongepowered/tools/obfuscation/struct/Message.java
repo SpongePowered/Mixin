@@ -72,6 +72,12 @@ public class Message {
         this.value = value;
     }
 
+    /**
+     * Send this message to the supplied message
+     * 
+     * @param messager messager to send to
+     * @return fluent interface
+     */
     public Message sendTo(Messager messager) {
         if (this.value != null) {
             messager.printMessage(this.kind, this.msg, this.element, this.annotation, this.value);
@@ -85,40 +91,63 @@ public class Message {
         return this;
     }
 
-    
+    /**
+     * Get the message kind
+     */
     public Diagnostic.Kind getKind() {
         return this.kind;
     }
-
     
+    /**
+     * Set the message kind
+     * 
+     * @param kind message kind
+     * @return fluent interface
+     */
     public Message setKind(Diagnostic.Kind kind) {
         this.kind = kind;
         return this;
     }
-
     
+    /**
+     * Get the message text
+     * 
+     * @return fluent interface
+     */
     public CharSequence getMsg() {
         return this.msg;
     }
-
     
+    /**
+     * Set the message text
+     * 
+     * @param msg message text
+     * @return fluent interface
+     */
     public Message setMsg(CharSequence msg) {
         this.msg = msg;
         return this;
     }
-
     
+    /**
+     * Get the target element
+     */
     public Element getElement() {
         return this.element;
     }
-
     
+    /**
+     * Get the target annotation
+     */
     public AnnotationMirror getAnnotation() {
         return this.annotation;
     }
-
     
+    /**
+     * Get the target annotation value
+     */
     public AnnotationValue getValue() {
         return this.value;
     }
+
 }

@@ -62,7 +62,7 @@ import net.minecraft.launchwrapper.Launch;
 /**
  * Mixin configuration bundle
  */
-class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
+final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     
     /**
      * Wrapper for injection options
@@ -738,7 +738,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Check whether this configuration bundle has a mixin for the specified
      * class
      * 
-     * @param targetClass
+     * @param targetClass target class
      * @return true if this bundle contains any mixins for the specified target
      */
     public boolean hasMixinsFor(String targetClass) {
@@ -748,7 +748,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Get mixins for the specified target class
      * 
-     * @param targetClass
+     * @param targetClass target class
      * @return mixins for the specified target
      */
     public List<MixinInfo> getMixinsFor(String targetClass) {
@@ -805,7 +805,7 @@ class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Factory method, creates a new mixin configuration bundle from the
      * specified configFile, which must be accessible on the classpath
      * 
-     * @param configFile
+     * @param configFile configuration file to load
      * @param outer fallback environment
      * @return new Config
      */

@@ -31,11 +31,10 @@ import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.ASMHelper;
 
 /**
- * Reference to a field or method that also includes invocation
- * instructions.
+ * Reference to a field or method that also includes invocation instructions.
  *
- * To instances are defined to be equal if they both refer to the same method
- * and have the same invocation instructions.
+ * <p>To instances are defined to be equal if they both refer to the same method
+ * and have the same invocation instructions.</p>
  */
 public abstract class MemberRef {
 

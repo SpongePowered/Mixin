@@ -41,6 +41,9 @@ import org.spongepowered.asm.util.ASMHelper;
  */
 public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
+    /**
+     * Target class node
+     */
     public final ClassNode classNode;
 
     /**
@@ -177,8 +180,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     }
 
     /**
-     * Allocate a number of new stack variables for this method, returns the
-     * first stack index of the allocated range
+     * Allocate a number of new local variables for this method
      * 
      * @param locals number of locals to allocate
      */
@@ -186,16 +188,33 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.setMaxLocals(this.maxLocals + locals);
     }
 
+    /**
+     * Set the maxlocals for this target to the specified value, the specfied
+     * value must be higher than the original max locals
+     * 
+     * @param maxLocals max locals value to set
+     */
     public void setMaxLocals(int maxLocals) {
         if (maxLocals > this.method.maxLocals) {
             this.method.maxLocals = maxLocals;
         }
     }
 
+    /**
+     * Allocate a number of new stack variables for this method
+     * 
+     * @param stack number of stack entries to allocate
+     */
     public void addToStack(int stack) {
         this.setMaxStack(this.maxStack + stack);
     }
 
+    /**
+     * Set the max stack size for this target to the specified value, the
+     * specfied value must be higher than the original max stack
+     * 
+     * @param maxStack max stack value to set
+     */
     public void setMaxStack(int maxStack) {
         if (maxStack > this.method.maxStack) {
             this.method.maxStack = maxStack;
@@ -290,14 +309,29 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         return this.toString().compareTo(o.toString());
     }
 
+    /**
+     * Return the index of the specified instruction in this instruction list
+     * 
+     * @param insn instruction to locate, must exist in the target
+     * @return opcode index
+     */
     public int indexOf(AbstractInsnNode insn) {
         return this.insns.indexOf(insn);
     }
     
+    /**
+     * Return the instruction at the specified index
+     * 
+     * @param index opcode index
+     * @return requested instruction
+     */
     public AbstractInsnNode get(int index) {
         return this.insns.get(index);
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Iterable#iterator()
+     */
     @Override
     public Iterator<AbstractInsnNode> iterator() {
         return this.insns.iterator();
@@ -337,6 +371,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param location Instruction to replace
      * @param champion Instruction which notionally replaces the original insn
      * @param before Instructions to actually insert (must contain champion)
+     * @param after Instructions to insert after the specified location
      */
     public void wrapNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList before, InsnList after) {
         this.insns.insertBefore(location, before);

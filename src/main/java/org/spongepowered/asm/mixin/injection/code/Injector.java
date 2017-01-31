@@ -159,6 +159,12 @@ public abstract class Injector {
         myNodes.add(target.injectionNodes.add(node));
     }
     
+    /**
+     * Performs the injection on the specified target
+     * 
+     * @param target target to inject into
+     * @param nodes selected nodes
+     */
     public final void inject(Target target, List<InjectionNode> nodes) {
         for (InjectionNode node : nodes) {
             if (node.isRemoved()) {
@@ -270,10 +276,26 @@ public abstract class Injector {
         return "(" + Joiner.on("").join(args) + ")";
     }
     
+    /**
+     * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
+     * type.
+     * 
+     * @param from type to coerce from
+     * @param to type to coerce to
+     * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
+     */
     public static boolean canCoerce(Type from, Type to) {
         return Injector.canCoerce(from.getDescriptor(), to.getDescriptor());
     }
     
+    /**
+     * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
+     * type.
+     * 
+     * @param from type to coerce from
+     * @param to type to coerce to
+     * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
+     */
     public static boolean canCoerce(String from, String to) {
         if (from.length() > 1 || to.length() > 1) {
             return false;
@@ -282,6 +304,14 @@ public abstract class Injector {
         return Injector.canCoerce(from.charAt(0), to.charAt(0));
     }
 
+    /**
+     * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
+     * type.
+     * 
+     * @param from type to coerce from
+     * @param to type to coerce to
+     * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
+     */
     public static boolean canCoerce(char from, char to) {
         return to == 'I' && "IBSCZ".indexOf(from) > -1;
     }

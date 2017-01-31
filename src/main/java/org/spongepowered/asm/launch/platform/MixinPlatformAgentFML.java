@@ -88,7 +88,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
     private Class<?> clCoreModManager;
 
     /**
-     * @param uri
+     * @param manager platform manager
+     * @param uri URI of the resource for this agent
      */
     public MixinPlatformAgentFML(MixinPlatformManager manager, URI uri) {
         super(manager, uri);

@@ -59,7 +59,7 @@ public interface IMixinPlatformAgent {
     /**
      * Called from <tt>injectIntoClassLoader</tt> in the parent tweaker
      * 
-     * @param classLoader
+     * @param classLoader classLoader to inject into
      */
     public abstract void injectIntoClassLoader(LaunchClassLoader classLoader);
     

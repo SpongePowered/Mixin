@@ -101,15 +101,18 @@ public class InjectorTarget {
     }
 
     /**
-     * Get the slice instructions for the specified 
+     * Get the slice instructions for the specified injection point
      * 
-     * @param injectionPoint
+     * @param injectionPoint injection point to fetch slice for
      * @return slice
      */
     public InsnList getSlice(InjectionPoint injectionPoint) {
         return this.getSlice(injectionPoint.getSlice());
     }
     
+    /**
+     * Dispose all cached instruction lists
+     */
     public void dispose() {
         for (ReadOnlyInsnList insns : this.cache.values()) {
             insns.dispose();

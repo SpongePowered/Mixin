@@ -93,10 +93,24 @@ public class AccessorInfo extends SpecialMethodInfo {
             this.expectedPrefixes = expectedPrefixes;
         }
         
+        /**
+         * Returns true if the supplied prefix string is an allowed prefix for
+         * this accessor type
+         * 
+         * @param prefix prefix to check
+         * @return true if the expected prefix set contains the supplied value
+         */
         public boolean isExpectedPrefix(String prefix) {
             return this.expectedPrefixes.contains(prefix);
         }
         
+        /**
+         * Returns all the expected prefixes for this accessor type as a string
+         * for debugging/error message purposes
+         * 
+         * @return string representation of expected prefixes for this accessor
+         *      type
+         */
         public String getExpectedPrefixes() {
             return this.expectedPrefixes.toString();
         }
@@ -203,11 +217,34 @@ public class AccessorInfo extends SpecialMethodInfo {
         return MemberInfo.parse(name, this.mixin).name;
     }
 
+    /**
+     * Uses the name of this accessor method and the calculated accessor type to
+     * try and inflect the name of the target field or method. This allows a
+     * method named <tt>getFoo</tt> to be inflected to a target named
+     * <tt>foo</tt> for example.  
+     */
     protected String inflectTarget() {
         return AccessorInfo.inflectTarget(this.method.name, this.type, this.toString(), this.mixin,
                 this.mixin.getEnvironment().getOption(Option.DEBUG_VERBOSE));
     }
 
+    /**
+     * Uses the name of an accessor method and the accessor type to try and
+     * inflect the name of the target field or method. This allows a method
+     * named <tt>getFoo</tt> to be inflected to a target named <tt>foo</tt> for
+     * example.  
+     * 
+     * @param accessorName Name of the accessor method
+     * @param accessorType Type of accessor being processed, this is calculated
+     *      from the method signature (<tt>void</tt> methods being setters,
+     *      methods with return types being getters)
+     * @param accessorDescription description of the accessor to include in
+     *      error messages
+     * @param context Mixin context
+     * @param verbose Emit warnings when accessor prefix doesn't match type
+     * @return inflected target member name or <tt>null</tt> if name cannot be
+     *      inflected 
+     */
     public static String inflectTarget(String accessorName, AccessorType accessorType, String accessorDescription,
             IMixinContext context, boolean verbose) {
         Matcher nameMatcher = AccessorInfo.PATTERN_ACCESSOR.matcher(accessorName);
@@ -303,6 +340,7 @@ public class AccessorInfo extends SpecialMethodInfo {
      * fields and methods.
      * 
      * @param nodes Node list to search (method/field list)
+     * @param <TNode> node type
      * @return best match
      */
     protected <TNode> TNode findTarget(List<TNode> nodes) {

@@ -48,6 +48,9 @@ public final class SupportedOptions {
     
     private SupportedOptions() {}
 
+    /**
+     * Return all supported options
+     */
     public static Set<String> getAllOptions() {
         Builder<String> options = ImmutableSet.<String>builder();
         options.add(

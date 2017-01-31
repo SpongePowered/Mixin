@@ -47,8 +47,15 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
  */
 public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     
+    /**
+     * Data points stored in this struct, entries are stored by type
+     */
     private final Map<ObfuscationType, T> data = new HashMap<ObfuscationType, T>();
     
+    /**
+     * Default obfuscation value to return when an obfuscation entry is
+     * requested but not present in the map
+     */
     private final T defaultValue;
     
     public ObfuscationData() {
@@ -59,24 +66,46 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
         this.defaultValue = defaultValue;
     }
     
+    /**
+     * Add an entry to the map
+     * 
+     * @param type obfuscation type
+     * @param value new entry
+     */
     public void add(ObfuscationType type, T value) {
         this.data.put(type, value);
     }
 
+    /**
+     * Returns true if this store contains no entries
+     */
     public boolean isEmpty() {
         return this.data.isEmpty();
     }
     
+    /**
+     * Get the obfuscation entry for the specified obfuscation type, returns the
+     * default (if present) if no entry is found for the specified type
+     * 
+     * @param type obfuscation type
+     * @return obfuscation entry or default value if absent
+     */
     public T get(ObfuscationType type) {
         T value = this.data.get(type);
         return value != null ? value : this.defaultValue;
     }
 
+    /* (non-Javadoc)
+     * @see java.lang.Iterable#iterator()
+     */
     @Override
     public Iterator<ObfuscationType> iterator() {
         return this.data.keySet().iterator();
     }
     
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
     @Override
     public String toString() {
         return String.format("ObfuscationData[%sDEFAULT=%s]", this.listValues(), this.defaultValue);

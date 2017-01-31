@@ -1265,7 +1265,7 @@ public class ClassSignature {
     @Override
     public String toString() {
         while (this.rawInterfaces.size() > 0) {
-             this.addRawInterface(this.rawInterfaces.remove());
+            this.addRawInterface(this.rawInterfaces.remove());
         }
         
         StringBuilder sb = new StringBuilder();

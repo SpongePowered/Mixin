@@ -197,8 +197,8 @@ public class MixinAgent implements IHotSwap {
     /**
      * Initialize the java agent
      *
-     * This will be called automatically if the jar is in a -javaagent java
-     * command line argument
+     * <p>This will be called automatically if the jar is in a -javaagent java
+     * command line argument</p>
      *
      * @param arg Ignored
      * @param instrumentation Instance to use to transform the mixins
@@ -211,8 +211,8 @@ public class MixinAgent implements IHotSwap {
     /**
      * Initialize the java agent
      *
-     * This will be called automatically if the java agent is loaded after jvm
-     * startup
+     * <p>This will be called automatically if the java agent is loaded after
+     * JVVM startup</p>
      *
      * @param arg Ignored
      * @param instrumentation Instance to use to re-define the mixins

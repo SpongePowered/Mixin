@@ -143,6 +143,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * 
          * @param key meta key
          * @param value meta value
+         * @param <V> value type
          */
         public <V> InjectionNode decorate(String key, V value) {
             if (this.decorations == null) {
@@ -158,7 +159,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * @param key meta key
          * @return true if the specified decoration exists
          */
-        public <K> boolean hasDecoration(K key) {
+        public boolean hasDecoration(String key) {
             return this.decorations != null && this.decorations.get(key) != null;
         }
         
@@ -167,6 +168,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * 
          * @param key meta key
          * @return decoration value or null if absent
+         * @param <V> value type
          */
         @SuppressWarnings("unchecked")
         public <V> V getDecoration(String key) {
@@ -186,7 +188,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          */
         @Override
         public String toString() {
-            return String.format("InjectionNode[%s]", ASMHelper.getNodeDescriptionForDebug(this.currentTarget).replaceAll("\\s+", " "));
+            return String.format("InjectionNode[%s]", ASMHelper.describeNode(this.currentTarget).replaceAll("\\s+", " "));
         }
         
     }

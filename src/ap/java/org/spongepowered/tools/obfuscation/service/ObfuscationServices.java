@@ -38,7 +38,7 @@ import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 /**
  * Obfuscation service manager
  */
-public class ObfuscationServices {
+public final class ObfuscationServices {
 
     /**
      * Singleton
@@ -74,6 +74,8 @@ public class ObfuscationServices {
     
     /**
      * Initialise services
+     * 
+     * @param ap annotation processor
      */
     public void initProviders(IMixinAnnotationProcessor ap) {
         try {
@@ -102,6 +104,9 @@ public class ObfuscationServices {
         }
     }
 
+    /**
+     * Get the options supported by all available providers
+     */
     public Set<String> getSupportedOptions() {
         Set<String> supportedOptions = new HashSet<String>();
         for (IObfuscationService provider : this.serviceLoader) {
@@ -113,6 +118,12 @@ public class ObfuscationServices {
         return supportedOptions;
     }
     
+    /**
+     * Get the service instance for the specified class from the service loader
+     * 
+     * @param serviceClass service class
+     * @return service instance or null if no matching services were loaded
+     */
     public IObfuscationService getService(Class<? extends IObfuscationService> serviceClass) {
         for (IObfuscationService service : this.serviceLoader) {
             if (serviceClass.getName().equals(service.getClass().getName())) {

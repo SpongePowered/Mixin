@@ -36,6 +36,10 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
 
+    /**
+     * @param manager platform manager
+     * @param uri URI of the resource for this agent
+     */
     public MixinPlatformAgentDefault(MixinPlatformManager manager, URI uri) {
         super(manager, uri);
     }

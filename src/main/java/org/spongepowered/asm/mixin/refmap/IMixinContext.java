@@ -53,10 +53,28 @@ public interface IMixinContext {
      */
     public abstract ReferenceMapper getReferenceMapper();
 
+    /**
+     * Retrieve the value of the specified <tt>option</tt> from the environment
+     * this mixin belongs to.
+     * 
+     * @param option option to check
+     * @return option value
+     */
     public abstract boolean getOption(Option option);
 
+    /**
+     * Get the priority of the mixin
+     */
     public abstract int getPriority();
 
-    public abstract Target getTargetMethod(MethodNode into);
+    /**
+     * Obtain a {@link Target} method handle for a method in the target, this is
+     * used by consumers to manipulate the bytecode in a target method in a
+     * controlled manner.
+     * 
+     * @param method method node to wrap
+     * @return target method
+     */
+    public abstract Target getTargetMethod(MethodNode method);
 
 }

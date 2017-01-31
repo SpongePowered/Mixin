@@ -78,7 +78,7 @@ import com.google.common.collect.ImmutableList;
  * Mixin info manager, stores all of the mixin info during processing and also
  * manages access to the mappings
  */
-class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
+final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider, ITypeHandleProvider, IJavadocProvider {
     
     private static final String MAPID_SYSTEM_PROPERTY = "mixin.target.mapid";
     

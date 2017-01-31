@@ -49,7 +49,7 @@ import com.google.common.io.Files;
  * Serialisable map of classes to their associated mixins, used so that we can
  * pass target information for supermixins from one compiler session to another
  */
-public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
+public final class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
 
     private static final long serialVersionUID = 1L;
     
@@ -68,7 +68,7 @@ public class TargetMap extends HashMap<TypeReference, Set<TypeReference>> {
     /**
      * Create a TargetMap with the specified session ID
      * 
-     * @param sessionId
+     * @param sessionId session id
      */
     private TargetMap(String sessionId) {
         this.sessionId = sessionId;

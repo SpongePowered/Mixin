@@ -43,14 +43,32 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface At {
+    
     /**
      * <b>Shift</b> is used to shift resulting opcodes
      */
     public enum Shift {
+        
+        /**
+         * Do not shift the returned opcodes
+         */
         NONE,
+        
+        /**
+         * Shift the returned opcodes back one instruction 
+         */
         BEFORE,
+        
+        /**
+         * Shift the returned opcodes forward one instruction 
+         */
         AFTER,
+        
+        /**
+         * Shift the returned opcodes by the amount specified in {@link At#by} 
+         */
         BY
+        
     }
     
     /**
@@ -110,7 +128,7 @@ public @interface At {
     /**
      * <p>The <b>named arguments</b> list is used to expand the scope of the
      * annotation beyond the fixed values below in order to accommodate the
-     * needs of custom injection point classes.
+     * needs of custom injection point classes.</p>
      * 
      * @return Named arguments for the injection point
      */

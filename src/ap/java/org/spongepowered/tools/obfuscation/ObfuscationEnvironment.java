@@ -143,7 +143,7 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
         
             if (this.inFileNames == null) {
                 this.ap.printMessage(Kind.ERROR, "The " + this.type.getConfig().getInputFileOption()
-                    + " argument was not supplied, obfuscation processing will not occur");
+                        + " argument was not supplied, obfuscation processing will not occur");
                 return false;
             }
             

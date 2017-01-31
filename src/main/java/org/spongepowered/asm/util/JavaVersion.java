@@ -36,6 +36,9 @@ public abstract class JavaVersion {
     
     private JavaVersion() {}
     
+    /**
+     * Get the current java version, calculates if necessary
+     */
     public static double current() {
         if (JavaVersion.current == 0.0) {
             JavaVersion.current = JavaVersion.resolveCurrentVersion();

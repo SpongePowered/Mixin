@@ -188,7 +188,7 @@ class MixinPreProcessorStandard {
     /**
      * Run the second pass, attach to the specified context
      * 
-     * @param context
+     * @param context mixin target context
      */
     MixinPreProcessorStandard attach(MixinTargetContext context) {
         if (this.attached) {
@@ -474,8 +474,8 @@ class MixinPreProcessorStandard {
                 boolean isFinal = field.isDecoratedFinal();
                 if (this.verboseLogging && ASMHelper.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
-                        ? "@Shadow field {}::{} is decorated with @Final but target is not final"
-                        : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
+                            ? "@Shadow field {}::{} is decorated with @Final but target is not final"
+                            : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
                     MixinPreProcessorStandard.logger.warn(message, this.mixin, mixinField.name);
                 }
 
