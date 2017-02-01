@@ -310,7 +310,7 @@ public final class ConstraintParser {
      * @return parsed constraint
      */
     public static Constraint parse(AnnotationNode annotation) {
-        String constraints = ASMHelper.getAnnotationValue(annotation, "constraints", "");
+        String constraints = Annotations.getValue(annotation, "constraints", "");
         return ConstraintParser.parse(constraints);
     }
 

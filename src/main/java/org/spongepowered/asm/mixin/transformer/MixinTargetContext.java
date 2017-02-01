@@ -66,6 +66,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
 
@@ -217,7 +218,7 @@ public class MixinTargetContext implements IMixinContext {
         this.mergedMethods.add(method);
         this.targetClassInfo.addMethod(method);
         
-        ASMHelper.setVisibleAnnotation(method, MixinMerged.class,
+        Annotations.setVisible(method, MixinMerged.class,
                 "mixin", this.getClassName(),
                 "priority", this.getPriority(),
                 "sessionId", this.sessionId);
@@ -431,7 +432,7 @@ public class MixinTargetContext implements IMixinContext {
      */
     private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
-        if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) != null) {
+        if (Annotations.getInvisible(method, SoftOverride.class) != null) {
             ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, SearchType.SUPER_CLASSES_ONLY,
                     Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
@@ -661,7 +662,7 @@ public class MixinTargetContext implements IMixinContext {
                     + " is private or static");
         }
         
-        if (ASMHelper.getInvisibleAnnotation(method, SoftOverride.class) == null) {
+        if (Annotations.getInvisible(method, SoftOverride.class) == null) {
             throw new InvalidMixinException(this, "Illegal imaginary super access: method " + method.name + method.desc
                     + " is not decorated with @SoftOverride");
         }
@@ -839,7 +840,7 @@ public class MixinTargetContext implements IMixinContext {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(method.name);
         if (annotation != null) {
-            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(annotation, "aliases");
+            List<String> aka = Annotations.<List<String>>getValue(annotation, "aliases");
             if (aka != null) {
                 aliases.addAll(aka);
             }
@@ -865,7 +866,7 @@ public class MixinTargetContext implements IMixinContext {
         Deque<String> aliases = new LinkedList<String>();
         aliases.add(field.name);
         if (shadow != null) {
-            List<String> aka = ASMHelper.<List<String>>getAnnotationValue(shadow, "aliases");
+            List<String> aka = Annotations.<List<String>>getValue(shadow, "aliases");
             if (aka != null) {
                 aliases.addAll(aka);
             }

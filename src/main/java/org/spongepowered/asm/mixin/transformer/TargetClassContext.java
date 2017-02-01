@@ -40,6 +40,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 
 /**
@@ -297,17 +298,17 @@ class TargetClassContext {
             return;
         }
 
-        AnnotationNode classDebugAnnotation = ASMHelper.getVisibleAnnotation(this.classNode, Debug.class);
+        AnnotationNode classDebugAnnotation = Annotations.getVisible(this.classNode, Debug.class);
         if (classDebugAnnotation != null) {
-            this.forceExport = Boolean.TRUE.equals(ASMHelper.getAnnotationValue(classDebugAnnotation, "export"));
-            if (Boolean.TRUE.equals(ASMHelper.getAnnotationValue(classDebugAnnotation, "print"))) {
+            this.forceExport = Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "export"));
+            if (Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "print"))) {
                 ASMHelper.textify(this.classNode, System.err);
             }
         }
         
         for (MethodNode method : this.classNode.methods) {
-            AnnotationNode methodDebugAnnotation = ASMHelper.getVisibleAnnotation(method, Debug.class);
-            if (methodDebugAnnotation != null && Boolean.TRUE.equals(ASMHelper.getAnnotationValue(methodDebugAnnotation, "print"))) {
+            AnnotationNode methodDebugAnnotation = Annotations.getVisible(method, Debug.class);
+            if (methodDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<String>getValue(methodDebugAnnotation, "print"))) {
                 ASMHelper.textify(method, System.err);
             }
         }

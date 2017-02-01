@@ -38,6 +38,7 @@ import org.spongepowered.asm.lib.tree.LocalVariableNode;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator.Context.Local;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -368,12 +369,12 @@ public class LocalVariableDiscriminator {
      * @return discriminator configured using values from the annoation
      */
     public static LocalVariableDiscriminator parse(AnnotationNode annotation) {
-        boolean argsOnly = ASMHelper.<Boolean>getAnnotationValue(annotation, "argsOnly", Boolean.FALSE).booleanValue();
-        int ordinal = ASMHelper.<Integer>getAnnotationValue(annotation, "ordinal", -1);
-        int index = ASMHelper.<Integer>getAnnotationValue(annotation, "index", -1);
+        boolean argsOnly = Annotations.<Boolean>getValue(annotation, "argsOnly", Boolean.FALSE).booleanValue();
+        int ordinal = Annotations.<Integer>getValue(annotation, "ordinal", -1);
+        int index = Annotations.<Integer>getValue(annotation, "index", -1);
         
         Set<String> names = new HashSet<String>();
-        List<String> namesList = ASMHelper.<List<String>>getAnnotationValue(annotation, "name", (List<String>)null);
+        List<String> namesList = Annotations.<List<String>>getValue(annotation, "name", (List<String>)null);
         if (namesList != null) {
             names.addAll(namesList);
         }

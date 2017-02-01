@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInjector;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 import com.google.common.base.Strings;
 
@@ -46,9 +46,9 @@ public class CallbackInjectionInfo extends InjectionInfo {
 
     @Override
     protected Injector parseInjector(AnnotationNode injectAnnotation) {
-        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", Boolean.FALSE);
-        LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
-        String identifier = ASMHelper.<String>getAnnotationValue(injectAnnotation, "id", "");
+        boolean cancellable = Annotations.<Boolean>getValue(injectAnnotation, "cancellable", Boolean.FALSE);
+        LocalCapture locals = Annotations.<LocalCapture>getValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
+        String identifier = Annotations.<String>getValue(injectAnnotation, "id", "");
         
         return new CallbackInjector(this, cancellable, locals, identifier);
     }

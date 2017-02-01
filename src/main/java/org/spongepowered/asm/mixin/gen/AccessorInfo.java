@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -165,7 +166,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     }
     
     protected AccessorInfo(MixinTargetContext mixin, MethodNode method, Class<? extends Annotation> annotationClass) {
-        super(mixin, method, ASMHelper.getVisibleAnnotation(method, annotationClass));
+        super(mixin, method, Annotations.getVisible(method, annotationClass));
         this.argTypes = Type.getArgumentTypes(method.desc);
         this.returnType = Type.getReturnType(method.desc);
         this.type = this.initType();
@@ -206,7 +207,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     }
 
     protected String getTargetName() {
-        String name = ASMHelper.<String>getAnnotationValue(this.annotation);
+        String name = Annotations.<String>getValue(this.annotation);
         if (Strings.isNullOrEmpty(name)) {
             String inflectedTarget = this.inflectTarget();
             if (inflectedTarget == null) {

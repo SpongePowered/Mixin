@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
 /**
@@ -134,14 +135,14 @@ class MixinPreProcessorStandard {
     }
 
     protected void prepareShadow(MixinMethodNode mixinMethod, Method method) {
-        AnnotationNode shadowAnnotation = ASMHelper.getVisibleAnnotation(mixinMethod, Shadow.class);
+        AnnotationNode shadowAnnotation = Annotations.getVisible(mixinMethod, Shadow.class);
         if (shadowAnnotation == null) {
             return;
         }
         
-        String prefix = ASMHelper.<String>getAnnotationValue(shadowAnnotation, "prefix", Shadow.class);
+        String prefix = Annotations.<String>getValue(shadowAnnotation, "prefix", Shadow.class);
         if (mixinMethod.name.startsWith(prefix)) {
-            ASMHelper.setVisibleAnnotation(mixinMethod, MixinRenamed.class, "originalName", mixinMethod.name);
+            Annotations.setVisible(mixinMethod, MixinRenamed.class, "originalName", mixinMethod.name);
             String newName = mixinMethod.name.substring(prefix.length());
             mixinMethod.name = method.renameTo(newName);
         }
@@ -405,7 +406,7 @@ class MixinPreProcessorStandard {
     protected void attachFields(MixinTargetContext context) {
         for (Iterator<FieldNode> iter = this.classNode.fields.iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
-            AnnotationNode shadow = ASMHelper.getVisibleAnnotation(mixinField, Shadow.class);
+            AnnotationNode shadow = Annotations.getVisible(mixinField, Shadow.class);
             boolean isShadow = shadow != null;
             
             if (!this.validateField(context, mixinField, shadow)) {
@@ -495,7 +496,7 @@ class MixinPreProcessorStandard {
         }
 
         // Shadow fields can't have prefixes, it's meaningless for them anyway
-        String prefix = ASMHelper.<String>getAnnotationValue(shadow, "prefix", Shadow.class);
+        String prefix = Annotations.<String>getValue(shadow, "prefix", Shadow.class);
         if (field.name.startsWith(prefix)) {
             throw new InvalidMixinException(context, String.format("@Shadow field %s.%s has a shadow prefix. This is not allowed.",
                     context, field.name));

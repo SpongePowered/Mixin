@@ -57,7 +57,7 @@ import org.spongepowered.asm.mixin.injection.points.MethodHead;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -505,14 +505,14 @@ public abstract class InjectionPoint {
      *      failed
      */
     public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, AnnotationNode node) {
-        String at = ASMHelper.<String>getAnnotationValue(node, "value");
-        List<String> args = ASMHelper.<List<String>>getAnnotationValue(node, "args");
-        String target = ASMHelper.<String>getAnnotationValue(node, "target", "");
-        String slice = ASMHelper.<String>getAnnotationValue(node, "slice", "");
-        At.Shift shift = ASMHelper.<At.Shift>getAnnotationValue(node, "shift", At.Shift.class, At.Shift.NONE);
-        int by = ASMHelper.<Integer>getAnnotationValue(node, "by", Integer.valueOf(0));
-        int ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
-        int opcode = ASMHelper.<Integer>getAnnotationValue(node, "opcode", Integer.valueOf(0));
+        String at = Annotations.<String>getValue(node, "value");
+        List<String> args = Annotations.<List<String>>getValue(node, "args");
+        String target = Annotations.<String>getValue(node, "target", "");
+        String slice = Annotations.<String>getValue(node, "slice", "");
+        At.Shift shift = Annotations.<At.Shift>getValue(node, "shift", At.Shift.class, At.Shift.NONE);
+        int by = Annotations.<Integer>getValue(node, "by", Integer.valueOf(0));
+        int ordinal = Annotations.<Integer>getValue(node, "ordinal", Integer.valueOf(-1));
+        int opcode = Annotations.<Integer>getValue(node, "opcode", Integer.valueOf(0));
 
         if (args == null) {
             args = ImmutableList.<String>of();

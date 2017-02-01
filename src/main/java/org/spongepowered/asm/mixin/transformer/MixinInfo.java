@@ -63,7 +63,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
 
 import com.google.common.base.Function;
@@ -107,7 +107,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
 
         public AnnotationNode getVisibleAnnotation(Class<? extends Annotation> annotationClass) {
-            return ASMHelper.getVisibleAnnotation(this, annotationClass);
+            return Annotations.getVisible(this, annotationClass);
         }
 
         public AnnotationNode getInjectorAnnotation() {
@@ -276,7 +276,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             type.validate(this, targetClasses);
 
             this.detachedSuper = type.isDetachedSuper();
-            this.unique = ASMHelper.getVisibleAnnotation(this.getClassNode(), Unique.class) != null;
+            this.unique = Annotations.getVisible(this.getClassNode(), Unique.class) != null;
 
             // Pre-flight checks
             this.validateInner();
@@ -318,12 +318,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             // Can't have remappable fields or methods on a multi-target mixin, because after obfuscation the fields will remap to conflicting names
             if (targetClasses.size() > 1) {
                 for (FieldNode field : this.classNode.fields) {
-                    this.validateRemappable(Shadow.class, field.name, ASMHelper.getVisibleAnnotation(field, Shadow.class));
+                    this.validateRemappable(Shadow.class, field.name, Annotations.getVisible(field, Shadow.class));
                 }
                 
                 for (MethodNode method : this.classNode.methods) {
-                    this.validateRemappable(Shadow.class, method.name, ASMHelper.getVisibleAnnotation(method, Shadow.class));
-                    AnnotationNode overwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class);
+                    this.validateRemappable(Shadow.class, method.name, Annotations.getVisible(method, Shadow.class));
+                    AnnotationNode overwrite = Annotations.getVisible(method, Overwrite.class);
                     if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
                         throw new InvalidMixinException(MixinInfo.this, "Found @Overwrite annotation on " + method.name + " in " + this);
                     }
@@ -332,7 +332,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         private void validateRemappable(Class<Shadow> annotationClass, String name, AnnotationNode annotation) {
-            if (annotation != null && ASMHelper.getAnnotationValue(annotation, "remap", Boolean.TRUE)) {
+            if (annotation != null && Annotations.getValue(annotation, "remap", Boolean.TRUE)) {
                 throw new InvalidMixinException(MixinInfo.this, "Found a remappable @" + annotationClass.getSimpleName() + " annotation on " + name
                         + " in " + this);
             }
@@ -345,12 +345,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.interfaces.addAll(this.classNode.interfaces);
             this.interfaces.addAll(type.getInterfaces());
             
-            AnnotationNode implementsAnnotation = ASMHelper.getInvisibleAnnotation(this.classNode, Implements.class);
+            AnnotationNode implementsAnnotation = Annotations.getInvisible(this.classNode, Implements.class);
             if (implementsAnnotation == null) {
                 return;
             }
             
-            List<AnnotationNode> interfaces = ASMHelper.getAnnotationValue(implementsAnnotation);
+            List<AnnotationNode> interfaces = Annotations.getValue(implementsAnnotation);
             if (interfaces == null) {
                 return;
             }
@@ -817,14 +817,14 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             return Collections.<ClassInfo>emptyList();
         }
         
-        AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
+        AnnotationNode mixin = Annotations.getInvisible(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
         List<ClassInfo> targets = new ArrayList<ClassInfo>();
-        List<org.spongepowered.asm.lib.Type> publicTargets = ASMHelper.getAnnotationValue(mixin, "value");
-        List<String> privateTargets = ASMHelper.getAnnotationValue(mixin, "targets");
+        List<org.spongepowered.asm.lib.Type> publicTargets = Annotations.getValue(mixin, "value");
+        List<String> privateTargets = Annotations.getValue(mixin, "targets");
 
         if (publicTargets != null) {
             this.readTargets(targets, Lists.transform(publicTargets, new Function<org.spongepowered.asm.lib.Type, String>() {
@@ -907,17 +907,17 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             return this.parent.getDefaultMixinPriority();
         }
         
-        AnnotationNode mixin = ASMHelper.getInvisibleAnnotation(classNode, Mixin.class);
+        AnnotationNode mixin = Annotations.getInvisible(classNode, Mixin.class);
         if (mixin == null) {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
-        Integer priority = ASMHelper.getAnnotationValue(mixin, "priority");
+        Integer priority = Annotations.getValue(mixin, "priority");
         return priority == null ? this.parent.getDefaultMixinPriority() : priority.intValue();
     }
 
     protected boolean readPseudo(ClassNode classNode) {
-        return ASMHelper.getInvisibleAnnotation(classNode, Pseudo.class) != null;
+        return Annotations.getInvisible(classNode, Pseudo.class) != null;
     }
 
     private boolean isReloading() {

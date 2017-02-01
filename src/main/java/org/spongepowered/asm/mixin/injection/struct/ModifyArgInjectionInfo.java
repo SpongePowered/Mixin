@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.ModifyArgInjector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Information about a {@link ModifyArg} injector
@@ -43,7 +43,7 @@ public class ModifyArgInjectionInfo extends InjectionInfo {
     
     @Override
     protected Injector parseInjector(AnnotationNode injectAnnotation) {
-        int index = ASMHelper.<Integer>getAnnotationValue(injectAnnotation, "index", -1);
+        int index = Annotations.<Integer>getValue(injectAnnotation, "index", -1);
         
         return new ModifyArgInjector(this, index);
     }

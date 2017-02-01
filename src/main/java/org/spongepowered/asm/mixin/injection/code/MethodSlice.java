@@ -40,6 +40,7 @@ import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 import com.google.common.base.Strings;
 
@@ -454,10 +455,10 @@ public final class MethodSlice {
      * @return parsed MethodSlice
      */
     public static MethodSlice parse(ISliceContext info, AnnotationNode node) {
-        String id = ASMHelper.<String>getAnnotationValue(node, "id");
+        String id = Annotations.<String>getValue(node, "id");
         
-        AnnotationNode from = ASMHelper.<AnnotationNode>getAnnotationValue(node, "from");
-        AnnotationNode to = ASMHelper.<AnnotationNode>getAnnotationValue(node, "to");
+        AnnotationNode from = Annotations.<AnnotationNode>getValue(node, "from");
+        AnnotationNode to = Annotations.<AnnotationNode>getValue(node, "to");
         
         InjectionPoint fromPoint = from != null ? InjectionPoint.parse(info, from) : null;
         InjectionPoint toPoint = to != null ? InjectionPoint.parse(info, to) : null;

@@ -52,7 +52,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 
 import com.google.common.collect.ImmutableList;
@@ -411,16 +411,16 @@ public final class ClassInfo extends TreeInfo {
         @SuppressWarnings("unchecked")
         public Method(MethodNode method) {
             this(method, false);
-            this.setUnique(ASMHelper.getVisibleAnnotation(method, Unique.class) != null);
-            this.isAccessor = ASMHelper.getSingleVisibleAnnotation(method, Accessor.class, Invoker.class) != null;
+            this.setUnique(Annotations.getVisible(method, Unique.class) != null);
+            this.isAccessor = Annotations.getSingleVisible(method, Accessor.class, Invoker.class) != null;
         }
 
         @SuppressWarnings("unchecked")
         public Method(MethodNode method, boolean injected) {
             super(Type.METHOD, method.name, method.desc, method.access, injected);
             this.frames = this.gatherFrames(method);
-            this.setUnique(ASMHelper.getVisibleAnnotation(method, Unique.class) != null);
-            this.isAccessor = ASMHelper.getSingleVisibleAnnotation(method, Accessor.class, Invoker.class) != null;
+            this.setUnique(Annotations.getVisible(method, Unique.class) != null);
+            this.isAccessor = Annotations.getSingleVisible(method, Accessor.class, Invoker.class) != null;
         }
 
         public Method(String name, String desc) {
@@ -514,11 +514,11 @@ public final class ClassInfo extends TreeInfo {
         public Field(FieldNode field, boolean injected) {
             super(Type.FIELD, field.name, field.desc, field.access, injected);
             
-            this.setUnique(ASMHelper.getVisibleAnnotation(field, Unique.class) != null);
+            this.setUnique(Annotations.getVisible(field, Unique.class) != null);
             
-            if (ASMHelper.getVisibleAnnotation(field, Shadow.class) != null) {
-                boolean decoratedFinal = ASMHelper.getVisibleAnnotation(field, Final.class) != null;
-                boolean decoratedMutable = ASMHelper.getVisibleAnnotation(field, Mutable.class) != null;
+            if (Annotations.getVisible(field, Shadow.class) != null) {
+                boolean decoratedFinal = Annotations.getVisible(field, Final.class) != null;
+                boolean decoratedMutable = Annotations.getVisible(field, Mutable.class) != null;
                 this.setDecoratedFinal(decoratedFinal, decoratedMutable);
             }
         }

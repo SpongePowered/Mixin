@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Joiner;
@@ -152,7 +153,7 @@ public class RedirectInjector extends InvokeInjector {
         super(info, annotationType);
         
         int priority = info.getContext().getPriority();
-        boolean isFinal = ASMHelper.getVisibleAnnotation(this.methodNode, Final.class) != null;
+        boolean isFinal = Annotations.getVisible(this.methodNode, Final.class) != null;
         this.meta = new Meta(priority, isFinal, this.info.toString(), this.methodNode.desc);
     }
     

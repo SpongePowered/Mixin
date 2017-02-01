@@ -41,6 +41,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -256,7 +257,7 @@ public class CallbackInjector extends Injector {
                         return false; // Reference types must match exactly
                     }
 
-                    AnnotationNode coerce = ASMHelper.getInvisibleParameterAnnotation(this.handler, Coerce.class, arg);
+                    AnnotationNode coerce = Annotations.getInvisibleParameter(this.handler, Coerce.class, arg);
                     if (coerce == null) {
                         return false; // No @Coerce specified, types must match
                     }
@@ -376,7 +377,7 @@ public class CallbackInjector extends Injector {
                 // if changes to the local variable table are EXPECTED for some
                 // reason.
                 MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
-                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
+                if (surrogateHandler != null && Annotations.getVisible(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching method, use it
                     callbackMethod = surrogateHandler;
                 } else {
@@ -409,7 +410,7 @@ public class CallbackInjector extends Injector {
                 }
                 
                 MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
-                if (surrogateHandler != null && ASMHelper.getVisibleAnnotation(surrogateHandler, Surrogate.class) != null) {
+                if (surrogateHandler != null && Annotations.getVisible(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching surrogate method, use it
                     callbackMethod = surrogateHandler;
                 } else {

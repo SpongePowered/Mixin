@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Information about a {@link ModifyVariable} injector
@@ -44,7 +44,7 @@ public class ModifyVariableInjectionInfo extends InjectionInfo {
     
     @Override
     protected Injector parseInjector(AnnotationNode injectAnnotation) {
-        boolean print = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "print", Boolean.FALSE).booleanValue();
+        boolean print = Annotations.<Boolean>getValue(injectAnnotation, "print", Boolean.FALSE).booleanValue();
         return new ModifyVariableInjector(this, print, LocalVariableDiscriminator.parse(injectAnnotation));
     }
     

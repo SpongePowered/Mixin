@@ -35,7 +35,7 @@ import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Information store for injector groups
@@ -81,7 +81,7 @@ public class InjectorGroupInfo {
          * @return Group or NO_GROUP if no group
          */
         public InjectorGroupInfo parseGroup(MethodNode method, String defaultGroup) {
-            return this.parseGroup(ASMHelper.getInvisibleAnnotation(method, Group.class), defaultGroup);
+            return this.parseGroup(Annotations.getInvisible(method, Group.class), defaultGroup);
         }
         
         /**
@@ -97,18 +97,18 @@ public class InjectorGroupInfo {
                 return InjectorGroupInfo.Map.NO_GROUP;
             }
             
-            String name = ASMHelper.<String>getAnnotationValue(annotation, "name");
+            String name = Annotations.<String>getValue(annotation, "name");
             if (name == null || name.isEmpty()) {
                 name = defaultGroup;
             }
             InjectorGroupInfo groupInfo = this.forName(name);
             
-            Integer min = ASMHelper.<Integer>getAnnotationValue(annotation, "min");
+            Integer min = Annotations.<Integer>getValue(annotation, "min");
             if (min != null && min.intValue() != -1) {
                 groupInfo.setMinRequired(min.intValue());
             }
             
-            Integer max = ASMHelper.<Integer>getAnnotationValue(annotation, "max");
+            Integer max = Annotations.<Integer>getValue(annotation, "max");
             if (max != null && max.intValue() != -1) {
                 groupInfo.setMaxAllowed(max.intValue());
             }

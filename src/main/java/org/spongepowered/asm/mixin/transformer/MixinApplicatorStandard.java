@@ -59,6 +59,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
@@ -424,7 +425,7 @@ class MixinApplicatorStandard {
      * @param method Method to merge
      */
     protected void mergeMethod(MixinTargetContext mixin, MethodNode method) {
-        boolean isOverwrite = ASMHelper.getVisibleAnnotation(method, Overwrite.class) != null;
+        boolean isOverwrite = Annotations.getVisible(method, Overwrite.class) != null;
         MethodNode target = this.findTargetMethod(method);
         
         if (target != null) {
@@ -432,7 +433,7 @@ class MixinApplicatorStandard {
                 return;
             }
             
-            AnnotationNode intrinsic = ASMHelper.getInvisibleAnnotation(method, Intrinsic.class);
+            AnnotationNode intrinsic = Annotations.getInvisible(method, Intrinsic.class);
             if (intrinsic != null) {
                 if (this.mergeIntrinsic(mixin, method, isOverwrite, target, intrinsic)) {
                     return;
@@ -467,16 +468,16 @@ class MixinApplicatorStandard {
      * @return true if the target was already merged and should be skipped
      */
     protected boolean isAlreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
-        AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
+        AnnotationNode merged = Annotations.getVisible(target, MixinMerged.class);
         if (merged == null) {
-            if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+            if (Annotations.getVisible(target, Final.class) != null) {
                 this.logger.warn("Overwrite prohibited for @Final method {} in {}. Skipping method.", method.name, mixin);
                 return true;
             }
             return false;
         }
     
-        String sessionId = ASMHelper.<String>getAnnotationValue(merged, "sessionId");
+        String sessionId = Annotations.<String>getValue(merged, "sessionId");
         
         if (!this.context.getSessionId().equals(sessionId)) {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
@@ -490,15 +491,15 @@ class MixinApplicatorStandard {
             return true;
         }
         
-        String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
-        int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
+        String owner = Annotations.<String>getValue(merged, "mixin");
+        int priority = Annotations.<Integer>getValue(merged, "priority");
         
         if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
             this.logger.warn("Method overwrite conflict for {} in {}, previously written by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
         
-        if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+        if (Annotations.getVisible(target, Final.class) != null) {
             this.logger.warn("Method overwrite conflict for @Final method {} in {} declared by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
@@ -532,13 +533,13 @@ class MixinApplicatorStandard {
             throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
         
-        AnnotationNode renamed = ASMHelper.getVisibleAnnotation(method, MixinRenamed.class);
-        if (renamed == null || !ASMHelper.getAnnotationValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
+        AnnotationNode renamed = Annotations.getVisible(method, MixinRenamed.class);
+        if (renamed == null || !Annotations.getValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
                     + methodName + " in " + mixin);
         }
         
-        if (!ASMHelper.getAnnotationValue(intrinsic, "displace", Boolean.FALSE)) {
+        if (!Annotations.getValue(intrinsic, "displace", Boolean.FALSE)) {
             this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {} for {}", methodName, mixin.getTargetClassRef());
             return true;
         }
@@ -912,7 +913,7 @@ class MixinApplicatorStandard {
         if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                 && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                 && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
-                && !(ASMHelper.getVisibleAnnotation(mixinMethod, Overwrite.class) != null)) {
+                && !(Annotations.getVisible(mixinMethod, Overwrite.class) != null)) {
             throw new InvalidMixinException(mixin, 
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
         }
@@ -930,7 +931,7 @@ class MixinApplicatorStandard {
      */
     protected void checkMethodConstraints(MixinTargetContext mixin, MethodNode method) {
         for (Class<? extends Annotation> annotationType : MixinApplicatorStandard.CONSTRAINED_ANNOTATIONS) {
-            AnnotationNode annotation = ASMHelper.getVisibleAnnotation(method, annotationType);
+            AnnotationNode annotation = Annotations.getVisible(method, annotationType);
             if (annotation != null) {
                 this.checkConstraints(mixin, method, annotation);
             }

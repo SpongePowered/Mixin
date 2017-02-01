@@ -30,7 +30,7 @@ import java.util.Map;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Represents a collection of {@link MethodSlice}s, mapped by ID. Stored ids may
@@ -101,7 +101,7 @@ public final class MethodSlices {
         
         AnnotationNode annotation = info.getAnnotation();
         if (annotation != null) {
-            for (AnnotationNode node : ASMHelper.<AnnotationNode>getAnnotationValue(annotation, "slice", true)) {
+            for (AnnotationNode node : Annotations.<AnnotationNode>getValue(annotation, "slice", true)) {
                 MethodSlice slice = MethodSlice.parse(info, node);
                 slices.add(slice);
             }

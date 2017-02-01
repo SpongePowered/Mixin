@@ -36,7 +36,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Information about an interface being runtime-patched onto a mixin target
@@ -192,7 +192,7 @@ public final class InterfaceInfo extends TreeInfo {
             throw new InvalidMixinException(this.mixin, String.format("%s cannot implement %s because it is not visible", realName, this.getName()));
         }
         
-        ASMHelper.setVisibleAnnotation(method, MixinRenamed.class, "originalName", method.name, "isInterfaceMember", true);
+        Annotations.setVisible(method, MixinRenamed.class, "originalName", method.name, "isInterfaceMember", true);
         this.decorateUniqueMethod(method);
         method.name = realName;
         return true;
@@ -209,8 +209,8 @@ public final class InterfaceInfo extends TreeInfo {
             return;
         }
         
-        if (ASMHelper.getVisibleAnnotation(method, Unique.class) == null) {
-            ASMHelper.setVisibleAnnotation(method, Unique.class);
+        if (Annotations.getVisible(method, Unique.class) == null) {
+            Annotations.setVisible(method, Unique.class);
             this.mixin.getClassInfo().findMethod(method).setUnique(true);
         }
     }
@@ -224,9 +224,9 @@ public final class InterfaceInfo extends TreeInfo {
      * @return parsed InterfaceInfo object
      */
     static InterfaceInfo fromAnnotation(MixinInfo mixin, AnnotationNode node) {
-        String prefix = ASMHelper.<String>getAnnotationValue(node, "prefix");
-        Type iface = ASMHelper.<Type>getAnnotationValue(node, "iface");
-        Boolean unique = ASMHelper.<Boolean>getAnnotationValue(node, "unique");
+        String prefix = Annotations.<String>getValue(node, "prefix");
+        Type iface = Annotations.<Type>getValue(node, "iface");
+        Boolean unique = Annotations.<Boolean>getValue(node, "unique");
         
         if (prefix == null || iface == null) {
             throw new InvalidMixinException(mixin, String.format("@Interface annotation on %s is missing a required parameter", mixin));

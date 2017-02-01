@@ -46,6 +46,7 @@ import org.spongepowered.asm.mixin.injection.invoke.ModifyConstantInjector;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
 import com.google.common.primitives.Ints;
@@ -84,21 +85,21 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         private final boolean log;
 
         public BeforeConstant(InjectionInfo info, AnnotationNode node, String returnType) {
-            Boolean empty = ASMHelper.<Boolean>getAnnotationValue(node, "nullValue", (Boolean)null);
-            this.ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
+            Boolean empty = Annotations.<Boolean>getValue(node, "nullValue", (Boolean)null);
+            this.ordinal = Annotations.<Integer>getValue(node, "ordinal", Integer.valueOf(-1));
             this.nullValue = empty != null ? empty.booleanValue() : false;
-            this.intValue = ASMHelper.<Integer>getAnnotationValue(node, "intValue", (Integer)null);
-            this.floatValue = ASMHelper.<Float>getAnnotationValue(node, "floatValue", (Float)null);
-            this.longValue = ASMHelper.<Long>getAnnotationValue(node, "longValue", (Long)null);
-            this.doubleValue = ASMHelper.<Double>getAnnotationValue(node, "doubleValue", (Double)null);
-            this.stringValue = ASMHelper.<String>getAnnotationValue(node, "stringValue", (String)null);
-            this.typeValue = ASMHelper.<Type>getAnnotationValue(node, "classValue", (Type)null);
+            this.intValue = Annotations.<Integer>getValue(node, "intValue", (Integer)null);
+            this.floatValue = Annotations.<Float>getValue(node, "floatValue", (Float)null);
+            this.longValue = Annotations.<Long>getValue(node, "longValue", (Long)null);
+            this.doubleValue = Annotations.<Double>getValue(node, "doubleValue", (Double)null);
+            this.stringValue = Annotations.<String>getValue(node, "stringValue", (String)null);
+            this.typeValue = Annotations.<Type>getValue(node, "classValue", (Type)null);
             
             this.matchByType = this.validateDiscriminator(info, returnType, empty);
             this.expandOpcodes = this.parseExpandOpcodes(node);
             this.expand = this.expandOpcodes.length > 0;
             
-            this.log = ASMHelper.<Boolean>getAnnotationValue(node, "log", Boolean.FALSE).booleanValue();
+            this.log = Annotations.<Boolean>getValue(node, "log", Boolean.FALSE).booleanValue();
         }
 
         private String validateDiscriminator(InjectionInfo info, String returnType, Boolean empty) {
@@ -113,7 +114,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
 
         private int[] parseExpandOpcodes(AnnotationNode node) {
             Set<Integer> opcodes = new HashSet<Integer>();
-            for (Condition condition : ASMHelper.<Condition>getAnnotationValue(node, "expandZeroConditions", true, Condition.class)) {
+            for (Condition condition : Annotations.<Condition>getValue(node, "expandZeroConditions", true, Condition.class)) {
                 Condition actual = condition.getEquivalentCondition();
                 for (int opcode : actual.getOpcodes()) {
                     opcodes.add(Integer.valueOf(opcode));
@@ -220,7 +221,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
     
     @Override
     protected List<AnnotationNode> readInjectionPoints(String type) {
-        AnnotationNode constantAnnotation = ASMHelper.<AnnotationNode>getAnnotationValue(this.annotation, "constant");
+        AnnotationNode constantAnnotation = Annotations.<AnnotationNode>getValue(this.annotation, "constant");
         List<AnnotationNode> ats = new ArrayList<AnnotationNode>();
         ats.add(constantAnnotation);
         return ats;

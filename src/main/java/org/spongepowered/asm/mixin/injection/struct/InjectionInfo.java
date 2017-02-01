@@ -61,6 +61,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Contructs information about an injection from an {@link Inject} annotation
@@ -155,7 +156,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected MemberInfo parseTarget(String type) {
-        String method = ASMHelper.<String>getAnnotationValue(this.annotation, "method");
+        String method = Annotations.<String>getValue(this.annotation, "method");
         if (method == null) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
         }
@@ -174,7 +175,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected List<AnnotationNode> readInjectionPoints(String type) {
-        List<AnnotationNode> ats = ASMHelper.<AnnotationNode>getAnnotationValue(this.annotation, "at", false);
+        List<AnnotationNode> ats = Annotations.<AnnotationNode>getValue(this.annotation, "at", false);
         if (ats == null) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
@@ -188,12 +189,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     protected void parseRequirements() {
         this.group = this.mixin.getInjectorGroups().parseGroup(this.method, this.mixin.getDefaultInjectorGroup()).add(this);
         
-        Integer expect = ASMHelper.<Integer>getAnnotationValue(this.annotation, "expect");
+        Integer expect = Annotations.<Integer>getValue(this.annotation, "expect");
         if (expect != null) {
             this.expectedCallbackCount = expect.intValue();
         }
 
-        Integer require = ASMHelper.<Integer>getAnnotationValue(this.annotation, "require");
+        Integer require = Annotations.<Integer>getValue(this.annotation, "require");
         if (require != null && require.intValue() > -1) {
             this.requiredCallbackCount = require.intValue();
         } else if (this.group.isDefault()) {
@@ -350,7 +351,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         for (MethodNode target : this.classNode.methods) {
             if (searchFor.matches(target.name, target.desc, ordinal)) {
-                boolean isMixinMethod = ASMHelper.getVisibleAnnotation(target, MixinMerged.class) != null;
+                boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
                 if (searchFor.matchAll && (ASMHelper.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
                     continue;
                 }
@@ -368,20 +369,20 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     private void checkTarget(MethodNode target) {
-        AnnotationNode merged = ASMHelper.getVisibleAnnotation(target, MixinMerged.class);
+        AnnotationNode merged = Annotations.getVisible(target, MixinMerged.class);
         if (merged == null) {
             return;
         }
         
-        String owner = ASMHelper.<String>getAnnotationValue(merged, "mixin");
-        int priority = ASMHelper.<Integer>getAnnotationValue(merged, "priority");
+        String owner = Annotations.<String>getValue(merged, "mixin");
+        int priority = Annotations.<Integer>getValue(merged, "priority");
         
         if (priority >= this.mixin.getPriority() && !owner.equals(this.mixin.getClassName())) {
             throw new InvalidInjectionException(this, this + " cannot inject into " + this.classNode.name + "::" + target.name + target.desc
                     + " merged by " + owner + " with priority " + priority);
         }
         
-        if (ASMHelper.getVisibleAnnotation(target, Final.class) != null) {
+        if (Annotations.getVisible(target, Final.class) != null) {
             throw new InvalidInjectionException(this, this + " cannot inject into @Final method " + this.classNode.name + "::" + target.name
                     + target.desc + " merged by " + owner);
         }
@@ -431,7 +432,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     public static AnnotationNode getInjectorAnnotation(IMixinInfo mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
-            annotation = ASMHelper.getSingleVisibleAnnotation(method,
+            annotation = Annotations.getSingleVisible(method,
                 Inject.class,
                 ModifyArg.class,
                 Redirect.class,
