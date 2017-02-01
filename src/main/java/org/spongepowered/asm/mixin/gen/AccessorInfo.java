@@ -41,7 +41,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 
 import com.google.common.base.Strings;
@@ -308,7 +308,7 @@ public class AccessorInfo extends SpecialMethodInfo {
 
     @Override
     public String toString() {
-        return String.format("%s->@%s[%s]::%s%s", this.mixin.toString(), ASMHelper.getSimpleName(this.annotation), this.type.toString(),
+        return String.format("%s->@%s[%s]::%s%s", this.mixin.toString(), Bytecode.getSimpleName(this.annotation), this.type.toString(),
                 this.method.name, this.method.desc);
     }
 

@@ -35,7 +35,7 @@ import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * A bytecode injector which allows a specific
@@ -71,7 +71,7 @@ public class ModifyConstantInjector extends RedirectInjector {
             return;
         }
         
-        if (ASMHelper.isConstant(targetNode)) {
+        if (Bytecode.isConstant(targetNode)) {
             this.injectConstantModifier(target, targetNode);
             return;
         }
@@ -90,7 +90,7 @@ public class ModifyConstantInjector extends RedirectInjector {
         int opcode = jumpNode.getOpcode();
         if (opcode < Opcodes.IFLT || opcode > Opcodes.IFLE) {
             throw new InvalidInjectionException(this.info, this.annotationType + " annotation selected an invalid opcode "
-                    + ASMHelper.getOpcodeName(opcode) + " in " + target + " in " + this); 
+                    + Bytecode.getOpcodeName(opcode) + " in " + target + " in " + this); 
         }
         
         final InsnList insns = new InsnList();
@@ -102,7 +102,7 @@ public class ModifyConstantInjector extends RedirectInjector {
     }
 
     private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
-        final Type constantType = ASMHelper.getConstantType(constNode);
+        final Type constantType = Bytecode.getConstantType(constNode);
         final InsnList before = new InsnList();
         final InsnList after = new InsnList();
         AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, before, after);
@@ -110,7 +110,7 @@ public class ModifyConstantInjector extends RedirectInjector {
     }
 
     private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, InsnList before, InsnList after) {
-        final String handlerDesc = ASMHelper.generateDescriptor(constantType, constantType);
+        final String handlerDesc = Bytecode.generateDescriptor(constantType, constantType);
         final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
@@ -120,7 +120,7 @@ public class ModifyConstantInjector extends RedirectInjector {
         
         if (withArgs) {
             this.pushArgs(target.arguments, after, target.argIndices, 0, target.arguments.length);
-            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+            target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
         return this.invokeHandler(after);

@@ -30,7 +30,7 @@ import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Generator for proxy methods
@@ -62,18 +62,18 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
         this.targetMethod = info.getTargetMethod();
         this.argTypes = info.getArgTypes();
         this.returnType = info.getReturnType();
-        this.isInstanceMethod = !ASMHelper.hasFlag(this.targetMethod, Opcodes.ACC_STATIC);
+        this.isInstanceMethod = !Bytecode.hasFlag(this.targetMethod, Opcodes.ACC_STATIC);
     }
 
     @Override
     public MethodNode generate() {
-        int size = ASMHelper.getArgsSize(this.argTypes) + this.returnType.getSize();
+        int size = Bytecode.getArgsSize(this.argTypes) + this.returnType.getSize();
         MethodNode method = this.createMethod(size, size);
         if (this.isInstanceMethod) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
-        ASMHelper.loadArgs(this.argTypes, method.instructions, this.isInstanceMethod ? 1 : 0);
-        boolean isPrivate = ASMHelper.hasFlag(this.targetMethod, Opcodes.ACC_PRIVATE);
+        Bytecode.loadArgs(this.argTypes, method.instructions, this.isInstanceMethod ? 1 : 0);
+        boolean isPrivate = Bytecode.hasFlag(this.targetMethod, Opcodes.ACC_PRIVATE);
         int opcode = this.isInstanceMethod ? (isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL) : Opcodes.INVOKESTATIC;
         method.instructions.add(new MethodInsnNode(opcode, this.info.getClassNode().name, this.targetMethod.name, this.targetMethod.desc, false));
         method.instructions.add(new InsnNode(this.returnType.getOpcode(Opcodes.IRETURN)));

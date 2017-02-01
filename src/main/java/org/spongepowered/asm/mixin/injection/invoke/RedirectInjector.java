@@ -51,7 +51,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
@@ -297,11 +297,11 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         InsnList insns = new InsnList();
-        int extraLocals = ASMHelper.getArgsSize(stackVars) + 1;
+        int extraLocals = Bytecode.getArgsSize(stackVars) + 1;
         int extraStack = 1; // Normally only need 1 extra stack pos to store target ref 
         int[] argMap = this.storeArgs(target, stackVars, insns, 0);
         if (injectTargetParams) {
-            int argSize = ASMHelper.getArgsSize(target.arguments);
+            int argSize = Bytecode.getArgsSize(target.arguments);
             extraLocals += argSize;
             extraStack += argSize;
             argMap = Ints.concat(argMap, target.argIndices);
@@ -340,7 +340,7 @@ public class RedirectInjector extends InvokeInjector {
     private void injectAtArrayField(Target target, FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType, int fuzz) {
         Type elementType = fieldType.getElementType();
         if (opCode != Opcodes.GETSTATIC && opCode != Opcodes.GETFIELD) {
-            throw new InvalidInjectionException(this.info, "Unspported opcode " + ASMHelper.getOpcodeName(opCode) + " for array access " + this.info);
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + Bytecode.getOpcodeName(opCode) + " for array access " + this.info);
         } else if (this.returnType.getSort() != Type.VOID) {
             AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IALOAD), fuzz);
             this.injectAtGetArray(target, fieldNode, varNode, ownerType, fieldType);
@@ -354,7 +354,7 @@ public class RedirectInjector extends InvokeInjector {
      * Array element read (xALOAD)
      */
     private void injectAtGetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = ASMHelper.generateDescriptor(this.returnType, (Object[])RedirectInjector.getArrayArgs(fieldType));
+        String handlerDesc = Bytecode.generateDescriptor(this.returnType, (Object[])RedirectInjector.getArrayArgs(fieldType));
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array getter");
         this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
     }
@@ -363,7 +363,7 @@ public class RedirectInjector extends InvokeInjector {
      * Array element write (xASTORE)
      */
     private void injectAtSetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = ASMHelper.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, fieldType.getElementType()));
+        String handlerDesc = Bytecode.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, fieldType.getElementType()));
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array setter");
         this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
     }
@@ -389,7 +389,7 @@ public class RedirectInjector extends InvokeInjector {
         InsnList invokeInsns = new InsnList();
         if (withArgs) {
             this.pushArgs(target.arguments, invokeInsns, target.argIndices, 0, target.arguments.length);
-            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+            target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         target.replaceNode(varNode, this.invokeHandler(invokeInsns), invokeInsns);
     }
@@ -411,7 +411,7 @@ public class RedirectInjector extends InvokeInjector {
         } else if (opCode == Opcodes.PUTSTATIC || opCode == Opcodes.PUTFIELD) {
             invoke = this.injectAtPutField(insns, target, fieldNode, opCode == Opcodes.PUTSTATIC, ownerType, fieldType);
         } else {
-            throw new InvalidInjectionException(this.info, "Unspported opcode " + ASMHelper.getOpcodeName(opCode) + " for " + this.info);
+            throw new InvalidInjectionException(this.info, "Unspported opcode " + Bytecode.getOpcodeName(opCode) + " for " + this.info);
         }
         
         target.replaceNode(fieldNode, invoke, insns);
@@ -424,7 +424,7 @@ public class RedirectInjector extends InvokeInjector {
      * handler and the field itself.
      */
     private AbstractInsnNode injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
-        final String handlerDesc = staticField ? ASMHelper.generateDescriptor(fieldType) : ASMHelper.generateDescriptor(fieldType, owner);
+        final String handlerDesc = staticField ? Bytecode.generateDescriptor(fieldType) : Bytecode.generateDescriptor(fieldType, owner);
         final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
@@ -436,7 +436,7 @@ public class RedirectInjector extends InvokeInjector {
         
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
-            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+            target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
         target.addToStack(this.isStatic ? 0 : 1);
@@ -450,7 +450,7 @@ public class RedirectInjector extends InvokeInjector {
      * handler and the field itself.
      */
     private AbstractInsnNode injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
-        String handlerDesc = staticField ? ASMHelper.generateDescriptor(null, fieldType) : ASMHelper.generateDescriptor(null, owner, fieldType);
+        String handlerDesc = staticField ? Bytecode.generateDescriptor(null, fieldType) : Bytecode.generateDescriptor(null, owner, fieldType);
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "setter");
 
         if (!this.isStatic) {
@@ -468,7 +468,7 @@ public class RedirectInjector extends InvokeInjector {
         
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
-            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+            target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
         target.addToStack(!this.isStatic && !staticField ? 1 : 0);
@@ -541,7 +541,7 @@ public class RedirectInjector extends InvokeInjector {
         InsnList insns = new InsnList();
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
-            target.addToStack(ASMHelper.getArgsSize(target.arguments));
+            target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
         this.invokeHandler(insns);

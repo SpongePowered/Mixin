@@ -50,7 +50,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 import com.google.common.base.Joiner;
 
@@ -129,7 +129,7 @@ public abstract class Injector {
         this.methodNode = methodNode;
         this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
         this.returnType = Type.getReturnType(this.methodNode.desc);
-        this.isStatic = ASMHelper.methodIsStatic(this.methodNode);
+        this.isStatic = Bytecode.methodIsStatic(this.methodNode);
     }
     
     @Override

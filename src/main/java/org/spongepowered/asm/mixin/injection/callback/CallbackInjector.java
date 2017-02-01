@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
@@ -156,7 +156,7 @@ public class CallbackInjector extends Injector {
             this.node = node.getCurrentTarget();
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
-            this.frameSize = ASMHelper.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
+            this.frameSize = Bytecode.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
             List<String> argNames = null;
             
             if (locals != null) {
@@ -176,7 +176,7 @@ public class CallbackInjector extends Injector {
             }
             
             // Calc number of args for the handler method, additional 1 is to ignore the CallbackInfo arg
-            this.extraArgs = Math.max(0, ASMHelper.getFirstNonArgLocalIndex(this.handler) - (this.frameSize + 1));
+            this.extraArgs = Math.max(0, Bytecode.getFirstNonArgLocalIndex(this.handler) - (this.frameSize + 1));
             this.argNames = argNames != null ? argNames.toArray(new String[argNames.size()]) : null;
             this.canCaptureLocals = captureLocals && locals != null && locals.length > this.frameSize;
             this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
@@ -318,7 +318,7 @@ public class CallbackInjector extends Injector {
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
         
-        if (ASMHelper.methodIsStatic(target.method) != this.isStatic) {
+        if (Bytecode.methodIsStatic(target.method) != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
 
@@ -376,7 +376,7 @@ public class CallbackInjector extends Injector {
                 // signature for the current locals. This allows silent failover
                 // if changes to the local variable table are EXPECTED for some
                 // reason.
-                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                MethodNode surrogateHandler = Bytecode.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
                 if (surrogateHandler != null && Annotations.getVisible(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching method, use it
                     callbackMethod = surrogateHandler;
@@ -409,7 +409,7 @@ public class CallbackInjector extends Injector {
                     throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! CallbackInfoReturnable is required!");  
                 }
                 
-                MethodNode surrogateHandler = ASMHelper.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
+                MethodNode surrogateHandler = Bytecode.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
                 if (surrogateHandler != null && Annotations.getVisible(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching surrogate method, use it
                     callbackMethod = surrogateHandler;
@@ -456,7 +456,7 @@ public class CallbackInjector extends Injector {
      */
     private MethodNode generateErrorMethod(Callback callback, String errorClass, String message) {
         MethodNode method = this.info.addMethod(this.methodNode.access, this.methodNode.name + "$missing", callback.getDescriptor());
-        method.maxLocals = ASMHelper.getFirstNonArgLocalIndex(Type.getArgumentTypes(callback.getDescriptor()), !this.isStatic);
+        method.maxLocals = Bytecode.getFirstNonArgLocalIndex(Type.getArgumentTypes(callback.getDescriptor()), !this.isStatic);
         method.maxStack = 3;
         InsnList insns = method.instructions;
         insns.add(new TypeInsnNode(Opcodes.NEW, errorClass));
@@ -484,7 +484,7 @@ public class CallbackInjector extends Injector {
         printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
         printer.kv("Initial Frame Size", callback.frameSize);
         printer.kv("Callback Name", this.methodNode.name);
-        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(), ASMHelper.getOpcodeName(callback.node.getOpcode()));
+        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(), Bytecode.getOpcodeName(callback.node.getOpcode()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
             printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");
@@ -577,7 +577,7 @@ public class CallbackInjector extends Injector {
 
         // Push the target method's parameters onto the stack
         if (callback.captureArgs()) {
-            ASMHelper.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
+            Bytecode.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
         }
         
         // Push the callback info onto the stack

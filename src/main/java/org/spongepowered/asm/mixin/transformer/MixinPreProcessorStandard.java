@@ -51,7 +51,7 @@ import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
@@ -261,7 +261,7 @@ class MixinPreProcessorStandard {
             return false;
         }
         
-        String description = "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name;
+        String description = "@" + Bytecode.getSimpleName(type) + " method " + mixinMethod.name;
         Method method = this.getSpecialMethod(mixinMethod, type);
         if (MixinEnvironment.getCompatibilityLevel().isAtLeast(CompatibilityLevel.JAVA_8) && method.isStatic()) {
             if (this.mixin.getTargets().size() > 1) {
@@ -320,7 +320,7 @@ class MixinPreProcessorStandard {
             }
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, "@" + ASMHelper.getSimpleName(type) + " method " + mixinMethod.name
+                throw new InvalidMixinException(this.mixin, "@" + Bytecode.getSimpleName(type) + " method " + mixinMethod.name
                         + " was not located in the target class");
             }
             mixinMethod.name = method.renameTo(target.name);
@@ -349,14 +349,14 @@ class MixinPreProcessorStandard {
 
     protected void checkMethodNotUnique(Class<? extends Annotation> type, Method method) {
         if (method.isUnique()) {
-            String annotation = "@" + ASMHelper.getSimpleName(type);
+            String annotation = "@" + Bytecode.getSimpleName(type);
             throw new InvalidMixinException(this.mixin, annotation + " method " + method.getName() + " cannot be @Unique");
         }
     }
 
     protected void checkMixinNotUnique(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
         if (this.mixin.isUnique()) {
-            String annotation = "@" + ASMHelper.getSimpleName(type);
+            String annotation = "@" + Bytecode.getSimpleName(type);
             throw new InvalidMixinException(this.mixin, annotation + " method " + mixinMethod.name + " found in a @Unique mixin");
         }
     }
@@ -473,7 +473,7 @@ class MixinPreProcessorStandard {
             
             if (isShadow) {
                 boolean isFinal = field.isDecoratedFinal();
-                if (this.verboseLogging && ASMHelper.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
+                if (this.verboseLogging && Bytecode.hasFlag(target, Opcodes.ACC_FINAL) != isFinal) {
                     String message = isFinal
                             ? "@Shadow field {}::{} is decorated with @Final but target is not final"
                             : "@Shadow target {}::{} is final but shadow is not decorated with @Final";
@@ -487,9 +487,9 @@ class MixinPreProcessorStandard {
 
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         // Public static fields will fall foul of early static binding in java, including them in a mixin is an error condition
-        if (ASMHelper.hasFlag(field, Opcodes.ACC_STATIC)
-                && !ASMHelper.hasFlag(field, Opcodes.ACC_PRIVATE)
-                && !ASMHelper.hasFlag(field, Opcodes.ACC_SYNTHETIC)
+        if (Bytecode.hasFlag(field, Opcodes.ACC_STATIC)
+                && !Bytecode.hasFlag(field, Opcodes.ACC_PRIVATE)
+                && !Bytecode.hasFlag(field, Opcodes.ACC_SYNTHETIC)
                 && shadow == null) {
             throw new InvalidMixinException(context, String.format("Mixin %s contains non-private static field %s:%s",
                     context, field.name, field.desc));

@@ -30,7 +30,7 @@ import java.util.Map;
 
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Used to keep track of instruction nodes in a {@link Target} method which are
@@ -188,7 +188,7 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          */
         @Override
         public String toString() {
-            return String.format("InjectionNode[%s]", ASMHelper.describeNode(this.currentTarget).replaceAll("\\s+", " "));
+            return String.format("InjectionNode[%s]", Bytecode.describeNode(this.currentTarget).replaceAll("\\s+", " "));
         }
         
     }

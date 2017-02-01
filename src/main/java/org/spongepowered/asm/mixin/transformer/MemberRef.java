@@ -28,7 +28,7 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Reference to a field or method that also includes invocation instructions.
@@ -318,7 +318,7 @@ public abstract class MemberRef {
 
     @Override
     public String toString() {
-        return ASMHelper.getOpcodeName(this.getOpcode()) + " for "
+        return Bytecode.getOpcodeName(this.getOpcode()) + " for "
                 + this.getOwner() + "." + this.getName() + (this.isField() ? ":" : "") + this.getDesc();
     }
 

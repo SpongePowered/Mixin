@@ -58,7 +58,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
@@ -365,7 +365,7 @@ class MixinApplicatorStandard {
                 this.mergeAnnotations(shadow, target);
                 
                 // Strip the FINAL flag from @Mutable non-private fields
-                if (entry.getValue().isDecoratedMutable() && !ASMHelper.hasFlag(target, Opcodes.ACC_PRIVATE)) {
+                if (entry.getValue().isDecoratedMutable() && !Bytecode.hasFlag(target, Opcodes.ACC_PRIVATE)) {
                     target.access &= ~Opcodes.ACC_FINAL;
                 }
             }
@@ -483,8 +483,8 @@ class MixinApplicatorStandard {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
         }
         
-        if (ASMHelper.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
-                && ASMHelper.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
+        if (Bytecode.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
+                && Bytecode.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
             if (mixin.getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
                 this.logger.warn("Synthetic bridge method clash for {} in {}", method.name, mixin);
             }
@@ -529,7 +529,7 @@ class MixinApplicatorStandard {
         }
         
         String methodName = method.name + method.desc;
-        if (ASMHelper.hasFlag(method, Opcodes.ACC_STATIC)) {
+        if (Bytecode.hasFlag(method, Opcodes.ACC_STATIC)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
         
@@ -760,7 +760,7 @@ class MixinApplicatorStandard {
                         if (opcode == ivalidOp) {
                             // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
                             // code which will likely break things and fix it if a real test case ever appears
-                            throw new InvalidMixinException(mixin, "Cannot handle " + ASMHelper.getOpcodeName(opcode) + " opcode (0x"
+                            throw new InvalidMixinException(mixin, "Cannot handle " + Bytecode.getOpcodeName(opcode) + " opcode (0x"
                                     + Integer.toHexString(opcode).toUpperCase() + ") in class initialiser");
                         }
                     }
@@ -790,7 +790,7 @@ class MixinApplicatorStandard {
      * @param initialiser initialiser instructions
      */
     protected final void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
-        Map<LabelNode, LabelNode> labels = ASMHelper.cloneLabels(ctor.instructions);
+        Map<LabelNode, LabelNode> labels = Bytecode.cloneLabels(ctor.instructions);
         
         AbstractInsnNode insn = this.findInitialiserInjectionPoint(mixin, ctor, initialiser);
         if (insn == null) {
@@ -910,9 +910,9 @@ class MixinApplicatorStandard {
      * @param mixinMethod method to check
      */
     protected void checkMethodVisibility(MixinTargetContext mixin, MethodNode mixinMethod) {
-        if (ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
-                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
-                && !ASMHelper.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
+        if (Bytecode.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
+                && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
+                && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
                 && !(Annotations.getVisible(mixinMethod, Overwrite.class) != null)) {
             throw new InvalidMixinException(mixin, 
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));

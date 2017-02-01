@@ -45,9 +45,9 @@ import org.spongepowered.asm.lib.util.TraceClassVisitor;
 import com.google.common.primitives.Ints;
 
 /**
- * Utility methods for working with ASM
+ * Utility methods for working with bytecode via ASM
  */
-public final class ASMHelper {
+public final class Bytecode {
 
     /**
      * Integer constant opcodes
@@ -112,7 +112,7 @@ public final class ASMHelper {
         "I", //"S"
     };
     
-    private ASMHelper() {
+    private Bytecode() {
         // utility class
     }
 
@@ -167,7 +167,7 @@ public final class ASMHelper {
     public static void dumpClass(ClassNode classNode) {
         ClassWriter cw = new ClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
         classNode.accept(cw);
-        ASMHelper.dumpClass(cw.toByteArray());
+        Bytecode.dumpClass(cw.toByteArray());
     }
 
     /**
@@ -189,7 +189,7 @@ public final class ASMHelper {
         System.err.printf("%s%s\n", method.name, method.desc);
         int i = 0;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
-            System.err.printf("[%4d] %s\n", i++, ASMHelper.describeNode(iter.next()));
+            System.err.printf("[%4d] %s\n", i++, Bytecode.describeNode(iter.next()));
         }
     }
 
@@ -202,7 +202,7 @@ public final class ASMHelper {
         System.err.printf("%s%s\n", method.name, method.desc);
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             System.err.print("  ");
-            ASMHelper.printNode(iter.next());
+            Bytecode.printNode(iter.next());
         }
     }
 
@@ -212,7 +212,7 @@ public final class ASMHelper {
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
-        System.err.printf("%s\n", ASMHelper.describeNode(node));
+        System.err.printf("%s\n", Bytecode.describeNode(node));
     }
 
     /**
@@ -232,15 +232,15 @@ public final class ASMHelper {
         
         String out = String.format("   %-14s ", node.getClass().getSimpleName().replace("Node", ""));
         if (node instanceof JumpInsnNode) {
-            out += String.format("[%s] [%s]", ASMHelper.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
+            out += String.format("[%s] [%s]", Bytecode.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
         } else if (node instanceof VarInsnNode) {
-            out += String.format("[%s] %d", ASMHelper.getOpcodeName(node), ((VarInsnNode)node).var);
+            out += String.format("[%s] %d", Bytecode.getOpcodeName(node), ((VarInsnNode)node).var);
         } else if (node instanceof MethodInsnNode) {
             MethodInsnNode mth = (MethodInsnNode)node;
-            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), mth.owner, mth.name, mth.desc);
+            out += String.format("[%s] %s %s %s", Bytecode.getOpcodeName(node), mth.owner, mth.name, mth.desc);
         } else if (node instanceof FieldInsnNode) {
             FieldInsnNode fld = (FieldInsnNode)node;
-            out += String.format("[%s] %s %s %s", ASMHelper.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+            out += String.format("[%s] %s %s %s", Bytecode.getOpcodeName(node), fld.owner, fld.name, fld.desc);
         } else if (node instanceof LineNumberNode) {
             LineNumberNode ln = (LineNumberNode)node;
             out += String.format("LINE=[%d] LABEL=[%s]", ln.line, ln.start.getLabel());
@@ -249,9 +249,9 @@ public final class ASMHelper {
         } else if (node instanceof IntInsnNode) {
             out += (((IntInsnNode)node).operand);
         } else if (node instanceof FrameNode) {
-            out += String.format("[%s] ", ASMHelper.getOpcodeName(((FrameNode)node).type, "H_INVOKEINTERFACE", -1));
+            out += String.format("[%s] ", Bytecode.getOpcodeName(((FrameNode)node).type, "H_INVOKEINTERFACE", -1));
         } else {
-            out += String.format("[%s] ", ASMHelper.getOpcodeName(node));
+            out += String.format("[%s] ", Bytecode.getOpcodeName(node));
         }
         return out;
     }
@@ -265,7 +265,7 @@ public final class ASMHelper {
      *      the {@link Opcodes} class have the same value as opcodes
      */
     public static String getOpcodeName(AbstractInsnNode node) {
-        return ASMHelper.getOpcodeName(node.getOpcode());
+        return Bytecode.getOpcodeName(node.getOpcode());
     }
 
     /**
@@ -277,7 +277,7 @@ public final class ASMHelper {
      *      the {@link Opcodes} class have the same value as opcodes
      */
     public static String getOpcodeName(int opcode) {
-        return ASMHelper.getOpcodeName(opcode, "UNINITIALIZED_THIS", 1);
+        return Bytecode.getOpcodeName(opcode, "UNINITIALIZED_THIS", 1);
     }
 
     private static String getOpcodeName(int opcode, String start, int min) {
@@ -333,7 +333,7 @@ public final class ASMHelper {
      *      argument or "this"
      */
     public static int getFirstNonArgLocalIndex(MethodNode method) {
-        return ASMHelper.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), (method.access & Opcodes.ACC_STATIC) == 0);
+        return Bytecode.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), (method.access & Opcodes.ACC_STATIC) == 0);
     }
 
     /**
@@ -349,7 +349,7 @@ public final class ASMHelper {
      *      argument or "this"
      */
     public static int getFirstNonArgLocalIndex(Type[] args, boolean includeThis) {
-        return ASMHelper.getArgsSize(args) + (includeThis ? 1 : 0);
+        return Bytecode.getArgsSize(args) + (includeThis ? 1 : 0);
     }
 
     /**
@@ -378,7 +378,7 @@ public final class ASMHelper {
      * @param pos Start position
      */
     public static void loadArgs(Type[] args, InsnList insns, int pos) {
-        ASMHelper.loadArgs(args, insns, pos, -1);
+        Bytecode.loadArgs(args, insns, pos, -1);
     }
 
     /**
@@ -436,10 +436,10 @@ public final class ASMHelper {
         StringBuilder sb = new StringBuilder().append('(');
 
         for (Object arg : args) {
-            sb.append(ASMHelper.toDescriptor(arg));
+            sb.append(Bytecode.toDescriptor(arg));
         }
 
-        return sb.append(')').append(returnType != null ? ASMHelper.toDescriptor(returnType) : "V").toString();
+        return sb.append(')').append(returnType != null ? Bytecode.toDescriptor(returnType) : "V").toString();
     }
 
     /**
@@ -478,7 +478,7 @@ public final class ASMHelper {
      * @return annotation's simple name
      */
     public static String getSimpleName(AnnotationNode annotation) {
-        return ASMHelper.getSimpleName(annotation.desc);
+        return Bytecode.getSimpleName(annotation.desc);
     }
 
     /**
@@ -503,7 +503,7 @@ public final class ASMHelper {
         if (insn == null) {
             return false;
         }
-        return Ints.contains(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
+        return Ints.contains(Bytecode.CONSTANTS_ALL, insn.getOpcode());
     }
 
     /**
@@ -527,8 +527,8 @@ public final class ASMHelper {
             throw new IllegalArgumentException("IntInsnNode with invalid opcode " + insn.getOpcode() + " in getConstant");
         }
         
-        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
-        return index < 0 ? null : ASMHelper.CONSTANTS_VALUES[index];
+        int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : Bytecode.CONSTANTS_VALUES[index];
     }
 
     /**
@@ -559,8 +559,8 @@ public final class ASMHelper {
             throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
         }
         
-        int index = Ints.indexOf(ASMHelper.CONSTANTS_ALL, insn.getOpcode());
-        return index < 0 ? null : Type.getType(ASMHelper.CONSTANTS_TYPES[index]);
+        int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());
+        return index < 0 ? null : Type.getType(Bytecode.CONSTANTS_TYPES[index]);
     }
     
     /**

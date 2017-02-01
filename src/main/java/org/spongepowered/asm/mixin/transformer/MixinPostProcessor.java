@@ -47,7 +47,7 @@ import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.transformers.TreeTransformer;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * TODO Description for MixinPostProcessor
@@ -171,7 +171,7 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
         
         for (Iterator<MixinMethodNode> iter = classNode.mixinMethods.iterator(); iter.hasNext();) {
             MixinMethodNode methodNode = iter.next();
-            if (!ASMHelper.hasFlag(methodNode, Opcodes.ACC_STATIC)) {
+            if (!Bytecode.hasFlag(methodNode, Opcodes.ACC_STATIC)) {
                 continue;
             }
             
@@ -207,10 +207,10 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
         methodNode.instructions.clear();
         Type[] args = Type.getArgumentTypes(methodNode.desc);
         Type returnType = Type.getReturnType(methodNode.desc);
-        ASMHelper.loadArgs(args, methodNode.instructions, 0);
+        Bytecode.loadArgs(args, methodNode.instructions, 0);
         methodNode.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, targetClass.getName(), method.getName(), methodNode.desc, false));
         methodNode.instructions.add(new InsnNode(returnType.getOpcode(Opcodes.IRETURN)));
-        methodNode.maxStack = ASMHelper.getFirstNonArgLocalIndex(args, false);
+        methodNode.maxStack = Bytecode.getFirstNonArgLocalIndex(args, false);
         methodNode.maxLocals = 0;
     }
 

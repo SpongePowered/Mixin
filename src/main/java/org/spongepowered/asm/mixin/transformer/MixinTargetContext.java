@@ -65,7 +65,7 @@ import org.spongepowered.asm.mixin.transformer.meta.SourceMap.File;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
@@ -653,7 +653,7 @@ public class MixinTargetContext implements IMixinContext {
                         + " must not specify an initialiser");
             }
             
-            throw new InvalidMixinException(this, "Illegal imaginary super access: found " + ASMHelper.getOpcodeName(fieldInsn.getOpcode())
+            throw new InvalidMixinException(this, "Illegal imaginary super access: found " + Bytecode.getOpcodeName(fieldInsn.getOpcode())
                     + " opcode in " + method.name + method.desc);
         }
         

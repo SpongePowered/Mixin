@@ -33,7 +33,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InjectionNodes;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Information about the current injection target, mainly just convenience
@@ -110,7 +110,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.classNode = classNode;
         this.method = method;
         this.insns = method.instructions;
-        this.isStatic = ASMHelper.methodIsStatic(method);
+        this.isStatic = Bytecode.methodIsStatic(method);
         this.arguments = Type.getArgumentTypes(method.desc);
         this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
 

@@ -60,7 +60,7 @@ import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 
 /**
@@ -134,7 +134,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      */
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
-        this.isStatic = ASMHelper.methodIsStatic(method);
+        this.isStatic = Bytecode.methodIsStatic(method);
         this.slices = MethodSlices.parse(this);
         this.readAnnotation();
     }
@@ -147,7 +147,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return;
         }
         
-        String type = "@" + ASMHelper.getSimpleName(this.annotation);
+        String type = "@" + Bytecode.getSimpleName(this.annotation);
         List<AnnotationNode> injectionPoints = this.readInjectionPoints(type);
         this.findMethods(this.parseTarget(type), type);
         this.parseInjectionPoints(injectionPoints);
@@ -352,7 +352,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         for (MethodNode target : this.classNode.methods) {
             if (searchFor.matches(target.name, target.desc, ordinal)) {
                 boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
-                if (searchFor.matchAll && (ASMHelper.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
+                if (searchFor.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
                     continue;
                 }
                 
@@ -468,7 +468,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
-        return String.format("%s->@%s::%s%s", mixin.toString(), ASMHelper.getSimpleName(annotation), method.name, method.desc);
+        return String.format("%s->@%s::%s%s", mixin.toString(), Bytecode.getSimpleName(annotation), method.name, method.desc);
     }
 
 }

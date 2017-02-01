@@ -45,7 +45,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.ModifyConstantInjector;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
@@ -137,7 +137,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
                 if (matchesInsn) {
                     this.log("    BeforeConstant found a matching constant{} at ordinal {}", this.matchByType != null ? " TYPE" : " value", ordinal);
                     if (this.ordinal == -1 || this.ordinal == ordinal) {
-                        this.log("      BeforeConstant found {}", ASMHelper.describeNode(insn).trim());
+                        this.log("      BeforeConstant found {}", Bytecode.describeNode(insn).trim());
                         nodes.add(insn);
                         found = true;
                     }
@@ -151,13 +151,13 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         private boolean matchesConditionalInsn(AbstractInsnNode insn) {
             for (int conditionalOpcode : this.expandOpcodes) {
                 if (insn.getOpcode() == conditionalOpcode) {
-                    this.log("  BeforeConstant found %s instruction", ASMHelper.getOpcodeName(conditionalOpcode));
+                    this.log("  BeforeConstant found %s instruction", Bytecode.getOpcodeName(conditionalOpcode));
                     return true;
                 }
             }
             
-            if (this.intValue != null && this.intValue.intValue() == 0 && ASMHelper.isConstant(insn)) {
-                Object value = ASMHelper.getConstant(insn);
+            if (this.intValue != null && this.intValue.intValue() == 0 && Bytecode.isConstant(insn)) {
+                Object value = Bytecode.getConstant(insn);
                 this.log("  BeforeConstant found INTEGER constant: value = {}", value);
                 return value instanceof Integer && ((Integer)value).intValue() == 0;
             }
@@ -166,11 +166,11 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         }
 
         private boolean matchesConstantInsn(AbstractInsnNode insn) {
-            if (!ASMHelper.isConstant(insn)) {
+            if (!Bytecode.isConstant(insn)) {
                 return false;
             }
             
-            Object value = ASMHelper.getConstant(insn);
+            Object value = Bytecode.getConstant(insn);
             if (value == null) {
                 this.log("  BeforeConstant found NULL constant: nullValue = {}", this.nullValue);
                 return this.nullValue || Constants.OBJECT.equals(this.matchByType);

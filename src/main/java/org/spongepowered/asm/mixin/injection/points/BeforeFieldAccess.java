@@ -37,7 +37,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * <p>This injection point searches for GETFIELD and PUTFIELD (and static
@@ -143,7 +143,7 @@ public class BeforeFieldAccess extends BeforeInvoke {
         if (this.arrOpcode > 0) {
             FieldInsnNode fieldInsn = (FieldInsnNode)insn;
             int accOpcode = Type.getType(fieldInsn.desc).getElementType().getOpcode(this.arrOpcode);
-            this.log("{} > > > > searching for array access opcode {} fuzz={}", this.className, ASMHelper.getOpcodeName(accOpcode), this.fuzzFactor);
+            this.log("{} > > > > searching for array access opcode {} fuzz={}", this.className, Bytecode.getOpcodeName(accOpcode), this.fuzzFactor);
             
             if (BeforeFieldAccess.findArrayNode(insns, fieldInsn, accOpcode, this.fuzzFactor) == null) {
                 this.log("{} > > > > > failed to locate matching insn", this.className);

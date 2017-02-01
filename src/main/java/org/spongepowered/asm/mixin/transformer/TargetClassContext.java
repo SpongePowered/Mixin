@@ -39,7 +39,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 
@@ -302,14 +302,14 @@ class TargetClassContext {
         if (classDebugAnnotation != null) {
             this.forceExport = Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "export"));
             if (Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "print"))) {
-                ASMHelper.textify(this.classNode, System.err);
+                Bytecode.textify(this.classNode, System.err);
             }
         }
         
         for (MethodNode method : this.classNode.methods) {
             AnnotationNode methodDebugAnnotation = Annotations.getVisible(method, Debug.class);
             if (methodDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<String>getValue(methodDebugAnnotation, "print"))) {
-                ASMHelper.textify(method, System.err);
+                Bytecode.textify(method, System.err);
             }
         }
     }

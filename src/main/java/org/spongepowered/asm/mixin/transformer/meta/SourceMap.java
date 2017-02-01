@@ -32,7 +32,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.LineNumberNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.util.ASMHelper;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Structure which contains information about a SourceDebugExtension SMAP
@@ -240,7 +240,7 @@ public class SourceMap {
      * @return new File
      */
     public File addFile(String stratumName, ClassNode classNode) {
-        return this.addFile(stratumName, classNode.sourceFile, classNode.name + ".java", ASMHelper.getMaxLineNumber(classNode, 500, 50));
+        return this.addFile(stratumName, classNode.sourceFile, classNode.name + ".java", Bytecode.getMaxLineNumber(classNode, 500, 50));
     }
     
     /**
