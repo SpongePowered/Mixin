@@ -1,0 +1,11 @@
+dist: trusty
+
+language: java
+jdk:
+  - openjdk8
+  - oraclejdk8
+
+script: ./gradlew build
+
+notifications:
+  email: false
