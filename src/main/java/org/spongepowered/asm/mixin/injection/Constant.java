@@ -27,6 +27,8 @@ package org.spongepowered.asm.mixin.injection;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+import org.spongepowered.asm.lib.Opcodes;
+
 /**
  * Annotation for specifying the injection point for an {@link ModifyConstant}
  * injector. Leaving all values unset causes the injection point to match all
@@ -41,14 +43,94 @@ import java.lang.annotation.RetentionPolicy;
 public @interface Constant {
     
     /**
-     * Causes this injector to match ACONST_NULL (null object) literals
+     * Available options for the {@link Constant#expandZeroConditions} setting.
+     * Each option matches the inverse instructions as well because in the
+     * compiled code it is not unusual for <tt>if (x &gt; 0)</tt> to be compiled
+     * as <tt>if (!(x &lt;= 0))</tt>
+     * 
+     * <p>Note that all of these options assume that <tt>x</tt> is on the <b>
+     * left-hand side</b> of the expression in question. For expressions where
+     * zero is on the <b>right-hand side</b> you should choose the inverse.</p>
+     */
+    public enum Condition {
+        
+        /**
+         * Match &lt; operators and &gt;= instructions:
+         * 
+         * <code>x &lt; 0</code>
+         */
+        LESS_THAN_ZERO(Opcodes.IFLT, Opcodes.IFGE),
+        
+        /**
+         * Match &lt;= operators and &gt; instructions
+         * 
+         * <code>x &lt;= 0</code>
+         */
+        LESS_THAN_OR_EQUAL_TO_ZERO(Opcodes.IFLE, Opcodes.IFGT),
+        
+        /**
+         * Match &gt;= operators and &lt; instructions, equivalent to
+         * {@link #LESS_THAN_ZERO}
+         * 
+         * <code>x &gt;= 0</code>
+         */
+        GREATER_THAN_OR_EQUAL_TO_ZERO(Condition.LESS_THAN_ZERO),
+        
+        /**
+         * Match &gt; operators and &lt;= instructions, equivalent to
+         * {@link #LESS_THAN_OR_EQUAL_TO_ZERO}
+         * 
+         * <code>x &gt; 0</code>
+         */
+        GREATER_THAN_ZERO(Condition.LESS_THAN_OR_EQUAL_TO_ZERO);
+        
+        private final int[] opcodes;
+        
+        private final Condition equivalence;
+        
+        private Condition(int... opcodes) {
+            this(null, opcodes);
+        }
+        
+        private Condition(Condition equivalence) {
+            this(equivalence, equivalence.opcodes);
+        }
+        
+        private Condition(Condition equivalence, int... opcodes) {
+            this.equivalence = equivalence != null ? equivalence : this;
+            this.opcodes = opcodes;
+        }
+        
+        /**
+         * Get the condition which is equivalent to this condition
+         */
+        public Condition getEquivalentCondition() {
+            return this.equivalence;
+        }
+        
+        /**
+         * Get the opcodes for this condition
+         */
+        public int[] getOpcodes() {
+            return this.opcodes;
+        }
+        
+    }
+    
+    
+    /**
+     * Causes this injector to match <tt>ACONST_NULL</tt> (null object) literals
      * 
      * @return true to match <tt>null</tt>
      */
     public boolean nullValue() default false;
 
     /**
-     * Specify an integer constant to match, includes byte and short values
+     * Specify an integer constant to match, includes byte and short values.
+     * 
+     * <p><b>Special note for referencing <tt>0</tt> (zero) which forms part of
+     * a comparison expression:</b> See the {@link #expandZeroConditions} option
+     * below.</p>
      * 
      * @return integer value to match
      */
@@ -103,9 +185,52 @@ public @interface Constant {
     public int ordinal() default -1;
     
     /**
+     * Whilst most constants can be located in the compiled method with relative
+     * ease, there exists a special case when a <tt>zero</tt> is used in a
+     * conditional expression. For example:
+     * 
+     * <blockquote><code>if (x &gt;= 0)</code></blockquote>
+     * 
+     * <p>This special case occurs because java includes explicit instructions
+     * for this type of comparison, and thus the compiled code might look more
+     * like this:</p>
+     * 
+     * <blockquote><code>if (x.isGreaterThanOrEqualToZero())</code></blockquote>
+     * 
+     * <p>Of course if we know that the constant we are searching for is part of
+     * a comparison, then we can explicitly search for the
+     * <tt>isGreaterThanOrEqualToZero</tt> and convert it back to the original
+     * form in order to redirect it just like any other constant access.</p>
+     * 
+     * <p>To enable this behaviour, you may specify one or more values for this
+     * argument based on the type of expression you wish to expand. Since the
+     * Java compiler is wont to compile certain expressions as the <i>inverse
+     * </i> of their source-level counterparts (eg. compiling a <em>do this if
+     * greater than</em> structure to a <em>ignore this if less than or equal
+     * </em> structure); specifying a particular expression type implicitly
+     * includes the inverse expression as well.</p>
+     * 
+     * <p>It is worth noting that the effect on ordinals may be hard to predict,
+     * and thus care should be taken to ensure that the selected injection
+     * points match the expected locations.</p>
+     * 
+     * <p>Specifying this option has the following effects:</p>
+     * 
+     * <ul>
+     *   <li>Matching conditional opcodes in the target method are identified
+     *     for injection candidacy.</li>
+     *   <li>An <tt>intValue</tt> of <tt>0</tt> is implied and does not need to
+     *     be explicitly defined.</li>
+     *   <li>However, explicitly specifying an <tt>intValue</tt> of <tt>0</tt>
+     *     will cause this selector to also match explicit <tt>0</tt> constants
+     *     in the method body as well.</li>
+     * </ul>
+     */
+    public Condition[] expandZeroConditions() default {};
+    
+    /**
      * @return true to enable verbose debug logging for this injection point
      */
     public boolean log() default false;
+
 }
-
-

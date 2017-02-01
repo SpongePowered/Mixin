@@ -533,12 +533,12 @@ class MixinApplicatorStandard {
         }
         
         AnnotationNode renamed = ASMHelper.getVisibleAnnotation(method, MixinRenamed.class);
-        if (renamed == null || !ASMHelper.getAnnotationValue(renamed, "isInterfaceMember", false)) {
+        if (renamed == null || !ASMHelper.getAnnotationValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
                     + methodName + " in " + mixin);
         }
         
-        if (!ASMHelper.getAnnotationValue(intrinsic, "displace", false)) {
+        if (!ASMHelper.getAnnotationValue(intrinsic, "displace", Boolean.FALSE)) {
             this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {} for {}", methodName, mixin.getTargetClassRef());
             return true;
         }

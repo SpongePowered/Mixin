@@ -453,5 +453,14 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">January 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.6.8</b></td>
+      <td valign="top">
+        <ul>
+          <li>Allow &#064;ModifyConstant to hook implicit zero in comparisons</li>
+        </ul>
+      </td>
+      <td valign="top">February 2017</td>
+    </tr>
   </tbody>
 </table>

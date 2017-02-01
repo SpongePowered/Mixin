@@ -173,17 +173,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
     }
 
-    @SuppressWarnings("unchecked")
     protected List<AnnotationNode> readInjectionPoints(String type) {
-        Object atValue = ASMHelper.getAnnotationValue(this.annotation, "at");
-        if (atValue instanceof List) {
-            return (List<AnnotationNode>)atValue;
-        } else if (atValue instanceof AnnotationNode) {
-            List<AnnotationNode> ats = new ArrayList<AnnotationNode>();
-            ats.add((AnnotationNode)atValue);
-            return ats;
+        List<AnnotationNode> ats = ASMHelper.<AnnotationNode>getAnnotationValue(this.annotation, "at", false);
+        if (ats == null) {
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
         }
-        throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
+        return ats;
     }
 
     protected void parseInjectionPoints(List<AnnotationNode> ats) {

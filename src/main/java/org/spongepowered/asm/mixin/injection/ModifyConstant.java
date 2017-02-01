@@ -49,6 +49,10 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * 
  * <p>The callback receives the original value of the constant, and should
  * return the new value.</p>
+ * 
+ * <p>Like other <em>Redirect</em> injectors, the callback signature can
+ * optionally include the target method arguments by simply appending them to
+ * the handler method signature.</p>
  */
 
 @Target({ ElementType.METHOD })

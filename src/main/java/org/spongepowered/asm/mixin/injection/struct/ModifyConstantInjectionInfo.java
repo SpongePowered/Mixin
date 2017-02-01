@@ -26,8 +26,10 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,6 +39,7 @@ import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.Constant.Condition;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.ModifyConstantInjector;
@@ -44,6 +47,8 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionExceptio
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.ASMHelper;
 import org.spongepowered.asm.util.Constants;
+
+import com.google.common.primitives.Ints;
 
 /**
  * Information about a constant modifier injector
@@ -71,55 +76,67 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         private final String stringValue;
         private final Type typeValue;
         
+        private final int[] expandOpcodes;
+        private final boolean expand;
+        
         private final String matchByType;
         
         private final boolean log;
 
         public BeforeConstant(InjectionInfo info, AnnotationNode node, String returnType) {
             Boolean empty = ASMHelper.<Boolean>getAnnotationValue(node, "nullValue", (Boolean)null);
-            this.ordinal     = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
-            this.nullValue   = empty != null ? empty.booleanValue() : false;;
-            this.intValue    = ASMHelper.<Integer>getAnnotationValue(node, "intValue", (Integer)null);
-            this.floatValue  = ASMHelper.<Float>getAnnotationValue(node, "floatValue", (Float)null);
-            this.longValue   = ASMHelper.<Long>getAnnotationValue(node, "longValue", (Long)null);
+            this.ordinal = ASMHelper.<Integer>getAnnotationValue(node, "ordinal", Integer.valueOf(-1));
+            this.nullValue = empty != null ? empty.booleanValue() : false;
+            this.intValue = ASMHelper.<Integer>getAnnotationValue(node, "intValue", (Integer)null);
+            this.floatValue = ASMHelper.<Float>getAnnotationValue(node, "floatValue", (Float)null);
+            this.longValue = ASMHelper.<Long>getAnnotationValue(node, "longValue", (Long)null);
             this.doubleValue = ASMHelper.<Double>getAnnotationValue(node, "doubleValue", (Double)null);
             this.stringValue = ASMHelper.<String>getAnnotationValue(node, "stringValue", (String)null);
-            this.typeValue   = ASMHelper.<Type>getAnnotationValue(node, "classValue", (Type)null);
+            this.typeValue = ASMHelper.<Type>getAnnotationValue(node, "classValue", (Type)null);
             
+            this.matchByType = this.validateDiscriminator(info, returnType, empty);
+            this.expandOpcodes = this.parseExpandOpcodes(node);
+            this.expand = this.expandOpcodes.length > 0;
+            
+            this.log = ASMHelper.<Boolean>getAnnotationValue(node, "log", Boolean.FALSE).booleanValue();
+        }
+
+        private String validateDiscriminator(InjectionInfo info, String returnType, Boolean empty) {
             int c = BeforeConstant.count(empty, this.intValue, this.floatValue, this.longValue, this.doubleValue, this.stringValue, this.typeValue);
             if (c == 1) {
                 returnType = null;
             } else if (c > 1) {
                 throw new InvalidInjectionException(info, "Conflicting constant discriminators specified on @Constant annotation for " + info);
             }
-            
-            this.matchByType = returnType;
-            
-            this.log = ASMHelper.<Boolean>getAnnotationValue(node, "log", Boolean.FALSE).booleanValue();
+            return returnType;
+        }
+
+        private int[] parseExpandOpcodes(AnnotationNode node) {
+            Set<Integer> opcodes = new HashSet<Integer>();
+            for (Condition condition : ASMHelper.<Condition>getAnnotationValue(node, "expandZeroConditions", true, Condition.class)) {
+                Condition actual = condition.getEquivalentCondition();
+                for (int opcode : actual.getOpcodes()) {
+                    opcodes.add(Integer.valueOf(opcode));
+                }
+            }
+            return Ints.toArray(opcodes);
         }
 
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
             boolean found = false;
 
-            if (this.log) {
-                BeforeConstant.logger.info("BeforeConstant is searching for an constants in method with descriptor {}", desc);
-            }
+            this.log("BeforeConstant is searching for constants in method with descriptor {}", desc);
             
             ListIterator<AbstractInsnNode> iter = insns.iterator();
             for (int ordinal = 0; iter.hasNext();) {
                 AbstractInsnNode insn = iter.next();
 
-                boolean matchesInsn = this.matchesInsn(insn);
+                boolean matchesInsn = this.expand ? this.matchesConditionalInsn(insn) : this.matchesConstantInsn(insn);
                 if (matchesInsn) {
-                    if (this.log) {
-                        String byType = this.matchByType != null ? " TYPE" : " value";
-                        BeforeConstant.logger.info("    BeforeConstant found a matching constant{} at ordinal {}", byType, ordinal);
-                    }
+                    this.log("    BeforeConstant found a matching constant{} at ordinal {}", this.matchByType != null ? " TYPE" : " value", ordinal);
                     if (this.ordinal == -1 || this.ordinal == ordinal) {
-                        if (this.log) {
-                            BeforeConstant.logger.info("      BeforeConstant found {}", ASMHelper.describeNode(insn).trim());
-                        }
+                        this.log("      BeforeConstant found {}", ASMHelper.describeNode(insn).trim());
                         nodes.add(insn);
                         found = true;
                     }
@@ -130,52 +147,61 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
             return found;
         }
 
-        private boolean matchesInsn(AbstractInsnNode insn) {
+        private boolean matchesConditionalInsn(AbstractInsnNode insn) {
+            for (int conditionalOpcode : this.expandOpcodes) {
+                if (insn.getOpcode() == conditionalOpcode) {
+                    this.log("  BeforeConstant found %s instruction", ASMHelper.getOpcodeName(conditionalOpcode));
+                    return true;
+                }
+            }
+            
+            if (this.intValue != null && this.intValue.intValue() == 0 && ASMHelper.isConstant(insn)) {
+                Object value = ASMHelper.getConstant(insn);
+                this.log("  BeforeConstant found INTEGER constant: value = {}", value);
+                return value instanceof Integer && ((Integer)value).intValue() == 0;
+            }
+            
+            return false;
+        }
+
+        private boolean matchesConstantInsn(AbstractInsnNode insn) {
             if (!ASMHelper.isConstant(insn)) {
                 return false;
             }
             
             Object value = ASMHelper.getConstant(insn);
             if (value == null) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found NULL constant: nullValue = {}", this.nullValue);
-                }
+                this.log("  BeforeConstant found NULL constant: nullValue = {}", this.nullValue);
                 return this.nullValue || Constants.OBJECT.equals(this.matchByType);
             } else if (value instanceof Integer) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found INTEGER constant: value = {}, intValue = {}", value, this.intValue);
-                }
+                this.log("  BeforeConstant found INTEGER constant: value = {}, intValue = {}", value, this.intValue);
                 return value.equals(this.intValue) || "I".equals(this.matchByType);
             } else if (value instanceof Float) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found FLOAT constant: value = {}, floatValue = {}", value, this.floatValue);
-                }
+                this.log("  BeforeConstant found FLOAT constant: value = {}, floatValue = {}", value, this.floatValue);
                 return value.equals(this.floatValue) || "F".equals(this.matchByType);
             } else if (value instanceof Long) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found LONG constant: value = {}, longValue = {}", value, this.longValue);
-                }
+                this.log("  BeforeConstant found LONG constant: value = {}, longValue = {}", value, this.longValue);
                 return value.equals(this.longValue) || "J".equals(this.matchByType);
             } else if (value instanceof Double) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found DOUBLE constant: value = {}, doubleValue = {}", value, this.doubleValue);
-                }
+                this.log("  BeforeConstant found DOUBLE constant: value = {}, doubleValue = {}", value, this.doubleValue);
                 return value.equals(this.doubleValue) || "D".equals(this.matchByType);
             } else if (value instanceof String) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found STRING constant: value = {}, stringValue = {}", value, this.stringValue);
-                }
+                this.log("  BeforeConstant found STRING constant: value = {}, stringValue = {}", value, this.stringValue);
                 return value.equals(this.stringValue) || Constants.STRING.equals(this.matchByType);
             } else if (value instanceof Type) {
-                if (this.log) {
-                    BeforeConstant.logger.info("  BeforeConstant found CLASS constant: value = {}, typeValue = {}", value, this.typeValue);
-                }
+                this.log("  BeforeConstant found CLASS constant: value = {}, typeValue = {}", value, this.typeValue);
                 return value.equals(this.typeValue) || Constants.CLASS.equals(this.matchByType);
             }
             
             return false;
         }
 
+        protected void log(String message, Object... params) {
+            if (this.log) {
+                BeforeConstant.logger.info(message, params);
+            }
+        }
+        
         private static int count(Object... values) {
             int counter = 0;
             for (Object value : values) {

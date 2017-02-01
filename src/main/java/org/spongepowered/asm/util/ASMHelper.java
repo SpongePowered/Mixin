@@ -31,9 +31,11 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import org.spongepowered.asm.lib.ClassReader;
@@ -657,23 +659,75 @@ public final class ASMHelper {
      * defaultValue if the annotation value is not set
      *
      * @param <T> duck type
-     * @param annotationNode Annotation node to query
+     * @param annotation Annotation node to query
      * @param key Key to search for
      * @param enumClass Class of enum containing the enum constant to search for
      * @param defaultValue Value to return if the specified key isn't found
      * @return duck-typed annotation value or defaultValue if missing
      */
-    public static <T extends Enum<T>> T getAnnotationValue(AnnotationNode annotationNode, String key, Class<T> enumClass, T defaultValue) {
-        String[] value = ASMHelper.<String[]>getAnnotationValue(annotationNode, key);
+    public static <T extends Enum<T>> T getAnnotationValue(AnnotationNode annotation, String key, Class<T> enumClass, T defaultValue) {
+        String[] value = ASMHelper.<String[]>getAnnotationValue(annotation, key);
         if (value == null) {
             return defaultValue;
         }
+        return ASMHelper.toEnumValue(enumClass, value);
+    }
+
+    /**
+     * Return the specified annotation node value as a list of nodes
+     * 
+     * @param <T> list element type
+     * @param annotation Annotation node to query
+     * @param key Key to search for
+     * @param notNull if true, return an empty list instead of null if the
+     *      annotation value is absent
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> List<T> getAnnotationValue(AnnotationNode annotation, String key, boolean notNull) {
+        Object value = ASMHelper.<Object>getAnnotationValue(annotation, key);
+        if (value instanceof List) {
+            return (List<T>)value;
+        } else if (value != null) {
+            List<T> list = new ArrayList<T>();
+            list.add((T)value);
+            return list;
+        }
+        return Collections.<T>emptyList();
+    }
+    
+    /**
+     * Return the specified annotation node value as a list of enums
+     * 
+     * @param <T> list element type
+     * @param annotation Annotation node to query
+     * @param key Key to search for
+     * @param notNull if true, return an empty list instead of null if the
+     *      annotation value is absent
+     * @param enumClass Class of enum containing the enum constant to use
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends Enum<T>> List<T> getAnnotationValue(AnnotationNode annotation, String key, boolean notNull, Class<T> enumClass) {
+        Object value = ASMHelper.<Object>getAnnotationValue(annotation, key);
+        if (value instanceof List) {
+            for (ListIterator<Object> iter = ((List<Object>)value).listIterator(); iter.hasNext();) {
+                iter.set(ASMHelper.toEnumValue(enumClass, (String[])iter.next()));
+            }
+            return (List<T>)value;
+        } else if (value instanceof String[]) {
+            List<T> list = new ArrayList<T>();
+            list.add(ASMHelper.toEnumValue(enumClass, (String[])value));
+            return list;
+        }
+        return Collections.<T>emptyList();
+    }
+
+    private static <T extends Enum<T>> T toEnumValue(Class<T> enumClass, String[] value) {
         if (!enumClass.getName().equals(Type.getType(value[0]).getClassName())) {
             throw new IllegalArgumentException("The supplied enum class does not match the stored enum value");
         }
         return Enum.valueOf(enumClass, value[1]);
     }
-
+    
     /**
      * Returns true if the supplied method node is static
      * 

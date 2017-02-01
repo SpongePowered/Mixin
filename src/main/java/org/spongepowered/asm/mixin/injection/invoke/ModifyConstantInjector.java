@@ -28,6 +28,8 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.lib.tree.JumpInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -39,6 +41,12 @@ import org.spongepowered.asm.util.ASMHelper;
  * A bytecode injector which allows a specific
  */
 public class ModifyConstantInjector extends RedirectInjector {
+    
+    /**
+     * Offset between "implicit zero" opcodes and "explicit int comparison"
+     * opcodes
+     */
+    private static final int OPCODE_OFFSET = Opcodes.IF_ICMPLT - Opcodes.IFLT;
 
     /**
      * @param info Injection info
@@ -57,30 +65,56 @@ public class ModifyConstantInjector extends RedirectInjector {
             throw new UnsupportedOperationException("Target failure for " + this.info);
         }
         
-        if (ASMHelper.isConstant(node.getCurrentTarget())) {
-            this.injectConstantModifier(target, node);
+        AbstractInsnNode targetNode = node.getCurrentTarget();
+        if (targetNode instanceof JumpInsnNode) {
+            this.injectExpandedConstantModifier(target, (JumpInsnNode)targetNode);
             return;
         }
         
-        throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
+        if (ASMHelper.isConstant(targetNode)) {
+            this.injectConstantModifier(target, targetNode);
+            return;
+        }
+        
+        throw new InvalidInjectionException(this.info, this.annotationType + " annotation is targetting an invalid insn in "
                 + target + " in " + this);
     }
     
-    private void injectConstantModifier(Target target, InjectionNode node) {
-        final AbstractInsnNode constNode = node.getCurrentTarget();
+    /**
+     * Injects a constant modifier at an implied-zero
+     * 
+     * @param target target method
+     * @param jumpNode jump instruction (must be IFLT, IFGE, IFGT or IFLE)
+     */
+    private void injectExpandedConstantModifier(Target target, JumpInsnNode jumpNode) {
+        int opcode = jumpNode.getOpcode();
+        if (opcode < Opcodes.IFLT || opcode > Opcodes.IFLE) {
+            throw new InvalidInjectionException(this.info, this.annotationType + " annotation selected an invalid opcode "
+                    + ASMHelper.getOpcodeName(opcode) + " in " + target + " in " + this); 
+        }
+        
+        final InsnList insns = new InsnList();
+        insns.add(new InsnNode(Opcodes.ICONST_0));
+        AbstractInsnNode invoke = this.invokeConstantHandler(Type.getType("I"), target, insns, insns);
+        insns.add(new JumpInsnNode(opcode + ModifyConstantInjector.OPCODE_OFFSET, jumpNode.label));
+        target.replaceNode(jumpNode, invoke, insns);
+        target.addToStack(1);
+    }
+
+    private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
         final Type constantType = ASMHelper.getConstantType(constNode);
         final InsnList before = new InsnList();
         final InsnList after = new InsnList();
-        AbstractInsnNode invoke = this.invokeConstantHandler(constNode, constantType, target, before, after);
+        AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, before, after);
         target.wrapNode(constNode, invoke, before, after);
     }
 
-    private AbstractInsnNode invokeConstantHandler(AbstractInsnNode targetNode, Type constantType, Target target, InsnList before, InsnList after) {
+    private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, InsnList before, InsnList after) {
         final String handlerDesc = ASMHelper.generateDescriptor(constantType, constantType);
         final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
-            before.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            before.insert(new VarInsnNode(Opcodes.ALOAD, 0));
             target.addToStack(1);
         }
         

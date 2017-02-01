@@ -46,7 +46,7 @@ public class CallbackInjectionInfo extends InjectionInfo {
 
     @Override
     protected Injector parseInjector(AnnotationNode injectAnnotation) {
-        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", false);
+        boolean cancellable = ASMHelper.<Boolean>getAnnotationValue(injectAnnotation, "cancellable", Boolean.FALSE);
         LocalCapture locals = ASMHelper.<LocalCapture>getAnnotationValue(injectAnnotation, "locals", LocalCapture.class, LocalCapture.NO_CAPTURE);
         String identifier = ASMHelper.<String>getAnnotationValue(injectAnnotation, "id", "");
         

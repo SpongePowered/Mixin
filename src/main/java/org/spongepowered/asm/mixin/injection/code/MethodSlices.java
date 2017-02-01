@@ -24,9 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.code;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.spongepowered.asm.lib.tree.AnnotationNode;
@@ -98,21 +96,12 @@ public final class MethodSlices {
      * @param info owning injector
      * @return parsed slice collection
      */
-    @SuppressWarnings("unchecked")
     public static MethodSlices parse(InjectionInfo info) {
         MethodSlices slices = new MethodSlices(info);
         
         AnnotationNode annotation = info.getAnnotation();
         if (annotation != null) {
-            List<AnnotationNode> sliceNodes = new ArrayList<AnnotationNode>();
-            Object sliceValue = ASMHelper.getAnnotationValue(annotation, "slice");
-            if (sliceValue instanceof List) {
-                sliceNodes.addAll((List<AnnotationNode>)sliceValue);
-            } else if (sliceValue instanceof AnnotationNode) {
-                sliceNodes.add((AnnotationNode)sliceValue);
-            }
-            
-            for (AnnotationNode node : sliceNodes) {
+            for (AnnotationNode node : ASMHelper.<AnnotationNode>getAnnotationValue(annotation, "slice", true)) {
                 MethodSlice slice = MethodSlice.parse(info, node);
                 slices.add(slice);
             }
