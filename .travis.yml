@@ -9,3 +9,8 @@ script: ./gradlew build
 
 notifications:
   email: false
+
+# Exclude master because it is built on Jenkins
+branches:
+  except:
+    - master
