@@ -863,7 +863,7 @@ public class MixinTransformer extends TreeTransformer {
                 .hr('-')
                 .addWrapped("    %s", ex.getMessage())
                 .hr('-')
-                .add(ex.getStackTrace(), 8)
+                .add(ex, 8)
                 .trace(action.logLevel);
         }
     
