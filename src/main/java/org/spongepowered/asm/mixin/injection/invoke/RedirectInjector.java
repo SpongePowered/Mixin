@@ -356,7 +356,7 @@ public class RedirectInjector extends InvokeInjector {
     private void injectAtGetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
         String handlerDesc = Bytecode.generateDescriptor(this.returnType, (Object[])RedirectInjector.getArrayArgs(fieldType));
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array getter");
-        this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
+        this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array getter");
     }
 
     /**
@@ -365,7 +365,7 @@ public class RedirectInjector extends InvokeInjector {
     private void injectAtSetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
         String handlerDesc = Bytecode.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, fieldType.getElementType()));
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array setter");
-        this.injectArrayRedirect(target, fieldNode, varNode, withArgs);
+        this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array setter");
     }
 
     /**
@@ -379,8 +379,15 @@ public class RedirectInjector extends InvokeInjector {
      * @param varNode array access node
      * @param withArgs true if the descriptor includes captured arguments from
      *      the target method signature
+     * @param type description of access type for use in error messages
      */
-    public void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs) {
+    public void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs, String type) {
+        if (varNode == null) {
+            String advice = "";
+            throw new InvalidInjectionException(this.info, "Array element " + this.annotationType + " on " + this + " could not locate a matching "
+                    + type + " instruction in " + target + ". " + advice);
+        }
+        
         if (!this.isStatic) {
             target.insns.insertBefore(fieldNode, new VarInsnNode(Opcodes.ALOAD, 0));
             target.addToStack(1);
