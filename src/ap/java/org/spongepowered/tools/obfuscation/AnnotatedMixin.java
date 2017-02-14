@@ -58,29 +58,29 @@ import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
  * Information about a mixin stored during processing
  */
 class AnnotatedMixin {
-    
+
     /**
      * Mixin annotation
      */
     private final AnnotationHandle annotation;
-    
+
     /**
-     * Messager 
+     * Messager
      */
     private final Messager messager;
-    
+
     /**
      * Type handle provider
      */
     private final ITypeHandleProvider typeProvider;
-    
+
     /**
      * Manager
      */
     private final IObfuscationManager obf;
-    
+
     /**
-     * Generated mappings 
+     * Generated mappings
      */
     private final IMappingConsumer mappings;
 
@@ -88,7 +88,7 @@ class AnnotatedMixin {
      * Mixin class
      */
     private final TypeElement mixin;
-    
+
     /**
      * Mixin class
      */
@@ -98,50 +98,50 @@ class AnnotatedMixin {
      * Specified targets
      */
     private final List<TypeHandle> targets = new ArrayList<TypeHandle>();
-    
+
     /**
-     * Target type (for single-target mixins) 
+     * Target type (for single-target mixins)
      */
     private final TypeHandle primaryTarget;
-    
+
     /**
      * Mixin class "reference" (bytecode name)
      */
     private final String classRef;
-    
+
     /**
      * True if we will actually process remappings for this mixin
      */
     private final boolean remap;
-    
+
     /**
      * True if the target class is allowed to not exist at compile time, we will
      * simulate the target in order to do as much validation as is feasible.
-     * 
+     *
      * <p>Implies <tt>remap=false</tt></p>
      */
     private final boolean virtual;
- 
+
     /**
      * Overwrite handler
      */
     private final AnnotatedMixinElementHandlerOverwrite overwrites;
-    
+
     /**
      * Shadow handler
      */
     private final AnnotatedMixinElementHandlerShadow shadows;
-    
+
     /**
      * Injector handler
      */
     private final AnnotatedMixinElementHandlerInjector injectors;
-    
+
     /**
-     * Accessor handler 
+     * Accessor handler
      */
     private final AnnotatedMixinElementHandlerAccessor accessors;
-    
+
     /**
      * Soft implementation handler;
      */
@@ -160,7 +160,7 @@ class AnnotatedMixin {
         this.primaryTarget = this.initTargets();
 //        this.remap = !this.virtual && this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
-        
+
         this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
         this.shadows = new AnnotatedMixinElementHandlerShadow(ap, this);
         this.injectors = new AnnotatedMixinElementHandlerInjector(ap, this);
@@ -174,13 +174,13 @@ class AnnotatedMixin {
                 break;
             }
         }
-        
+
         return this;
     }
 
     private TypeHandle initTargets() {
         TypeHandle primaryTarget = null;
-        
+
         // Public targets, referenced by class
         try {
             for (TypeMirror target : this.annotation.<TypeMirror>getList()) {
@@ -196,7 +196,7 @@ class AnnotatedMixin {
         } catch (Exception ex) {
             this.printMessage(Kind.WARNING, "Error processing public targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
         }
-        
+
         // Private targets, referenced by name
         try {
             for (String privateTarget : this.annotation.<String>getList("targets")) {
@@ -221,11 +221,11 @@ class AnnotatedMixin {
         } catch (Exception ex) {
             this.printMessage(Kind.WARNING, "Error processing private targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
         }
-        
+
         if (primaryTarget == null) {
             this.printMessage(Kind.ERROR, "Mixin has no targets", this);
         }
-        
+
         return primaryTarget;
     }
 
@@ -241,10 +241,10 @@ class AnnotatedMixin {
         if (!obfClassData.isEmpty()) {
             this.obf.getReferenceManager().addClassMapping(this.classRef, reference, obfClassData);
         }
-        
+
         this.addTarget(type);
     }
-    
+
     private void addTarget(TypeHandle type) {
         this.targets.add(type);
     }
@@ -253,39 +253,39 @@ class AnnotatedMixin {
     public String toString() {
         return this.mixin.getSimpleName().toString();
     }
-    
+
     public AnnotationHandle getAnnotation() {
         return this.annotation;
     }
-    
+
     /**
      * Get the mixin class
      */
     public TypeElement getMixin() {
         return this.mixin;
     }
-    
+
     /**
      * Get the type handle for the mixin class
      */
     public TypeHandle getHandle() {
         return this.handle;
     }
-    
+
     /**
      * Get the mixin class reference
      */
     public String getClassRef() {
         return this.classRef;
     }
-    
+
     /**
      * Get whether this is an interface mixin
      */
     public boolean isInterface() {
         return this.mixin.getKind() == ElementKind.INTERFACE;
     }
-    
+
     /**
      * Get the <em>primary</em> target
      */
@@ -293,32 +293,32 @@ class AnnotatedMixin {
     public TypeHandle getPrimaryTarget() {
         return this.primaryTarget;
     }
-    
+
     /**
      * Get the mixin's targets
      */
     public List<TypeHandle> getTargets() {
         return this.targets;
     }
-    
+
     /**
      * Get whether this is a multi-target mixin
      */
     public boolean isMultiTarget() {
         return this.targets.size() > 1;
     }
-    
+
     /**
      * Get whether to remap annotations in this mixin
      */
     public boolean remap() {
         return this.remap;
     }
-    
+
     public IMappingConsumer getMappings() {
         return this.mappings;
     }
-    
+
     public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite) {
         this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite));
     }
@@ -333,21 +333,21 @@ class AnnotatedMixin {
 
     public void registerInjector(ExecutableElement method, AnnotationHandle inject, InjectorRemap remap) {
         this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, remap));
-        
+
         List<AnnotationHandle> ats = inject.getAnnotationList("at");
         for (AnnotationHandle at : ats) {
             this.registerInjectionPoint(method, inject, at, remap, "@At(%s)");
         }
-        
+
         List<AnnotationHandle> slices = inject.getAnnotationList("slice");
         for (AnnotationHandle slice : slices) {
             String id = slice.<String>getValue("id", "");
-            
+
             AnnotationHandle from = slice.getAnnotation("from");
             if (from != null) {
                 this.registerInjectionPoint(method, inject, from, remap, "@Slice[" + id + "](from=@At(%s))");
             }
-            
+
             AnnotationHandle to = slice.getAnnotation("to");
             if (to != null) {
                 this.registerInjectionPoint(method, inject, to, remap, "@Slice[" + id + "](to=@At(%s))");
@@ -359,16 +359,16 @@ class AnnotatedMixin {
         this.injectors.registerInjectionPoint(new AnnotatedElementInjectionPoint(element, inject, at, remap), format);
     }
 
-    public void registerAccessor(ExecutableElement element, AnnotationHandle accessor) {
-        this.accessors.registerAccessor(new AnnotatedElementAccessor(element, accessor));
+    public void registerAccessor(ExecutableElement element, AnnotationHandle accessor, boolean shouldRemap) {
+        this.accessors.registerAccessor(new AnnotatedElementAccessor(element, accessor, shouldRemap));
     }
 
-    public void registerInvoker(ExecutableElement element, AnnotationHandle invoker) {
-        this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker));
+    public void registerInvoker(ExecutableElement element, AnnotationHandle invoker, boolean shouldRemap) {
+        this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker, shouldRemap));
     }
 
     public void registerSoftImplements(AnnotationHandle implementsAnnotation) {
         this.softImplements.process(implementsAnnotation);
     }
-    
+
 }

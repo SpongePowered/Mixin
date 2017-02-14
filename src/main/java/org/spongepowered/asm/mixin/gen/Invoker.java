@@ -42,7 +42,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * greatly simplify mixins which <b>only</b> contain accessors, and provide for
  * faster development than with access transformers since no re-decompile is
  * needed to put the changes into effect.</p>
- * 
+ *
  * <p>Invokers can be used in regular mixins as a way to provide access to a
  * private method without needing to shadow and then manually proxy the method
  * call. They can also be used to create <i>"Accessor Mixins"</i> which are
@@ -51,7 +51,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * <i>Accessor Mixins</i> are accessible via user code and thus no surrogate
  * <i>"Duck"</i> interface is required to expose the generated methods, the
  * mixin itself acts as its own Duck.</p>
- * 
+ *
  * <ul><li>See also {@link Accessor}</li></ul>
  */
 @Target({ ElementType.METHOD })
@@ -63,14 +63,29 @@ public @interface Invoker {
      * method name. If the annotated method starts with "call" or "invoke"
      * followed by a capital letter, then the prefix is stripped and the
      * remainder of the method name is used as the target method name.
-     * 
+     *
      * <p>However sometimes it maye be desirable to name an accessor method
      * differently to the target method. In this case you may specify the method
      * using its name.</p>
-     * 
+     *
      * @return name for the target method, or empty string to inflect using the
      *      annotated method name
      */
     public String value() default "";
-    
+
+    /**
+     * By default, the annotation processor will attempt to locate an
+     * obfuscation mapping for all {@link Invoker} methods since it is
+     * anticipated that in general the target of a {@link Invoker} annotation
+     * will be an obfuscated method in the target class. However since it is
+     * possible that the target is not obfuscated, it may be desirable to
+     * suppress the compiler warning which would be generated. Setting this
+     * value to <em>false</em> will cause the annotation processor to skip
+     * remapping for this annotation.
+     *
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this annotation
+     */
+    public boolean remap() default true;
+
 }

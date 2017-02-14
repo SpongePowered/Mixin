@@ -59,16 +59,23 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
      * Accessor element
      */
     static class AnnotatedElementAccessor extends AnnotatedElement<ExecutableElement> {
-        
+
+        private final boolean shouldRemap;
+
         private final TypeMirror returnType;
-        
+
         private String targetName;
-        
-        public AnnotatedElementAccessor(ExecutableElement element, AnnotationHandle annotation) {
+
+        public AnnotatedElementAccessor(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation);
+            this.shouldRemap = shouldRemap;
             this.returnType = this.getElement().getReturnType();
         }
-        
+
+        public boolean shouldRemap() {
+            return this.shouldRemap;
+        }
+
         public String getAnnotationValue() {
             return this.getAnnotation().<String>getValue();
         }
@@ -83,19 +90,19 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
                     return null;
             }
         }
-        
+
         public String getTargetTypeName() {
             return TypeUtils.getTypeName(this.getTargetType());
         }
-        
+
         public String getAccessorDesc() {
             return TypeUtils.getInternalName(this.getTargetType());
         }
-        
+
         public MemberInfo getContext() {
             return new MemberInfo(this.getTargetName(), null, this.getAccessorDesc());
         }
-        
+
         public AccessorType getAccessorType() {
             return this.returnType.getKind() == TypeKind.VOID ? AccessorType.FIELD_SETTER : AccessorType.FIELD_GETTER;
         }
@@ -103,72 +110,72 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         public void setTargetName(String targetName) {
             this.targetName = targetName;
         }
-        
+
         public String getTargetName() {
             return this.targetName;
         }
-        
+
         @Override
         public String toString() {
             return this.targetName != null ? this.targetName : "<invalid>";
         }
     }
-    
+
     /**
      * Invoker element
      */
     static class AnnotatedElementInvoker extends AnnotatedElementAccessor {
 
-        public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation) {
-            super(element, annotation);
+        public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
+            super(element, annotation, shouldRemap);
         }
-        
+
         @Override
         public String getAccessorDesc() {
             return TypeUtils.getDescriptor(this.getElement());
         }
-        
+
         @Override
         public AccessorType getAccessorType() {
             return AccessorType.METHOD_PROXY;
         }
-        
+
         @Override
         public String getTargetTypeName() {
             return TypeUtils.getJavaSignature(this.getElement());
         }
-        
+
     }
-    
+
     public AnnotatedMixinElementHandlerAccessor(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
-    
+
     @Override
     public ReferenceMapper getReferenceMapper() {
         return null;
     }
-    
+
     @Override
     public String getClassRef() {
         return this.mixin.getClassRef();
     }
-    
+
     @Override
     public IMixinInfo getMixin() {
         throw new UnsupportedOperationException("MixinInfo not available at compile time");
     }
-    
+
     @Override
     public boolean getOption(Option option) {
         throw new UnsupportedOperationException("Options not available at compile time");
     }
-    
+
     @Override
     public int getPriority() {
         throw new UnsupportedOperationException("Priority not available at compile time");
     }
-    
+
     @Override
     public Target getTargetMethod(MethodNode into) {
         throw new UnsupportedOperationException("Target not available at compile time");
@@ -176,7 +183,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
 
     /**
      * Register a new accessor
-     * 
+     *
      * @param elem accessor element
      */
     public void registerAccessor(AnnotatedElementAccessor elem) {
@@ -191,7 +198,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return;
         }
         elem.setTargetName(targetName);
-        
+
         for (TypeHandle target : this.mixin.getTargets()) {
             if (elem.getAccessorType() == AccessorType.METHOD_PROXY) {
                 this.registerInvokerForTarget((AnnotatedElementInvoker)elem, target);
@@ -208,13 +215,17 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return;
         }
 
+        if (!elem.shouldRemap()) {
+            return;
+        }
+
         ObfuscationData<MappingField> obfData = this.obf.getDataProvider().getObfField(targetField.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
             elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
             return;
         }
-        
+
         obfData = AnnotatedMixinElementHandler.<MappingField>stripOwnerData(obfData);
 
         try {
@@ -231,16 +242,20 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Invoker target " + elem + " in target " + target);
             return;
         }
-        
+
+        if (!elem.shouldRemap()) {
+            return;
+        }
+
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
             elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
             return;
         }
-        
+
         obfData = AnnotatedMixinElementHandler.<MappingMethod>stripOwnerData(obfData);
-        
+
         try {
             this.obf.getReferenceManager().addMethodMapping(this.mixin.getClassRef(), elem.getTargetName(), elem.getContext(), obfData);
         } catch (ReferenceConflictException ex) {
@@ -248,7 +263,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
                     + target + " conflicts with existing mapping " + ex.getOld());
         }
     }
-    
+
     private String getAccessorTargetName(AnnotatedElementAccessor elem) {
         String value = elem.getAnnotationValue();
         if (Strings.isNullOrEmpty(value)) {
