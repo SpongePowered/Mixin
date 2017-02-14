@@ -46,25 +46,25 @@ import org.spongepowered.asm.util.ClassSignature;
 /**
  * Struct for containing target class information during mixin application
  */
-class TargetClassContext {
+class TargetClassContext implements ITargetClass {
 
     /**
      * Transformer session ID
      */
     private final String sessionId;
-    
+
     /**
-     * Target class name 
+     * Target class name
      */
     private final String className;
-    
+
     /**
-     * Target class as tree 
+     * Target class as tree
      */
     private final ClassNode classNode;
-    
+
     /**
-     * Target class metadata 
+     * Target class metadata
      */
     private final ClassInfo classInfo;
 
@@ -72,14 +72,14 @@ class TargetClassContext {
      * Source map that is generated for target class
      */
     private final SourceMap sourceMap;
-    
+
     /**
-     * Target class signature 
+     * Target class signature
      */
     private final ClassSignature signature;
-    
+
     /**
-     * Mixins to apply 
+     * Mixins to apply
      */
     private final SortedSet<MixinInfo> mixins;
 
@@ -88,20 +88,20 @@ class TargetClassContext {
      * transformations we apply
      */
     private final Map<String, Target> targetMethods = new HashMap<String, Target>();
-    
+
     /**
-     * Unique method and field indices 
+     * Unique method and field indices
      */
     private int nextUniqueMethodIndex, nextUniqueFieldIndex;
 
     /**
-     * True once mixins have been applied to this class 
+     * True once mixins have been applied to this class
      */
     private boolean applied;
-    
+
     /**
      * True if this class is decorated with an {@link Debug} annotation which
-     * instructs an export 
+     * instructs an export
      */
     private boolean forceExport;
 
@@ -115,45 +115,49 @@ class TargetClassContext {
         this.sourceMap = new SourceMap(classNode.sourceFile);
         this.sourceMap.addFile(this.classNode);
     }
-    
+
     @Override
     public String toString() {
         return this.className;
     }
-    
+
     boolean isApplied() {
         return this.applied;
     }
-    
+
     boolean isExportForced() {
         return this.forceExport;
     }
-    
-    /**
-     * Get the transformer session ID
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ITargetClass#getSessionId()
      */
-    String getSessionId() {
+    @Override
+    public String getSessionId() {
         return this.sessionId;
     }
-    
-    /**
-     * Get the internal class name
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ITargetClass#getName()
      */
-    String getName() {
+    @Override
+    public String getName() {
         return this.classNode.name;
     }
-    
-    /**
-     * Get the class name
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ITargetClass#getClassName()
      */
-    String getClassName() {
+    @Override
+    public String getClassName() {
         return this.className;
     }
 
-    /**
-     * Get the class tree
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ITargetClass#getClassNode()
      */
-    ClassNode getClassNode() {
+    @Override
+    public ClassNode getClassNode() {
         return this.classNode;
     }
 
@@ -163,7 +167,7 @@ class TargetClassContext {
     List<MethodNode> getMethods() {
         return this.classNode.methods;
     }
-    
+
     /**
      * Get the class fields (from the tree)
      */
@@ -177,7 +181,7 @@ class TargetClassContext {
     ClassInfo getClassInfo() {
         return this.classInfo;
     }
-    
+
     /**
      * Get the mixins for this target class
      */
@@ -191,10 +195,10 @@ class TargetClassContext {
     SourceMap getSourceMap() {
         return this.sourceMap;
     }
-    
+
     /**
      * Merge the supplied signature into this class's signature
-     * 
+     *
      * @param signature signature to merge
      */
     void mergeSignature(ClassSignature signature) {
@@ -206,7 +210,7 @@ class TargetClassContext {
         if (alias == null) {
             return null;
         }
-        
+
         for (MethodNode target : this.classNode.methods) {
             if (target.name.equals(alias) && target.desc.equals(desc)) {
                 return target;
@@ -215,10 +219,10 @@ class TargetClassContext {
 
         return this.findAliasedMethod(aliases, desc);
     }
-    
+
     /**
      * Finds a field in the target class
-     * 
+     *
      * @param aliases aliases for the field
      * @param desc field descriptor
      * @return Target field  or null if not found
@@ -228,7 +232,7 @@ class TargetClassContext {
         if (alias == null) {
             return null;
         }
-        
+
         for (FieldNode target : this.classNode.fields) {
             if (target.name.equals(alias) && target.desc.equals(desc)) {
                 return target;
@@ -240,7 +244,7 @@ class TargetClassContext {
 
     /**
      * Get a target method handle from the target class
-     * 
+     *
      * @param method method to get a target handle for
      * @return new or existing target handle for the supplied method
      */
@@ -248,16 +252,16 @@ class TargetClassContext {
         if (!this.classNode.methods.contains(method)) {
             throw new IllegalArgumentException("Invalid target method supplied to getTargetMethod()");
         }
-        
+
         String targetName = method.name + method.desc;
         Target target = this.targetMethods.get(targetName);
         if (target == null) {
-            target = new Target(this.classNode, method);
+            target = new Target(this, method);
             this.targetMethods.put(targetName, target);
         }
         return target;
     }
-    
+
     String getUniqueName(MethodNode method, boolean preservePrefix) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
         String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
@@ -268,7 +272,7 @@ class TargetClassContext {
         String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
         return String.format("fd%s$%s$%s", this.sessionId.substring(30), field.name, uniqueIndex);
     }
-    
+
     /**
      * Apply mixins to this class
      */
@@ -279,7 +283,7 @@ class TargetClassContext {
         this.applied = true;
         MixinApplicatorStandard applicator = this.createApplicator();
         applicator.apply(this.mixins);
-        
+
         this.classNode.signature = this.signature.toString();
     }
 
@@ -305,7 +309,7 @@ class TargetClassContext {
                 Bytecode.textify(this.classNode, System.err);
             }
         }
-        
+
         for (MethodNode method : this.classNode.methods) {
             AnnotationNode methodDebugAnnotation = Annotations.getVisible(method, Debug.class);
             if (methodDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<String>getValue(methodDebugAnnotation, "print"))) {
@@ -313,5 +317,5 @@ class TargetClassContext {
             }
         }
     }
-    
+
 }

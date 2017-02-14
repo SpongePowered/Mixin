@@ -49,31 +49,31 @@ import org.spongepowered.asm.util.SignaturePrinter;
  * by the {@link ModifyVariableInjector} and its associated injection points.
  */
 public class LocalVariableDiscriminator {
-    
+
     /**
      * Discriminator context information, wraps all relevant information about
      * a target location for use when performing discrimination
      */
     public static class Context implements org.spongepowered.asm.util.PrettyPrinter.IPrettyPrintable {
-        
+
         /**
          * Information about a local variable in the LVT, used during
          * discrimination
          */
         public class Local {
-            
+
             /**
-             * Ordinal value of this local variable type 
+             * Ordinal value of this local variable type
              */
             int ord = 0;
-            
+
             /**
-             * Local variable name 
+             * Local variable name
              */
             String name;
-            
+
             /**
-             * Local variable type 
+             * Local variable type
              */
             Type type;
 
@@ -81,43 +81,43 @@ public class LocalVariableDiscriminator {
                 this.name = name;
                 this.type = type;
             }
-            
+
             @Override
             public String toString() {
                 return String.format("Local[ordinal=%d, name=%s, type=%s]", this.ord, this.name, this.type);
             }
-            
+
         }
-        
+
         /**
          * Target method for this context
          */
         final Target target;
-        
+
         /**
          * The return type of the handler in question, also the type of the
-         * local variable that we care about 
+         * local variable that we care about
          */
         final Type returnType;
-        
+
         /**
-         * Injection point 
+         * Injection point
          */
         final AbstractInsnNode node;
-        
+
         /**
          * Base argument index, for static methods this is 0, for instance
          * methods this is 1
          */
         final int baseArgIndex;
-        
+
         /**
          * Enumerated locals in this context
          */
         final Local[] locals;
-        
+
         /**
-         * True if the handler (and target) are static 
+         * True if the handler (and target) are static
          */
         private final boolean isStatic;
 
@@ -133,7 +133,7 @@ public class LocalVariableDiscriminator {
 
         private Local[] initLocals(Target target, boolean argsOnly, AbstractInsnNode node) {
             if (!argsOnly) {
-                LocalVariableNode[] locals = Locals.getLocalsAt(target.classNode, target.method, node);
+                LocalVariableNode[] locals = Locals.getLocalsAt(target.owner.getClassNode(), target.method, node);
                 if (locals != null) {
                     Local[] lvt = new Local[locals.length];
                     for (int l = 0; l < locals.length; l++) {
@@ -144,10 +144,10 @@ public class LocalVariableDiscriminator {
                     return lvt;
                 }
             }
-            
+
             Local[] lvt = new Local[this.baseArgIndex + target.arguments.length];
             if (!this.isStatic) {
-                lvt[0] = new Local("this", Type.getType(target.classNode.name));
+                lvt[0] = new Local("this", Type.getType(target.owner.getClassNode().name));
             }
             for (int local = this.baseArgIndex; local < lvt.length; local++) {
                 Type arg = target.arguments[local - this.baseArgIndex];
@@ -155,7 +155,7 @@ public class LocalVariableDiscriminator {
             }
             return lvt;
         }
-        
+
         private void initOrdinals() {
             Map<Type, Integer> ordinalMap = new HashMap<Type, Integer>();
             for (int l = 0; l < this.locals.length; l++) {
@@ -188,12 +188,12 @@ public class LocalVariableDiscriminator {
         }
 
     }
-        
+
     /**
      * True to consider only method args
      */
     private final boolean argsOnly;
-    
+
     /**
      * Ordinal of the target variable or -1 to fail over to {@link index}
      */
@@ -203,7 +203,7 @@ public class LocalVariableDiscriminator {
      * Ordinal of the target variable or -1 to fail over to {@link names}
      */
     private final int index;
-    
+
     /**
      * Candidate names for the local variable, if empty fails over to matching
      * single local by type
@@ -222,7 +222,7 @@ public class LocalVariableDiscriminator {
         this.index = index;
         this.names = Collections.<String>unmodifiableSet(names);
     }
-    
+
     /**
      * True if this discriminator will examine only the target method args and
      * won't consider the rest of the LVT at the target location
@@ -230,21 +230,21 @@ public class LocalVariableDiscriminator {
     public boolean isArgsOnly() {
         return this.argsOnly;
     }
-    
+
     /**
      * Get the local variable ordinal (nth variable of type)
      */
     public int getOrdinal() {
         return this.ordinal;
     }
-    
+
     /**
      * Get the local variable absolute index
      */
     public int getIndex() {
         return this.index;
     }
-    
+
     /**
      * Get valid names for consideration
      */
@@ -258,13 +258,13 @@ public class LocalVariableDiscriminator {
     public boolean hasNames() {
         return !this.names.isEmpty();
     }
-    
+
     /**
-     * If the user specifies no values for <tt>ordinal</tt>, <tt>index</tt> or 
+     * If the user specifies no values for <tt>ordinal</tt>, <tt>index</tt> or
      * <tt>names</tt> then we are considered to be operating in "implicit mode"
      * where only a single local variable of the specified type is expected to
      * exist.
-     * 
+     *
      * @param context Target context
      * @return true if operating in implicit mode
      */
@@ -273,8 +273,8 @@ public class LocalVariableDiscriminator {
     }
 
     /**
-     * Find a matching local variable in the specified target 
-     * 
+     * Find a matching local variable in the specified target
+     *
      * @param returnType variable tyoe
      * @param argsOnly only match in the method args
      * @param target target method
@@ -288,10 +288,10 @@ public class LocalVariableDiscriminator {
             return -1;
         }
     }
-    
+
     /**
      * Find a local variable for the specified context
-     * 
+     *
      * @param context search context
      * @return index of local or -1 if not found
      */
@@ -306,7 +306,7 @@ public class LocalVariableDiscriminator {
      * Find an implicit local, this means that we expect exactly 1 variable with
      * the specified type in scope, if more than one is found then we throw an
      * {@link InvalidImplicitDiscriminatorException}
-     * 
+     *
      * @param context search context
      * @return local variable index
      */
@@ -321,7 +321,7 @@ public class LocalVariableDiscriminator {
             count++;
             found = index;
         }
-        
+
         if (count == 1) {
             return found;
         }
@@ -332,7 +332,7 @@ public class LocalVariableDiscriminator {
     /**
      * Find an explicit local variable in the local variable table. Returns -1
      * if no variables match the discriminator
-     * 
+     *
      * @param context search context
      * @return variable index or -1 if not found
      */
@@ -358,13 +358,13 @@ public class LocalVariableDiscriminator {
                 return index;
             }
         }
-        
+
         return -1;
     }
-    
+
     /**
      * Parse a local variable discriminator from the supplied annotation
-     * 
+     *
      * @param annotation annotation to parse
      * @return discriminator configured using values from the annoation
      */
@@ -372,13 +372,13 @@ public class LocalVariableDiscriminator {
         boolean argsOnly = Annotations.<Boolean>getValue(annotation, "argsOnly", Boolean.FALSE).booleanValue();
         int ordinal = Annotations.<Integer>getValue(annotation, "ordinal", -1);
         int index = Annotations.<Integer>getValue(annotation, "index", -1);
-        
+
         Set<String> names = new HashSet<String>();
         List<String> namesList = Annotations.<List<String>>getValue(annotation, "name", (List<String>)null);
         if (namesList != null) {
             names.addAll(namesList);
         }
-        
+
         return new LocalVariableDiscriminator(argsOnly, ordinal, index, names);
     }
 

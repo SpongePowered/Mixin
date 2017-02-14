@@ -28,11 +28,11 @@ import java.util.Iterator;
 
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.InjectionNodes;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.transformer.ITargetClass;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -42,72 +42,72 @@ import org.spongepowered.asm.util.Bytecode;
 public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
-     * Target class node
+     * Target class context
      */
-    public final ClassNode classNode;
+    public final ITargetClass owner;
 
     /**
      * Target method
      */
     public final MethodNode method;
-    
+
     /**
      * Method instructions
      */
     public final InsnList insns;
-    
+
     /**
-     * True if the method is static 
+     * True if the method is static
      */
     public final boolean isStatic;
-    
+
     /**
      * Method arguments
      */
     public final Type[] arguments;
-    
+
     /**
-     * Method argument slots 
+     * Method argument slots
      */
     public final int[] argIndices;
-    
+
     /**
-     * Return type computed from the method descriptor 
+     * Return type computed from the method descriptor
      */
     public final Type returnType;
-    
+
     /**
-     * Callback method descriptor based on this target 
+     * Callback method descriptor based on this target
      */
     public final String callbackDescriptor;
-    
+
     /**
      * Callback info class
      */
     public final String callbackInfoClass;
-    
+
     /**
-     * Nodes targetted by injectors 
+     * Nodes targetted by injectors
      */
     public final InjectionNodes injectionNodes = new InjectionNodes();
 
     /**
-     * Method's (original) MAXS 
+     * Method's (original) MAXS
      */
     private final int maxStack;
-    
+
     /**
-     * Method's original max locals 
+     * Method's original max locals
      */
     private final int maxLocals;
 
     /**
      * Make a new Target for the supplied method
-     * 
+     *
      * @param method target method
      */
-    public Target(ClassNode classNode, MethodNode method) {
-        this.classNode = classNode;
+    public Target(ITargetClass owner, MethodNode method) {
+        this.owner = owner;
         this.method = method;
         this.insns = method.instructions;
         this.isStatic = Bytecode.methodIsStatic(method);
@@ -120,56 +120,56 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
         this.callbackDescriptor = String.format("(%sL%s;)V", method.desc.substring(1, method.desc.indexOf(')')), this.callbackInfoClass);
     }
-    
+
     /**
      * Get the original max locals of the method
-     * 
+     *
      * @return the original max locals value
      */
     public int getMaxLocals() {
         return this.maxLocals;
     }
-    
+
     /**
      * Get the original max stack of the method
-     * 
+     *
      * @return the original max stack value
      */
     public int getMaxStack() {
         return this.maxStack;
     }
-    
+
     /**
      * Get the current max locals of the method
-     * 
+     *
      * @return the current max local value
      */
     public int getCurrentMaxLocals() {
         return this.method.maxLocals;
     }
-    
+
     /**
      * Get the current max stack of the method
-     * 
+     *
      * @return the current max stack value
      */
     public int getCurrentMaxStack() {
         return this.method.maxStack;
     }
-    
+
     /**
      * Allocate a new local variable for the method
-     * 
+     *
      * @return the allocated local index
      */
     public int allocateLocal() {
         return this.allocateLocals(1);
     }
-    
+
     /**
      * Allocate a number of new local variables for this method, returns the
      * first local variable index of the allocated range
-     * 
+     *
      * @param locals number of locals to allocate
      * @return the first local variable index of the allocated range
      */
@@ -181,7 +181,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
      * Allocate a number of new local variables for this method
-     * 
+     *
      * @param locals number of locals to allocate
      */
     public void addToLocals(int locals) {
@@ -191,7 +191,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     /**
      * Set the maxlocals for this target to the specified value, the specfied
      * value must be higher than the original max locals
-     * 
+     *
      * @param maxLocals max locals value to set
      */
     public void setMaxLocals(int maxLocals) {
@@ -202,7 +202,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
      * Allocate a number of new stack variables for this method
-     * 
+     *
      * @param stack number of stack entries to allocate
      */
     public void addToStack(int stack) {
@@ -212,7 +212,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     /**
      * Set the max stack size for this target to the specified value, the
      * specfied value must be higher than the original max stack
-     * 
+     *
      * @param maxStack max stack value to set
      */
     public void setMaxStack(int maxStack) {
@@ -225,7 +225,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * Generate an array containing local indexes for the specified args,
      * returns an array of identical size to the supplied array with an
      * allocated local index in each corresponding position
-     * 
+     *
      * @param args Argument types
      * @param start starting index
      * @return array containing a corresponding local arg index for each member
@@ -249,19 +249,19 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         }
         return argIndices;
     }
-    
+
     /**
      * Get "simple" callback descriptor (descriptor with only CallbackInfo)
-     * 
+     *
      * @return generated descriptor
      */
     public String getSimpleCallbackDescriptor() {
         return String.format("(L%s;)V", this.callbackInfoClass);
     }
-    
+
     /**
      * Get the callback descriptor
-     * 
+     *
      * @param locals Local variable types
      * @param argumentTypes Argument types
      * @return generated descriptor
@@ -272,7 +272,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
      * Get the callback descriptor
-     * 
+     *
      * @param captureLocals True if the callback is capturing locals
      * @param locals Local variable types
      * @param argumentTypes Argument types
@@ -295,10 +295,10 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
         return descriptor + ")V";
     }
-    
+
     @Override
     public String toString() {
-        return String.format("%s::%s%s", this.classNode.name, this.method.name, this.method.desc);
+        return String.format("%s::%s%s", this.owner.getName(), this.method.name, this.method.desc);
     }
 
     @Override
@@ -311,24 +311,24 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
      * Return the index of the specified instruction in this instruction list
-     * 
+     *
      * @param insn instruction to locate, must exist in the target
      * @return opcode index
      */
     public int indexOf(AbstractInsnNode insn) {
         return this.insns.indexOf(insn);
     }
-    
+
     /**
      * Return the instruction at the specified index
-     * 
+     *
      * @param index opcode index
      * @return requested instruction
      */
     public AbstractInsnNode get(int index) {
         return this.insns.get(index);
     }
-    
+
     /* (non-Javadoc)
      * @see java.lang.Iterable#iterator()
      */
@@ -340,7 +340,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     /**
      * Replace an instruction in this target with the specified instruction and
      * mark the node as replaced for other injectors
-     * 
+     *
      * @param location Instruction to replace
      * @param insn Instruction to replace with
      */
@@ -349,11 +349,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.insns.remove(location);
         this.injectionNodes.replace(location, insn);
     }
-    
+
     /**
      * Replace an instruction in this target with the specified instructions and
      * mark the node as replaced with the specified champion node from the list.
-     * 
+     *
      * @param location Instruction to replace
      * @param champion Instruction which notionally replaces the original insn
      * @param insns Instructions to actually insert (must contain champion)
@@ -363,11 +363,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.insns.remove(location);
         this.injectionNodes.replace(location, champion);
     }
-    
+
     /**
      * Wrap instruction in this target with the specified instructions and mark
      * the node as replaced with the specified champion node from the list.
-     * 
+     *
      * @param location Instruction to replace
      * @param champion Instruction which notionally replaces the original insn
      * @param before Instructions to actually insert (must contain champion)
@@ -382,7 +382,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     /**
      * Replace an instruction in this target with the specified instructions and
      * mark the original node as removed
-     * 
+     *
      * @param location Instruction to replace
      * @param insns Instructions to replace with
      */
@@ -390,16 +390,16 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.insns.insertBefore(location, insns);
         this.removeNode(location);
     }
-    
+
     /**
      * Remove the specified instruction from the target and mark it as removed
      * for injections
-     * 
+     *
      * @param insn instruction to remove
      */
     public void removeNode(AbstractInsnNode insn) {
         this.insns.remove(insn);
         this.injectionNodes.remove(insn);
     }
-    
+
 }

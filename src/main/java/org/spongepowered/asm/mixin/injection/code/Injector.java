@@ -58,21 +58,21 @@ import com.google.common.base.Joiner;
  * Base class for bytecode injectors
  */
 public abstract class Injector {
-    
+
     /**
      * A nominated target node
      */
     class TargetNode {
-        
+
         final AbstractInsnNode node;
-        
+
         final Set<InjectionPoint> nominators = new HashSet<InjectionPoint>();
 
         TargetNode(AbstractInsnNode node) {
             this.node = node;
         }
     }
-    
+
     /**
      * Log more things
      */
@@ -87,19 +87,19 @@ public abstract class Injector {
      * Class node
      */
     protected final ClassNode classNode;
-    
+
     /**
-     * Callback method 
+     * Callback method
      */
     protected final MethodNode methodNode;
-    
+
     /**
-     * Arguments of the handler method 
+     * Arguments of the handler method
      */
     protected final Type[] methodArgs;
-    
+
     /**
-     * Return type of the handler method 
+     * Return type of the handler method
      */
     protected final Type returnType;
 
@@ -110,7 +110,7 @@ public abstract class Injector {
 
     /**
      * Make a new CallbackInjector for the supplied InjectionInfo
-     * 
+     *
      * @param info Information about this injection
      */
     public Injector(InjectionInfo info) {
@@ -120,7 +120,7 @@ public abstract class Injector {
 
     /**
      * Make a new CallbackInjector with the supplied args
-     * 
+     *
      * @param classNode Class containing callback and target methods
      * @param methodNode Callback method
      */
@@ -131,7 +131,7 @@ public abstract class Injector {
         this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = Bytecode.methodIsStatic(this.methodNode);
     }
-    
+
     @Override
     public String toString() {
         return String.format("%s::%s", this.classNode.name, this.methodNode.name);
@@ -139,10 +139,10 @@ public abstract class Injector {
 
     /**
      * ...
-     * 
+     *
      * @param injectorTarget Target method to inject into
      * @param injectionPoints InjectionPoint instances which will identify
-     *      target insns in the target method 
+     *      target insns in the target method
      * @return discovered injection points
      */
     public final List<InjectionNode> find(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
@@ -158,10 +158,10 @@ public abstract class Injector {
     protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
         myNodes.add(target.injectionNodes.add(node));
     }
-    
+
     /**
      * Performs the injection on the specified target
-     * 
+     *
      * @param target target to inject into
      * @param nodes selected nodes
      */
@@ -175,7 +175,7 @@ public abstract class Injector {
             }
             this.inject(target, node);
         }
-        
+
         for (InjectionNode node : nodes) {
             this.postInject(target, node);
         }
@@ -184,7 +184,7 @@ public abstract class Injector {
     /**
      * Use the supplied InjectionPoints to find target insns in the target
      * method
-     * 
+     *
      * @param target.method Target method
      * @param injectionPoints List of injection points parsed from At
      *      annotations on the callback method
@@ -209,7 +209,7 @@ public abstract class Injector {
                 }
             }
         }
-        
+
         return targetNodes.values();
     }
 
@@ -218,7 +218,7 @@ public abstract class Injector {
     }
 
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
-        if (target.classNode != this.classNode) {
+        if (target.owner.getClassNode() != this.classNode) {
             throw new InvalidInjectionException(this.info, "Target class does not match injector class in " + this);
         }
     }
@@ -231,7 +231,7 @@ public abstract class Injector {
 
     /**
      * Invoke the handler method
-     * 
+     *
      * @param insns Instruction list to inject into
      * @return injected insn node
      */
@@ -241,7 +241,7 @@ public abstract class Injector {
 
     /**
      * Invoke a handler method
-     * 
+     *
      * @param insns Instruction list to inject into
      * @param handler Actual method to invoke (may be different if using a
      *      surrogate)
@@ -255,11 +255,11 @@ public abstract class Injector {
         this.info.addCallbackInvocation(handler);
         return insn;
     }
-    
+
     /**
      * Throw an exception. The exception class must have a string which takes a
      * string argument
-     * 
+     *
      * @param insns Insn list to inject into
      * @param exceptionType Type of exception to throw (binary name)
      * @param message Message to pass to the exception constructor
@@ -271,15 +271,15 @@ public abstract class Injector {
         insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, exceptionType, "<init>", "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
     }
-    
+
     protected static String printArgs(Type[] args) {
         return "(" + Joiner.on("").join(args) + ")";
     }
-    
+
     /**
      * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
      * type.
-     * 
+     *
      * @param from type to coerce from
      * @param to type to coerce to
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
@@ -287,11 +287,11 @@ public abstract class Injector {
     public static boolean canCoerce(Type from, Type to) {
         return Injector.canCoerce(from.getDescriptor(), to.getDescriptor());
     }
-    
+
     /**
      * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
      * type.
-     * 
+     *
      * @param from type to coerce from
      * @param to type to coerce to
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
@@ -300,14 +300,14 @@ public abstract class Injector {
         if (from.length() > 1 || to.length() > 1) {
             return false;
         }
-        
+
         return Injector.canCoerce(from.charAt(0), to.charAt(0));
     }
 
     /**
      * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
      * type.
-     * 
+     *
      * @param from type to coerce from
      * @param to type to coerce to
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
