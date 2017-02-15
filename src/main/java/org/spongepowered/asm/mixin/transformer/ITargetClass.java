@@ -51,4 +51,14 @@ public interface ITargetClass {
      */
     public abstract ClassNode getClassNode();
 
+    /**
+     * Get the name of the field used for storing callback info instances
+     */
+    public abstract String getCallbackFieldName();
+
+    /**
+     * Get the next index into the callback info array
+     */
+    public abstract int getNextCallbackIndex();
+
 }

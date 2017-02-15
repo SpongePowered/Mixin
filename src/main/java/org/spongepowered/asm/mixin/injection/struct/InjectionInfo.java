@@ -68,17 +68,17 @@ import org.spongepowered.asm.util.Annotations;
  * and allows the injection to be processed.
  */
 public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceContext {
-    
+
     /**
-     * Annotated method is static 
+     * Annotated method is static
      */
     protected final boolean isStatic;
-    
+
     /**
      * Target method(s)
      */
     protected final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
-    
+
     /**
      * Method slice descriptors parsed from the annotation
      */
@@ -89,7 +89,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * {@link org.spongepowered.asm.mixin.injection.At} annotations
      */
     protected final List<InjectionPoint> injectionPoints = new ArrayList<InjectionPoint>();
-    
+
     /**
      * Map of lists of nodes enumerated by calling {@link #prepare}
      */
@@ -99,35 +99,35 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Bytecode injector
      */
     protected Injector injector;
-    
+
     /**
      * Injection group
      */
     protected InjectorGroupInfo group;
-    
+
     /**
-     * Methods injected by injectors 
+     * Methods injected by injectors
      */
     private final List<MethodNode> injectedMethods = new ArrayList<MethodNode>(0);
-    
+
     /**
-     * Number of callbacks we expect to inject into targets 
+     * Number of callbacks we expect to inject into targets
      */
     private int expectedCallbackCount = 1;
-    
+
     /**
-     * Number of callbacks we require injected 
+     * Number of callbacks we require injected
      */
     private int requiredCallbackCount = 0;
-    
+
     /**
      * Actual number of injected callbacks
      */
     private int injectedCallbackCount = 0;
-    
+
     /**
      * ctor
-     * 
+     *
      * @param mixin Mixin data
      * @param method Injector method
      * @param annotation Annotation to parse
@@ -146,7 +146,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if (this.annotation == null) {
             return;
         }
-        
+
         String type = "@" + Bytecode.getSimpleName(this.annotation);
         List<AnnotationNode> injectionPoints = this.readInjectionPoints(type);
         this.findMethods(this.parseTarget(type), type);
@@ -160,7 +160,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if (method == null) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
         }
-        
+
         try {
             MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
             if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
@@ -188,7 +188,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     protected void parseRequirements() {
         this.group = this.mixin.getInjectorGroups().parseGroup(this.method, this.mixin.getDefaultInjectorGroup()).add(this);
-        
+
         Integer expect = Annotations.<Integer>getValue(this.annotation, "expect");
         if (expect != null) {
             this.expectedCallbackCount = expect.intValue();
@@ -204,17 +204,17 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     // stub
     protected abstract Injector parseInjector(AnnotationNode injectAnnotation);
-    
+
     /**
      * Get whether there is enough valid information in this info to actually
      * perform an injection.
-     * 
+     *
      * @return true if this InjectionInfo was successfully parsed
      */
     public boolean isValid() {
         return this.targets.size() > 0 && this.injectionPoints.size() > 0;
     }
-    
+
     /**
      * Discover injection points
      */
@@ -227,7 +227,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             injectorTarget.dispose();
         }
     }
-    
+
     /**
      * Perform injections
      */
@@ -237,15 +237,17 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         this.targets.clear();
     }
-    
+
     /**
-     * Perform cleanup and post-injection tasks 
+     * Perform cleanup and post-injection tasks
      */
     public void postInject() {
+        this.injector.postInject();
+
         for (MethodNode method : this.injectedMethods) {
             this.classNode.methods.add(method);
         }
-        
+
         if ((MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
                     String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded",
@@ -256,18 +258,18 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                     this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
         }
     }
-    
+
     /**
      * Callback from injector which notifies us that a callback was injected. No
      * longer used.
-     * 
+     *
      * @param target target into which the injector injected
      */
     public void notifyInjected(Target target) {
 //        this.targets.remove(target.method);
     }
 
-    
+
     protected String getDescription() {
         return "Callback method";
     }
@@ -276,16 +278,16 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     public String toString() {
         return InjectionInfo.describeInjector(this.mixin, this.annotation, this.method);
     }
-    
+
     /**
      * Get methods being injected into
-     * 
+     *
      * @return methods being injected into
      */
     public Collection<MethodNode> getTargets() {
         return this.targets;
     }
-    
+
     /**
      * Get the slice descriptors
      */
@@ -293,12 +295,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     public MethodSlice getSlice(String id) {
         return this.slices.get(this.getSliceId(id));
     }
-    
+
     /**
      * Return the mapped slice id for the specified ID. Injectors which only
      * support use of a single slice will always return the default id (an empty
      * string)
-     * 
+     *
      * @param id slice id
      * @return mapped id
      */
@@ -308,7 +310,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     /**
      * Get the injected callback count
-     * 
+     *
      * @return the injected callback count
      */
     public int getInjectedCallbackCount() {
@@ -317,11 +319,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     /**
      * Inject a method into the target class
-     * 
+     *
      * @param access Method access flags, synthetic will be automatically added
      * @param name Method name
      * @param desc Method descriptor
-     * 
+     *
      * @return new method
      */
     public MethodNode addMethod(int access, String name, String desc) {
@@ -329,40 +331,40 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         this.injectedMethods.add(method);
         return method;
     }
-    
+
     /**
      * Notify method, called by injector when adding a callback into a target
-     * 
+     *
      * @param handler callback handler being invoked
      */
     public void addCallbackInvocation(MethodNode handler) {
         this.injectedCallbackCount++;
     }
-    
+
     /**
      * Finds methods in the target class which match searchFor
-     * 
+     *
      * @param searchFor member info to search for
      * @param type annotation type
      */
     private void findMethods(MemberInfo searchFor, String type) {
         this.targets.clear();
         int ordinal = 0;
-        
+
         for (MethodNode target : this.classNode.methods) {
             if (searchFor.matches(target.name, target.desc, ordinal)) {
                 boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
                 if (searchFor.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
                     continue;
                 }
-                
+
                 this.checkTarget(target);
-                
+
                 this.targets.add(target);
                 ordinal++;
             }
         }
-        
+
         if (this.targets.size() == 0) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find '" + searchFor.name + "'");
         }
@@ -373,37 +375,37 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if (merged == null) {
             return;
         }
-        
+
         String owner = Annotations.<String>getValue(merged, "mixin");
         int priority = Annotations.<Integer>getValue(merged, "priority");
-        
+
         if (priority >= this.mixin.getPriority() && !owner.equals(this.mixin.getClassName())) {
             throw new InvalidInjectionException(this, this + " cannot inject into " + this.classNode.name + "::" + target.name + target.desc
                     + " merged by " + owner + " with priority " + priority);
         }
-        
+
         if (Annotations.getVisible(target, Final.class) != null) {
             throw new InvalidInjectionException(this, this + " cannot inject into @Final method " + this.classNode.name + "::" + target.name
                     + target.desc + " merged by " + owner);
         }
     }
-    
+
     /**
      * Parse an injector from the specified method (if an injector annotation is
      * present). If no injector annotation is present then <tt>null</tt> is
      * returned.
-     * 
+     *
      * @param mixin context
      * @param method mixin method
      * @return parsed InjectionInfo or null
      */
     public static InjectionInfo parse(MixinTargetContext mixin, MethodNode method) {
         AnnotationNode annotation = InjectionInfo.getInjectorAnnotation(mixin.getMixin(), method);
-        
+
         if (annotation == null) {
             return null;
         }
-        
+
         if (annotation.desc.endsWith(Inject.class.getSimpleName() + ";")) {
             return new CallbackInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
@@ -415,7 +417,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         } else if (annotation.desc.endsWith(ModifyConstant.class.getSimpleName() + ";")) {
             return new ModifyConstantInjectionInfo(mixin, method, annotation);
         }
-        
+
         return null;
     }
 
@@ -423,7 +425,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Returns any injector annotation found on the specified method. If
      * multiple matching annotations are found then an exception is thrown. If
      * no annotations are present then <tt>null</tt> is returned.
-     * 
+     *
      * @param mixin context
      * @param method mixin method
      * @return annotation or null
@@ -448,7 +450,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     /**
      * Get the conform prefix for an injector handler by type
-     * 
+     *
      * @param annotation Annotation to inspect
      * @return conform prefix
      */

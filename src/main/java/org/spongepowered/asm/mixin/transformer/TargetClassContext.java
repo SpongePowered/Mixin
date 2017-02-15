@@ -39,8 +39,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
 
 /**
@@ -104,6 +104,11 @@ class TargetClassContext implements ITargetClass {
      * instructs an export
      */
     private boolean forceExport;
+
+    /**
+     * Next available callback index
+     */
+    private int nextCallbackIndex;
 
     TargetClassContext(String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
         this.sessionId = sessionId;
@@ -262,6 +267,20 @@ class TargetClassContext implements ITargetClass {
         return target;
     }
 
+    @Override
+    public String getCallbackFieldName() {
+        return String.format("callbackInfo$%s$%s", this.classInfo.getUID(), this.sessionId.substring(30));
+    }
+
+    @Override
+    public int getNextCallbackIndex() {
+        return this.nextCallbackIndex++;
+    }
+
+    boolean hasCallbacks() {
+        return this.nextCallbackIndex > 0;
+    }
+
     String getUniqueName(MethodNode method, boolean preservePrefix) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
         String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
@@ -284,6 +303,8 @@ class TargetClassContext implements ITargetClass {
         MixinApplicatorStandard applicator = this.createApplicator();
         applicator.apply(this.mixins);
 
+        this.processDebugTasks();
+
         this.classNode.signature = this.signature.toString();
     }
 
@@ -297,7 +318,7 @@ class TargetClassContext implements ITargetClass {
     /**
      * Process {@link Debug} annotations on the class after application
      */
-    void processDebugTasks() {
+    private void processDebugTasks() {
         if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
             return;
         }

@@ -57,61 +57,61 @@ public final class Bytecode {
     };
 
     /**
-     * Float constant opcodes 
+     * Float constant opcodes
      */
     public static final int[] CONSTANTS_FLOAT = {
         Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2
     };
-    
+
     /**
      * Double constant opcodes
      */
     public static final int[] CONSTANTS_DOUBLE = {
         Opcodes.DCONST_0, Opcodes.DCONST_1
     };
-    
+
     /**
      * Long constant opcodes
      */
     public static final int[] CONSTANTS_LONG = {
         Opcodes.LCONST_0, Opcodes.LCONST_1
     };
-    
+
     /**
-     * All constant opcodes 
+     * All constant opcodes
      */
     public static final int[] CONSTANTS_ALL = {
         Opcodes.ACONST_NULL,
         Opcodes.ICONST_M1,
         Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5,
         Opcodes.LCONST_0, Opcodes.LCONST_1,
-        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2, 
+        Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2,
         Opcodes.DCONST_0, Opcodes.DCONST_1,
         Opcodes.BIPUSH, // 15
         Opcodes.SIPUSH, // 16
         Opcodes.LDC,    // 17
     };
-    
+
     private static final Object[] CONSTANTS_VALUES = {
         null,
         Integer.valueOf(-1),
         Integer.valueOf(0), Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3), Integer.valueOf(4), Integer.valueOf(5),
         Long.valueOf(0L), Long.valueOf(1L),
-        Float.valueOf(0.0F), Float.valueOf(1.0F), Float.valueOf(2.0F), 
+        Float.valueOf(0.0F), Float.valueOf(1.0F), Float.valueOf(2.0F),
         Double.valueOf(0.0), Double.valueOf(1.0)
     };
-    
+
     private static final String[] CONSTANTS_TYPES = {
         null,
         "I",
         "I", "I", "I", "I", "I", "I",
         "J", "J",
-        "F", "F", "F", 
+        "F", "F", "F",
         "D", "D",
         "I", //"B",
         "I", //"S"
     };
-    
+
     private Bytecode() {
         // utility class
     }
@@ -134,9 +134,25 @@ public final class Bytecode {
     }
 
     /**
+     * Find or create the static initialiser for the specified class node
+     *
+     * @param classNode class to search
+     * @return existing or new static initialiser
+     */
+    public static MethodNode getStaticInitialiser(ClassNode classNode) {
+        MethodNode method = Bytecode.findMethod(classNode, Constants.CLINIT, "()V");
+        if (method == null) {
+            method = new MethodNode(Opcodes.ACC_STATIC, Constants.CLINIT, "()V", null, null);
+            classNode.methods.add(0, method);
+            method.instructions.add(new InsnNode(Opcodes.RETURN));
+        }
+        return method;
+    }
+
+    /**
      * Runs textifier on the specified class node and dumps the output to the
      * specified output stream
-     * 
+     *
      * @param classNode class to textify
      * @param out output stream
      */
@@ -147,7 +163,7 @@ public final class Bytecode {
     /**
      * Runs textifier on the specified method node and dumps the output to the
      * specified output stream
-     * 
+     *
      * @param methodNode method to textify
      * @param out output stream
      */
@@ -179,10 +195,10 @@ public final class Bytecode {
         ClassReader cr = new ClassReader(bytes);
         CheckClassAdapter.verify(cr, true, new PrintWriter(System.out));
     }
-    
+
     /**
      * Prints a representation of a method's instructions to stderr
-     * 
+     *
      * @param method Method to print
      */
     public static void printMethodWithOpcodeIndices(MethodNode method) {
@@ -195,7 +211,7 @@ public final class Bytecode {
 
     /**
      * Prints a representation of a method's instructions to stderr
-     * 
+     *
      * @param method Method to print
      */
     public static void printMethod(MethodNode method) {
@@ -208,7 +224,7 @@ public final class Bytecode {
 
     /**
      * Prints a representation of the specified insn node to stderr
-     * 
+     *
      * @param node Node to print
      */
     public static void printNode(AbstractInsnNode node) {
@@ -217,7 +233,7 @@ public final class Bytecode {
 
     /**
      * Gets a description of the supplied node for debugging purposes
-     * 
+     *
      * @param node node to describe
      * @return human-readable description of node
      */
@@ -225,11 +241,11 @@ public final class Bytecode {
         if (node == null) {
             return String.format("   %-14s ", "null");
         }
-        
+
         if (node instanceof LabelNode) {
             return String.format("[%s]", ((LabelNode)node).getLabel());
         }
-        
+
         String out = String.format("   %-14s ", node.getClass().getSimpleName().replace("Node", ""));
         if (node instanceof JumpInsnNode) {
             out += String.format("[%s] [%s]", Bytecode.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
@@ -255,11 +271,11 @@ public final class Bytecode {
         }
         return out;
     }
-    
+
     /**
      * Uses reflection to find an approximate constant name match for the
      * supplied node's opcode
-     * 
+     *
      * @param node Node to query for opcode
      * @return Approximate opcode name (approximate because some constants in
      *      the {@link Opcodes} class have the same value as opcodes
@@ -271,7 +287,7 @@ public final class Bytecode {
     /**
      * Uses reflection to find an approximate constant name match for the
      * supplied opcode
-     * 
+     *
      * @param opcode Opcode to look up
      * @return Approximate opcode name (approximate because some constants in
      *      the {@link Opcodes} class have the same value as opcodes
@@ -283,7 +299,7 @@ public final class Bytecode {
     private static String getOpcodeName(int opcode, String start, int min) {
         if (opcode >= min) {
             boolean found = false;
-            
+
             try {
                 for (java.lang.reflect.Field f : Opcodes.class.getDeclaredFields()) {
                     if (!found && !f.getName().equals(start)) {
@@ -297,37 +313,37 @@ public final class Bytecode {
             } catch (Exception ex) {
                 // derp
             }
-        }        
-        
+        }
+
         return opcode >= 0 ? String.valueOf(opcode) : "UNKNOWN";
     }
-    
+
     /**
      * Returns true if the supplied method node is static
-     * 
+     *
      * @param method method node
      * @return true if the method has the {@link Opcodes#ACC_STATIC} flag
      */
     public static boolean methodIsStatic(MethodNode method) {
         return (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
-    
+
     /**
      * Returns true if the supplied field node is static
-     * 
+     *
      * @param field field node
      * @return true if the field has the {@link Opcodes#ACC_STATIC} flag
      */
     public static boolean fieldIsStatic(FieldNode field) {
         return (field.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
-    
+
     /**
      * Get the first variable index in the supplied method which is not an
      * argument or "this" reference, this corresponds to the size of the
      * arguments passed in to the method plus an extra spot for "this" if the
      * method is non-static
-     * 
+     *
      * @param method MethodNode to inspect
      * @return first available local index which is NOT used by a method
      *      argument or "this"
@@ -341,7 +357,7 @@ public final class Bytecode {
      * whether to include the "this" reference, this corresponds to the size of
      * the arguments passed in to the method plus an extra spot for "this" is
      * specified
-     * 
+     *
      * @param args Method arguments
      * @param includeThis Whether to include a slot for "this" (generally true
      *      for all non-static methods)
@@ -355,7 +371,7 @@ public final class Bytecode {
     /**
      * Get the size of the specified args array in local variable terms (eg.
      * doubles and longs take two spaces)
-     * 
+     *
      * @param args Method argument types as array
      * @return size of the specified arguments array in terms of stack slots
      */
@@ -372,7 +388,7 @@ public final class Bytecode {
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
      * for each entry in the args array starting at pos
-     * 
+     *
      * @param args Argument types
      * @param insns Instruction List to inject into
      * @param pos Start position
@@ -384,7 +400,7 @@ public final class Bytecode {
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
      * for each entry in the args array starting at start and ending at end
-     * 
+     *
      * @param args Argument types
      * @param insns Instruction List to inject into
      * @param start Start position
@@ -401,33 +417,33 @@ public final class Bytecode {
             }
         }
     }
-    
+
     /**
      * Clones all of the labels in the source instruction list and returns the
      * clones in a map of old label -&gt; new label. This is used to facilitate
      * the use of {@link AbstractInsnNode#clone}.
-     * 
+     *
      * @param source instruction list
      * @return map of existing labels to their cloned counterparts
      */
     public static Map<LabelNode, LabelNode> cloneLabels(InsnList source) {
         Map<LabelNode, LabelNode> labels = new HashMap<LabelNode, LabelNode>();
-        
+
         for (Iterator<AbstractInsnNode> iter = source.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof LabelNode) {
                 labels.put((LabelNode)insn, new LabelNode(((LabelNode)insn).getLabel()));
             }
         }
-        
+
         return labels;
     }
-    
+
     /**
      * Generate a bytecode descriptor from the supplied tokens. Each token can
      * be a {@link Type}, a {@link Class} or otherwise is converted in-place by
      * calling {@link Object#toString toString}.
-     * 
+     *
      * @param returnType object representing the method return type, can be
      *      <tt>null</tt> for <tt>void</tt>
      * @param args objects representing argument types
@@ -445,7 +461,7 @@ public final class Bytecode {
     /**
      * Converts the supplied object to a descriptor component, used by
      * {@link #generateDescriptor}.
-     * 
+     *
      * @param arg object to convert
      */
     private static String toDescriptor(Object arg) {
@@ -462,18 +478,18 @@ public final class Bytecode {
     /**
      * Returns the simple name of an annotation, mainly used for printing
      * annotation names in error messages/user-facing strings
-     * 
+     *
      * @param annotationType annotation
      * @return annotation's simple name
      */
     public static String getSimpleName(Class<? extends Annotation> annotationType) {
         return annotationType.getSimpleName();
     }
-    
+
     /**
      * Returns the simple name of an annotation, mainly used for printing
      * annotation names in error messages/user-facing strings
-     * 
+     *
      * @param annotation annotation node
      * @return annotation's simple name
      */
@@ -483,7 +499,7 @@ public final class Bytecode {
 
     /**
      * Returns the simple name from an object type descriptor (in L...; format)
-     * 
+     *
      * @param desc type descriptor
      * @return "simple" name
      */
@@ -493,9 +509,9 @@ public final class Bytecode {
     }
 
     /**
-     * Gets whether the supplied instruction is a constant instruction (eg. 
+     * Gets whether the supplied instruction is a constant instruction (eg.
      * <tt>ICONST_1</tt>)
-     * 
+     *
      * @param insn instruction to check
      * @return true if the supplied instruction is a constant
      */
@@ -509,7 +525,7 @@ public final class Bytecode {
     /**
      * If the supplied instruction is a constant, returns the constant value
      * from the instruction
-     * 
+     *
      * @param insn constant instruction to process
      * @return the constant value or <tt>null</tt> if the value cannot be parsed
      *      (or is null)
@@ -526,14 +542,14 @@ public final class Bytecode {
             }
             throw new IllegalArgumentException("IntInsnNode with invalid opcode " + insn.getOpcode() + " in getConstant");
         }
-        
+
         int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());
         return index < 0 ? null : Bytecode.CONSTANTS_VALUES[index];
     }
 
     /**
-     * Returns the {@link Type} of a particular constant instruction's payload 
-     * 
+     * Returns the {@link Type} of a particular constant instruction's payload
+     *
      * @param insn constant instruction
      * @return type of constant or <tt>null</tt> if it cannot be parsed (or is
      *      null)
@@ -558,14 +574,25 @@ public final class Bytecode {
             }
             throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
         }
-        
+
         int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());
         return index < 0 ? null : Type.getType(Bytecode.CONSTANTS_TYPES[index]);
     }
-    
+
+    /**
+     * Return the relevant integer constant instruction for the specified
+     * integer
+     *
+     * @param value constant value
+     * @return new instruction
+     */
+    public static AbstractInsnNode intConstant(int value) {
+        return value > 5 || value < -1 ? new IntInsnNode(Opcodes.BIPUSH, value) : new InsnNode(Bytecode.CONSTANTS_INT[value + 1]);
+    }
+
     /**
      * Check whether the specified flag is set on the specified class
-     * 
+     *
      * @param classNode class node
      * @param flag flag to check
      * @return True if the specified flag is set in this method's access flags
@@ -573,10 +600,10 @@ public final class Bytecode {
     public static boolean hasFlag(ClassNode classNode, int flag) {
         return (classNode.access & flag) == flag;
     }
-    
+
     /**
      * Check whether the specified flag is set on the specified method
-     * 
+     *
      * @param method method node
      * @param flag flag to check
      * @return True if the specified flag is set in this method's access flags
@@ -584,10 +611,10 @@ public final class Bytecode {
     public static boolean hasFlag(MethodNode method, int flag) {
         return (method.access & flag) == flag;
     }
-    
+
     /**
      * Check whether the specified flag is set on the specified field
-     * 
+     *
      * @param field field node
      * @param flag flag to check
      * @return True if the specified flag is set in this field's access flags
@@ -598,7 +625,7 @@ public final class Bytecode {
 
     /**
      * Compute the largest line number found in the specified class
-     * 
+     *
      * @param classNode Class to inspect
      * @param min minimum value to return
      * @param pad amount to pad at the end of files

@@ -43,7 +43,7 @@ import com.google.common.base.Strings;
  * Maintains method remaps for a target class
  */
 public class MethodMapper {
-    
+
     /**
      * Mutable integer
      */
@@ -55,12 +55,12 @@ public class MethodMapper {
      * Logger
      */
     private static final Logger logger = LogManager.getLogger("mixin");
-    
+
     private static final List<String> classes = new ArrayList<String>();
-    
+
     /**
      * Method descriptor to ID map, used to ensure that remappings are globally
-     * unique 
+     * unique
      */
     private static final Map<String, Counter> methods = new HashMap<String, Counter>();
 
@@ -69,14 +69,14 @@ public class MethodMapper {
     public MethodMapper(MixinEnvironment env, ClassInfo info) {
         this.info = info;
     }
-    
+
     public ClassInfo getClassInfo() {
         return this.info;
     }
-    
+
     /**
      * Conforms an injector handler method
-     * 
+     *
      * @param mixin owner mixin
      * @param handler annotated injector handler method
      * @param method method in target
@@ -85,23 +85,23 @@ public class MethodMapper {
         if (!(handler instanceof MixinMethodNode) || !((MixinMethodNode)handler).isInjector()) {
             return;
         }
-        
+
         if (method.isUnique()) {
             MethodMapper.logger.warn("Redundant @Unique on injector method {} in {}. Injectors are implicitly unique", method, mixin);
         }
-        
+
         if (method.isRenamed()) {
             handler.name = method.getName();
             return;
         }
-        
+
         String handlerName = this.getHandlerName((MixinMethodNode)handler);
         handler.name = method.renameTo(handlerName);
     }
-    
+
     /**
      * Get the name for a handler method provided a source mixin method
-     * 
+     *
      * @param method mixin method
      * @return conformed handler name
      */
@@ -114,11 +114,11 @@ public class MethodMapper {
 
     /**
      * Get a unique identifier for a class
-     * 
+     *
      * @param classRef Class name (binary)
      * @return unique identifier
      */
-    private static String getClassUID(String classRef) {
+    static String getClassUID(String classRef) {
         int index = MethodMapper.classes.indexOf(classRef);
         if (index < 0) {
             index = MethodMapper.classes.size();
@@ -129,7 +129,7 @@ public class MethodMapper {
 
     /**
      * Get a unique identifier for a method
-     * 
+     *
      * @param name method name
      * @param desc method descriptor
      * @param increment true to incrememnt the id if it already exists
@@ -149,7 +149,7 @@ public class MethodMapper {
 
     /**
      * Finagle a string from an index thingummy, for science, you monster
-     * 
+     *
      * @param index a positive number
      * @return unique identifier string of some kind
      */

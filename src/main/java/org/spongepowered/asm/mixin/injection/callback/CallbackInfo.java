@@ -32,9 +32,19 @@ import org.spongepowered.asm.util.Constants;
  * CallbackInfo instances are passed to callbacks in order to provide
  * information and handling opportunities to the callback to interact with the
  * callback itself. For example by allowing the callback to be "cancelled" and
- * return from a method prematurely. 
+ * return from a method prematurely.
  */
 public class CallbackInfo implements Cancellable {
+
+    /**
+     * CallbackInfo class name
+     */
+    public static final String CLASS_NAME = CallbackInfo.getCallInfoClassName();
+
+    /**
+     * CallbackInfo constructor descriptor
+     */
+    static final String CTOR_DESC = CallbackInfo.getConstructorDescriptor();
 
     /**
      * Method name being injected into, this is useful if a single callback is
@@ -54,7 +64,7 @@ public class CallbackInfo implements Cancellable {
 
     /**
      * This ctor is always called by injected code
-     * 
+     *
      * @param name calling method name
      * @param cancellable true if the callback can be cancelled
      */
@@ -67,7 +77,7 @@ public class CallbackInfo implements Cancellable {
      * Get the ID of the injector which defined this callback. This defaults to
      * the method name but can be overridden by specifying the {@link Inject#id}
      * parameter on the injector
-     * 
+     *
      * @return the injector ID
      */
     public String getId() {
@@ -103,18 +113,18 @@ public class CallbackInfo implements Cancellable {
 
         this.cancelled = true;
     }
-    
+
     // Methods below this point used by the CallbackInjector
 
     static String getCallInfoClassName() {
-        return CallbackInfo.class.getName();
+        return CallbackInfo.class.getName().replace('.', '/');
     }
 
     /**
      * Gets the {@link CallbackInfo} class name to use for the specified return
      * type. Currently returns {@link CallbackInfo} for void types and
      * {@link CallbackInfoReturnable} for non-void types.
-     * 
+     *
      * @param returnType return type of the target method
      * @return CallbackInfo class name to use
      */

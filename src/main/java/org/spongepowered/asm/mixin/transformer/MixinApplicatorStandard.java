@@ -54,6 +54,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
@@ -72,7 +73,7 @@ import com.google.common.collect.ImmutableList;
  * Applies mixins to a target class
  */
 class MixinApplicatorStandard {
-    
+
     /**
      * Annotations which can have constraints
      */
@@ -84,7 +85,7 @@ class MixinApplicatorStandard {
         ModifyVariable.class,
         ModifyConstant.class
     );
-    
+
     /**
      * Passes the mixin applicator applies to each mixin
      */
@@ -93,18 +94,18 @@ class MixinApplicatorStandard {
          * Main pass, mix in methods, fields, interfaces etc
          */
         MAIN,
-        
+
         /**
-         * Enumerate injectors and scan for injection points 
+         * Enumerate injectors and scan for injection points
          */
         PREINJECT,
-        
+
         /**
-         * Apply injectors from previous pass 
+         * Apply injectors from previous pass
          */
         INJECT
     }
-    
+
     /**
      * Strategy for injecting initialiser insns
      */
@@ -114,14 +115,14 @@ class MixinApplicatorStandard {
          * competing initialisers in the target ctor
          */
         DEFAULT,
-        
+
         /**
          * Safe mode, only injects initialiser directly after the super-ctor
-         * invocation 
+         * invocation
          */
         SAFE
     }
-    
+
     /**
      * Internal struct for representing a range
      */
@@ -130,12 +131,12 @@ class MixinApplicatorStandard {
          * Start of the range
          */
         final int start;
-        
+
         /**
-         * End of the range 
+         * End of the range
          */
         final int end;
-        
+
         /**
          * Range marker
          */
@@ -143,7 +144,7 @@ class MixinApplicatorStandard {
 
         /**
          * Create a range with the specified values.
-         * 
+         *
          * @param start Start of the range
          * @param end End of the range
          * @param marker Arbitrary marker value
@@ -153,36 +154,36 @@ class MixinApplicatorStandard {
             this.end = end;
             this.marker = marker;
         }
-        
+
         /**
          * Range is valid if both start and end are nonzero and end is after or
          * at start
-         * 
+         *
          * @return true if valid
          */
         boolean isValid() {
             return (this.start != 0 && this.end != 0 && this.end >= this.start);
         }
-        
+
         /**
          * Returns true if the supplied value is between or equal to start and
          * end
-         * 
+         *
          * @param value true if the range contains value
          */
         boolean contains(int value) {
             return value >= this.start && value <= this.end;
         }
-        
+
         /**
          * Returns true if the supplied value is outside the range
-         * 
+         *
          * @param value true if the range does not contain value
          */
         boolean excludes(int value) {
             return value < this.start || value > this.end;
         }
-        
+
         /* (non-Javadoc)
          * @see java.lang.Object#toString()
          */
@@ -191,7 +192,7 @@ class MixinApplicatorStandard {
             return String.format("Range[%d-%d,%d,valid=%s)", this.start, this.end, this.marker, this.isValid());
         }
     }
-    
+
     /**
      * List of opcodes which must not appear in a class initialiser, mainly a
      * sanity check so that if any of the specified opcodes are found, we can
@@ -199,7 +200,7 @@ class MixinApplicatorStandard {
      * Essentially if it turns out that field initialisers can somehow make use
      * of local variables, then I need to write some code to ensure that said
      * locals are shifted so that they don't interfere with locals in the
-     * receiving constructor. 
+     * receiving constructor.
      */
     protected static final int[] INITIALISER_OPCODE_BLACKLIST = {
         Opcodes.RETURN, Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
@@ -212,52 +213,52 @@ class MixinApplicatorStandard {
      * Log more things
      */
     protected final Logger logger = LogManager.getLogger("mixin");
-    
+
     /**
-     * Target class context 
+     * Target class context
      */
     protected final TargetClassContext context;
-    
+
     /**
      * Target class name
      */
     protected final String targetName;
-    
+
     /**
-     * Target class tree 
+     * Target class tree
      */
     protected final ClassNode targetClass;
-    
+
     MixinApplicatorStandard(TargetClassContext context) {
         this.context = context;
         this.targetName = context.getClassName();
         this.targetClass = context.getClassNode();
     }
-    
+
     /**
      * Apply supplied mixins to the target class
      */
-    void apply(SortedSet<MixinInfo> mixins) {
+    final void apply(SortedSet<MixinInfo> mixins) {
         List<MixinTargetContext> mixinContexts = new ArrayList<MixinTargetContext>();
-        
+
         for (MixinInfo mixin : mixins) {
             this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
             mixinContexts.add(mixin.createContextFor(this.context));
         }
-        
+
         MixinTargetContext current = null;
-        
+
         try {
             for (MixinTargetContext context : mixinContexts) {
                 (current = context).preApply(this.targetName, this.targetClass);
             }
-            
+
             for (ApplicatorPass pass : ApplicatorPass.values()) {
                 for (MixinTargetContext context : mixinContexts) {
                     this.applyMixin(current = context, pass);
                 }
             }
-            
+
             for (MixinTargetContext context : mixinContexts) {
                 (current = context).postApply(this.targetName, this.targetClass);
             }
@@ -268,13 +269,13 @@ class MixinApplicatorStandard {
                     + ex.getMessage(), ex);
         }
 
+        this.applyCallbackInfoField(this.context);
         this.applySourceMap(this.context);
-        this.context.processDebugTasks();
     }
 
     /**
      * Apply the mixin described by mixin to the supplied classNode
-     * 
+     *
      * @param mixin Mixin to apply
      */
     protected final void applyMixin(MixinTargetContext mixin, ApplicatorPass pass) {
@@ -288,16 +289,16 @@ class MixinApplicatorStandard {
                 this.applyMethods(mixin);
                 this.applyInitialisers(mixin);
                 break;
-                
+
             case PREINJECT:
                 this.prepareInjections(mixin);
                 break;
-                
+
             case INJECT:
                 this.applyAccessors(mixin);
                 this.applyInjections(mixin);
                 break;
-                
+
             default:
                 // wat?
                 throw new IllegalStateException("Invalid pass specified " + pass);
@@ -310,7 +311,7 @@ class MixinApplicatorStandard {
 
     /**
      * Mixin interfaces implemented by the mixin class onto the target class
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyInterfaces(MixinTargetContext mixin) {
@@ -324,7 +325,7 @@ class MixinApplicatorStandard {
 
     /**
      * Mixin misc attributes from mixin class onto the target class
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyAttributes(MixinTargetContext mixin) {
@@ -336,20 +337,20 @@ class MixinApplicatorStandard {
 
     /**
      * Mixin class-level annotations on the mixin into the target class
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyAnnotations(MixinTargetContext mixin) {
         ClassNode sourceClass = mixin.getClassNode();
         this.mergeAnnotations(sourceClass, this.targetClass);
     }
-    
+
     /**
      * Mixin fields from mixin class into the target class. It is vital that
      * this is done before mixinMethods because we need to compute renamed
      * fields so that transformMethod can rename field references in the method
      * body.
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyFields(MixinTargetContext mixin) {
@@ -363,7 +364,7 @@ class MixinApplicatorStandard {
             FieldNode target = this.findTargetField(shadow);
             if (target != null) {
                 this.mergeAnnotations(shadow, target);
-                
+
                 // Strip the FINAL flag from @Mutable non-private fields
                 if (entry.getValue().isDecoratedMutable() && !Bytecode.hasFlag(target, Opcodes.ACC_PRIVATE)) {
                     target.access &= ~Opcodes.ACC_FINAL;
@@ -384,14 +385,14 @@ class MixinApplicatorStandard {
 
     /**
      * Mixin methods from the mixin class into the target class
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyMethods(MixinTargetContext mixin) {
         for (MethodNode shadow : mixin.getShadowMethods()) {
             this.applyShadowMethod(mixin, shadow);
         }
-        
+
         for (MethodNode mixinMethod : mixin.getMethods()) {
             this.applyNormalMethod(mixin, mixinMethod);
         }
@@ -420,19 +421,19 @@ class MixinApplicatorStandard {
 
     /**
      * Attempts to merge the supplied method into the target class
-     * 
+     *
      * @param mixin Mixin being applied
      * @param method Method to merge
      */
     protected void mergeMethod(MixinTargetContext mixin, MethodNode method) {
         boolean isOverwrite = Annotations.getVisible(method, Overwrite.class) != null;
         MethodNode target = this.findTargetMethod(method);
-        
+
         if (target != null) {
             if (this.isAlreadyMerged(mixin, method, isOverwrite, target)) {
                 return;
             }
-            
+
             AnnotationNode intrinsic = Annotations.getInvisible(method, Intrinsic.class);
             if (intrinsic != null) {
                 if (this.mergeIntrinsic(mixin, method, isOverwrite, target, intrinsic)) {
@@ -445,10 +446,10 @@ class MixinApplicatorStandard {
             throw new InvalidMixinException(mixin, String.format("Overwrite target \"%s\" was not located in target class %s",
                     method.name, mixin.getTargetClassRef()));
         }
-        
+
         this.targetClass.methods.add(method);
         mixin.addMergedMethod(method);
-        
+
         if (method.signature != null) {
             SignatureVisitor sv = mixin.getSignature().getRemapper();
             new SignatureReader(method.signature).accept(sv);
@@ -460,7 +461,7 @@ class MixinApplicatorStandard {
      * Check whether this method was already merged into the target, returns
      * false if the method was <b>not</b> already merged or if the incoming
      * method has a higher priority than the already merged method.
-     * 
+     *
      * @param mixin Mixin context
      * @param method Method being merged
      * @param isOverwrite True if the incoming method is tagged with Override
@@ -476,13 +477,13 @@ class MixinApplicatorStandard {
             }
             return false;
         }
-    
+
         String sessionId = Annotations.<String>getValue(merged, "sessionId");
-        
+
         if (!this.context.getSessionId().equals(sessionId)) {
             throw new ClassFormatError("Invalid @MixinMerged annotation found in" + mixin + " at " + method.name + " in " + this.targetClass.name);
         }
-        
+
         if (Bytecode.hasFlag(target, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)
                 && Bytecode.hasFlag(method, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_BRIDGE)) {
             if (mixin.getEnvironment().getOption(Option.DEBUG_VERBOSE)) {
@@ -490,15 +491,15 @@ class MixinApplicatorStandard {
             }
             return true;
         }
-        
+
         String owner = Annotations.<String>getValue(merged, "mixin");
         int priority = Annotations.<Integer>getValue(merged, "priority");
-        
+
         if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
             this.logger.warn("Method overwrite conflict for {} in {}, previously written by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
-        
+
         if (Annotations.getVisible(target, Final.class) != null) {
             this.logger.warn("Method overwrite conflict for @Final method {} in {} declared by {}. Skipping method.", method.name, mixin, owner);
             return true;
@@ -511,7 +512,7 @@ class MixinApplicatorStandard {
      * Validates and prepares an intrinsic merge, returns true if the intrinsic
      * check results in a "skip" action, indicating that no further merge action
      * should be undertaken
-     * 
+     *
      * @param mixin Mixin context
      * @param method Method being merged
      * @param isOverwrite True if the incoming method is tagged with Override
@@ -522,35 +523,35 @@ class MixinApplicatorStandard {
      */
     protected boolean mergeIntrinsic(MixinTargetContext mixin, MethodNode method, boolean isOverwrite,
             MethodNode target, AnnotationNode intrinsic) {
-        
+
         if (isOverwrite) {
             throw new InvalidMixinException(mixin, "@Intrinsic is not compatible with @Overwrite, remove one of these annotations on "
                     + method.name + " in " + mixin);
         }
-        
+
         String methodName = method.name + method.desc;
         if (Bytecode.hasFlag(method, Opcodes.ACC_STATIC)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
-        
+
         AnnotationNode renamed = Annotations.getVisible(method, MixinRenamed.class);
         if (renamed == null || !Annotations.getValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
             throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
                     + methodName + " in " + mixin);
         }
-        
+
         if (!Annotations.getValue(intrinsic, "displace", Boolean.FALSE)) {
             this.logger.log(mixin.getLoggingLevel(), "Skipping Intrinsic mixin method {} for {}", methodName, mixin.getTargetClassRef());
             return true;
         }
-        
+
         this.displaceIntrinsic(mixin, method, target);
         return false;
     }
 
     /**
      * Handles intrinsic displacement
-     * 
+     *
      * @param mixin Mixin context
      * @param method Method being merged
      * @param target target method being checked
@@ -559,7 +560,7 @@ class MixinApplicatorStandard {
         // Deliberately include invalid character in the method name so that
         // we guarantee no hackiness
         String proxyName = "proxy+" + target.name;
-        
+
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof MethodInsnNode && insn.getOpcode() != Opcodes.INVOKESTATIC) {
@@ -569,27 +570,27 @@ class MixinApplicatorStandard {
                 }
             }
         }
-        
+
         target.name = proxyName;
     }
 
     /**
      * Handles appending instructions from the source method to the target
      * method. Both methods must return void
-     * 
-     * @param mixin mixin target context 
+     *
+     * @param mixin mixin target context
      * @param method source method
      */
     protected final void appendInsns(MixinTargetContext mixin, MethodNode method) {
         if (Type.getReturnType(method.desc) != Type.VOID_TYPE) {
             throw new IllegalArgumentException("Attempted to merge insns from a method which does not return void");
         }
-        
+
         MethodNode target = this.findTargetMethod(method);
 
         if (target != null) {
             AbstractInsnNode returnNode = MixinApplicatorStandard.findInsn(target, Opcodes.RETURN);
-            
+
             if (returnNode != null) {
                 Iterator<AbstractInsnNode> injectIter = method.instructions.iterator();
                 while (injectIter.hasNext()) {
@@ -598,36 +599,36 @@ class MixinApplicatorStandard {
                         target.instructions.insertBefore(returnNode, insn);
                     }
                 }
-                
+
                 target.maxLocals = Math.max(target.maxLocals, method.maxLocals);
                 target.maxStack = Math.max(target.maxStack, method.maxStack);
             }
-            
+
             return;
         }
-        
+
         this.targetClass.methods.add(method);
     }
-    
+
     /**
      * (Attempts to) find and patch field initialisers from the mixin into the
      * target class
-     * 
+     *
      * @param mixin mixin target context
      */
     protected void applyInitialisers(MixinTargetContext mixin) {
-        // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
+        // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser
         MethodNode ctor = this.getConstructor(mixin);
         if (ctor == null) {
             return;
         }
-        
+
         // Find the initialiser instructions in the candidate ctor
         Deque<AbstractInsnNode> initialiser = this.getInitialiser(mixin, ctor);
         if (initialiser == null || initialiser.size() == 0) {
             return;
         }
-        
+
         // Patch the initialiser into the target class ctors
         for (MethodNode method : this.targetClass.methods) {
             if (Constants.CTOR.equals(method.name)) {
@@ -636,16 +637,16 @@ class MixinApplicatorStandard {
             }
         }
     }
-    
+
     /**
      * Finds a suitable ctor for reading the instance initialiser bytecode
-     * 
+     *
      * @param mixin mixin to search
      * @return appropriate ctor or null if none found
      */
     protected MethodNode getConstructor(MixinTargetContext mixin) {
         MethodNode ctor = null;
-        
+
         for (MethodNode mixinMethod : mixin.getMethods()) {
             if (Constants.CTOR.equals(mixinMethod.name) && MixinApplicatorStandard.hasLineNumbers(mixinMethod)) {
                 if (ctor == null) {
@@ -656,14 +657,14 @@ class MixinApplicatorStandard {
                 }
             }
         }
-        
+
         return ctor;
     }
 
     /**
      * Identifies line numbers in the supplied ctor which correspond to the
      * start and end of the method body.
-     * 
+     *
      * @param ctor constructor to scan
      * @return range indicating the line numbers of the specified constructor
      *      and the position of the superclass ctor invocation
@@ -671,7 +672,7 @@ class MixinApplicatorStandard {
     private Range getConstructorRange(MethodNode ctor) {
         boolean lineNumberIsValid = false;
         AbstractInsnNode endReturn = null;
-        
+
         int line = 0, start = 0, end = 0, superIndex = -1;
         for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
@@ -694,20 +695,20 @@ class MixinApplicatorStandard {
                 }
             }
         }
-        
+
         if (endReturn != null) {
             LabelNode label = new LabelNode(new Label());
             ctor.instructions.insertBefore(endReturn, label);
             ctor.instructions.insertBefore(endReturn, new LineNumberNode(start, label));
         }
-        
+
         return new Range(start, end, superIndex);
     }
 
     /**
      * Get insns corresponding to the instance initialiser (hopefully) from the
      * supplied constructor.
-     * 
+     *
      * @param mixin mixin target context
      * @param ctor constructor to inspect
      * @return initialiser bytecode extracted from the supplied constructor, or
@@ -717,13 +718,13 @@ class MixinApplicatorStandard {
         //
         // TODO Potentially rewrite this to be less horrible.
         //
-        
+
         // Find the range of line numbers which corresponds to the constructor body
         Range init = this.getConstructorRange(ctor);
         if (!init.isValid()) {
             return null;
         }
-        
+
         // Now we know where the constructor is, look for insns which lie OUTSIDE the method body
         int line = 0;
         Deque<AbstractInsnNode> initialiser = new ArrayDeque<AbstractInsnNode>();
@@ -747,7 +748,7 @@ class MixinApplicatorStandard {
                     initialiser.add(optionalInsn);
                     optionalInsn = null;
                 }
-                
+
                 if (insn instanceof LabelNode) {
                     optionalInsn = (LabelNode)insn;
                 } else {
@@ -764,13 +765,13 @@ class MixinApplicatorStandard {
                                     + Integer.toHexString(opcode).toUpperCase() + ") in class initialiser");
                         }
                     }
-                    
+
                     initialiser.add(insn);
                 }
             }
         }
-        
-        // Check that the last insn is a PUTFIELD, if it's not then 
+
+        // Check that the last insn is a PUTFIELD, if it's not then
         AbstractInsnNode last = initialiser.peekLast();
         if (last != null) {
             if (last.getOpcode() != Opcodes.PUTFIELD) {
@@ -778,20 +779,20 @@ class MixinApplicatorStandard {
                         + Integer.toHexString(last.getOpcode()) + " in " + mixin);
             }
         }
-        
+
         return initialiser;
     }
 
     /**
      * Inject initialiser code into the target constructor
-     * 
+     *
      * @param mixin mixin target context
      * @param ctor target constructor
      * @param initialiser initialiser instructions
      */
     protected final void injectInitialiser(MixinTargetContext mixin, MethodNode ctor, Deque<AbstractInsnNode> initialiser) {
         Map<LabelNode, LabelNode> labels = Bytecode.cloneLabels(ctor.instructions);
-        
+
         AbstractInsnNode insn = this.findInitialiserInjectionPoint(mixin, ctor, initialiser);
         if (insn == null) {
             this.logger.warn("Failed to locate initialiser injection point in <init>{}, initialiser was not mixed in.", ctor.desc);
@@ -814,7 +815,7 @@ class MixinApplicatorStandard {
     /**
      * Find the injection point for injected initialiser insns in the target
      * ctor
-     * 
+     *
      * @param mixin target context for mixin being applied
      * @param ctor target ctor
      * @param initialiser source initialiser insns
@@ -824,12 +825,12 @@ class MixinApplicatorStandard {
         Set<String> initialisedFields = new HashSet<String>();
         for (AbstractInsnNode initialiserInsn : initialiser) {
             if (initialiserInsn.getOpcode() == Opcodes.PUTFIELD) {
-                initialisedFields.add(MixinApplicatorStandard.fieldKey((FieldInsnNode)initialiserInsn)); 
+                initialisedFields.add(MixinApplicatorStandard.fieldKey((FieldInsnNode)initialiserInsn));
             }
         }
 
         InitialiserInjectionMode mode = this.getInitialiserInjectionMode(mixin.getEnvironment());
-        String targetName = mixin.getTargetClassInfo().getName(); 
+        String targetName = mixin.getTargetClassInfo().getName();
         String targetSuperName = mixin.getTargetClassInfo().getSuperName();
         AbstractInsnNode targetInsn = null;
 
@@ -848,9 +849,9 @@ class MixinApplicatorStandard {
                 if (initialisedFields.contains(key)) {
                     targetInsn = insn;
                 }
-            }            
+            }
         }
-        
+
         return targetInsn;
     }
 
@@ -873,25 +874,25 @@ class MixinApplicatorStandard {
 
     /**
      * Scan for injector methods and injection points
-     * 
+     *
      * @param mixin Mixin being scanned
      */
     protected void prepareInjections(MixinTargetContext mixin) {
         mixin.prepareInjections();
     }
-    
+
     /**
      * Apply all injectors discovered in the previous pass
-     * 
+     *
      * @param mixin Mixin being applied
      */
     protected void applyInjections(MixinTargetContext mixin) {
         mixin.applyInjections();
     }
-    
+
     /**
      * Apply all accessors discovered during preprocessing
-     * 
+     *
      * @param mixin Mixin being applied
      */
     protected void applyAccessors(MixinTargetContext mixin) {
@@ -905,7 +906,7 @@ class MixinApplicatorStandard {
 
     /**
      * Check visibility before merging a mixin method
-     * 
+     *
      * @param mixin mixin target context
      * @param mixinMethod method to check
      */
@@ -914,9 +915,24 @@ class MixinApplicatorStandard {
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
                 && !(Annotations.getVisible(mixinMethod, Overwrite.class) != null)) {
-            throw new InvalidMixinException(mixin, 
+            throw new InvalidMixinException(mixin,
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
         }
+    }
+
+    protected void applyCallbackInfoField(TargetClassContext context) {
+        if (!context.hasCallbacks()) {
+            return;
+        }
+
+        MethodNode clinit = Bytecode.getStaticInitialiser(this.targetClass);
+        String fieldName = context.getCallbackFieldName();
+        String arrayDesc = "[L" + CallbackInfo.CLASS_NAME + ";";
+        this.targetClass.fields.add(new FieldNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, fieldName, arrayDesc, null, null));
+        clinit.instructions.insert(new FieldInsnNode(Opcodes.PUTSTATIC, this.targetClass.name, fieldName, arrayDesc));
+        clinit.instructions.insert(new TypeInsnNode(Opcodes.ANEWARRAY, CallbackInfo.CLASS_NAME));
+        clinit.instructions.insert(Bytecode.intConstant(context.getNextCallbackIndex()));
+        clinit.maxStack = Math.max(clinit.maxStack, 2);
     }
 
     protected void applySourceMap(TargetClassContext context) {
@@ -925,7 +941,7 @@ class MixinApplicatorStandard {
 
     /**
      * Check constraints in annotations on the specified mixin method
-     * 
+     *
      * @param mixin Target context
      * @param method Mixin method
      */
@@ -937,11 +953,11 @@ class MixinApplicatorStandard {
             }
         }
     }
-    
+
     /**
      * Check constraints for the specified annotation based on token values in
      * the current environment
-     * 
+     *
      * @param mixin Mixin being applied
      * @param method annotated method
      * @param annotation Annotation node to check constraints
@@ -970,8 +986,8 @@ class MixinApplicatorStandard {
      * annotations from the source. If the source node has no annotations then
      * no action will take place, if the target node has no annotations then a
      * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
+     * are not merged.
+     *
      * @param from ClassNode to merge annotations from
      * @param to ClassNode to merge annotations to
      */
@@ -979,15 +995,15 @@ class MixinApplicatorStandard {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
-        
+
     /**
      * Merge annotations from the specified source MethodNode to the destination
      * MethodNode, replaces annotations of the equivalent type on the target
      * with annotations from the source. If the source node has no annotations
      * then no action will take place, if the target node has no annotations
      * then a new annotation list will be created. Annotations from the mixin
-     * package are not merged. 
-     * 
+     * package are not merged.
+     *
      * @param from MethodNode to merge annotations from
      * @param to MethodNode to merge annotations to
      */
@@ -995,15 +1011,15 @@ class MixinApplicatorStandard {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
-    
+
     /**
      * Merge annotations from the specified source FieldNode to the destination
      * FieldNode, replaces annotations of the equivalent type on the target with
      * annotations from the source. If the source node has no annotations then
      * no action will take place, if the target node has no annotations then a
      * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
+     * are not merged.
+     *
      * @param from FieldNode to merge annotations from
      * @param to FieldNode to merge annotations to
      */
@@ -1011,11 +1027,11 @@ class MixinApplicatorStandard {
         to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
         to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
     }
-    
+
     /**
      * Merge annotations from the source list to the target list. Returns the
      * target list or a new list if the target list was null.
-     * 
+     *
      * @param from Annotations to merge
      * @param to Annotation list to merge into
      * @param name Name of the item being merged, for debugging purposes
@@ -1026,29 +1042,29 @@ class MixinApplicatorStandard {
             if (from == null) {
                 return to;
             }
-            
+
             if (to == null) {
                 to = new ArrayList<AnnotationNode>();
             }
-            
+
             for (AnnotationNode annotation : from) {
                 if (!this.isMergeableAnnotation(annotation)) {
                     continue;
                 }
-                
+
                 for (Iterator<AnnotationNode> iter = to.iterator(); iter.hasNext();) {
                     if (iter.next().desc.equals(annotation.desc)) {
                         iter.remove();
                         break;
                     }
                 }
-                
+
                 to.add(annotation);
             }
         } catch (Exception ex) {
             this.logger.warn("Exception encountered whilst merging annotations for {}", name);
         }
-        
+
         return to;
     }
 
@@ -1061,10 +1077,10 @@ class MixinApplicatorStandard {
 
     /**
      * Find the first insn node with a matching opcode in the specified method
-     * 
+     *
      * @param method method to search
      * @param opcode opcode to search for
-     * @return found node or null if not found 
+     * @return found node or null if not found
      */
     protected static AbstractInsnNode findInsn(MethodNode method, int opcode) {
         Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
@@ -1079,7 +1095,7 @@ class MixinApplicatorStandard {
 
     /**
      * Returns true if the supplied method contains any line number information
-     * 
+     *
      * @param method Method to scan
      * @return true if a line number node is located
      */
@@ -1095,7 +1111,7 @@ class MixinApplicatorStandard {
     /**
      * Finds a method in the target class
      * @param searchFor
-     * 
+     *
      * @return Target method matching searchFor, or null if not found
      */
     protected final MethodNode findTargetMethod(MethodNode searchFor) {
@@ -1104,14 +1120,14 @@ class MixinApplicatorStandard {
                 return target;
             }
         }
-        
+
         return null;
     }
 
     /**
      * Finds a field in the target class
      * @param searchFor
-     * 
+     *
      * @return Target field matching searchFor, or null if not found
      */
     protected final FieldNode findTargetField(FieldNode searchFor) {
@@ -1123,5 +1139,5 @@ class MixinApplicatorStandard {
 
         return null;
     }
-    
+
 }

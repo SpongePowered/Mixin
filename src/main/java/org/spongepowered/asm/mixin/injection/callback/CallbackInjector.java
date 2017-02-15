@@ -25,7 +25,9 @@
 package org.spongepowered.asm.mixin.injection.callback;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
@@ -40,8 +42,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -53,37 +55,37 @@ import com.google.common.base.Strings;
  * This class is responsible for generating the bytecode for injected callbacks
  */
 public class CallbackInjector extends Injector {
-    
+
     /**
-     * Struct to replace all the horrible state variables from before 
+     * Struct to replace all the horrible state variables from before
      */
     private class Callback extends InsnList {
-        
+
         /**
          * Handler method
          */
         private final MethodNode handler;
-        
+
         /**
          * Target method handle
          */
         final Target target;
-        
+
         /**
-         * Target node, callback injected <b>before</b> this node 
+         * Target node, callback injected <b>before</b> this node
          */
         final AbstractInsnNode node;
-        
+
         /**
-         * Calculated local variables 
+         * Calculated local variables
          */
         final LocalVariableNode[] locals;
-        
+
         /**
          * Local variable types
          */
         final Type[] localTypes;
-        
+
         /**
          * The initial frame size based on the target method's arguments
          */
@@ -110,16 +112,16 @@ public class CallbackInjector extends Injector {
          * Callback descriptor without locals
          */
         final String desc;
-        
+
         /**
          * Callback descriptor with locals
          */
         final String descl;
-        
+
         /**
          * Callback argument names, unlike the locals arrays this array does not
          * contain null entries for TOP slots, so each index in this array
-         * matches the corresponding argument index in the callback  
+         * matches the corresponding argument index in the callback
          */
         final String[] argNames;
 
@@ -142,11 +144,11 @@ public class CallbackInjector extends Injector {
          * two purposes because they don't exist at the same time).
          */
         final int marshallVar;
-        
+
         /**
          * True if this callback expects the target method arguments to be
          * passed in. Set to false if {@link #checkDescriptor} determines that
-         * the "simple" descriptor matches. 
+         * the "simple" descriptor matches.
          */
         private boolean captureArgs = true;
 
@@ -158,7 +160,7 @@ public class CallbackInjector extends Injector {
             this.localTypes = locals != null ? new Type[locals.length] : null;
             this.frameSize = Bytecode.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
             List<String> argNames = null;
-            
+
             if (locals != null) {
                 int baseArgIndex = CallbackInjector.this.isStatic() ? 0 : 1;
                 argNames = new ArrayList<String>();
@@ -174,7 +176,7 @@ public class CallbackInjector extends Injector {
                     }
                 }
             }
-            
+
             // Calc number of args for the handler method, additional 1 is to ignore the CallbackInfo arg
             this.extraArgs = Math.max(0, Bytecode.getFirstNonArgLocalIndex(this.handler) - (this.frameSize + 1));
             this.argNames = argNames != null ? argNames.toArray(new String[argNames.size()]) : null;
@@ -186,22 +188,22 @@ public class CallbackInjector extends Injector {
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
             this.marshallVar = target.allocateLocal();
         }
-        
+
         /**
          * Returns true if the supplied opcode represents a <em>non-void</em>
          * RETURN opcode
-         * 
+         *
          * @param opcode opcode to check
          * @return true if value return
          */
         private boolean isValueReturnOpcode(int opcode) {
             return opcode >= Opcodes.IRETURN && opcode < Opcodes.RETURN;
         }
-        
+
         String getDescriptor() {
             return this.canCaptureLocals ? this.descl : this.desc;
         }
-        
+
         String getDescriptorWithAllLocals() {
             return this.target.getCallbackDescriptor(true, this.localTypes, this.target.arguments, this.frameSize, Short.MAX_VALUE);
         }
@@ -209,7 +211,7 @@ public class CallbackInjector extends Injector {
         /**
          * Add an instruction to this callback and increment the appropriate
          * stack sizes
-         * 
+         *
          * @param insn Instruction to append
          * @param ctorStack true if this insn contributes to the ctor stack
          * @param invokeStack true if this insn contributes to the invoke stack
@@ -219,7 +221,7 @@ public class CallbackInjector extends Injector {
             this.ctor += (ctorStack ? 1 : 0);
             this.invoke += (invokeStack ? 1 : 0);
         }
-        
+
         /**
          * Inject our generated code into the method and set the max stack size
          * for the method based on our calculated values
@@ -233,26 +235,26 @@ public class CallbackInjector extends Injector {
             if (this.getDescriptor().equals(desc)) {
                 return true; // Descriptor matches exactly, this is good
             }
-            
+
             if (this.target.getSimpleCallbackDescriptor().equals(desc) && !this.canCaptureLocals) {
                 this.captureArgs = false;
                 return true;
             }
-            
+
             if (this.extraArgs > 0) {
                 Type[] inTypes = Type.getArgumentTypes(desc);
                 Type[] myTypes = Type.getArgumentTypes(this.descl);
-                
+
                 if (inTypes.length != myTypes.length) {
                     return false;
                 }
-                
+
                 for (int arg = this.frameSize + 1; arg < myTypes.length; arg++) {
                     Type type = inTypes[arg];
                     if (type.equals(myTypes[arg])) {
                         continue; // Type matches
                     }
-                    
+
                     if (type.getSort() >= Type.ARRAY) {
                         return false; // Reference types must match exactly
                     }
@@ -267,36 +269,76 @@ public class CallbackInjector extends Injector {
                         return false; // Can't coerce source type to local type, give up
                     }
                 }
-                
+
                 return true;
             }
-            
+
             return false;
         }
-        
+
         boolean captureArgs() {
             return this.captureArgs;
         }
     }
-    
+
     /**
-     * True if cancellable 
+     * Information about a class-static callback info instance
+     */
+    private static class StaticCallbackInfo {
+
+        final String fieldName;
+
+        final int index;
+
+        final String id;
+
+        StaticCallbackInfo(String fieldName, int index, String id) {
+            this.fieldName = fieldName;
+            this.index = index;
+            this.id = id;
+        }
+
+        void append(ClassNode classNode) {
+            InsnList insns = new InsnList();
+            insns.add(new FieldInsnNode(Opcodes.GETSTATIC, classNode.name, this.fieldName, "[L" + CallbackInfo.CLASS_NAME + ";"));
+            insns.add(Bytecode.intConstant(this.index));
+            insns.add(new TypeInsnNode(Opcodes.NEW, CallbackInfo.CLASS_NAME));
+            insns.add(new InsnNode(Opcodes.DUP));
+            insns.add(new LdcInsnNode(this.id));
+            insns.add(new InsnNode(Opcodes.ICONST_0));
+            insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, CallbackInfo.CLASS_NAME, Constants.CTOR, CallbackInfo.CTOR_DESC, false));
+            insns.add(new InsnNode(Opcodes.AASTORE));
+
+            MethodNode clinit = Bytecode.getStaticInitialiser(classNode);
+            clinit.instructions.insert(insns);
+            clinit.maxStack = Math.max(clinit.maxStack, 6);
+        }
+    }
+
+
+    /**
+     * True if cancellable
      */
     private final boolean cancellable;
-    
+
     /**
      * Local variable capture behaviour
      */
     private final LocalCapture localCapture;
-    
+
     /**
-     * ID to return from callbackinfo 
+     * ID to return from callbackinfo
      */
     private final String identifier;
-    
+
+    /**
+     * Callback info fields
+     */
+    private final Map<String, StaticCallbackInfo> ciFields = new LinkedHashMap<String, StaticCallbackInfo>();
+
     /**
      * Make a new CallbackInjector with the supplied args
-     * 
+     *
      * @param info information about this injector
      * @param cancellable True if injections performed by this injector should
      *      be cancellable
@@ -317,7 +359,7 @@ public class CallbackInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
-        
+
         if (Bytecode.methodIsStatic(target.method) != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
@@ -329,6 +371,15 @@ public class CallbackInjector extends Injector {
                             + " targetting a ctor in " + this + ". Only RETURN allowed for a ctor target");
                 }
             }
+        }
+    }
+
+    @Override
+    public void postInject() {
+        super.postInject();
+
+        for (StaticCallbackInfo ciField : this.ciFields.values()) {
+            ciField.append(this.classNode);
         }
     }
 
@@ -350,7 +401,7 @@ public class CallbackInjector extends Injector {
 
     /**
      * Generate the actual bytecode for the callback
-     * 
+     *
      * @param callback callback handle
      */
     private void inject(final Callback callback) {
@@ -359,7 +410,7 @@ public class CallbackInjector extends Injector {
             this.info.addCallbackInvocation(this.methodNode);
             return;
         }
-        
+
         // The actual callback method, to start with this is set to the handler
         // method but we will redirect to our generated handler if the signature
         // is invalid and we have to generate an error handler stub method
@@ -383,7 +434,7 @@ public class CallbackInjector extends Injector {
                 } else {
                     // No matching method, generate a message to bitch about it
                     String message = this.generateBadLVTMessage(callback);
-                    
+
                     switch (this.localCapture) {
                         case CAPTURE_FAILEXCEPTION:
                             Injector.logger.error("Injection error: {}", message);
@@ -406,9 +457,9 @@ public class CallbackInjector extends Injector {
                 if (callback.checkDescriptor(returnableSig)) {
                     // Switching out CallbackInfo for CallbackInfoReturnable
                     // worked, so notify the user that they done derped
-                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! CallbackInfoReturnable is required!");  
+                    throw new InvalidInjectionException(this.info, "Invalid descriptor on " + this.info + "! CallbackInfoReturnable is required!");
                 }
-                
+
                 MethodNode surrogateHandler = Bytecode.findMethod(this.classNode, this.methodNode.name, callback.getDescriptor());
                 if (surrogateHandler != null && Annotations.getVisible(surrogateHandler, Surrogate.class) != null) {
                     // Found a matching surrogate method, use it
@@ -419,21 +470,21 @@ public class CallbackInjector extends Injector {
                 }
             }
         }
-        
+
         this.dupReturnValue(callback);
         if (this.cancellable) {
             this.createCallbackInfo(callback, true);
         }
         this.invokeCallback(callback, callbackMethod);
         this.injectCancellationCode(callback);
-        
+
         callback.inject();
         this.info.notifyInjected(callback.target);
     }
 
     /**
      * Generate the "bad local variable table" message
-     * 
+     *
      * @param callback callback handle
      * @return generated message
      */
@@ -448,7 +499,7 @@ public class CallbackInjector extends Injector {
 
     /**
      * Generates a method which throws an error
-     * 
+     *
      * @param callback callback handle
      * @param errorClass error class to throw
      * @param message message for the error
@@ -466,10 +517,10 @@ public class CallbackInjector extends Injector {
         insns.add(new InsnNode(Opcodes.ATHROW));
         return method;
     }
-    
+
     /**
      * Pretty-print local variable information to stderr
-     * 
+     *
      * @param callback callback handle
      */
     private void printLocals(final Callback callback) {
@@ -477,7 +528,7 @@ public class CallbackInjector extends Injector {
         SignaturePrinter methodSig = new SignaturePrinter(callback.target.method, callback.argNames);
         SignaturePrinter handlerSig = new SignaturePrinter(this.methodNode.name, callback.target.returnType, args, callback.argNames);
         handlerSig.setModifiers(this.methodNode);
-        
+
         PrettyPrinter printer = new PrettyPrinter();
         printer.kv("Target Class", this.classNode.name.replace('/', '.'));
         printer.kv("Target Method", methodSig);
@@ -505,6 +556,15 @@ public class CallbackInjector extends Injector {
         printer.add("    // Method body").add("}").add().print(System.err);
     }
 
+    private StaticCallbackInfo getCallbackInfo(final Callback callback, String id) {
+        StaticCallbackInfo ciField = this.ciFields.get(id);
+        if (ciField == null) {
+            ciField = new StaticCallbackInfo(callback.target.owner.getCallbackFieldName(), callback.target.owner.getNextCallbackIndex(), id);
+            this.ciFields.put(id, ciField);
+        }
+        return ciField;
+    }
+
     /**
      * @param callback callback handle
      * @param store store the callback info in a local variable
@@ -512,7 +572,7 @@ public class CallbackInjector extends Injector {
     private void createCallbackInfo(final Callback callback, boolean store) {
         callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
         callback.add(new InsnNode(Opcodes.DUP), true, true);
-        
+
         this.invokeCallbackInfoCtor(callback, store);
         if (store) {
             callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
@@ -526,7 +586,11 @@ public class CallbackInjector extends Injector {
         if (this.cancellable) {
             callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
         } else {
-            this.createCallbackInfo(callback, false);
+            StaticCallbackInfo ciField = this.getCallbackInfo(callback, this.getIdentifier(callback));
+            callback.add(new FieldInsnNode(Opcodes.GETSTATIC, this.classNode.name, callback.target.owner.getCallbackFieldName(),
+                    "[L" + CallbackInfo.CLASS_NAME + ";"), false, true);
+            callback.add(Bytecode.intConstant(ciField.index), false, true);
+            callback.add(new InsnNode(Opcodes.AALOAD), false, true);
         }
     }
 
@@ -535,14 +599,14 @@ public class CallbackInjector extends Injector {
      * we can expect the *original* return value to be on the stack, then we dup
      * the return value into a local var so we can push it later when we invoke
      * the ReturnEventInfo ctor
-     * 
+     *
      * @param callback callback handle
      */
     private void dupReturnValue(final Callback callback) {
         if (!callback.isAtReturn) {
             return;
         }
-        
+
         callback.add(new InsnNode(Opcodes.DUP));
         callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ISTORE), callback.marshallVar));
     }
@@ -579,15 +643,15 @@ public class CallbackInjector extends Injector {
         if (callback.captureArgs()) {
             Bytecode.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
         }
-        
+
         // Push the callback info onto the stack
         this.loadOrCreateCallbackInfo(callback);
-        
+
         // (Maybe) push the locals onto the stack
         if (callback.canCaptureLocals) {
             Locals.loadLocals(callback.localTypes, callback, callback.frameSize, callback.extraArgs);
         }
-        
+
         // Call the callback!
         this.invokeHandler(callback, callbackMethod);
     }
@@ -596,7 +660,7 @@ public class CallbackInjector extends Injector {
      * Get the identifier to use for the specified callback. If an id was
      * specified by the end user on the annotation then use the value specified,
      * otherwise defaults to the target method name.
-     * 
+     *
      * @param callback Callback being injected
      * @return Identifier to use
      */
@@ -606,14 +670,14 @@ public class CallbackInjector extends Injector {
 
     /**
      * if (e.isCancelled()) return e.getReturnValue();
-     * 
+     *
      * @param callback callback handle
      */
     protected void injectCancellationCode(final Callback callback) {
         if (!this.cancellable) {
             return;
         }
-        
+
         callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
         callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, callback.target.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
                 CallbackInfo.getIsCancelledMethodSig(), false));
@@ -630,7 +694,7 @@ public class CallbackInjector extends Injector {
 
     /**
      * Inject the appropriate return code for the method type
-     * 
+     *
      * @param callback callback handle
      */
     protected void injectReturnCode(final Callback callback) {
@@ -650,10 +714,10 @@ public class CallbackInjector extends Injector {
             callback.add(new InsnNode(callback.target.returnType.getOpcode(Opcodes.IRETURN)));
         }
     }
-    
+
     /**
      * Explicit to avoid creation of synthetic accessor
-     * 
+     *
      * @return true if the target method is static
      */
     protected boolean isStatic() {

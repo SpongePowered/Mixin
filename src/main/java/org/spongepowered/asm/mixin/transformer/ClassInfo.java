@@ -68,23 +68,23 @@ public final class ClassInfo extends TreeInfo {
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
     public static final int INCLUDE_ALL = ClassInfo.INCLUDE_PRIVATE | ClassInfo.INCLUDE_STATIC;
-    
+
     /**
      * Search type for the findInHierarchy methods, replaces a boolean flag
      * which made calling code difficult to read
      */
     public static enum SearchType {
-        
+
         /**
          * Include this class when searching in the hierarchy
          */
         ALL_CLASSES,
-        
+
         /**
-         * Only walk the superclasses when searching the hierarchy 
+         * Only walk the superclasses when searching the hierarchy
          */
         SUPER_CLASSES_ONLY
-        
+
     }
 
     /**
@@ -128,7 +128,7 @@ public final class ClassInfo extends TreeInfo {
         private final Traversal next;
 
         private final boolean traverse;
-        
+
         private final SearchType searchType;
 
         private Traversal(Traversal next, boolean traverse, SearchType searchType) {
@@ -150,7 +150,7 @@ public final class ClassInfo extends TreeInfo {
         public boolean canTraverse() {
             return this.traverse;
         }
-        
+
         public SearchType getSearchType() {
             return this.searchType;
         }
@@ -244,9 +244,9 @@ public final class ClassInfo extends TreeInfo {
          * if the member has been renamed
          */
         private String currentName;
-        
+
         /**
-         * True if this member is decorated with {@link Final} 
+         * True if this member is decorated with {@link Final}
          */
         private boolean decoratedFinal;
 
@@ -314,11 +314,11 @@ public final class ClassInfo extends TreeInfo {
         public boolean isFinal() {
             return (this.modifiers & Opcodes.ACC_FINAL) != 0;
         }
-        
+
         public boolean isUnique() {
             return this.unique;
         }
-        
+
         public void setUnique(boolean unique) {
             this.unique = unique;
         }
@@ -326,7 +326,7 @@ public final class ClassInfo extends TreeInfo {
         public boolean isDecoratedFinal() {
             return this.decoratedFinal;
         }
-        
+
         public boolean isDecoratedMutable() {
             return this.decoratedMutable;
         }
@@ -335,7 +335,7 @@ public final class ClassInfo extends TreeInfo {
             this.decoratedFinal = decoratedFinal;
             this.decoratedMutable = decoratedMutable;
         }
-            
+
         public boolean matchesFlags(int flags) {
             return (((~this.modifiers | (flags & ClassInfo.INCLUDE_PRIVATE)) & ClassInfo.INCLUDE_PRIVATE) != 0
                  && ((~this.modifiers | (flags & ClassInfo.INCLUDE_STATIC)) & ClassInfo.INCLUDE_STATIC) != 0);
@@ -343,7 +343,7 @@ public final class ClassInfo extends TreeInfo {
 
         // Abstract because this has to be static in order to contain the enum
         public abstract ClassInfo getOwner();
-        
+
         public ClassInfo getImplementor() {
             return this.getOwner();
         }
@@ -400,9 +400,9 @@ public final class ClassInfo extends TreeInfo {
     public class Method extends Member {
 
         private final List<FrameData> frames;
-        
+
         private boolean isAccessor;
-        
+
         public Method(Member member) {
             super(member);
             this.frames = member instanceof Method ? ((Method)member).frames : null;
@@ -452,7 +452,7 @@ public final class ClassInfo extends TreeInfo {
         public List<FrameData> getFrames() {
             return this.frames;
         }
-        
+
         @Override
         public ClassInfo getOwner() {
             return ClassInfo.this;
@@ -470,32 +470,32 @@ public final class ClassInfo extends TreeInfo {
 
             return super.equals(obj);
         }
-        
+
     }
-    
+
     /**
      * A method resolved in an interface <em>via</em> a class, return the member
      * wrapped so that the implementing class can be retrieved.
      */
     public class InterfaceMethod extends Method {
-        
+
         private final ClassInfo owner;
 
         public InterfaceMethod(Member member) {
             super(member);
             this.owner = member.getOwner();
         }
-        
+
         @Override
         public ClassInfo getOwner() {
             return this.owner;
         }
-        
+
         @Override
         public ClassInfo getImplementor() {
             return ClassInfo.this;
         }
-        
+
     }
 
     /**
@@ -513,9 +513,9 @@ public final class ClassInfo extends TreeInfo {
 
         public Field(FieldNode field, boolean injected) {
             super(Type.FIELD, field.name, field.desc, field.access, injected);
-            
+
             this.setUnique(Annotations.getVisible(field, Unique.class) != null);
-            
+
             if (Annotations.getVisible(field, Shadow.class) != null) {
                 boolean decoratedFinal = Annotations.getVisible(field, Final.class) != null;
                 boolean decoratedMutable = Annotations.getVisible(field, Mutable.class) != null;
@@ -544,7 +544,7 @@ public final class ClassInfo extends TreeInfo {
 
             return super.equals(obj);
         }
-        
+
         @Override
         protected String getDisplayFormat() {
             return "%s:%s";
@@ -618,9 +618,9 @@ public final class ClassInfo extends TreeInfo {
      * Mixin info if this class is a mixin itself
      */
     private final MixinInfo mixin;
-    
+
     private final MethodMapper methodMapper;
-    
+
     /**
      * True if this is a mixin rather than a class
      */
@@ -645,7 +645,7 @@ public final class ClassInfo extends TreeInfo {
      * Outer class reference, not initialised until required
      */
     private ClassInfo outerClass;
-    
+
     /**
      * Class signature, lazy-loaded where possible
      */
@@ -819,7 +819,7 @@ public final class ClassInfo extends TreeInfo {
     public String toString() {
         return this.name;
     }
-    
+
     public MethodMapper getMethodMapper() {
         return this.methodMapper;
     }
@@ -834,7 +834,7 @@ public final class ClassInfo extends TreeInfo {
     public String getName() {
         return this.name;
     }
-    
+
     /**
      * Get the class name (java format)
      */
@@ -879,14 +879,21 @@ public final class ClassInfo extends TreeInfo {
 
         return this.outerClass;
     }
-    
+
     /**
      * Return the class signature
-     * 
+     *
      * @return signature as a {@link ClassSignature} instance
      */
     public ClassSignature getSignature() {
         return this.signature.wake();
+    }
+
+    /**
+     * Get the finagled unique id for this class
+     */
+    public String getUID() {
+        return MethodMapper.getClassUID(this.name);
     }
 
     /**
@@ -1051,10 +1058,10 @@ public final class ClassInfo extends TreeInfo {
         if (ClassInfo.OBJECT.name == superClass) {
             return null;
         }
-        
+
         return this.findSuperClass(superClass, traversal, new HashSet<String>());
     }
-    
+
     private ClassInfo findSuperClass(String superClass, Traversal traversal, Set<String> traversed) {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
@@ -1070,7 +1077,7 @@ public final class ClassInfo extends TreeInfo {
                 }
             }
         }
-        
+
         if (traversal.canTraverse()) {
             for (MixinInfo mixin : this.mixins) {
                 String mixinClassName = mixin.getClassName();
@@ -1394,7 +1401,7 @@ public final class ClassInfo extends TreeInfo {
                 }
             }
         }
-        
+
         if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces())) {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);

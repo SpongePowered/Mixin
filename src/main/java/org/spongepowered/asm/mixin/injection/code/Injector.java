@@ -182,6 +182,13 @@ public abstract class Injector {
     }
 
     /**
+     * Perform post-injection tasks
+     */
+    public void postInject() {
+        // Stub for subclasses
+    }
+
+    /**
      * Use the supplied InjectionPoints to find target insns in the target
      * method
      *
