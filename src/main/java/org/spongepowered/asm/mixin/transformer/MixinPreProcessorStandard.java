@@ -51,8 +51,9 @@ import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.Constants;
 
 /**
@@ -312,6 +313,7 @@ class MixinPreProcessorStandard {
             this.checkMixinNotUnique(mixinMethod, type);
         }
         
+        String description = "@" + Bytecode.getSimpleName(type);
         Method method = this.getSpecialMethod(mixinMethod, type);
         MethodNode target = context.findMethod(mixinMethod, annotation);
         if (target == null) {
@@ -320,14 +322,28 @@ class MixinPreProcessorStandard {
             }
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, "@" + Bytecode.getSimpleName(type) + " method " + mixinMethod.name
+                throw new InvalidMixinException(this.mixin, description + " method " + mixinMethod.name + " in " + this.mixin
                         + " was not located in the target class");
             }
             mixinMethod.name = method.renameTo(target.name);
         }
         
         if (Constants.CTOR.equals(target.name)) {
-            throw new InvalidMixinException(this.mixin, "Nice try! " + mixinMethod.name + " cannot alias a constructor!");
+            throw new InvalidMixinException(this.mixin, "Nice try! " + mixinMethod.name + " in " + this.mixin + " cannot alias a constructor!");
+        }
+        
+        if (!Bytecode.compareFlags(mixinMethod, target, Opcodes.ACC_STATIC)) {
+            throw new InvalidMixinException(this.mixin, "STATIC modifier of " + description + " method " + mixinMethod.name + " in " + this.mixin
+                    + " does not match the target");
+        }
+        
+        if (overwrite) {
+            Visibility visTarget = Bytecode.getVisibility(target);
+            Visibility visMethod = Bytecode.getVisibility(mixinMethod);
+            if (visMethod.ordinal() < visTarget.ordinal()) {
+                throw new InvalidMixinException(this.mixin, visMethod + " " + description + " method " + mixinMethod.name + " in " + this.mixin
+                        + " cannot reduce visibiliy of " + visTarget + " target method");
+            }
         }
         
         if (!target.name.equals(mixinMethod.name)) {
@@ -343,21 +359,21 @@ class MixinPreProcessorStandard {
 
     protected Method getSpecialMethod(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-        this.checkMethodNotUnique(type, method);
+        this.checkMethodNotUnique(method, type);
         return method;
     }
 
-    protected void checkMethodNotUnique(Class<? extends Annotation> type, Method method) {
+    protected void checkMethodNotUnique(Method method, Class<? extends Annotation> type) {
         if (method.isUnique()) {
-            String annotation = "@" + Bytecode.getSimpleName(type);
-            throw new InvalidMixinException(this.mixin, annotation + " method " + method.getName() + " cannot be @Unique");
+            String description = "@" + Bytecode.getSimpleName(type);
+            throw new InvalidMixinException(this.mixin, description + " method " + method.getName() + " cannot be @Unique");
         }
     }
 
     protected void checkMixinNotUnique(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
         if (this.mixin.isUnique()) {
-            String annotation = "@" + Bytecode.getSimpleName(type);
-            throw new InvalidMixinException(this.mixin, annotation + " method " + mixinMethod.name + " found in a @Unique mixin");
+            String description = "@" + Bytecode.getSimpleName(type);
+            throw new InvalidMixinException(this.mixin, description + " method " + mixinMethod.name + " found in a @Unique mixin");
         }
     }
 
@@ -432,6 +448,11 @@ class MixinPreProcessorStandard {
                     throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
                 }
                 mixinField.name = field.renameTo(target.name);
+            }
+            
+            if (!Bytecode.compareFlags(mixinField, target, Opcodes.ACC_STATIC)) {
+                throw new InvalidMixinException(this.mixin, "STATIC modifier of @Shadow field " + mixinField.name + " in " + this.mixin
+                        + " does not match the target");
             }
             
             if (field.isUnique()) {

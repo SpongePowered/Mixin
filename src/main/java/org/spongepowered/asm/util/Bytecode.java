@@ -48,7 +48,39 @@ import com.google.common.primitives.Ints;
  * Utility methods for working with bytecode via ASM
  */
 public final class Bytecode {
-
+    
+    /**
+     * Ordinal member visibility level. This is used to represent visibility of
+     * a member in a formal way from lowest to highest. The
+     * {@link Bytecode#getVisibility} methods can be used to convert access
+     * flags to this enum. The value returned from {@link #ordinal} can then be
+     * used to determine whether a visibility level is <i>higher</i> or <i>lower
+     * </i> than any other given visibility level.  
+     */
+    public enum Visibility {
+        
+        /**
+         * Members decorated with {@link Opcodes#ACC_PRIVATE} 
+         */
+        PRIVATE,
+        
+        /**
+         * Members decorated with {@link Opcodes#ACC_PROTECTED} 
+         */
+        PROTECTED,
+        
+        /**
+         * Members not decorated with any access flags
+         */
+        PACKAGE,
+        
+        /**
+         * Members decorated with {@link Opcodes#ACC_PUBLIC} 
+         */
+        PUBLIC
+        
+    }
+    
     /**
      * Integer constant opcodes
      */
@@ -596,6 +628,93 @@ public final class Bytecode {
         return (field.access & flag) == flag;
     }
 
+    /**
+     * Check whether the status of the specified flag matches on both of the
+     * supplied arguments.
+     * 
+     * @param m1 First method
+     * @param m2 Second method
+     * @param flag flag to compare
+     * @return True if the flag is set to the same value on both members
+     */
+    public static boolean compareFlags(MethodNode m1, MethodNode m2, int flag) {
+        return Bytecode.hasFlag(m1, flag) == Bytecode.hasFlag(m2, flag);
+    }
+    
+    /**
+     * Check whether the status of the specified flag matches on both of the
+     * supplied arguments.
+     * 
+     * @param f1 First field
+     * @param f2 Second field
+     * @param flag flag to compare
+     * @return True if the flag is set to the same value on both members
+     */
+    public static boolean compareFlags(FieldNode f1, FieldNode f2, int flag) {
+        return Bytecode.hasFlag(f1, flag) == Bytecode.hasFlag(f2, flag);
+    }
+    
+    /**
+     * Returns the <i>ordinal visibility</i> of the supplied argument where a
+     * higher value equals higher "visibility":
+     * 
+     * <ol start="0">
+     *   <li>{@link #Visibility.PRIVATE}</li>
+     *   <li>{@link #Visibility.PROTECTED}</li>
+     *   <li>{@link #Visibility.PACKAGE}</li>
+     *   <li>{@link #Visibility.PUBLIC}</li>
+     * </ol>
+     * 
+     * @param method method to get visibility for
+     * @return visibility level
+     */
+    public static Visibility getVisibility(MethodNode method) {
+        return Bytecode.getVisibility(method.access & 0x7);
+    }
+    
+    /**
+     * Returns the <i>ordinal visibility</i> of the supplied argument where a
+     * higher value equals higher "visibility":
+     * 
+     * <ol start="0">
+     *   <li>{@link Visibility#PRIVATE}</li>
+     *   <li>{@link Visibility#PROTECTED}</li>
+     *   <li>{@link Visibility#PACKAGE}</li>
+     *   <li>{@link Visibility#PUBLIC}</li>
+     * </ol>
+     * 
+     * @param field field to get visibility for
+     * @return visibility level
+     */
+    public static Visibility getVisibility(FieldNode field) {
+        return Bytecode.getVisibility(field.access & 0x7);
+    }
+
+    /**
+     * Returns the <i>ordinal visibility</i> of the supplied argument where a
+     * higher value equals higher "visibility":
+     * 
+     * <ol start="0">
+     *   <li>{@link Visibility#PRIVATE}</li>
+     *   <li>{@link Visibility#PROTECTED}</li>
+     *   <li>{@link Visibility#PACKAGE}</li>
+     *   <li>{@link Visibility#PUBLIC}</li>
+     * </ol>
+     * 
+     * @param flags access flags of member
+     * @return visibility level
+     */
+    private static Visibility getVisibility(int flags) {
+        if ((flags & Opcodes.ACC_PROTECTED) != 0) {
+            return Bytecode.Visibility.PROTECTED;
+        } else if ((flags & Opcodes.ACC_PRIVATE) != 0) {
+            return Bytecode.Visibility.PRIVATE;
+        } else if ((flags & Opcodes.ACC_PUBLIC) != 0) {
+            return Bytecode.Visibility.PUBLIC;
+        }
+        return Bytecode.Visibility.PACKAGE;
+    }
+    
     /**
      * Compute the largest line number found in the specified class
      * 
