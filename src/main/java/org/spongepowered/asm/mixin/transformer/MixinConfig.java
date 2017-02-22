@@ -296,6 +296,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private boolean onLoad(String name, MixinEnvironment fallbackEnvironment) {
         this.name = name;
         this.env = this.parseSelector(this.selector, fallbackEnvironment);
+        this.required &= !this.env.getOption(Option.IGNORE_REQUIRED);
         this.initCompatibilityLevel();
         this.initInjectionPoints();
         return this.checkVersion();

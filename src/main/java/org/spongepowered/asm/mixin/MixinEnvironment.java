@@ -275,13 +275,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Allow fernflower to be disabled even if it is found on the classpath
          */
-        DEBUG_EXPORT_DECOMPILE(Option.DEBUG_EXPORT, "decompile") {
-            @Override
-            boolean getBooleanValue() {
-                // Allow a local FALSE to override a parent TRUE
-                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
-            }
-        },
+        DEBUG_EXPORT_DECOMPILE(Option.DEBUG_EXPORT, Inherit.ALLOW_OVERRIDE, "decompile"),
         
         /**
          * Run fernflower in a separate thread. In general this will allow
@@ -289,13 +283,7 @@ public final class MixinEnvironment implements ITokenProvider {
          * about 20% to load times) with the trade-off that crashes may lead to
          * undecompiled exports.
          */
-        DEBUG_EXPORT_DECOMPILE_THREADED(Option.DEBUG_EXPORT_DECOMPILE, "async") {
-            @Override
-            boolean getBooleanValue() {
-                // Allow a local FALSE to override a parent TRUE
-                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
-            }
-        },
+        DEBUG_EXPORT_DECOMPILE_THREADED(Option.DEBUG_EXPORT_DECOMPILE, Inherit.ALLOW_OVERRIDE, "async"),
         
         /**
          * Run the CheckClassAdapter on all classes after mixins are applied,
@@ -319,13 +307,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Enable strict checks
          */
-        DEBUG_STRICT(Option.DEBUG_ALL, "strict") {
-            @Override
-            boolean getBooleanValue() {
-                // no inheritance
-                return this.getLocalBooleanValue();
-            }
-        },
+        DEBUG_STRICT(Option.DEBUG_ALL, Inherit.INDEPENDENT, "strict"),
         
         /**
          * If false (default), {@link Unique} public methods merely raise a
@@ -338,17 +320,6 @@ public final class MixinEnvironment implements ITokenProvider {
          * Enable strict checking for mixin targets
          */
         DEBUG_TARGETS(Option.DEBUG_STRICT, "targets"),
-        
-        /**
-         * Disable the injector handler remapper
-         */
-//        DEBUG_DISABLE_HANDLER_REMAP(Option.DEBUG_ALL, "disableHandlerRename") {
-//            @Override
-//            boolean getBooleanValue() {
-//                // Allow a local FALSE to override a parent TRUE
-//                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
-//            }
-//        },
 
         /**
          * Dumps the bytecode for the target class to disk when mixin
@@ -373,13 +344,7 @@ public final class MixinEnvironment implements ITokenProvider {
          * option to <tt>false</tt> causes abstract targets to be skipped when
          * generating the implementation report.
          */
-        CHECK_IMPLEMENTS_STRICT(Option.CHECK_IMPLEMENTS, "strict") {
-            @Override
-            boolean getBooleanValue() {
-                // Allow a local FALSE to override a parent TRUE
-                return Booleans.parseBoolean(System.getProperty(this.property), super.getBooleanValue());
-            }
-        },
+        CHECK_IMPLEMENTS_STRICT(Option.CHECK_IMPLEMENTS, Inherit.ALLOW_OVERRIDE, "strict"),
         
         /**
          * Ignore all constraints on mixin annotations, output warnings instead
@@ -394,33 +359,63 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Parent for environment settings
          */
-        ENVIRONMENT("env") {
-            @Override
-            boolean getBooleanValue() {
-                return false;
-            }
-        },
+        ENVIRONMENT(Inherit.ALWAYS_FALSE, "env"),
         
         /**
          * Force refmap obf type when required 
          */
-        OBFUSCATION_TYPE(Option.ENVIRONMENT, "obf"),
+        OBFUSCATION_TYPE(Option.ENVIRONMENT, Inherit.ALWAYS_FALSE, "obf"),
         
         /**
          * Disable refmap when required 
          */
-        DISABLE_REFMAP(Option.ENVIRONMENT, "disableRefMap"),
+        DISABLE_REFMAP(Option.ENVIRONMENT, Inherit.INDEPENDENT, "disableRefMap"),
         
+        /**
+         * Globally ignore the "required" attribute of all configurations
+         */
+        IGNORE_REQUIRED(Option.ENVIRONMENT, Inherit.INDEPENDENT, "ignoreRequired"),
+
         /**
          * Default compatibility level to operate at
          */
-        DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, "compatLevel"),
+        DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, Inherit.INDEPENDENT, "compatLevel"),
         
         /**
          * Behaviour for initialiser injections, current supported options are
          * "default" and "safe"
          */
         INITIALISER_INJECTION_MODE("initialiserInjectionMode", "default");
+        
+        /**
+         * Type of inheritance for options
+         */
+        private enum Inherit {
+            
+            /**
+             * If the parent is set, this option will be set too.
+             */
+            INHERIT,
+            
+            /**
+             * If the parent is set, this option will be set too. However
+             * setting the option explicitly to <tt>false</tt> will override the
+             * parent value. 
+             */
+            ALLOW_OVERRIDE,
+            
+            /**
+             * This option ignores the value of the parent option, parent is
+             * only used for grouping. 
+             */
+            INDEPENDENT,
+            
+            /**
+             * This option is always <tt>false</tt>.
+             */
+            ALWAYS_FALSE;
+            
+        }
 
         /**
          * Prefix for mixin options
@@ -434,6 +429,11 @@ public final class MixinEnvironment implements ITokenProvider {
         final Option parent;
         
         /**
+         * Inheritance behaviour for this option 
+         */
+        final Inherit inheritance;
+
+        /**
          * Java property name
          */
         final String property;
@@ -446,7 +446,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Whether this property is boolean or not
          */
-        final boolean flag;
+        final boolean isFlag;
         
         /**
          * Number of parents 
@@ -457,31 +457,48 @@ public final class MixinEnvironment implements ITokenProvider {
             this(null, property, true);
         }
         
+        private Option(Inherit inheritance, String property) {
+            this(null, inheritance, property, true);
+        }
+        
         private Option(String property, boolean flag) {
             this(null, property, flag);
         }
 
         private Option(String property, String defaultStringValue) {
-            this(null, property, false, defaultStringValue);
+            this(null, Inherit.INHERIT, property, false, defaultStringValue);
         }
         
         private Option(Option parent, String property) {
-            this(parent, property, true);
+            this(parent, Inherit.INHERIT, property, true);
         }
         
-        private Option(Option parent, String property, boolean flag) {
-            this(parent, property, flag, null);
+        private Option(Option parent, Inherit inheritance, String property) {
+            this(parent, inheritance, property, true);
+        }
+        
+        private Option(Option parent, String property, boolean isFlag) {
+            this(parent, Inherit.INHERIT, property, isFlag, null);
+        }
+        
+        private Option(Option parent, Inherit inheritance, String property, boolean isFlag) {
+            this(parent, inheritance, property, isFlag, null);
         }
         
         private Option(Option parent, String property, String defaultStringValue) {
-            this(parent, property, false, defaultStringValue);
+            this(parent, Inherit.INHERIT, property, false, defaultStringValue);
         }
         
-        private Option(Option parent, String property, boolean flag, String defaultStringValue) {
+        private Option(Option parent, Inherit inheritance, String property, String defaultStringValue) {
+            this(parent, inheritance, property, false, defaultStringValue);
+        }
+        
+        private Option(Option parent, Inherit inheritance, String property, boolean isFlag, String defaultStringValue) {
             this.parent = parent;
+            this.inheritance = inheritance;
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
             this.defaultValue = defaultStringValue;
-            this.flag = flag;
+            this.isFlag = isFlag;
             int depth = 0;
             for (; parent != null; depth++) {
                 parent = parent.parent;
@@ -499,22 +516,32 @@ public final class MixinEnvironment implements ITokenProvider {
         
         @Override
         public String toString() {
-            return this.flag ? String.valueOf(this.getBooleanValue()) : this.getStringValue();
+            return this.isFlag ? String.valueOf(this.getBooleanValue()) : this.getStringValue();
         }
         
-        protected boolean getLocalBooleanValue() {
-            return Booleans.parseBoolean(System.getProperty(this.property), false);
+        private boolean getLocalBooleanValue(boolean defaultValue) {
+            return Booleans.parseBoolean(System.getProperty(this.property), defaultValue);
         }
         
-        protected boolean getInheritedBooleanValue() {
+        private boolean getInheritedBooleanValue() {
             return this.parent != null && this.parent.getBooleanValue();
         }
         
-        boolean getBooleanValue() {
-            return this.getLocalBooleanValue() || this.getInheritedBooleanValue();
+        final boolean getBooleanValue() {
+            if (this.inheritance == Inherit.ALWAYS_FALSE) {
+                return false;
+            }
+            
+            boolean local = this.getLocalBooleanValue(false);
+            if (this.inheritance == Inherit.INDEPENDENT) {
+                return local;
+            }
+
+            boolean inherited = local || this.getInheritedBooleanValue();
+            return this.inheritance == Inherit.INHERIT ? inherited : this.getLocalBooleanValue(inherited);
         }
 
-        String getStringValue() {
+        final String getStringValue() {
             return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property, this.defaultValue) : this.defaultValue;
         }
 
@@ -798,8 +825,6 @@ public final class MixinEnvironment implements ITokenProvider {
      * This environment's options
      */
     private final boolean[] options;
-    
-//    private final Map<String, MixinConfig> configs;
     
     /**
      * List of token provider classes
