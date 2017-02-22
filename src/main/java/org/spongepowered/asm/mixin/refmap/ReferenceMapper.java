@@ -65,11 +65,6 @@ public final class ReferenceMapper implements Serializable {
      * Passthrough mapper, used as failover 
      */
     public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true);
-    
-    /**
-     * Log even more things
-     */
-    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * "Default" mappings. The set of mappings to use as "default" is specified
@@ -224,6 +219,7 @@ public final class ReferenceMapper implements Serializable {
      * @return new refmap or {@link #DEFAULT_MAPPER} if reading fails
      */
     public static ReferenceMapper read(String resourcePath) {
+        Logger logger = LogManager.getLogger("mixin");
         Reader reader = null;
         try {
             InputStream resource = Launch.classLoader.getResourceAsStream(resourcePath);
@@ -232,9 +228,9 @@ public final class ReferenceMapper implements Serializable {
                 return ReferenceMapper.readJson(reader);
             }
         } catch (JsonParseException ex) {
-            ReferenceMapper.logger.error("Invalid REFMAP JSON in " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
+            logger.error("Invalid REFMAP JSON in " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } catch (Exception ex) {
-            ReferenceMapper.logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
+            logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } finally {
             if (reader != null) {
                 try {
