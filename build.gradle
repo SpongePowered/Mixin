@@ -258,7 +258,6 @@ task thinJar(type: Jar) {
     exclude 'org/spongepowered/asm/lib/tree/analysis/**'
     exclude 'org/spongepowered/asm/lib/xml/**'
     exclude 'org/spongepowered/asm/launch/**'
-    exclude 'org/spongepowered/asm/mixin/gen/**'
     exclude 'org/spongepowered/asm/mixin/injection/invoke/**'
     exclude 'org/spongepowered/asm/mixin/transformer/*.class'
     exclude 'org/spongepowered/asm/mixin/transformer/debug/**'
