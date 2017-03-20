@@ -67,12 +67,27 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     }
     
     /**
-     * Add an entry to the map
+     * Add an entry to the map, overwrites any previous entries. Since this
+     * method name poorly communicates its purpose, it is deprecated in favour
+     * of {@link #put}.  
      * 
      * @param type obfuscation type
      * @param value new entry
+     * 
+     * @deprecated Use {@link #put} instead
      */
+    @Deprecated
     public void add(ObfuscationType type, T value) {
+        this.put(type, value);
+    }
+
+    /**
+     * Put an entry into this map, replaces any existing entries.
+     * 
+     * @param type obfuscation type
+     * @param value entry
+     */
+    public void put(ObfuscationType type, T value) {
         this.data.put(type, value);
     }
 

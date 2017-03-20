@@ -469,7 +469,7 @@ abstract class AnnotatedMixinElementHandler {
         ObfuscationData<T> stripped = new ObfuscationData<T>();
         for (ObfuscationType type : data) {
             T mapping = data.get(type);
-            stripped.add(type, mapping.move(null));
+            stripped.put(type, mapping.move(null));
         }
         return stripped;
     }

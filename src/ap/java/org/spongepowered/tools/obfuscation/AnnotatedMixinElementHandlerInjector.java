@@ -248,9 +248,9 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             for (ObfuscationType type : remapped) {
                 MappingMethod mapping = remapped.get(type);
                 if (desc == null) {
-                    mappings.add(type, mapping.getOwner());
+                    mappings.put(type, mapping.getOwner());
                 } else {
-                    mappings.add(type, mapping.getDesc().replace(")V", ")L" + mapping.getOwner() + ";"));
+                    mappings.put(type, mapping.getDesc().replace(")V", ")L" + mapping.getOwner() + ";"));
                 }
             }
             

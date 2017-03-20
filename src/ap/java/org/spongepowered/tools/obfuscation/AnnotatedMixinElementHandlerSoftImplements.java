@@ -176,7 +176,7 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
         ObfuscationData<MappingMethod> prefixed = new ObfuscationData<MappingMethod>();
         for (ObfuscationType type : data) {
             MappingMethod mapping = data.get(type);
-            prefixed.add(type, mapping.addPrefix(prefix));
+            prefixed.put(type, mapping.addPrefix(prefix));
         }
         return prefixed;
     }

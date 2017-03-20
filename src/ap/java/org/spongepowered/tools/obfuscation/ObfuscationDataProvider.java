@@ -63,7 +63,6 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    @SuppressWarnings("unchecked")
     public <T> ObfuscationData<T> getObfEntryRecursive(final MemberInfo targetMember) {
         MemberInfo currentTarget = targetMember;
         ObfuscationData<String> obfTargetNames = this.getObfClass(currentTarget.owner);
@@ -74,25 +73,45 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
                 if (targetType == null) {
                     return obfData;
                 }
+                
                 TypeHandle superClass = targetType.getSuperclass();
-                if (superClass == null) {
-                    return obfData;
-                }
-                currentTarget = currentTarget.move(superClass.getName());
-                obfData = this.getObfEntry(currentTarget);
+                obfData = this.<T>getObfEntryUsing(currentTarget, superClass);
                 if (!obfData.isEmpty()) {
-                    for (ObfuscationType type : obfData) {
-                        String obfClass = obfTargetNames.get(type);
-                        T obfMember = obfData.get(type);
-                        obfData.add(type, (T)MemberInfo.fromMapping((IMapping<?>)obfMember).move(obfClass).asMapping());
+                    return ObfuscationDataProvider.applyParents(obfTargetNames, obfData);
+                }
+                
+                for (TypeHandle iface : targetType.getInterfaces()) {
+                    obfData = this.<T>getObfEntryUsing(currentTarget, iface);
+                    if (!obfData.isEmpty()) {
+                        return ObfuscationDataProvider.applyParents(obfTargetNames, obfData);
                     }
                 }
+                
+                if (superClass == null) {
+                    break;
+                }
+                
+                currentTarget = currentTarget.move(superClass.getName());
             }
         } catch (Exception ex) {
             ex.printStackTrace();
             return this.getObfEntry(targetMember);
         }
         return obfData;
+    }
+
+    /**
+     * Returns an obf entry for the specified member relocated into the
+     * specified target class. This is used by {@link #getObfEntryRecursive} to
+     * searh for matching obf entries in super classes an interfaces.
+     * 
+     * @param targetMember target member to search for
+     * @param targetClass new target class to check, if the supplied argument is
+     *      <tt>null</tt> then an empty dataset is returned 
+     * @return obfuscation data for the relocated member
+     */
+    private <T> ObfuscationData<T> getObfEntryUsing(MemberInfo targetMember, TypeHandle targetClass) {
+        return targetClass == null ? new ObfuscationData<T>() : this.<T>getObfEntry(targetMember.move(targetClass.getName()));
     }
 
     /* (non-Javadoc)
@@ -154,7 +173,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
         for (ObfuscationEnvironment env : this.environments) {
             MappingMethod obfMethod = env.getObfMethod(method);
             if (obfMethod != null) {
-                data.add(env.getType(), obfMethod);
+                data.put(env.getType(), obfMethod);
             }
         }
         
@@ -186,7 +205,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
         for (ObfuscationEnvironment env : this.environments) {
             MappingMethod obfMethod = env.getObfMethod(method);
             if (obfMethod != null) {
-                data.add(env.getType(), obfMethod);
+                data.put(env.getType(), obfMethod);
             }
         }
         
@@ -208,7 +227,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
         for (ObfuscationEnvironment env : this.environments) {
             MemberInfo obfMethod = env.remapDescriptor(method);
             if (obfMethod != null) {
-                data.add(env.getType(), obfMethod.asMethodMapping());
+                data.put(env.getType(), obfMethod.asMethodMapping());
             }
         }
 
@@ -248,7 +267,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
                 if (obfField.getDesc() == null && field.getDesc() != null) {
                     obfField = obfField.transform(env.remapDescriptor(field.getDesc()));
                 }
-                data.add(env.getType(), obfField);
+                data.put(env.getType(), obfField);
             }
         }
         
@@ -275,11 +294,28 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
         for (ObfuscationEnvironment env : this.environments) {
             String obfClass = env.getObfClass(className);
             if (obfClass != null) {
-                data.add(env.getType(), obfClass);
+                data.put(env.getType(), obfClass);
             }
         }
         
         return data;
+    }
+
+    /**
+     * Applies the supplied parent names to the supplied
+     * 
+     * @param parents parent class names
+     * @param members members to reparent
+     * @return members for passthrough
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> ObfuscationData<T> applyParents(ObfuscationData<String> parents, ObfuscationData<T> members) {
+        for (ObfuscationType type : members) {
+            String obfClass = parents.get(type);
+            T obfMember = members.get(type);
+            members.put(type, (T)MemberInfo.fromMapping((IMapping<?>)obfMember).move(obfClass).asMapping());
+        }
+        return members;
     }
 
 }
