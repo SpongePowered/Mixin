@@ -77,10 +77,11 @@ public @interface Mixin {
      * <em>false</em> on the individual annotations, or disabled for the entire
      * mixin by setting the value here to <em>false</em>. Doing so will cause
      * the annotation processor to skip all annotations in this mixin when
-     * building the obfuscation table.
+     * building the obfuscation table unless the individual annotation is
+     * explicitly decorated with <tt>remap = true</tt>.
      * 
      * @return True to instruct the annotation processor to search for
-     *      obfuscation mappings for this annotation 
+     *      obfuscation mappings for this annotation (default true). 
      */
     public boolean remap() default true;
 }

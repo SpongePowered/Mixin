@@ -95,6 +95,10 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.state = state;
         }
         
+        public boolean shouldRemap() {
+            return this.at.getBoolean("remap", this.state.shouldRemap());
+        }
+        
         public AnnotationHandle getAt() {
             return this.at;
         }
@@ -121,6 +125,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         public void notifyRemapped() {
             this.state.notifyRemapped();
         }
+    
     }
     
     AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
@@ -211,7 +216,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        if (!elem.getAt().getBoolean("remap", true)) {
+        if (!elem.shouldRemap()) {
             return;
         }
         

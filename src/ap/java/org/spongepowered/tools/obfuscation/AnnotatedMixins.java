@@ -483,7 +483,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     }
 
     private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationHandle annotation) {
-        return mixinClass.remap() && annotation.getBoolean("remap", true);
+        return annotation.getBoolean("remap", mixinClass.remap());
     }
 
     /**
