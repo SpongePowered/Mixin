@@ -44,7 +44,6 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
-import org.apache.logging.log4j.core.helpers.Booleans;
 import org.spongepowered.asm.launch.Blackboard;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
@@ -520,7 +519,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
         
         private boolean getLocalBooleanValue(boolean defaultValue) {
-            return Booleans.parseBoolean(System.getProperty(this.property), defaultValue);
+            return Boolean.parseBoolean(System.getProperty(this.property, Boolean.toString(defaultValue)));
         }
         
         private boolean getInheritedBooleanValue() {
