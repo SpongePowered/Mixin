@@ -47,15 +47,14 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * object instance the method was going to be invoked on. For example when
  * hooking the following call:</p>
  * 
- * <blockquote><pre>
- *   public void baz(int someInt, String someString) {
- *     int abc = 0;
- *     int def = 1;
- *     Foo someObject = new Foo();
- *     
- *     // Hooking this method
- *     boolean xyz = someObject.bar(abc, def);
- *   }</pre>
+ * <blockquote><pre>public void baz(int someInt, String someString) {
+ *    int abc = 0;
+ *    int def = 1;
+ *    Foo someObject = new Foo();
+ *  
+ *    // Hooking this method
+ *    boolean xyz = someObject.bar(abc, def);
+ *}</pre>
  * </blockquote>
  * 
  * <p>The signature of the redirected method should be:</p>
@@ -75,7 +74,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * 
  * <blockquote>
  *      <pre>public boolean barProxy(Foo someObject, int abc, int def,
- *   int someInt, String someString)</pre>
+ *    int someInt, String someString)</pre>
  * </blockquote>
  * 
  * <h4>Field Access Redirect Mode</h4>
@@ -121,12 +120,11 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * possible to redirect access to individual array elements. Consider the
  * following example:</p>
  * 
- * <blockquote><pre>
- *   private String[] strings = { "foo", "bar", "baz" };
- * 
- *   public void print(int index) {
- *     System.err.println(this.strings[index]);
- *   }</pre>
+ * <blockquote><pre>private String[] strings = { "foo", "bar", "baz" };
+ *
+ *public void print(int index) {
+ *    System.err.println(this.strings[index]);
+ *}</pre>
  * </blockquote>
  * 
  * <p>It may be desirable to redirect the access to this array element. To do
@@ -162,11 +160,10 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * and the return type must match the type of object being constructed. For
  * example to redirect the following constructor call:</p>
  * 
- * <blockquote><pre>
- *   public void baz(int someInt, String someString) {
- *     // Hooking this constructor
- *     Foo someObject = new Foo("bar");
- *   }</pre>
+ * <blockquote><pre>public void baz(int someInt, String someString) {
+ *    // Hooking this constructor
+ *    Foo someObject = new Foo("bar");
+ *}</pre>
  * </blockquote>
  * 
  * <p>The signature of the handler method should be:</p>
@@ -177,6 +174,34 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * 
  * <p>Note that like other redirectors, it is possible to capture the target
  * method's arguments by appending them to the handler method's signature.</p>
+ * 
+ * <h4>A note on <tt>static</tt> modifiers for handler methods</h4>
+ *
+ * <p>In general, when declaring a redirect handler the <tt>static</tt> modifier
+ * of the handler method must always match the target method. The exception to
+ * this rule is application of <tt>&#064;Redirect</tt> to instructions which are
+ * effectively <b>before</b> the call to <tt>super()</tt> in a constructor.</p>
+ * 
+ * <p>Consider the following code:</p>
+ * 
+ * <blockquote><pre>class Foo : Bar {
+ *    Foo(int arg) {
+ *        super(<span style="background: #FF0">Foo.isEven(arg)</span>);
+ *    }
+ *    
+ *    static int isEven(int arg) {
+ *        return arg % 2 == 0;
+ *    }
+ *}</pre>
+ * </blockquote>
+ * 
+ * <p>In this example, the inline call to <tt>Foo.isEven</tt> takes place
+ * <em>before</em> the call to <tt>super()</tt> and (per Java rules) this method
+ * must be static (because the instance (<tt>this</tt>) is unavailable until the
+ * initialiser is complete. Thus if you wish to <tt>&#064;Redirect</tt> the call
+ * to <tt>isEven</tt> then the handler method must also be <tt>static</tt>. The
+ * injection subsystem will raise an exception for non-static handlers in this
+ * situation to indicate that the staticness of the handler is incorrect.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

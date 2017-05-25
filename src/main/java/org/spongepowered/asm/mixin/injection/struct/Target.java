@@ -26,14 +26,19 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import java.util.Iterator;
 
+import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionNodes;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * Information about the current injection target, mainly just convenience
@@ -60,6 +65,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * True if the method is static 
      */
     public final boolean isStatic;
+    
+    /**
+     * True if the method is a constructor 
+     */
+    public final boolean isCtor;
     
     /**
      * Method arguments
@@ -111,6 +121,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.method = method;
         this.insns = method.instructions;
         this.isStatic = Bytecode.methodIsStatic(method);
+        this.isCtor = method.name.equals(Constants.CTOR);
         this.arguments = Type.getArgumentTypes(method.desc);
         this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
 
@@ -337,6 +348,42 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         return this.insns.iterator();
     }
 
+    /**
+     * Find the first <tt>&lt;init&gt;</tt> invocation after the specified
+     * <tt>NEW</tt> insn 
+     * 
+     * @param newNode NEW insn
+     * @return INVOKESPECIAL opcode of ctor, or null if not found
+     */
+    public MethodInsnNode findInitNodeFor(TypeInsnNode newNode) {
+        int start = this.indexOf(newNode);
+        for (Iterator<AbstractInsnNode> iter = this.insns.iterator(start); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
+                    return methodNode;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find the call to <tt>super()</tt> in a constructor. This attempts to
+     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
+     * to another object ctor being passed into the super invocation.
+     * 
+     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     */
+    public MethodInsnNode findSuperInitNode() {
+        if (!this.isCtor) {
+            return null;
+        }
+
+        return Bytecode.findSuperInit(this.method, ClassInfo.forName(this.classNode.name).getSuperName());
+    }
+    
     /**
      * Replace an instruction in this target with the specified instruction and
      * mark the node as replaced for other injectors

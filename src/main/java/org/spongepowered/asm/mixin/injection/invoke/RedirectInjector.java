@@ -25,7 +25,6 @@
 package org.spongepowered.asm.mixin.injection.invoke;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,9 +50,8 @@ import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.Bytecode;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ObjectArrays;
@@ -163,7 +161,7 @@ public class RedirectInjector extends InvokeInjector {
      */
     @Override
     protected void checkTarget(Target target) {
-        // Overridden so we can do this check later
+        // Overridden so we can do this check later in a location-aware manner
     }
 
     @Override
@@ -227,13 +225,13 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         if (node.getCurrentTarget() instanceof MethodInsnNode) {
-            super.checkTarget(target);
+            this.checkTargetForNode(target, node);
             this.injectAtInvoke(target, node);
             return;
         }
         
         if (node.getCurrentTarget() instanceof FieldInsnNode) {
-            super.checkTarget(target);
+            this.checkTargetForNode(target, node);
             this.injectAtFieldAccess(target, node);
             return;
         }
@@ -248,6 +246,32 @@ public class RedirectInjector extends InvokeInjector {
         
         throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
                 + target + " in " + this);
+    }
+
+    /**
+     * The normal staticness check is not location-aware, in that it merely
+     * enforces static modifiers of handlers to match their targets. For
+     * injecting into constructors however (which are ostensibly instance
+     * methods) calls which are redirected <em>before</em> the call to <tt>
+     * super()</tt> cannot access <tt>this</tt> and must therefore be declared
+     * as static.
+     * 
+     * @param target Target method
+     * @param node Injection location
+     */
+    private void checkTargetForNode(Target target, InjectionNode node) {
+        if (target.isCtor) {
+            MethodInsnNode superCall = target.findSuperInitNode();
+            int superCallIndex = target.indexOf(superCall);
+            int targetIndex = target.indexOf(node.getCurrentTarget());
+            if (targetIndex < superCallIndex) {
+                if (!this.isStatic) {
+                    throw new InvalidInjectionException(this.info, "@Redirect of pre-super invocation must be static in " + this);
+                }
+                return;
+            }
+        }
+        super.checkTarget(target);
     }
 
     protected boolean preInject(InjectionNode node) {
@@ -513,7 +537,7 @@ public class RedirectInjector extends InvokeInjector {
         
         final TypeInsnNode newNode = (TypeInsnNode)node.getCurrentTarget();
         final AbstractInsnNode dupNode = target.get(target.indexOf(newNode) + 1);
-        final MethodInsnNode initNode = this.findInitNode(target, newNode);
+        final MethodInsnNode initNode = target.findInitNodeFor(newNode);
         
         if (initNode == null) {
             if (!wildcard) {
@@ -571,20 +595,6 @@ public class RedirectInjector extends InvokeInjector {
         
         target.replaceNode(initNode, insns);
         meta.injected++;
-    }
-
-    protected MethodInsnNode findInitNode(Target target, TypeInsnNode newNode) {
-        int indexOf = target.indexOf(newNode);
-        for (Iterator<AbstractInsnNode> iter = target.insns.iterator(indexOf); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                MethodInsnNode methodNode = (MethodInsnNode)insn;
-                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
-                    return methodNode;
-                }
-            }
-        }
-        return null;
     }
     
     private static Type[] getArrayArgs(Type fieldType, Type... extra) {

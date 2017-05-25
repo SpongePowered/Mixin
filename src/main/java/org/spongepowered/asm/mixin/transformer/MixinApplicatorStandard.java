@@ -588,7 +588,7 @@ class MixinApplicatorStandard {
         MethodNode target = this.findTargetMethod(method);
 
         if (target != null) {
-            AbstractInsnNode returnNode = MixinApplicatorStandard.findInsn(target, Opcodes.RETURN);
+            AbstractInsnNode returnNode = Bytecode.findInsn(target, Opcodes.RETURN);
             
             if (returnNode != null) {
                 Iterator<AbstractInsnNode> injectIter = method.instructions.iterator();
@@ -1057,24 +1057,6 @@ class MixinApplicatorStandard {
             return annotation.desc.endsWith("Debug;");
         }
         return true;
-    }
-
-    /**
-     * Find the first insn node with a matching opcode in the specified method
-     * 
-     * @param method method to search
-     * @param opcode opcode to search for
-     * @return found node or null if not found 
-     */
-    protected static AbstractInsnNode findInsn(MethodNode method, int opcode) {
-        Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
-        while (findReturnIter.hasNext()) {
-            AbstractInsnNode insn = findReturnIter.next();
-            if (insn.getOpcode() == opcode) {
-                return insn;
-            }
-        }
-        return null;
     }
 
     /**

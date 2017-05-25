@@ -166,6 +166,57 @@ public final class Bytecode {
     }
 
     /**
+     * Find the first insn node with a matching opcode in the specified method
+     * 
+     * @param method method to search
+     * @param opcode opcode to search for
+     * @return found node or null if not found 
+     */
+    public static AbstractInsnNode findInsn(MethodNode method, int opcode) {
+        Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
+        while (findReturnIter.hasNext()) {
+            AbstractInsnNode insn = findReturnIter.next();
+            if (insn.getOpcode() == opcode) {
+                return insn;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find the call to <tt>super()</tt> in a constructor. This attempts to
+     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
+     * to another object ctor being passed into the super invocation.
+     * 
+     * @param method ctor to scan
+     * @param superName name of superclass
+     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     */
+    public static MethodInsnNode findSuperInit(MethodNode method, String superName) {
+        if (!Constants.CTOR.equals(method.name)) {
+            return null;
+        }
+        
+        int news = 0;
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
+                news++;
+            } else if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (Constants.CTOR.equals(methodNode.name)) {
+                    if (news > 0) {
+                        news--;
+                    } else if (methodNode.owner.equals(superName)) {
+                        return methodNode;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Runs textifier on the specified class node and dumps the output to the
      * specified output stream
      * 
