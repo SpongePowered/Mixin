@@ -690,6 +690,11 @@ public class MixinTransformer extends TreeTransformer {
      */
     private void selectModules(MixinEnvironment environment) {
         this.modules.clear();
+
+        // Generate source debug extension attribute if option is enabled
+        if (environment.getOption(Option.SOURCE_DEBUG_EXTENSION)) {
+            this.modules.add(new MixinTransformerModuleSourceDebugExtension());
+        }
         
         // Run CheckClassAdapter on the mixin bytecode if debug option is enabled 
         if (environment.getOption(Option.DEBUG_VERIFY)) {
