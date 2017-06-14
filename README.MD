@@ -462,5 +462,29 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">February 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.6.10</b></td>
+      <td valign="top">
+        <ul>
+          <li>(0.6.9) Minor fix to remove dependence on deprecated helper</li>
+          <li>Respect <tt>remap</tt> on Mixin for contained <tt>&#064;At</tt></li>
+          <li>Require redirectors which occur before call to superctor to be static</li>
+        </ul>
+      </td>
+      <td valign="top">May 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.11</b></td>
+      <td valign="top">
+        <ul>
+          <li>Fix handling of <tt>&#064;Unique</tt> when the same unique method
+          exists in more than one mixin targetting the same class</li>
+          <li>Fix handling of merged lambdas so that lambdas from mixins are
+          applied correctly when lambdas already exist in the target class (both
+          in the original class and when applied by earlier mixins)
+        </ul>
+      </td>
+      <td valign="top">June 2017</td>
+    </tr>
   </tbody>
 </table>
