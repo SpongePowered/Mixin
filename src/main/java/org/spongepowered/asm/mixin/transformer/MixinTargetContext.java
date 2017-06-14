@@ -58,6 +58,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationExcep
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
@@ -208,15 +209,20 @@ public class MixinTargetContext implements IMixinContext {
     void addAccessorMethod(MethodNode method, Class<? extends Annotation> type) {
         this.accessors.add(AccessorInfo.of(this, method, type));
     }
-
+    
+    void addMixinMethod(MethodNode method) {
+        this.targetClass.addMixinMethod(method);
+    }
+    
     /**
      * Callback from the applicator which notifies us that a method was merged
      * 
      * @param method merged method
      */
-    void addMergedMethod(MethodNode method) {
+    void methodMerged(MethodNode method) {
         this.mergedMethods.add(method);
         this.targetClassInfo.addMethod(method);
+        this.targetClass.methodMerged(method);
         
         Annotations.setVisible(method, MixinMerged.class,
                 "mixin", this.getClassName(),
@@ -455,6 +461,10 @@ public class MixinTargetContext implements IMixinContext {
         
         if (methodRef.getOwner().equals(this.getClassRef())) {
             methodRef.setOwner(this.targetClass.getName());
+            Method md = this.mixin.getClassInfo().findMethod(methodRef.getName(), methodRef.getDesc(), ClassInfo.INCLUDE_ALL);
+            if (md != null && md.isRenamed() && md.getOriginalName().equals(methodRef.getName()) && md.isSynthetic()) {
+                methodRef.setName(md.getName());
+            }
         } else if ((this.detachedSuper || this.inheritsFromMixin)) {
             if (methodRef.getOpcode() == Opcodes.INVOKESPECIAL) {
                 this.updateStaticBinding(method, methodRef);
@@ -846,7 +856,7 @@ public class MixinTargetContext implements IMixinContext {
             }
         }
         
-        return this.targetClass.findAliasedMethod(aliases, method.desc);
+        return this.targetClass.findMethod(aliases, method.desc);
     }
 
     MethodNode findRemappedMethod(MethodNode method) {
@@ -1114,7 +1124,9 @@ public class MixinTargetContext implements IMixinContext {
         List<MethodNode> methods = new ArrayList<MethodNode>();
         
         for (AccessorInfo accessor : this.accessors) {
-            methods.add(accessor.generate());
+            MethodNode generated = accessor.generate();
+            this.targetClass.addMixinMethod(generated);
+            methods.add(generated);
         }
         
         return methods;

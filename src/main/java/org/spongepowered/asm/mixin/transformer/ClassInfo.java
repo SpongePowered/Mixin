@@ -315,6 +315,10 @@ public final class ClassInfo extends TreeInfo {
             return (this.modifiers & Opcodes.ACC_FINAL) != 0;
         }
         
+        public boolean isSynthetic() {
+            return (this.modifiers & Opcodes.ACC_SYNTHETIC) != 0;
+        }
+        
         public boolean isUnique() {
             return this.unique;
         }

@@ -218,6 +218,7 @@ class MixinPreProcessorStandard {
             }
             
             if (this.attachInjectorMethod(context, mixinMethod)) {
+                context.addMixinMethod(mixinMethod);
                 continue;
             }
             
@@ -236,11 +237,13 @@ class MixinPreProcessorStandard {
             }
 
             if (this.attachUniqueMethod(context, mixinMethod)) {
+                context.addMixinMethod(mixinMethod);
                 iter.remove();
                 continue;
             }
             
             this.attachMethod(mixinMethod);
+            context.addMixinMethod(mixinMethod);
         }
     }
 
@@ -379,7 +382,7 @@ class MixinPreProcessorStandard {
 
     protected boolean attachUniqueMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-        if (method == null || (!method.isUnique() && !this.mixin.isUnique())) {
+        if (method == null || ((!method.isUnique() && !this.mixin.isUnique()) && !method.isSynthetic())) {
             return false;
         }
         
@@ -388,20 +391,22 @@ class MixinPreProcessorStandard {
             return false;
         }
         
+        String type = method.isUnique() ? "@Unique" : "synthetic";
+        
         if ((mixinMethod.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) != 0) {
             String uniqueName = context.getUniqueName(mixinMethod, false);
-            MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @Unique method {}{} to {} in {}",
-                    mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+            MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming {} method {}{} to {} in {}",
+                    type, mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
             mixinMethod.name = method.renameTo(uniqueName);
             return false;
         }
 
         if (this.strictUnique) {
-            throw new InvalidMixinException(this.mixin, "Method conflict, @Unique method " + mixinMethod.name + " in " + this.mixin
+            throw new InvalidMixinException(this.mixin, "Method conflict, " + type + " method " + mixinMethod.name + " in " + this.mixin
                     + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
         }
         
-        MixinPreProcessorStandard.logger.warn("Discarding @Unique public method {} in {} because it already exists in {}", mixinMethod.name,
+        MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
                 this.mixin, context.getTarget());
 
         return true;

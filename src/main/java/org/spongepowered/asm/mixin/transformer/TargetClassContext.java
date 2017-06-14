@@ -26,10 +26,14 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
@@ -39,14 +43,19 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
 
 /**
  * Struct for containing target class information during mixin application
  */
 class TargetClassContext {
+
+    /**
+     * Logger
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * Transformer session ID
@@ -88,7 +97,14 @@ class TargetClassContext {
      * transformations we apply
      */
     private final Map<String, Target> targetMethods = new HashMap<String, Target>();
-    
+
+    /**
+     * Information about methods which have been discovered by mixin
+     * preprocessors in this pass but which have not yet been merged into the
+     * target class. 
+     */
+    private final Set<MethodNode> mixinMethods = new HashSet<MethodNode>();
+
     /**
      * Unique method and field indices 
      */
@@ -200,8 +216,31 @@ class TargetClassContext {
     void mergeSignature(ClassSignature signature) {
         this.signature.merge(signature);
     }
+    
+    /**
+     * Add the specified method to the pending mixin methods set
+     * 
+     * @param method method to add
+     */
+    void addMixinMethod(MethodNode method) {
+        this.mixinMethods.add(method);
+    }
 
+    void methodMerged(MethodNode method) {
+        if (!this.mixinMethods.remove(method)) {
+            TargetClassContext.logger.debug("Unexpected: Merged unregistered method {}{} in {}", method.name, method.desc, this);
+        }
+    }
+    
+    MethodNode findMethod(Deque<String> aliases, String desc) {
+        return this.findAliasedMethod(aliases, desc, true);
+    }
+    
     MethodNode findAliasedMethod(Deque<String> aliases, String desc) {
+        return this.findAliasedMethod(aliases, desc, false);
+    }
+
+    private MethodNode findAliasedMethod(Deque<String> aliases, String desc, boolean includeMixinMethods) {
         String alias = aliases.poll();
         if (alias == null) {
             return null;
@@ -213,6 +252,14 @@ class TargetClassContext {
             }
         }
 
+        if (includeMixinMethods) {
+            for (MethodNode target : this.mixinMethods) {
+                if (target.name.equals(alias) && target.desc.equals(desc)) {
+                    return target;
+                }
+            } 
+        }
+        
         return this.findAliasedMethod(aliases, desc);
     }
     
@@ -277,10 +324,9 @@ class TargetClassContext {
             throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
-        MixinApplicatorStandard applicator = this.createApplicator();
-        applicator.apply(this.mixins);
-        
+        this.createApplicator().apply(this.mixins);
         this.classNode.signature = this.signature.toString();
+        this.checkMerges();
     }
 
     private MixinApplicatorStandard createApplicator() {
@@ -288,6 +334,14 @@ class TargetClassContext {
             return new MixinApplicatorInterface(this);
         }
         return new MixinApplicatorStandard(this);
+    }
+
+    private void checkMerges() {
+        for (MethodNode method : this.mixinMethods) {
+            if (!method.name.startsWith("<")) {
+                TargetClassContext.logger.debug("Unexpected: Registered method {}{} in {} was not merged", method.name, method.desc, this);
+            }
+        }
     }
 
     /**

@@ -447,7 +447,7 @@ class MixinApplicatorStandard {
         }
         
         this.targetClass.methods.add(method);
-        mixin.addMergedMethod(method);
+        mixin.methodMerged(method);
         
         if (method.signature != null) {
             SignatureVisitor sv = mixin.getSignature().getRemapper();
