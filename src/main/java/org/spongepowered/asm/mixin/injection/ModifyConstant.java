@@ -69,6 +69,14 @@ public @interface ModifyConstant {
     public String method();
     
     /**
+     * A {@link Slice} annotation which describes the method bisection used in
+     * locating target instructions for this modifier.
+     * 
+     * @return slice
+     */
+    public Slice slice() default @Slice;
+
+    /**
      * Discriminator for the constant to match (injection point), if not
      * specified then all constants matching the annotated handler's return type
      * are matched
