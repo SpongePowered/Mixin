@@ -481,7 +481,18 @@ plugin developed by [DemonWav](https://github.com/demonwav).
           exists in more than one mixin targetting the same class</li>
           <li>Fix handling of merged lambdas so that lambdas from mixins are
           applied correctly when lambdas already exist in the target class (both
-          in the original class and when applied by earlier mixins)
+          in the original class and when applied by earlier mixins)</li>
+        </ul>
+      </td>
+      <td valign="top">June 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.12</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add <tt>slice</tt> argument to <tt>&#064;ModifyConstant</tt></li>
+          <li>Add <tt>&#064;ModifyArgs</tt> injector which can change multiple
+          method call arguments with a single handler.</li>
         </ul>
       </td>
       <td valign="top">June 2017</td>
