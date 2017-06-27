@@ -36,7 +36,37 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
  * Specifies that this mixin method should inject an argument modifier to itself
- * in the target method(s) identified by {@link #method}.
+ * in the target method(s) identified by {@link #method}. This type of injection
+ * provides a lightweight mechanism for changing a single argument of a target
+ * method invocation. To affect multiple arguments at once, use {@link
+ * ModifyArgs} instead. 
+ * 
+ * <p>Consider the following method call:</p>
+ * 
+ * <blockquote><pre>// x, y and z are of type float
+ *someObject.setLocation(x, y, z, true);</pre></blockquote>
+ * 
+ * <p>Let us assume that we wish to modify the <tt>y</tt> value in the method
+ * call. We know that the arguments are <tt>float</tt>s and that the <tt>y</tt>
+ * value is the <em>second</em> (index = 1) <tt>float</tt> argument. Thus our
+ * injector requires the following signature:
+ *  
+ * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
+ *private float adjustYCoord(float y) {
+ *    return y + 64.0F;
+ *}</pre></blockquote>
+ * 
+ * <p>The callback consumes the original value of <tt>y</tt> and returns the
+ * adjusted value.</p>
+ * 
+ * <p><tt>&#064;ModifyArg</tt> can also consume all of the target method's
+ * arguments if required, to provide additional context for the callback. In
+ * this case the arguments of the callback should match the target method:</p> 
+ *  
+ * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
+ *private float adjustYCoord(float x, float y, float z, boolean interpolate) {
+ *    return (x == 0 && y == 0) ? 0 : y;
+ *}</pre></blockquote>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
