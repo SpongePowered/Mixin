@@ -42,6 +42,7 @@ import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.lib.util.CheckClassAdapter;
 import org.spongepowered.asm.lib.util.TraceClassVisitor;
 
+import com.google.common.base.Joiner;
 import com.google.common.primitives.Ints;
 
 /**
@@ -142,6 +143,42 @@ public final class Bytecode {
         "D", "D",
         "I", //"B",
         "I", //"S"
+    };
+    
+    /**
+     * Mapping of {@link Type#getSort()} return values to boxing types 
+     */
+    private static final String[] BOXING_TYPES = {
+        null,
+        "java/lang/Boolean",
+        "java/lang/Character",
+        "java/lang/Byte",
+        "java/lang/Short",
+        "java/lang/Integer",
+        "java/lang/Float",
+        "java/lang/Long",
+        "java/lang/Double",
+        null,
+        null,
+        null
+    };
+    
+    /**
+     * Mapping of {@link Type#getSort()} return values to boxing types 
+     */
+    private static final String[] UNBOXING_METHODS = {
+        null,
+        "booleanValue",
+        "charValue",
+        "byteValue",
+        "shortValue",
+        "intValue",
+        "floatValue",
+        "longValue",
+        "doubleValue",
+        null,
+        null,
+        null
     };
     
     private Bytecode() {
@@ -541,6 +578,44 @@ public final class Bytecode {
         }
         return arg == null ? "" : arg.toString();
     }
+    
+    /**
+     * Generate a method descriptor without return type for the supplied args
+     * array
+     * 
+     * @param args argument types
+     * @return method descriptor without return type
+     */
+    public static String getDescriptor(Type[] args) {
+        return "(" + Joiner.on("").join(args) + ")";
+    }
+    
+    /**
+     * Generate a method descriptor with the specified types
+     * 
+     * @param args argument types
+     * @param returnType return type
+     * @return generated method descriptor
+     */
+    public static String getDescriptor(Type[] args, Type returnType) {
+        return Bytecode.getDescriptor(args) + returnType.toString();
+    }
+
+    /**
+     * Changes the return type of a method descriptor to the specified symbol
+     * 
+     * @param desc descriptor to modify
+     * @param returnType new return type
+     * @return modified descriptor;
+     */
+    public static String changeDescriptorReturnType(String desc, String returnType) {
+        if (desc == null) {
+            return null;
+        } else if (returnType == null) {
+            return desc;
+        }
+        return desc.substring(0, desc.lastIndexOf(')') + 1) + returnType;
+    }
 
     /**
      * Returns the simple name of an annotation, mainly used for printing
@@ -787,4 +862,28 @@ public final class Bytecode {
         return Math.max(min, max + pad);
     }
 
+    /**
+     * Get the boxing type name for the specified type, if it is a primitive.
+     * For non-primitive types, <tt>null</tt> is returned
+     * 
+     * @param type type to box
+     * @return boxing type or null
+     */
+    public static String getBoxingType(Type type) {
+        return type == null ? null : Bytecode.BOXING_TYPES[type.getSort()];
+    }
+    
+    /**
+     * Get the unboxing method name for the specified primitive type's
+     * corresponding reference type. For example, if the type passed in is
+     * <tt>int</tt>, then the return value will be <tt>intValue</tt>. Returns
+     * <tt>null</tt> for non-primitive types.
+     * 
+     * @param type primitive type to get unboxing method for
+     * @return unboxing method name or <tt>null</tt>
+     */
+    public static String getUnboxingMethod(Type type) {
+        return type == null ? null : Bytecode.UNBOXING_METHODS[type.getSort()];
+    }
+    
 }

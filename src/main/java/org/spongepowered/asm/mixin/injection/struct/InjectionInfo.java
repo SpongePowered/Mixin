@@ -45,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -60,8 +61,8 @@ import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Contructs information about an injection from an {@link Inject} annotation
@@ -408,6 +409,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return new CallbackInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
             return new ModifyArgInjectionInfo(mixin, method, annotation);
+        } else if (annotation.desc.endsWith(ModifyArgs.class.getSimpleName() + ";")) {
+            return new ModifyArgsInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
             return new RedirectInjectionInfo(mixin, method, annotation);
         } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
@@ -435,6 +438,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             annotation = Annotations.getSingleVisible(method,
                 Inject.class,
                 ModifyArg.class,
+                ModifyArgs.class,
                 Redirect.class,
                 ModifyVariable.class,
                 ModifyConstant.class
@@ -456,6 +460,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if (annotation != null) {
             if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
                 return "modify";
+            } else if (annotation.desc.endsWith(ModifyArgs.class.getSimpleName() + ";")) {
+                return "args";
             } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
                 return "redirect";
             } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {

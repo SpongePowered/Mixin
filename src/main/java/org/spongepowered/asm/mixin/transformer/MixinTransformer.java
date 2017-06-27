@@ -53,6 +53,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler;
 import org.spongepowered.asm.mixin.extensibility.IMixinErrorHandler.ErrorAction;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.mixin.throwables.ClassAlreadyLoadedException;
 import org.spongepowered.asm.mixin.throwables.MixinApplyError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
@@ -404,6 +405,11 @@ public class MixinTransformer extends TreeTransformer {
     private final List<IMixinTransformerModule> modules = new ArrayList<IMixinTransformerModule>();
     
     /**
+     * Modules which generate synthetic classes required by mixins 
+     */
+    private final List<IClassGenerator> generators = new ArrayList<IClassGenerator>();
+    
+    /**
      * Re-entrance detector
      */
     private final ReEntranceState lock = new ReEntranceState(1);
@@ -469,6 +475,8 @@ public class MixinTransformer extends TreeTransformer {
         this.exporter = new Exporter();
         this.hotSwapper = this.initHotSwapper();
         this.postProcessor = new MixinPostProcessor();
+        
+        this.generators.add(ArgsClassGenerator.getInstance());
     }
 
     private IHotSwap initHotSwapper() {
@@ -526,7 +534,17 @@ public class MixinTransformer extends TreeTransformer {
      */
     @Override
     public synchronized byte[] transform(String name, String transformedName, byte[] basicClass) {
-        if (basicClass == null || transformedName == null || this.errorState) {
+        if (transformedName == null || this.errorState) {
+            return basicClass;
+        }
+        
+        if (basicClass == null) {
+            for (IClassGenerator generator : this.generators) {
+                if ((basicClass = generator.generate(transformedName)) != null) {
+                    this.exporter.export(transformedName.replace('.', '/'), true, basicClass);
+                    return basicClass;
+                }
+            }
             return basicClass;
         }
         

@@ -309,9 +309,9 @@ public class RedirectInjector extends InvokeInjector {
         final Type[] stackVars = targetIsStatic ? args : ObjectArrays.concat(ownerType, args);
         boolean injectTargetParams = false;
         
-        String desc = Injector.printArgs(stackVars) + returnType;
+        String desc = Bytecode.getDescriptor(stackVars, returnType);
         if (!desc.equals(this.methodNode.desc)) {
-            String alternateDesc = Injector.printArgs(ObjectArrays.concat(stackVars, target.arguments, Type.class)) + returnType;
+            String alternateDesc = Bytecode.getDescriptor(ObjectArrays.concat(stackVars, target.arguments, Type.class), returnType);
             if (alternateDesc.equals(this.methodNode.desc)) {
                 injectTargetParams = true;
             } else {
