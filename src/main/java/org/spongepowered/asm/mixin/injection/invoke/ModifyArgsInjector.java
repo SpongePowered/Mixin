@@ -81,32 +81,13 @@ public class ModifyArgsInjector extends InvokeInjector {
                     + targetMethod.name + targetMethod.desc + " with no arguments!");
         }
         
-        String argClass = ArgsClassGenerator.getInstance().getClassRef(targetMethod.desc);
-        
-        boolean withArgs = false;
-        String shortDesc = String.format("(L%s;)V", ArgsClassGenerator.CREF_ARGS);
-        if (!this.methodNode.desc.equals(shortDesc)) {
-            String targetDesc = Bytecode.changeDescriptorReturnType(target.method.desc, "V");
-            String longDesc = String.format("(L%s;%s", ArgsClassGenerator.CREF_ARGS, targetDesc.substring(1));
-            if (this.methodNode.desc.equals(longDesc)) {
-                withArgs = true;
-            } else {
-                throw new InvalidInjectionException(this.info, "@ModifyArgs injector " + this + " has an invalid signature "
-                        + this.methodNode.desc + ", expected " + shortDesc + " or " + longDesc);
-            }
-        }
+        String clArgs = ArgsClassGenerator.getInstance().getClassRef(targetMethod.desc);
+        boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();
         target.addToStack(1);
         
-        String factoryDesc = Bytecode.changeDescriptorReturnType(targetMethod.desc, "L" + argClass + ";");
-        insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, argClass, "of", factoryDesc, false));
-        insns.add(new InsnNode(Opcodes.DUP));
-        
-        if (!this.isStatic) {
-            insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            insns.add(new InsnNode(Opcodes.SWAP));
-        }
+        this.packArgs(insns, clArgs, targetMethod);
         
         if (withArgs) {
             target.addToStack(Bytecode.getArgsSize(target.arguments));
@@ -114,12 +95,44 @@ public class ModifyArgsInjector extends InvokeInjector {
         }
         
         this.invokeHandler(insns);
+        this.unpackArgs(insns, clArgs, args);
         
+        target.insns.insertBefore(targetMethod, insns);
+    }
+
+    private boolean verifyTarget(Target target) {
+        String shortDesc = String.format("(L%s;)V", ArgsClassGenerator.ARGS_REF);
+        if (!this.methodNode.desc.equals(shortDesc)) {
+            String targetDesc = Bytecode.changeDescriptorReturnType(target.method.desc, "V");
+            String longDesc = String.format("(L%s;%s", ArgsClassGenerator.ARGS_REF, targetDesc.substring(1));
+            
+            if (this.methodNode.desc.equals(longDesc)) {
+                return true;
+            }
+            
+            throw new InvalidInjectionException(this.info, "@ModifyArgs injector " + this + " has an invalid signature "
+                    + this.methodNode.desc + ", expected " + shortDesc + " or " + longDesc);
+        }
+        return false;
+    }
+
+    private void packArgs(InsnList insns, String clArgs, MethodInsnNode targetMethod) {
+        String factoryDesc = Bytecode.changeDescriptorReturnType(targetMethod.desc, "L" + clArgs + ";");
+        insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, clArgs, "of", factoryDesc, false));
+        insns.add(new InsnNode(Opcodes.DUP));
+        
+        if (!this.isStatic) {
+            insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            insns.add(new InsnNode(Opcodes.SWAP));
+        }
+    }
+
+    private void unpackArgs(InsnList insns, String clArgs, Type[] args) {
         for (int i = 0; i < args.length; i++) {
             if (i < args.length - 1) {
                 insns.add(new InsnNode(Opcodes.DUP));
             }
-            insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, argClass, ArgsClassGenerator.GETTER + i, "()" + args[i].getDescriptor(), false));
+            insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, clArgs, ArgsClassGenerator.GETTER_PREFIX + i, "()" + args[i].getDescriptor(), false));
             if (i < args.length - 1) {
                 if (args[i].getSize() == 1) {
                     insns.add(new InsnNode(Opcodes.SWAP));
@@ -129,7 +142,5 @@ public class ModifyArgsInjector extends InvokeInjector {
                 }
             }
         }
-        
-        target.insns.insertBefore(targetMethod, insns);
     }
 }

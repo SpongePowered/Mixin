@@ -54,21 +54,34 @@ import com.google.common.collect.HashBiMap;
  */
 public final class ArgsClassGenerator implements IClassGenerator {
     
-    public static final String CLASS_NAME_BASE = "org.spongepowered.asm.synthetic.Args$";
-    public static final String GETTER = "$";
+    public static final String ARGS_NAME = Args.class.getName();
+    public static final String ARGS_REF = ArgsClassGenerator.ARGS_NAME.replace('.', '/');
     
+    public static final String GETTER_PREFIX = "$";
+
+    private static final String CLASS_NAME_BASE = "org.spongepowered.asm.synthetic.Args$";
+
     private static final String OBJECT = "java/lang/Object";
     private static final String OBJECT_ARRAY = "[L" + ArgsClassGenerator.OBJECT + ";";
     
-    public static final String CNAME_ARGS = Args.class.getName();
-    public static final String CREF_ARGS = ArgsClassGenerator.CNAME_ARGS.replace('.', '/');
-    private static final String CTOR_DESC = "(" + ArgsClassGenerator.OBJECT_ARRAY + ")V";
-    
     private static final String VALUES_FIELD = "values";
     
+    private static final String CTOR_DESC = "(" + ArgsClassGenerator.OBJECT_ARRAY + ")V";
+    
+    private static final String SET = "set";
+    private static final String SET_DESC = "(ILjava/lang/Object;)V";
+    
+    private static final String SETALL = "setAll";
+    private static final String SETALL_DESC = "([Ljava/lang/Object;)V";
+
     private static final String NPE = "java/lang/NullPointerException";
+    private static final String NPE_CTOR_DESC = "(Ljava/lang/String;)V";
+    
     private static final String AIOOBE = "org/spongepowered/asm/mixin/injection/invoke/arg/ArgumentIndexOutOfBoundsException";
+    private static final String AIOOBE_CTOR_DESC = "(I)V";
+    
     private static final String ACE = "org/spongepowered/asm/mixin/injection/invoke/arg/ArgumentCountException";
+    private static final String ACE_CTOR_DESC = "(IILjava/lang/String;)V";
 
     /**
      * Singleton instance
@@ -179,7 +192,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
             visitor = new CheckClassAdapter(writer);
         }
         
-        visitor.visit(Opcodes.V1_6, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, ref, null, ArgsClassGenerator.CREF_ARGS, null);
+        visitor.visit(Opcodes.V1_6, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, ref, null, ArgsClassGenerator.ARGS_REF, null);
         visitor.visitSource(name.substring(name.lastIndexOf('.') + 1) + ".java", null);
         
         this.generateCtor(ref, desc, args, visitor);
@@ -206,7 +219,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
         ctor.visitCode();
         ctor.visitVarInsn(Opcodes.ALOAD, 0);
         ctor.visitVarInsn(Opcodes.ALOAD, 1);
-        ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.CREF_ARGS, Constants.CTOR, ArgsClassGenerator.CTOR_DESC, false);
+        ctor.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.ARGS_REF, Constants.CTOR, ArgsClassGenerator.CTOR_DESC, false);
         ctor.visitInsn(Opcodes.RETURN);
         ctor.visitMaxs(2, 2);
         ctor.visitEnd();
@@ -270,7 +283,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
     private void generateGetters(String ref, String desc, Type[] args, ClassVisitor writer) {
         byte argIndex = 0;
         for (Type arg : args) {
-            String name = ArgsClassGenerator.GETTER + argIndex;
+            String name = ArgsClassGenerator.GETTER_PREFIX + argIndex;
             String sig = "()" + arg.getDescriptor();
             MethodVisitorEx get = new MethodVisitorEx(writer.visitMethod(Opcodes.ACC_PUBLIC, name, sig, null, null));
             get.visitCode();
@@ -287,7 +300,6 @@ public final class ArgsClassGenerator implements IClassGenerator {
             // Return the value
             get.visitInsn(arg.getOpcode(Opcodes.IRETURN));
             
-            
             get.visitMaxs(2, 1);
             get.visitEnd();
             argIndex++;
@@ -295,10 +307,8 @@ public final class ArgsClassGenerator implements IClassGenerator {
     }
     
     /**
-     * Generate the <tt>set</tt> method body. The <tt>set</tt> method performs a
-     * <tt>CHECKCAST</tt> on all incoming arguments, checks that the argument
-     * index is not out of bounds, and also ensures that primitive types are not
-     * assigned <tt>null</tt> by the consumer code. 
+     * Generate the setter methods. These methods implement the abstract
+     * {@link Args#set} and {@link Args#setAll} methods. 
      * 
      * @param ref Class ref being generated
      * @param desc Argument descriptor
@@ -322,7 +332,8 @@ public final class ArgsClassGenerator implements IClassGenerator {
      * @param writer Class writer
      */
     private void generateIndexedSetter(String ref, String desc, Type[] args, ClassVisitor writer) {
-        MethodVisitorEx set = new MethodVisitorEx(writer.visitMethod(Opcodes.ACC_PUBLIC, "set", "(ILjava/lang/Object;)V", null, null));
+        MethodVisitorEx set = new MethodVisitorEx(writer.visitMethod(Opcodes.ACC_PUBLIC,
+                ArgsClassGenerator.SET, ArgsClassGenerator.SET_DESC, null, null));
         set.visitCode();
         
         Label store = new Label(), checkNull = new Label();
@@ -384,7 +395,8 @@ public final class ArgsClassGenerator implements IClassGenerator {
      * @param writer Class writer
      */
     private void generateMultiSetter(String ref, String desc, Type[] args, ClassVisitor writer) {
-        MethodVisitorEx set = new MethodVisitorEx(writer.visitMethod(Opcodes.ACC_PUBLIC, "setAll", "([Ljava/lang/Object;)V", null, null));
+        MethodVisitorEx set = new MethodVisitorEx(writer.visitMethod(Opcodes.ACC_PUBLIC,
+                ArgsClassGenerator.SETALL, ArgsClassGenerator.SETALL_DESC, null, null));
         set.visitCode();
         
         Label lengthOk = new Label(), nullPrimitive = new Label();
@@ -406,7 +418,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
         set.visitConstant((byte)args.length);
         set.visitLdcInsn(new SignaturePrinter("", null, args).setFullyQualified(true).getFormattedArgs());
 
-        set.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.ACE, Constants.CTOR, "(IILjava/lang/String;)V", false);
+        set.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.ACE, Constants.CTOR, ArgsClassGenerator.ACE_CTOR_DESC, false);
         set.visitInsn(Opcodes.ATHROW);
         
         set.visitLabel(lengthOk);
@@ -451,19 +463,26 @@ public final class ArgsClassGenerator implements IClassGenerator {
         set.visitEnd();
     }
 
+    /**
+     * Add insns to throw a null pointer exception with the specified message
+     */
     private static void throwNPE(MethodVisitorEx method, String message) {
         method.visitTypeInsn(Opcodes.NEW, ArgsClassGenerator.NPE);
         method.visitInsn(Opcodes.DUP);
         method.visitLdcInsn(message);
-        method.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.NPE, Constants.CTOR, "(Ljava/lang/String;)V", false);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.NPE, Constants.CTOR, ArgsClassGenerator.NPE_CTOR_DESC, false);
         method.visitInsn(Opcodes.ATHROW);
     }
 
+    /**
+     * Add insns to throw an {@link ArgumentIndexOutOfBoundsException}, reads
+     * the arg index from the local var specified by <tt>arg</tt>
+     */
     private static void throwAIOOBE(MethodVisitorEx method, int arg) {
         method.visitTypeInsn(Opcodes.NEW, ArgsClassGenerator.AIOOBE);
         method.visitInsn(Opcodes.DUP);
         method.visitVarInsn(Opcodes.ILOAD, arg);
-        method.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.AIOOBE, Constants.CTOR, "(I)V", false);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.AIOOBE, Constants.CTOR, ArgsClassGenerator.AIOOBE_CTOR_DESC, false);
         method.visitInsn(Opcodes.ATHROW);
     }
 
