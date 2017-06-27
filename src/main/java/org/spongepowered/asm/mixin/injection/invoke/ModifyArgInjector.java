@@ -30,12 +30,12 @@ import java.util.List;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
-import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * A bytecode injector which allows a single argument of a chosen method call to
@@ -94,6 +94,12 @@ public class ModifyArgInjector extends InvokeInjector {
         }
     }
     
+    @Override
+    protected void inject(Target target, InjectionNode node) {
+        this.checkTargetForNode(target, node);
+        super.inject(target, node);
+    }
+    
     /**
      * Do the injection
      */
@@ -132,7 +138,7 @@ public class ModifyArgInjector extends InvokeInjector {
     private int injectMultiArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
         if (!Arrays.equals(args, this.methodArgs)) {
             throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
-                    + Injector.printArgs(args) + ", expected " + Injector.printArgs(this.methodArgs));
+                    + Bytecode.getDescriptor(args) + ", expected " + Bytecode.getDescriptor(this.methodArgs));
         }
 
         int[] argMap = this.storeArgs(target, args, insns, 0);
@@ -146,7 +152,7 @@ public class ModifyArgInjector extends InvokeInjector {
         if (this.index > -1) {
             if (this.index >= args.length || !args[this.index].equals(this.returnType)) {
                 throw new InvalidInjectionException(this.info, "Specified index " + this.index + " for @ModifyArg is invalid for args "
-                        + Injector.printArgs(args) + ", expected " + this.returnType + " on " + this);
+                        + Bytecode.getDescriptor(args) + ", expected " + this.returnType + " on " + this);
             }
             return this.index;
         }

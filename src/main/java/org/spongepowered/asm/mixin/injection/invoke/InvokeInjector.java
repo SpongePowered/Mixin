@@ -77,6 +77,30 @@ public abstract class InvokeInjector extends Injector {
         }
     }
 
+    /**
+     * The normal staticness check is not location-aware, in that it merely
+     * enforces static modifiers of handlers to match their targets. For
+     * injecting into constructors however (which are ostensibly instance
+     * methods) calls which are injected <em>before</em> the call to <tt>
+     * super()</tt> cannot access <tt>this</tt> and must therefore be declared
+     * as static.
+     * 
+     * @param target Target method
+     * @param node Injection location
+     */
+    protected void checkTargetForNode(Target target, InjectionNode node) {
+        if (!target.isCtor) {
+            return;
+        }
+        
+        MethodInsnNode superCall = target.findSuperInitNode();
+        int superCallIndex = target.indexOf(superCall);
+        int targetIndex = target.indexOf(node.getCurrentTarget());
+        if (targetIndex <= superCallIndex && !this.isStatic) {
+            throw new InvalidInjectionException(this.info, "Pre-super " + this.annotationType + " invocation must be static in " + this);
+        }
+    }
+
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
      *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,

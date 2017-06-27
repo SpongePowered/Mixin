@@ -226,12 +226,14 @@ public class RedirectInjector extends InvokeInjector {
         
         if (node.getCurrentTarget() instanceof MethodInsnNode) {
             this.checkTargetForNode(target, node);
+            super.checkTarget(target);
             this.injectAtInvoke(target, node);
             return;
         }
         
         if (node.getCurrentTarget() instanceof FieldInsnNode) {
             this.checkTargetForNode(target, node);
+            super.checkTarget(target);
             this.injectAtFieldAccess(target, node);
             return;
         }
@@ -246,32 +248,6 @@ public class RedirectInjector extends InvokeInjector {
         
         throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting an invalid insn in "
                 + target + " in " + this);
-    }
-
-    /**
-     * The normal staticness check is not location-aware, in that it merely
-     * enforces static modifiers of handlers to match their targets. For
-     * injecting into constructors however (which are ostensibly instance
-     * methods) calls which are redirected <em>before</em> the call to <tt>
-     * super()</tt> cannot access <tt>this</tt> and must therefore be declared
-     * as static.
-     * 
-     * @param target Target method
-     * @param node Injection location
-     */
-    private void checkTargetForNode(Target target, InjectionNode node) {
-        if (target.isCtor) {
-            MethodInsnNode superCall = target.findSuperInitNode();
-            int superCallIndex = target.indexOf(superCall);
-            int targetIndex = target.indexOf(node.getCurrentTarget());
-            if (targetIndex < superCallIndex) {
-                if (!this.isStatic) {
-                    throw new InvalidInjectionException(this.info, "@Redirect of pre-super invocation must be static in " + this);
-                }
-                return;
-            }
-        }
-        super.checkTarget(target);
     }
 
     protected boolean preInject(InjectionNode node) {
@@ -309,9 +285,9 @@ public class RedirectInjector extends InvokeInjector {
         final Type[] stackVars = targetIsStatic ? args : ObjectArrays.concat(ownerType, args);
         boolean injectTargetParams = false;
         
-        String desc = Injector.printArgs(stackVars) + returnType;
+        String desc = Bytecode.getDescriptor(stackVars, returnType);
         if (!desc.equals(this.methodNode.desc)) {
-            String alternateDesc = Injector.printArgs(ObjectArrays.concat(stackVars, target.arguments, Type.class)) + returnType;
+            String alternateDesc = Bytecode.getDescriptor(ObjectArrays.concat(stackVars, target.arguments, Type.class), returnType);
             if (alternateDesc.equals(this.methodNode.desc)) {
                 injectTargetParams = true;
             } else {

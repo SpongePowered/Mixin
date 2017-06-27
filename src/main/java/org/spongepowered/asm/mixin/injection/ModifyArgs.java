@@ -30,47 +30,52 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
- * Specifies that this mixin method should inject an argument modifier to itself
- * in the target method(s) identified by {@link #method}. This type of injection
- * provides a lightweight mechanism for changing a single argument of a target
- * method invocation. To affect multiple arguments at once, use {@link
- * ModifyArgs} instead. 
+ * Specifies that this mixin method should inject an multi-argument modifier
+ * callback to itself in the target method(s) identified by {@link #method}.
+ * This type of injector provides a powerful but inefficient method for
+ * modifying multiple arguments of a method at once without making use of a
+ * {@link Redirect} injector. In general it is better to use redirectors where
+ * possible, however this type of injector can also function where {@link
+ * Redirect} cannot, such as modifying arguments of a super-constructor call. To
+ * modify a single method argument, use {@link ModifyArg} instead.
  * 
- * <p>Consider the following method call:</p>
+ * <p>This injector works by creating an <em>argument bundle</em> in the form of
+ * {@link Args} which is passed to your handler method. You can manipulate the
+ * method arguments via the bundle in your handler method. The bundle is then
+ * unpacked and the original method is called with the modified arguments.</p>
  * 
- * <blockquote><pre>// x, y and z are of type float
- *someObject.setLocation(x, y, z, true);</pre></blockquote>
+ * <p>Since the argument bundle is created for every invocation of the target
+ * method, and primitive types must undergo boxing and unboxing, this injector
+ * is intrinsically less efficient than other methods. However for certain uses
+ * this injector is more powerful:</p>
  * 
- * <p>Let us assume that we wish to modify the <tt>y</tt> value in the method
- * call. We know that the arguments are <tt>float</tt>s and that the <tt>y</tt>
- * value is the <em>second</em> (index = 1) <tt>float</tt> argument. Thus our
- * injector requires the following signature:
- *  
- * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
- *private float adjustYCoord(float y) {
- *    return y + 64.0F;
- *}</pre></blockquote>
+ * <ul>
+ *   <li>For modifying arguments of a superconstructor call, it would normally
+ *     be necessary to employ multiple {@link ModifyArg} callbacks (one for each
+ *     argument you wish to modify). However access to the enclosing scope is
+ *     not provided by {@link ModifyArg}, which can be problematic.</li>
+ *   <li>This injector can be used to target multiple methods with differing
+ *     argument types and counts.</li>
+ * </ul>
  * 
- * <p>The callback consumes the original value of <tt>y</tt> and returns the
- * adjusted value.</p>
+ * <p>Methods decorated with this injector should return <tt>void</tt> and
+ * return either:</p>
  * 
- * <p><tt>&#064;ModifyArg</tt> can also consume all of the target method's
- * arguments if required, to provide additional context for the callback. In
- * this case the arguments of the callback should match the target method:</p> 
- *  
- * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
- *private float adjustYCoord(float x, float y, float z, boolean interpolate) {
- *    return (x == 0 && y == 0) ? 0 : y;
- *}</pre></blockquote>
+ * <ul>
+ *   <li>A single argument of type {@link Args}</li>
+ *   <li>A single {@link Args} argument followed by the arguments of the
+ *     enclosing target method.</li>
+ * </ul>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ModifyArg {
+public @interface ModifyArgs {
     
     /**
      * String representation of a
@@ -100,23 +105,9 @@ public @interface ModifyArg {
     public At at();
     
     /**
-     * <p>Gets the argument index on the target to set. It is not necessary to
-     * set this value if there is only one argument of the modifier type in the
-     * hooked method's signature. For example if the target method accepts a
-     * boolean, an integer and a String, and the modifier method accepts and
-     * returns an integer, then the integer parameter will be automatically
-     * selected.</p>
-     * 
-     * <p>The index is zero-based.</p>
-     * 
-     * @return argument index to modify or -1 for automatic
-     */
-    public int index() default -1;
-
-    /**
      * By default, the annotation processor will attempt to locate an
-     * obfuscation mapping for all {@link ModifyArg} methods since it is
-     * anticipated that in general the target of a {@link ModifyArg} annotation
+     * obfuscation mapping for all {@link ModifyArgs} methods since it is
+     * anticipated that in general the target of a {@link ModifyArgs} annotation
      * will be an obfuscated method in the target class. However since it is
      * possible to also apply mixins to non-obfuscated targets (or non-
      * obfuscated methods in obfuscated targets, such as methods added by Forge)

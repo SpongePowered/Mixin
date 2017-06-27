@@ -52,8 +52,6 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
 
-import com.google.common.base.Joiner;
-
 /**
  * Base class for bytecode injectors
  */
@@ -270,10 +268,6 @@ public abstract class Injector {
         insns.add(new LdcInsnNode(message));
         insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, exceptionType, "<init>", "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
-    }
-    
-    protected static String printArgs(Type[] args) {
-        return "(" + Joiner.on("").join(args) + ")";
     }
     
     /**

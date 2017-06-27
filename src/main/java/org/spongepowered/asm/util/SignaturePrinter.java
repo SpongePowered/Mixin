@@ -127,7 +127,7 @@ public class SignaturePrinter {
      * Return only the arguments portion of this signature as a Java-style block
      */
     public String getFormattedArgs() {
-        return this.appendArgs(new StringBuilder(), true).toString();
+        return this.appendArgs(new StringBuilder(), true, true).toString();
     }
     
     /**
@@ -193,25 +193,25 @@ public class SignaturePrinter {
      */
     @Override
     public String toString() {
-        return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(this.name), false).toString();
+        return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(this.name), false, true).toString();
     }
     
     /**
      * Return this signature in descriptor format (return type after args)
      */
     public String toDescriptor() {
-        StringBuilder args = this.appendArgs(new StringBuilder(), true);
+        StringBuilder args = this.appendArgs(new StringBuilder(), true, false);
         return args.append(SignaturePrinter.getTypeName(this.returnType, false, this.fullyQualified)).toString();
     }
     
-    private StringBuilder appendArgs(StringBuilder sb, boolean typesOnly) {
+    private StringBuilder appendArgs(StringBuilder sb, boolean typesOnly, boolean pretty) {
         sb.append('(');
         for (int var = 0; var < this.argTypes.length; var++) {
             if (this.argTypes[var] == null) {
                 continue;
             } else if (var > 0) {
                 sb.append(',');
-                if (!typesOnly) {
+                if (pretty) {
                     sb.append(' ');
                 }
             }
