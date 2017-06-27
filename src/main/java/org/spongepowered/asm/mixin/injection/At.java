@@ -27,6 +27,16 @@ package org.spongepowered.asm.mixin.injection;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+import org.spongepowered.asm.mixin.injection.points.AfterInvoke;
+import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
+import org.spongepowered.asm.mixin.injection.points.BeforeFinalReturn;
+import org.spongepowered.asm.mixin.injection.points.BeforeInvoke;
+import org.spongepowered.asm.mixin.injection.points.BeforeNew;
+import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
+import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
+import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
+import org.spongepowered.asm.mixin.injection.points.MethodHead;
+
 /**
  * Annotation for specifying the type of {@link InjectionPoint} to use to
  * perform an {@link Inject} process. This annotation allows the
@@ -77,17 +87,15 @@ public @interface At {
      * {@link InjectionPoint}.</p>
      * 
      * <p>Built-in types are
-     * {@link org.spongepowered.asm.mixin.injection.points.MethodHead HEAD},
-     * {@link org.spongepowered.asm.mixin.injection.points.BeforeReturn RETURN},
-     * {@link org.spongepowered.asm.mixin.injection.points.BeforeInvoke INVOKE},
-     * {@link org.spongepowered.asm.mixin.injection.points.AfterInvoke
-     * INVOKE_ASSIGN},
-     * {@link org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess
-     * FIELD},
-     * {@link org.spongepowered.asm.mixin.injection.points.BeforeNew NEW},
-     * {@link org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke
-     * INVOKE_STRING} and
-     * {@link org.spongepowered.asm.mixin.injection.points.JumpInsnPoint JUMP}.
+     * {@link MethodHead HEAD},
+     * {@link BeforeReturn RETURN},
+     * {@link BeforeFinalReturn TAIL},
+     * {@link BeforeInvoke INVOKE},
+     * {@link AfterInvoke INVOKE_ASSIGN},
+     * {@link BeforeFieldAccess FIELD},
+     * {@link BeforeNew NEW},
+     * {@link BeforeStringInvoke INVOKE_STRING} and
+     * {@link JumpInsnPoint JUMP}.
      * See the javadoc for each type for more details on the scheme used by each
      * injection point.</p>
      * 
