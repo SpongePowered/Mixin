@@ -42,6 +42,8 @@ public abstract class MemberRef {
      * A static reference to a method backed by an invoke instruction
      */
     public static final class Method extends MemberRef {
+        
+        private static final int OPCODES = Opcodes.INVOKEVIRTUAL | Opcodes.INVOKESPECIAL | Opcodes.INVOKESTATIC | Opcodes.INVOKEINTERFACE;
 
         /**
          * Method invocation instruction
@@ -65,6 +67,15 @@ public abstract class MemberRef {
         @Override
         public int getOpcode() {
             return this.insn.getOpcode();
+        }
+        
+        @Override
+        public void setOpcode(int opcode) {
+            if ((opcode | Method.OPCODES) == 0) {
+                throw new IllegalArgumentException("Invalid opcode for method instruction: 0x" + Integer.toHexString(opcode));
+            }
+
+            this.insn.setOpcode(opcode);
         }
 
         @Override
@@ -102,6 +113,8 @@ public abstract class MemberRef {
      * A static reference to a field backed by field get/put instruction
      */
     public static final class Field extends MemberRef {
+        
+        private static final int OPCODES = Opcodes.GETSTATIC | Opcodes.PUTSTATIC | Opcodes.GETFIELD | Opcodes.PUTFIELD;
 
         /**
          * Field accessor instruction
@@ -125,6 +138,15 @@ public abstract class MemberRef {
         @Override
         public int getOpcode() {
             return this.insn.getOpcode();
+        }
+        
+        @Override
+        public void setOpcode(int opcode) {
+            if ((opcode | Field.OPCODES) == 0) {
+                throw new IllegalArgumentException("Invalid opcode for field instruction: 0x" + Integer.toHexString(opcode));
+            }
+            
+            this.insn.setOpcode(opcode);
         }
 
         @Override
@@ -206,27 +228,20 @@ public abstract class MemberRef {
 
         @Override
         public int getOpcode() {
-            switch (this.handle.getTag()) {
-                case Opcodes.H_INVOKEVIRTUAL:
-                    return Opcodes.INVOKEVIRTUAL;
-                case Opcodes.H_INVOKESTATIC:
-                    return Opcodes.INVOKESTATIC;
-                case Opcodes.H_INVOKEINTERFACE:
-                    return Opcodes.INVOKEINTERFACE;
-                case Opcodes.H_INVOKESPECIAL:
-                case Opcodes.H_NEWINVOKESPECIAL:
-                    return Opcodes.INVOKESPECIAL;
-                case Opcodes.H_GETFIELD:
-                    return Opcodes.GETFIELD;
-                case Opcodes.H_GETSTATIC:
-                    return Opcodes.GETSTATIC;
-                case Opcodes.H_PUTFIELD:
-                    return Opcodes.PUTFIELD;
-                case Opcodes.H_PUTSTATIC:
-                    return Opcodes.PUTSTATIC;
-                default:
-                    throw new MixinTransformerError("Invalid tag " + this.handle.getTag() + " for method handle " + this.handle + ".");
+            int opcode = MemberRef.opcodeFromTag(this.handle.getTag());
+            if (opcode == 0) {
+                throw new MixinTransformerError("Invalid tag " + this.handle.getTag() + " for method handle " + this.handle + ".");
             }
+            return opcode;
+        }
+        
+        @Override
+        public void setOpcode(int opcode) {
+            int tag = MemberRef.tagFromOpcode(opcode);
+            if (tag == 0) {
+                throw new MixinTransformerError("Invalid opcode " + Bytecode.getOpcodeName(opcode) + " for method handle " + this.handle + ".");
+            }
+            this.handle = new org.spongepowered.asm.lib.Handle(tag, this.handle.getOwner(), this.handle.getName(), this.handle.getDesc());
         }
 
         @Override
@@ -259,6 +274,19 @@ public abstract class MemberRef {
             this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc);
         }
     }
+    
+    private static final int[] H_OPCODES = {
+        0,                          // invalid
+        Opcodes.GETFIELD,           // H_GETFIELD
+        Opcodes.GETSTATIC,          // H_GETSTATIC
+        Opcodes.PUTFIELD,           // H_PUTFIELD
+        Opcodes.PUTSTATIC,          // H_PUTSTATIC
+        Opcodes.INVOKEVIRTUAL,      // H_INVOKEVIRTUAL
+        Opcodes.INVOKESTATIC,       // H_INVOKESTATIC
+        Opcodes.INVOKESPECIAL,      // H_INVOKESPECIAL
+        Opcodes.INVOKESPECIAL,      // H_NEWINVOKESPECIAL
+        Opcodes.INVOKEINTERFACE     // H_INVOKEINTERFACE
+    };
 
     /**
      * Whether this member is a field.
@@ -273,6 +301,13 @@ public abstract class MemberRef {
      * @return The opcode of the invocation
      */
     public abstract int getOpcode();
+
+    /**
+     * Set the opcode of the invocation.
+     * 
+     * @param opcode new opcode
+     */
+    public abstract void setOpcode(int opcode);
 
     /**
      * The internal name for the owner of this member.
@@ -318,8 +353,8 @@ public abstract class MemberRef {
 
     @Override
     public String toString() {
-        return Bytecode.getOpcodeName(this.getOpcode()) + " for "
-                + this.getOwner() + "." + this.getName() + (this.isField() ? ":" : "") + this.getDesc();
+        String name = Bytecode.getOpcodeName(this.getOpcode());
+        return String.format("%s for %s.%s%s%s", name, this.getOwner(), this.getName(), this.isField() ? ":" : "", this.getDesc());
     }
 
     @Override
@@ -339,4 +374,18 @@ public abstract class MemberRef {
     public int hashCode() {
         return this.toString().hashCode();
     }
+    
+    static int opcodeFromTag(int tag) {
+        return (tag >= 0 && tag < MemberRef.H_OPCODES.length) ? MemberRef.H_OPCODES[tag] : 0;
+    }
+    
+    static int tagFromOpcode(int opcode) {
+        for (int tag = 1; tag < MemberRef.H_OPCODES.length; tag++) {
+            if (MemberRef.H_OPCODES[tag] == opcode) {
+                return tag;
+            }
+        }
+        return 0;
+    }
+    
 }

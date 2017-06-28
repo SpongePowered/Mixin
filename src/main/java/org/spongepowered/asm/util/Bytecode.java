@@ -63,22 +63,30 @@ public final class Bytecode {
         /**
          * Members decorated with {@link Opcodes#ACC_PRIVATE} 
          */
-        PRIVATE,
+        PRIVATE(Opcodes.ACC_PRIVATE),
         
         /**
          * Members decorated with {@link Opcodes#ACC_PROTECTED} 
          */
-        PROTECTED,
+        PROTECTED(Opcodes.ACC_PROTECTED),
         
         /**
          * Members not decorated with any access flags
          */
-        PACKAGE,
+        PACKAGE(0),
         
         /**
          * Members decorated with {@link Opcodes#ACC_PUBLIC} 
          */
-        PUBLIC
+        PUBLIC(Opcodes.ACC_PUBLIC);
+        
+        static final int MASK = Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
+        
+        final int access;
+
+        private Visibility(int access) {
+            this.access = access;
+        }
         
     }
     
@@ -785,10 +793,10 @@ public final class Bytecode {
      * higher value equals higher "visibility":
      * 
      * <ol start="0">
-     *   <li>{@link #Visibility.PRIVATE}</li>
-     *   <li>{@link #Visibility.PROTECTED}</li>
-     *   <li>{@link #Visibility.PACKAGE}</li>
-     *   <li>{@link #Visibility.PUBLIC}</li>
+     *   <li>{@link Visibility#PRIVATE}</li>
+     *   <li>{@link Visibility#PROTECTED}</li>
+     *   <li>{@link Visibility#PACKAGE}</li>
+     *   <li>{@link Visibility#PUBLIC}</li>
      * </ol>
      * 
      * @param method method to get visibility for
@@ -839,6 +847,54 @@ public final class Bytecode {
             return Bytecode.Visibility.PUBLIC;
         }
         return Bytecode.Visibility.PACKAGE;
+    }
+    
+    /**
+     * Set the visibility of the specified member, leaving other access flags
+     * unchanged
+     * 
+     * @param method method to change
+     * @param visibility new visibility
+     */
+    public static void setVisibility(MethodNode method, Visibility visibility) {
+        method.access = Bytecode.setVisibility(method.access, visibility.access);
+    }
+    
+    /**
+     * Set the visibility of the specified member, leaving other access flags
+     * unchanged
+     * 
+     * @param field field to change
+     * @param visibility new visibility
+     */
+    public static void setVisibility(FieldNode field, Visibility visibility) {
+        field.access = Bytecode.setVisibility(field.access, visibility.access);
+    }
+    
+    /**
+     * Set the visibility of the specified member, leaving other access flags
+     * unchanged
+     * 
+     * @param method method to change
+     * @param access new visibility
+     */
+    public static void setVisibility(MethodNode method, int access) {
+        method.access = Bytecode.setVisibility(method.access, access);
+    }
+    
+    /**
+     * Set the visibility of the specified member, leaving other access flags
+     * unchanged
+     * 
+     * @param field field to change
+     * @param access new visibility
+     */
+    public static void setVisibility(FieldNode field, int access) {
+        field.access = Bytecode.setVisibility(field.access, access);
+    }
+    
+    private static int setVisibility(int oldAccess, int newAccess) {
+        return oldAccess & ~Visibility.MASK | (newAccess & Visibility.MASK);
     }
     
     /**

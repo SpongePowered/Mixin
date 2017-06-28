@@ -242,7 +242,7 @@ class MixinPreProcessorStandard {
                 continue;
             }
             
-            this.attachMethod(mixinMethod);
+            this.attachMethod(context, mixinMethod);
             context.addMixinMethod(mixinMethod);
         }
     }
@@ -340,14 +340,7 @@ class MixinPreProcessorStandard {
                     + " does not match the target");
         }
         
-        if (overwrite) {
-            Visibility visTarget = Bytecode.getVisibility(target);
-            Visibility visMethod = Bytecode.getVisibility(mixinMethod);
-            if (visMethod.ordinal() < visTarget.ordinal()) {
-                throw new InvalidMixinException(this.mixin, visMethod + " " + description + " method " + mixinMethod.name + " in " + this.mixin
-                        + " cannot reduce visibiliy of " + visTarget + " target method");
-            }
-        }
+        this.conformVisibility(context, mixinMethod, description, overwrite, target);
         
         if (!target.name.equals(mixinMethod.name)) {
             if (!overwrite && (target.access & Opcodes.ACC_PRIVATE) == 0) {
@@ -358,6 +351,32 @@ class MixinPreProcessorStandard {
         }
         
         return true;
+    }
+
+    private void conformVisibility(MixinTargetContext context, MixinMethodNode mixinMethod, String type, boolean overwrite, MethodNode target) {
+        Visibility visTarget = Bytecode.getVisibility(target);
+        Visibility visMethod = Bytecode.getVisibility(mixinMethod);
+        if (visMethod.ordinal() >= visTarget.ordinal()) {
+            if (visTarget == Visibility.PRIVATE && visMethod.ordinal() > Visibility.PRIVATE.ordinal()) {
+                context.getTarget().addUpgradedMethod(target);
+            }
+            return;
+        }
+        
+        String message = String.format("%s %s method %s in %s cannot reduce visibiliy of %s target method", visMethod, type, mixinMethod.name,
+                this.mixin, visTarget);
+        
+        if (overwrite && !this.mixin.getParent().conformOverwriteVisibility()) {
+            throw new InvalidMixinException(this.mixin, message);
+        }
+        
+        if (visMethod == Visibility.PRIVATE) {
+            if (overwrite) {
+                MixinPreProcessorStandard.logger.warn("Static binding violation: {}, visibility will be upgraded.", message);
+            }
+            context.addUpgradedMethod(mixinMethod);
+            Bytecode.setVisibility(mixinMethod, visTarget);
+        }
     }
 
     protected Method getSpecialMethod(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
@@ -412,7 +431,7 @@ class MixinPreProcessorStandard {
         return true;
     }
     
-    protected void attachMethod(MixinMethodNode mixinMethod) {
+    protected void attachMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
         if (method == null) {
             return;
@@ -421,6 +440,11 @@ class MixinPreProcessorStandard {
         Method parentMethod = this.mixin.getClassInfo().findMethodInHierarchy(mixinMethod, SearchType.SUPER_CLASSES_ONLY);
         if (parentMethod != null && parentMethod.isRenamed()) {
             mixinMethod.name = method.renameTo(parentMethod.getName());
+        }
+        
+        MethodNode target = context.findMethod(mixinMethod, null);
+        if (target != null) {
+            this.conformVisibility(context, mixinMethod, "overwrite", true, target);
         }
     }
 

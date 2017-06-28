@@ -50,7 +50,7 @@ import org.spongepowered.asm.util.ClassSignature;
 /**
  * Struct for containing target class information during mixin application
  */
-class TargetClassContext {
+class TargetClassContext extends ClassContext {
 
     /**
      * Logger
@@ -155,7 +155,8 @@ class TargetClassContext {
     /**
      * Get the internal class name
      */
-    String getName() {
+    @Override
+    String getClassRef() {
         return this.classNode.name;
     }
     
@@ -169,6 +170,7 @@ class TargetClassContext {
     /**
      * Get the class tree
      */
+    @Override
     ClassNode getClassNode() {
         return this.classNode;
     }
@@ -190,6 +192,7 @@ class TargetClassContext {
     /**
      * Get the target class metadata
      */
+    @Override
     ClassInfo getClassInfo() {
         return this.classInfo;
     }
@@ -324,8 +327,11 @@ class TargetClassContext {
             throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
-        this.createApplicator().apply(this.mixins);
-        this.classNode.signature = this.signature.toString();
+        
+        MixinApplicatorStandard applicator = this.createApplicator();
+        applicator.apply(this.mixins);
+        this.applySignature();
+        this.upgradeMethods();
         this.checkMerges();
     }
 
@@ -334,6 +340,10 @@ class TargetClassContext {
             return new MixinApplicatorInterface(this);
         }
         return new MixinApplicatorStandard(this);
+    }
+
+    private void applySignature() {
+        this.getClassNode().signature = this.signature.toString();
     }
 
     private void checkMerges() {
