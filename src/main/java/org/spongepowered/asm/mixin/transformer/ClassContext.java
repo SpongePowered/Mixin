@@ -81,7 +81,6 @@ abstract class ClassContext {
             // wat
             throw new IllegalStateException("Meta method for " + method.name + " not located in " + this);
         }
-        System.err.printf(">>>> ADDING upgrade method %s%s in %s\n", method.name, method.desc, this);
         this.upgradedMethods.add(md);
     }
     
@@ -112,7 +111,6 @@ abstract class ClassContext {
         }
         
         if (this.upgradedMethods.contains(method)) {
-            System.err.printf(">>>> UPGRADING method %s%s in %s\n", methodRef.getName(), methodRef.getDesc(), this);
             methodRef.setOpcode(Opcodes.INVOKEVIRTUAL);
         }
     }

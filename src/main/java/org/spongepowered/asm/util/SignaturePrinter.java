@@ -219,7 +219,7 @@ public class SignaturePrinter {
                 String name = typesOnly ? null : Strings.isNullOrEmpty(this.argNames[var]) ? "unnamed" + var : this.argNames[var];
                 this.appendType(sb, this.argTypes[var], name);
             } catch (Exception ex) {
-                System.err.printf("\n\n>>> argTypes=%d, argNames=%d\n\n", this.argTypes.length, this.argNames.length);
+//                System.err.printf("\n\n>>> argTypes=%d, argNames=%d\n\n", this.argTypes.length, this.argNames.length);
                 throw new RuntimeException(ex);
             }
         }
