@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
@@ -472,13 +473,13 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     /**
      * Called from each AP when a pass is completed
      */
-    public void onPassCompleted() {
+    public void onPassCompleted(RoundEnvironment roundEnv) {
         if (!"true".equalsIgnoreCase(this.getOption(SupportedOptions.DISABLE_TARGET_EXPORT))) {
             this.targets.write(true);
         }
-
-        for (AnnotatedMixin mixin : this.mixinsForPass) {
-            mixin.runValidators(ValidationPass.LATE, this.validators);
+        
+        for (AnnotatedMixin mixin : roundEnv.processingOver() ? this.mixins.values() : this.mixinsForPass) {
+            mixin.runValidators(roundEnv.processingOver() ? ValidationPass.FINAL : ValidationPass.LATE, this.validators);
         }
     }
 

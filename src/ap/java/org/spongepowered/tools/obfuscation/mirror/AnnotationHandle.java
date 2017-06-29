@@ -44,6 +44,8 @@ import com.google.common.collect.ImmutableList;
  */
 public final class AnnotationHandle {
     
+    public static final AnnotationHandle MISSING = new AnnotationHandle(null);
+    
     /**
      * Annotation being wrapped
      */

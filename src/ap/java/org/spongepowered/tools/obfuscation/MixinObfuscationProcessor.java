@@ -75,7 +75,7 @@ public abstract class MixinObfuscationProcessor extends AbstractProcessor {
     }
     
     protected void postProcess(RoundEnvironment roundEnv) {
-        this.mixins.onPassCompleted();
+        this.mixins.onPassCompleted(roundEnv);
     }
 
     @Override

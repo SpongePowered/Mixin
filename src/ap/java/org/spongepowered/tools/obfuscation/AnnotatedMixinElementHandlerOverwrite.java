@@ -55,9 +55,13 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
         super(ap, mixin);
     }
 
+    public void registerMerge(ExecutableElement method) {
+        this.validateTargetMethod(method, null, new AliasedElementName(method, AnnotationHandle.MISSING), "overwrite", true, true);
+    }
+
     public void registerOverwrite(AnnotatedElementOverwrite elem) {
         AliasedElementName name = new AliasedElementName(elem.getElement(), elem.getAnnotation());
-        this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite");
+        this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite", true, false);
         this.checkConstraints(elem.getElement(), elem.getAnnotation());
         
         if (!this.mixin.remap()) {

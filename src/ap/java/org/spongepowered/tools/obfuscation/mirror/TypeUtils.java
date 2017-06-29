@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation.mirror;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
@@ -370,6 +371,29 @@ public abstract class TypeUtils {
 
     private static TypeMirror toRawType(ProcessingEnvironment processingEnv, DeclaredType targetType) {
         return processingEnv.getElementUtils().getTypeElement(((TypeElement)targetType.asElement()).getQualifiedName()).asType();
+    }
+    
+    /**
+     * Get the ordinal visibility for the specified element
+     * 
+     * @param element element to inspect
+     * @return visibility level or null if element is null
+     */
+    public static Visibility getVisibility(Element element) {
+        if (element == null) {
+            return null;
+        }
+        
+        for (Modifier modifier : element.getModifiers()) {
+            switch (modifier) {
+                case PUBLIC: return Visibility.PUBLIC;
+                case PROTECTED: return Visibility.PROTECTED;
+                case PRIVATE: return Visibility.PRIVATE;
+                default: break;
+            }
+        }
+        
+        return Visibility.PACKAGE;
     }
     
 }

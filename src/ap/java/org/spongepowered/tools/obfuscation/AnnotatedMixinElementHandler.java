@@ -49,6 +49,7 @@ import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.Visibility;
 
 /**
  * Base class for module for {@link AnnotatedMixin} which handle different
@@ -153,6 +154,10 @@ abstract class AnnotatedMixinElementHandler {
             return this.originalName;
         }
 
+        public boolean hasPrefix() {
+            return false;
+        }
+
     }
     
     /**
@@ -231,6 +236,11 @@ abstract class AnnotatedMixinElementHandler {
         public ShadowElementName setObfuscatedName(String name) {
             this.obfuscated = name;
             return this;
+        }
+        
+        @Override
+        public boolean hasPrefix() {
+            return this.hasPrefix;
         }
 
         /**
@@ -369,7 +379,7 @@ abstract class AnnotatedMixinElementHandler {
     
     protected final void validateTarget(Element element, AnnotationHandle annotation, AliasedElementName name, String type) {
         if (element instanceof ExecutableElement) {
-            this.validateTargetMethod((ExecutableElement)element, annotation, name, type);
+            this.validateTargetMethod((ExecutableElement)element, annotation, name, type, false, false);
         } else if (element instanceof VariableElement) {
             this.validateTargetField((VariableElement)element, annotation, name, type);
         }
@@ -379,7 +389,8 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the specified method exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateTargetMethod(ExecutableElement method, AnnotationHandle annotation, AliasedElementName name, String type) {
+    protected final void validateTargetMethod(ExecutableElement method, AnnotationHandle annotation, AliasedElementName name, String type,
+            boolean overwrite, boolean merge) {
         String signature = TypeUtils.getJavaSignature(method);
 
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -389,28 +400,44 @@ abstract class AnnotatedMixinElementHandler {
             
             // Find method as-is
             MethodHandle targetMethod = target.findMethod(method);
-            if (targetMethod != null) {
-                continue;
-            }
             
-            if (!name.baseName().equals(name.elementName())) {
-                // Find method without prefix
+            // Find method without prefix
+            if (targetMethod == null && name.hasPrefix()) {
                 targetMethod = target.findMethod(name.baseName(), signature);
-                if (targetMethod != null) {
-                    continue;
-                }
             }
             
             // Check aliases
-            for (String alias : name.getAliases()) {
-                if ((targetMethod = target.findMethod(alias, signature)) != null) {
-                    break;
+            if (targetMethod == null && name.hasAliases()) {
+                for (String alias : name.getAliases()) {
+                    if ((targetMethod = target.findMethod(alias, signature)) != null) {
+                        break;
+                    }
                 }
             }
             
-            if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation.asMirror());
+            if (targetMethod != null) {
+                if (overwrite) {
+                    this.validateMethodVisibility(method, annotation, type, target, targetMethod);
+                }
+            } else if (!merge) {
+                this.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation);
             }
+        }
+    }
+
+    private void validateMethodVisibility(ExecutableElement method, AnnotationHandle annotation, String type, TypeHandle target,
+            MethodHandle targetMethod) {
+        Visibility visTarget = targetMethod.getVisibility();
+        if (visTarget == null) {
+            return;
+        }
+        
+        Visibility visMethod = TypeUtils.getVisibility(method);
+        String visibility = "visibility of " + visTarget + " method in " + target;
+        if (visTarget.ordinal() > visMethod.ordinal()) {
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method cannot reduce " + visibility, method, annotation);
+        } else if (visTarget == Visibility.PRIVATE && visMethod.ordinal() > visTarget.ordinal()) {
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method will upgrade " + visibility, method, annotation);
         }
     }
 
@@ -463,6 +490,14 @@ abstract class AnnotatedMixinElementHandler {
                 this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror());
             }
         }            
+    }
+
+    private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation) {
+        if (annotation == null) {
+            this.ap.printMessage(kind, msg, e);
+        } else {
+            this.ap.printMessage(kind, msg, e, annotation.asMirror());
+        }
     }
 
     protected static <T extends IMapping<T>> ObfuscationData<T> stripOwnerData(ObfuscationData<T> data) {

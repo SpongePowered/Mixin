@@ -88,6 +88,11 @@ class AnnotatedMixin {
      * Mixin class
      */
     private final TypeElement mixin;
+    
+    /**
+     * Methods 
+     */
+    private final List<ExecutableElement> methods;
 
     /**
      * Mixin class
@@ -146,6 +151,11 @@ class AnnotatedMixin {
      * Soft implementation handler;
      */
     private final AnnotatedMixinElementHandlerSoftImplements softImplements;
+    
+    /**
+     * True once the FINAL 
+     */
+    private boolean validated = false;
 
     public AnnotatedMixin(IMixinAnnotationProcessor ap, TypeElement type) {
         this.typeProvider = ap.getTypeProvider();
@@ -154,11 +164,11 @@ class AnnotatedMixin {
         this.messager = ap;
         this.mixin = type;
         this.handle = new TypeHandle(type);
+        this.methods = new ArrayList<ExecutableElement>(this.handle.<ExecutableElement>getEnclosedElements(ElementKind.METHOD));
         this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = type.getQualifiedName().toString().replace('.', '/');
         this.primaryTarget = this.initTargets();
-//        this.remap = !this.virtual && this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
 
         this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
@@ -173,6 +183,11 @@ class AnnotatedMixin {
             if (!validator.validate(pass, this.mixin, this.annotation, this.targets)) {
                 break;
             }
+        }
+        
+        if (pass == ValidationPass.FINAL && !this.validated) {
+            this.validated = true;
+            this.runFinalValidation();
         }
 
         return this;
@@ -319,7 +334,14 @@ class AnnotatedMixin {
         return this.mappings;
     }
 
+    private void runFinalValidation() {
+        for (ExecutableElement method : this.methods) {
+            this.overwrites.registerMerge(method);
+        }
+    }
+
     public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite) {
+        this.methods.remove(method);
         this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite));
     }
 
@@ -328,10 +350,12 @@ class AnnotatedMixin {
     }
 
     public void registerShadow(ExecutableElement method, AnnotationHandle shadow, boolean shouldRemap) {
+        this.methods.remove(method);
         this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowMethod(method, shadow, shouldRemap));
     }
 
     public void registerInjector(ExecutableElement method, AnnotationHandle inject, InjectorRemap remap) {
+        this.methods.remove(method);
         this.injectors.registerInjector(new AnnotatedElementInjector(method, inject, remap));
 
         List<AnnotationHandle> ats = inject.getAnnotationList("at");
@@ -360,10 +384,12 @@ class AnnotatedMixin {
     }
 
     public void registerAccessor(ExecutableElement element, AnnotationHandle accessor, boolean shouldRemap) {
+        this.methods.remove(element);
         this.accessors.registerAccessor(new AnnotatedElementAccessor(element, accessor, shouldRemap));
     }
 
     public void registerInvoker(ExecutableElement element, AnnotationHandle invoker, boolean shouldRemap) {
+        this.methods.remove(element);
         this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker, shouldRemap));
     }
 
