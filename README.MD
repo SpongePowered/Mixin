@@ -497,5 +497,17 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">June 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.6.13</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add support for conforming visibility of overwrite methods to
+          match target class. Fixes issues where a target class method has been
+          modified by an <em>Access Transformer</em> to have higher visibility
+          </li>
+        </ul>
+      </td>
+      <td valign="top">July 2017</td>
+    </tr>
   </tbody>
 </table>
