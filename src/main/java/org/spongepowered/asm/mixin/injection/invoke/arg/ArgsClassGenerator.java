@@ -192,10 +192,11 @@ public final class ArgsClassGenerator implements IClassGenerator {
             visitor = new CheckClassAdapter(writer);
         }
         
-        visitor.visit(Opcodes.V1_6, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER, ref, null, ArgsClassGenerator.ARGS_REF, null);
+        visitor.visit(Opcodes.V1_6, Opcodes.ACC_PUBLIC | Opcodes.ACC_SUPER | Opcodes.ACC_SYNTHETIC, ref, null, ArgsClassGenerator.ARGS_REF, null);
         visitor.visitSource(name.substring(name.lastIndexOf('.') + 1) + ".java", null);
         
         this.generateCtor(ref, desc, args, visitor);
+        this.generateToString(ref, desc, args, visitor);
         this.generateFactory(ref, desc, args, visitor);
         this.generateSetters(ref, desc, args, visitor);
         this.generateGetters(ref, desc, args, visitor);
@@ -225,6 +226,23 @@ public final class ArgsClassGenerator implements IClassGenerator {
         ctor.visitEnd();
     }
 
+    /**
+     * Generate a toString method for this Args class.
+     * 
+     * @param ref Class ref being generated
+     * @param desc Argument descriptor
+     * @param args Parsed argument list from descriptor
+     * @param writer Class writer
+     */
+    private void generateToString(String ref, String desc, Type[] args, ClassVisitor writer) {
+        MethodVisitor toString = writer.visitMethod(Opcodes.ACC_PUBLIC, "toString", "()Ljava/lang/String;", null, null);
+        toString.visitCode();
+        toString.visitLdcInsn("Args" + ArgsClassGenerator.getSignature(args));
+        toString.visitInsn(Opcodes.ARETURN);
+        toString.visitMaxs(1, 1);
+        toString.visitEnd();
+    }
+    
     /**
      * Generate the factory method (<tt>of</tt>) for the subclass, the factory
      * method takes the arguments which would have been passed to the target
@@ -416,7 +434,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
         set.visitInsn(Opcodes.DUP2_X1);
         set.visitInsn(Opcodes.POP2);
         set.visitConstant((byte)args.length);
-        set.visitLdcInsn(new SignaturePrinter("", null, args).setFullyQualified(true).getFormattedArgs());
+        set.visitLdcInsn(ArgsClassGenerator.getSignature(args));
 
         set.visitMethodInsn(Opcodes.INVOKESPECIAL, ArgsClassGenerator.ACE, Constants.CTOR, ArgsClassGenerator.ACE_CTOR_DESC, false);
         set.visitInsn(Opcodes.ATHROW);
@@ -517,6 +535,10 @@ public final class ArgsClassGenerator implements IClassGenerator {
         } else {
             method.visitTypeInsn(Opcodes.CHECKCAST, var.getInternalName());
         }
+    }
+
+    private static String getSignature(Type[] args) {
+        return new SignaturePrinter("", null, args).setFullyQualified(true).getFormattedArgs();
     }
 
     /**
