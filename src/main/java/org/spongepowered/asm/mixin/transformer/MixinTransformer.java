@@ -329,20 +329,34 @@ public class MixinTransformer extends TreeTransformer {
                 return null;
             }
             
+            boolean async = env.getOption(Option.DEBUG_EXPORT_DECOMPILE_THREADED);
+            
+            IDecompiler decompiler = this.loadDecompiler(outputPath, async, "FernFlower");
+            if (decompiler != null) {
+                return decompiler;
+            }
+            
+            decompiler = this.loadDecompiler(outputPath, async, "Despector");
+            if (decompiler == null) {
+                MixinTransformer.logger.info("No decompiler could be loaded. Exported classes will not be decompiled.");
+            }
+            return decompiler;
+        }
+
+        public IDecompiler loadDecompiler(File outputPath, boolean async, String type) {
             try {
-                boolean as = env.getOption(Option.DEBUG_EXPORT_DECOMPILE_THREADED);
-                MixinTransformer.logger.info("Attempting to load Fernflower decompiler{}", as ? " (Threaded mode)" : "");
-                String className = "org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + (as ? "Async" : "");
+                MixinTransformer.logger.info("Attempting to load {} decompiler{}", type, async ? " (Threaded mode)" : "");
+                String className = "org.spongepowered.asm.mixin.transformer.debug.RuntimeDecompiler" + type + (async ? "Async" : "");
                 @SuppressWarnings("unchecked")
                 Class<? extends IDecompiler> clazz = (Class<? extends IDecompiler>)Class.forName(className);
                 Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
                 IDecompiler decompiler = ctor.newInstance(outputPath);
-                MixinTransformer.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
-                        as ? " in a separate thread" : "");
+                MixinTransformer.logger.info("{} decompiler was successfully initialised, exported classes will be decompiled{}",
+                        type, async ? " in a separate thread" : "");
                 return decompiler;
             } catch (Throwable th) {
-                MixinTransformer.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
-                        th.getClass().getSimpleName(), th.getMessage());
+                MixinTransformer.logger.info("{} decompiler could not be loaded. {}: {}",
+                        type, th.getClass().getSimpleName(), th.getMessage());
             }
             return null;
         }

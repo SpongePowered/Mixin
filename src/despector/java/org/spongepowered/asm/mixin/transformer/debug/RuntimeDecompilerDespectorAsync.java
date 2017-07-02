@@ -33,7 +33,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Asynchronous decompiler, runs mixin export task in a separate thread to avoid
  * slowing down loading time
  */
-public class RuntimeDecompilerAsync extends RuntimeDecompiler implements Runnable, UncaughtExceptionHandler {
+public class RuntimeDecompilerDespectorAsync extends RuntimeDecompilerDespector implements Runnable, UncaughtExceptionHandler {
     
     private final BlockingQueue<File> queue = new LinkedBlockingQueue<File>();
     
@@ -41,7 +41,7 @@ public class RuntimeDecompilerAsync extends RuntimeDecompiler implements Runnabl
     
     private boolean run = true;
 
-    public RuntimeDecompilerAsync(File outputPath) {
+    public RuntimeDecompilerDespectorAsync(File outputPath) {
         super(outputPath);
         this.thread = new Thread(this, "Decompiler thread");
         this.thread.setDaemon(true);

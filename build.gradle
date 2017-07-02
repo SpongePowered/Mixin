@@ -75,6 +75,9 @@ sourceSets {
     fernflower {
         compileClasspath += main.output
     }
+    despector {
+        compileClasspath += main.output
+    }
     agent {
         compileClasspath += main.output
     }
@@ -152,6 +155,13 @@ dependencies {
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
     compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 
+    // despector bridge
+    despectorCompile 'commons-io:commons-io:2.4'
+    despectorCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
+//    despectorCompile 'com.google.guava:guava:17.0'
+    despectorCompile 'org.spongepowered:despector:0.1.0-SNAPSHOT'
+    compile 'org.spongepowered:despector:0.1.0-SNAPSHOT'
+    
     compile('net.minecraft:launchwrapper:1.11') {
         exclude module: 'lwjgl'
     }
@@ -212,6 +222,11 @@ if (JavaVersion.current().isJava8Compatible()) {
     }
 }
 
+compileDespectorJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
 jar {
     // Include annotation processor
     from sourceSets.ap.output
@@ -219,6 +234,9 @@ jar {
     // Include fernflower bridge
     from sourceSets.fernflower.output
 
+    // Include despector bridge
+    from sourceSets.despector.output
+    
     // Include hotswap agent
     from sourceSets.agent.output
     
@@ -303,6 +321,8 @@ task sourceJar(type: Jar) {
 	from sourceSets.ap.resources
 	from sourceSets.fernflower.java
 	from sourceSets.fernflower.resources
+	from sourceSets.despector.java
+	from sourceSets.despector.resources
     from sourceSets.agent.java
     from sourceSets.agent.resources
     from sourceSets.bridge.java
@@ -326,6 +346,7 @@ artifacts {
 
 ext.excludePomDeps = [
     'fernflower',
+    'despector',
     'jarjar',
     'hamcrest-library',
     'junit',

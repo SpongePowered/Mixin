@@ -45,7 +45,7 @@ import com.google.common.io.Files;
 /**
  * Wrapper for FernFlower to support runtime-decompilation of post-mixin classes
  */
-public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler, IResultSaver {
+public class RuntimeDecompilerFernFlower extends IFernflowerLogger implements IDecompiler, IResultSaver {
     
     private final Map<String, Object> options = ImmutableMap.<String, Object>builder()
         .put("din", "0").put("rbr", "0").put("dgs", "1").put("asc", "1")
@@ -55,7 +55,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     protected final Logger logger = LogManager.getLogger("fernflower");
 
-    public RuntimeDecompiler(File outputPath) {
+    public RuntimeDecompilerFernFlower(File outputPath) {
         this.outputPath = outputPath;
         if (this.outputPath.exists()) {
             try {
