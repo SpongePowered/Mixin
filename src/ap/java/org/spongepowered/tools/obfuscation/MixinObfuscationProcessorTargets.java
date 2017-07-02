@@ -64,6 +64,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (roundEnv.processingOver()) {
+            this.postProcess(roundEnv);
             return true;
         }
         

@@ -81,6 +81,16 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
     
     /**
+     * Wrapper for overwrite options
+     */
+    static class OverwriteOptions {
+        
+        @SerializedName("conformVisibility")
+        boolean conformAccessModifiers;
+        
+    }
+    
+    /**
      * Callback listener for certain mixin init steps
      */
     interface IListener {
@@ -257,6 +267,12 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @SerializedName("injectors")
     private InjectorOptions injectorOptions = new InjectorOptions();
+    
+    /**
+     * Overwrite options 
+     */
+    @SerializedName("overwrites")
+    private OverwriteOptions overwriteOptions = new OverwriteOptions();
     
     /**
      * Config plugin, if supplied
@@ -629,6 +645,16 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public String getDefaultInjectorGroup() {
         String defaultGroup = this.injectorOptions.defaultGroup;
         return defaultGroup != null && !defaultGroup.isEmpty() ? defaultGroup : "default";
+    }
+    
+    /**
+     * Get whether visibility levelfor overwritten methods should be conformed
+     * to the target class
+     * 
+     * @return true if conform is enabled
+     */
+    public boolean conformOverwriteVisibility() {
+        return this.overwriteOptions.conformAccessModifiers;
     }
 
     // AMS - temp

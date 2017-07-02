@@ -58,6 +58,11 @@ public abstract class MemberHandle<T extends IMapping<T>> {
     }
 
     /**
+     * Get the visibility level for this member
+     */
+    public abstract Visibility getVisibility();
+
+    /**
      * Return this handle as a mapping
      * 
      * @param includeOwner include the owner in the generated mapping, false to

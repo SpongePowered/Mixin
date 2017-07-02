@@ -45,7 +45,6 @@ public class ModifyArgsInjector extends InvokeInjector {
 
     /**
      * @param info Injection info
-     * @param index target arg index
      */
     public ModifyArgsInjector(InjectionInfo info) {
         super(info, "@ModifyArgs");

@@ -86,6 +86,11 @@ public class FieldHandle extends MemberHandle<MappingField> {
     public VariableElement getElement() {
         return this.element;
     }
+    
+    @Override
+    public Visibility getVisibility() {
+        return TypeUtils.getVisibility(this.element);
+    }
 
     /**
      * Returns true if the searched type had a type specifier but the returned

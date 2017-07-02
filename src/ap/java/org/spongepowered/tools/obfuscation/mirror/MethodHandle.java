@@ -46,7 +46,7 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
     }
     
     public MethodHandle(String owner, ExecutableElement element) {
-        this(owner, TypeUtils.getName(element), TypeUtils.getDescriptor(element));
+        this(owner, element, TypeUtils.getName(element), TypeUtils.getDescriptor(element));
     }
     
     protected MethodHandle(String owner, String name, String desc) {
@@ -70,6 +70,11 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
      */
     public ExecutableElement getElement() {
         return this.element;
+    }
+    
+    @Override
+    public Visibility getVisibility() {
+        return TypeUtils.getVisibility(this.element);
     }
 
     @Override
