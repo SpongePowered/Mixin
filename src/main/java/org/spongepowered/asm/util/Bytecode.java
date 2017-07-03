@@ -519,14 +519,32 @@ public final class Bytecode {
      * @param end End position
      */
     public static void loadArgs(Type[] args, InsnList insns, int start, int end) {
-        int pos = start;
+        Bytecode.loadArgs(args, insns, start, end, null);
+    }
+
+    /**
+     * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
+     * for each entry in the args array starting at start and ending at end
+     * 
+     * @param args Argument types
+     * @param insns Instruction List to inject into
+     * @param start Start position
+     * @param end End position
+     * @param casts Type casts array
+     */
+    public static void loadArgs(Type[] args, InsnList insns, int start, int end, Type[] casts) {
+        int pos = start, index = 0;
 
         for (Type type : args) {
             insns.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), pos));
+            if (casts != null && index < casts.length && casts[index] != null) {
+                insns.add(new TypeInsnNode(Opcodes.CHECKCAST, casts[index].getInternalName()));
+            }
             pos += type.getSize();
             if (end >= start && pos >= end) {
                 return;
             }
+            index++;
         }
     }
     

@@ -122,6 +122,11 @@ public class CallbackInjector extends Injector {
          * matches the corresponding argument index in the callback  
          */
         final String[] argNames;
+        
+        /**
+         * Arguments which require a type cast before being LOADed 
+         */
+//        final Type[] typeCasts;
 
         /**
          * These two variables keep track of the (additional) stack size
@@ -182,6 +187,7 @@ public class CallbackInjector extends Injector {
             this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
             this.desc = target.getCallbackDescriptor(this.localTypes, target.arguments);
             this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize, this.extraArgs);
+//            this.typeCasts = new Type[this.frameSize + this.extraArgs];
 
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
             this.marshallVar = target.allocateLocal();
@@ -239,39 +245,37 @@ public class CallbackInjector extends Injector {
                 return true;
             }
             
-            if (this.extraArgs > 0) {
-                Type[] inTypes = Type.getArgumentTypes(desc);
-                Type[] myTypes = Type.getArgumentTypes(this.descl);
-                
-                if (inTypes.length != myTypes.length) {
-                    return false;
-                }
-                
-                for (int arg = this.frameSize + 1; arg < myTypes.length; arg++) {
-                    Type type = inTypes[arg];
-                    if (type.equals(myTypes[arg])) {
-                        continue; // Type matches
-                    }
-                    
-                    if (type.getSort() >= Type.ARRAY) {
-                        return false; // Reference types must match exactly
-                    }
-
-                    AnnotationNode coerce = Annotations.getInvisibleParameter(this.handler, Coerce.class, arg);
-                    if (coerce == null) {
-                        return false; // No @Coerce specified, types must match
-                    }
-
-                    boolean canCoerce = Injector.canCoerce(inTypes[arg], myTypes[arg]);
-                    if (!canCoerce) {
-                        return false; // Can't coerce source type to local type, give up
-                    }
-                }
-                
-                return true;
+            Type[] inTypes = Type.getArgumentTypes(desc);
+            Type[] myTypes = Type.getArgumentTypes(this.descl);
+            
+            if (inTypes.length != myTypes.length) {
+                return false;
             }
             
-            return false;
+            for (int arg = 0; arg < myTypes.length; arg++) {
+                Type type = inTypes[arg];
+                if (type.equals(myTypes[arg])) {
+                    continue; // Type matches
+                }
+                
+                if (type.getSort() == Type.ARRAY) {
+                    return false; // Array types must match exactly
+                }
+
+                if (Annotations.getInvisibleParameter(this.handler, Coerce.class, arg) == null) {
+                    return false; // No @Coerce specified, types must match
+                }
+
+                if (!Injector.canCoerce(inTypes[arg], myTypes[arg])) {
+//                    if (Injector.canCoerce(myTypes[arg], inTypes[arg])) {
+//                        this.typeCasts[arg] = inTypes[arg];
+//                    } else {
+                        return false; // Can't coerce or cast source type to local type, give up
+//                    }
+                }
+            }
+            
+            return true;
         }
         
         boolean captureArgs() {
@@ -318,7 +322,7 @@ public class CallbackInjector extends Injector {
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
         
-        if (Bytecode.methodIsStatic(target.method) != this.isStatic) {
+        if (target.isStatic != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
 
@@ -577,7 +581,7 @@ public class CallbackInjector extends Injector {
 
         // Push the target method's parameters onto the stack
         if (callback.captureArgs()) {
-            Bytecode.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1);
+            Bytecode.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1, -1); //, callback.typeCasts);
         }
         
         // Push the callback info onto the stack

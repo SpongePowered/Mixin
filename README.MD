@@ -509,5 +509,15 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">July 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.6.14</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add support for using <tt>&#064;Coerce</tt> on reference types in
+          Callback Injectors to support derived types.</li>
+        </ul>
+      </td>
+      <td valign="top">July 2017</td>
+    </tr>
   </tbody>
 </table>

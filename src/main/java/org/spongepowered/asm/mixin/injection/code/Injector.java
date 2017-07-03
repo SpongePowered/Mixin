@@ -50,6 +50,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -279,9 +280,13 @@ public abstract class Injector {
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
      */
     public static boolean canCoerce(Type from, Type to) {
+        if (from.getSort() == Type.OBJECT && to.getSort() == Type.OBJECT) {
+            return Injector.canCoerce(ClassInfo.forType(from), ClassInfo.forType(to));
+        }
+        
         return Injector.canCoerce(from.getDescriptor(), to.getDescriptor());
     }
-    
+
     /**
      * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
      * type.
@@ -308,6 +313,19 @@ public abstract class Injector {
      */
     public static boolean canCoerce(char from, char to) {
         return to == 'I' && "IBSCZ".indexOf(from) > -1;
+    }
+    
+    /**
+     * Returns whether the <tt>from</tt> type can be coerced to the <tt>to</tt>
+     * type. This is effectively a superclass check: the check suceeds if <tt>
+     * to</tt> is a subclass of <tt>from</tt>.
+     * 
+     * @param from type to coerce from
+     * @param to type to coerce to
+     * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
+     */
+    private static boolean canCoerce(ClassInfo from, ClassInfo to) {
+        return from != null && to != null && (to == from || to.hasSuperClass(from));
     }
 
 }

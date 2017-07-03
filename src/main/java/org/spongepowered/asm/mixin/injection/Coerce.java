@@ -28,8 +28,14 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
 /**
- * Indicates that a local capture injector should coerce top-level primitive
- * types to covariant types.
+ * This annotation has two usages applicable to Callback Injectors (defined
+ * using {@link Inject}. For local capture injectors, it indicates that the
+ * injector should coerce top-level primitive types to covariant types defined
+ * on the handler. For other injectors, it can be used on a reference type to
+ * indicate that the intended type is covariant over the argument type (or that
+ * the argument type is contravariant on the target class type). This can be
+ * used for multi-target injectors with a bounded type argument on the class or
+ * target method.
  * 
  * <p>During LVT generation it is not always possible to inflect the exact local
  * type for types represented internally as integers, for example booleans and
