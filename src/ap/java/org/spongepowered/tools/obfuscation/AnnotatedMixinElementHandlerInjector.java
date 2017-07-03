@@ -30,9 +30,11 @@ import java.util.Map;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
@@ -42,6 +44,7 @@ import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.CompilerEnvironment;
+import org.spongepowered.tools.obfuscation.interfaces.IReferenceManager;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
@@ -65,6 +68,21 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         public boolean shouldRemap() {
             return this.state.shouldRemap();
+        }
+        
+        public boolean hasCoerceArgument() {
+            if (!this.annotation.toString().equals("@Inject")) {
+                return false;
+            }
+            
+            for (VariableElement param : this.element.getParameters()) {
+                AnnotationHandle coerce = AnnotationHandle.of(param, Coerce.class);
+                if (coerce != null) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
         
         public void addMessage(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation) {
@@ -192,14 +210,32 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             }
         }
         
+        IReferenceManager refMap = this.obf.getReferenceManager();
         try {
             // If the original owner is unspecified, and the mixin is multi-target, we strip the owner from the obf mappings
             if ((targetMember.owner == null && this.mixin.isMultiTarget()) || target.isSimulated()) {
                 obfData = AnnotatedMixinElementHandler.<MappingMethod>stripOwnerData(obfData);
             }
-            this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, obfData);
+            refMap.addMethodMapping(this.classRef, reference, obfData);
         } catch (ReferenceConflictException ex) {
             String conflictType = this.mixin.isMultiTarget() ? "Multi-target" : "Target";
+            
+            if (elem.hasCoerceArgument() && targetMember.owner == null && targetMember.desc == null) {
+                MemberInfo oldMember = MemberInfo.parse(ex.getOld());
+                MemberInfo newMember = MemberInfo.parse(ex.getNew());
+                if (oldMember.name.equals(newMember.name)) {
+                    obfData = AnnotatedMixinElementHandler.<MappingMethod>stripDescriptors(obfData);
+                    refMap.setAllowConflicts(true);
+                    refMap.addMethodMapping(this.classRef, reference, obfData);
+                    refMap.setAllowConflicts(false);
+
+                    // This is bad because in notch mappings, using the bare target name might cause everything to explode
+                    elem.printMessage(this.ap, Kind.WARNING, "Coerced " + conflictType + " reference has conflicting descriptors for " + targetName
+                            + ": Storing bare references " + obfData.values() + " in refMap");
+                    return true;
+                }
+            }
+            
             elem.printMessage(this.ap, Kind.ERROR, conflictType + " reference conflict for " + targetName + ": " + reference + " -> "
                     + ex.getNew() + " previously defined as " + ex.getOld());
         }

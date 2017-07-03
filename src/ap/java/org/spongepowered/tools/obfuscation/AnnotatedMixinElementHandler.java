@@ -64,9 +64,9 @@ abstract class AnnotatedMixinElementHandler {
      */
     abstract static class AnnotatedElement<E extends Element> {
         
-        private final E element;
+        protected final E element;
         
-        private final AnnotationHandle annotation;
+        protected final AnnotationHandle annotation;
 
         private final String desc;
 
@@ -505,6 +505,15 @@ abstract class AnnotatedMixinElementHandler {
         for (ObfuscationType type : data) {
             T mapping = data.get(type);
             stripped.put(type, mapping.move(null));
+        }
+        return stripped;
+    }
+    
+    protected static <T extends IMapping<T>> ObfuscationData<T> stripDescriptors(ObfuscationData<T> data) {
+        ObfuscationData<T> stripped = new ObfuscationData<T>();
+        for (ObfuscationType type : data) {
+            T mapping = data.get(type);
+            stripped.put(type, mapping.transform(null));
         }
         return stripped;
     }

@@ -133,7 +133,8 @@ public class MappingMethod implements IMapping<MappingMethod> {
 
     @Override
     public String toString() {
-        return String.format("%s %s", this.getName(), this.getDesc());
+        String desc = this.getDesc();
+        return String.format("%s%s%s", this.getName(), desc != null ? " " : "", desc != null ? desc : "");
     }
     
     private static String getBaseName(String name) {

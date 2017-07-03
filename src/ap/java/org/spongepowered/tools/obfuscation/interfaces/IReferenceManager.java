@@ -29,12 +29,30 @@ import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ObfuscationData;
+import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 
 /**
  * Consumer for generated references, builds the refmap during an AP pass and
  * supports writing the generated refmap to file once the AP run is complete
  */
 public interface IReferenceManager {
+    
+    /**
+     * Set whether this reference manager should allow conflicts to be inserted
+     * without raising an exception. Set to allow overrides to be written into
+     * the refmap when necessary
+     * 
+     * @param allowConflicts allow conflicts without raising an exception
+     */
+    public void setAllowConflicts(boolean allowConflicts);
+    
+    /**
+     * Get whether replacement mappings are allowed. Normally a mapping conflict
+     * will raise a {@link ReferenceConflictException}.
+     * 
+     * @return true if conflicts are allowed
+     */
+    public boolean getAllowConflicts();
 
     /**
      * Write the generated refmap to file

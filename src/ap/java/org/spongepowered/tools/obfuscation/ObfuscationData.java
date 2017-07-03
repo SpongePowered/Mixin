@@ -123,13 +123,27 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
      */
     @Override
     public String toString() {
-        return String.format("ObfuscationData[%sDEFAULT=%s]", this.listValues(), this.defaultValue);
+        return String.format("ObfuscationData[%s,DEFAULT=%s]", this.listValues(), this.defaultValue);
+    }
+
+    /**
+     * Get a string representation of the values in this data set
+     * 
+     * @return string
+     */
+    public String values() {
+        return "[" + this.listValues() + "]";
     }
 
     private String listValues() {
         StringBuilder sb = new StringBuilder();
+        boolean delim = false;
         for (ObfuscationType type : this.data.keySet()) {
-            sb.append(type.getKey()).append('=').append(this.data.get(type)).append(',');
+            if (delim) {
+                sb.append(',');
+            }
+            sb.append(type.getKey()).append('=').append(this.data.get(type));
+            delim = true;
         }
         return sb.toString();
     }

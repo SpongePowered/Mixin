@@ -89,10 +89,30 @@ public class ReferenceManager implements IReferenceManager {
      */
     private final ReferenceMapper refMapper = new ReferenceMapper();
     
+    private boolean allowConflicts;
+    
     public ReferenceManager(IMixinAnnotationProcessor ap, List<ObfuscationEnvironment> environments) {
         this.ap = ap;
         this.environments = environments;
         this.outRefMapFileName = this.ap.getOption(SupportedOptions.OUT_REFMAP_FILE);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.interfaces.IReferenceManager
+     *      #getAllowConflicts()
+     */
+    @Override
+    public boolean getAllowConflicts() {
+        return this.allowConflicts;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.interfaces.IReferenceManager
+     *      #setAllowConflicts(boolean)
+     */
+    @Override
+    public void setAllowConflicts(boolean allowConflicts) {
+        this.allowConflicts = allowConflicts;
     }
 
     /**
@@ -214,12 +234,12 @@ public class ReferenceManager implements IReferenceManager {
 
     protected void addMapping(ObfuscationType type, String className, String reference, String newReference) {
         String oldReference = this.refMapper.addMapping(type.getKey(), className, reference, newReference);
-        if (oldReference != null && !oldReference.equals(newReference)) {
-            throw new ReferenceConflictException(oldReference, newReference);
-        }
-        
         if (type.isDefault()) {
             this.refMapper.addMapping(null, className, reference, newReference);
+        }
+
+        if (!this.allowConflicts && oldReference != null && !oldReference.equals(newReference)) {
+            throw new ReferenceConflictException(oldReference, newReference);
         }
     }
 }
