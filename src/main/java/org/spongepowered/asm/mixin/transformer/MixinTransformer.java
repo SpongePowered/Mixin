@@ -477,6 +477,7 @@ public class MixinTransformer extends TreeTransformer {
         this.postProcessor = new MixinPostProcessor();
         
         this.generators.add(ArgsClassGenerator.getInstance());
+        this.generators.add(InnerClassGenerator.getInstance());
     }
 
     private IHotSwap initHotSwapper() {

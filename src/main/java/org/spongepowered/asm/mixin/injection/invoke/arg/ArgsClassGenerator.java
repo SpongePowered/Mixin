@@ -59,7 +59,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
     
     public static final String GETTER_PREFIX = "$";
 
-    private static final String CLASS_NAME_BASE = "org.spongepowered.asm.synthetic.Args$";
+    private static final String CLASS_NAME_BASE = Constants.SYNTHETIC_PACKAGE + ".args.Args$";
 
     private static final String OBJECT = "java/lang/Object";
     private static final String OBJECT_ARRAY = "[L" + ArgsClassGenerator.OBJECT + ";";

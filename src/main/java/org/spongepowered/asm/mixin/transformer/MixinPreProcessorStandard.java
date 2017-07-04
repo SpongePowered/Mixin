@@ -405,6 +405,11 @@ class MixinPreProcessorStandard {
             return false;
         }
         
+        if (method.isSynthetic()) {
+            context.transformDescriptor(mixinMethod);
+            method.remapTo(mixinMethod.desc);
+        }
+
         MethodNode target = context.findMethod(mixinMethod, null);
         if (target == null) {
             return false;
@@ -412,7 +417,7 @@ class MixinPreProcessorStandard {
         
         String type = method.isUnique() ? "@Unique" : "synthetic";
         
-        if ((mixinMethod.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) != 0) {
+        if (Bytecode.getVisibility(mixinMethod).ordinal() < Visibility.PUBLIC.ordinal()) {
             String uniqueName = context.getUniqueName(mixinMethod, false);
             MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming {} method {}{} to {} in {}",
                     type, mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
@@ -458,10 +463,11 @@ class MixinPreProcessorStandard {
                 iter.remove();
                 continue;
             }
-            
-            context.transformDescriptor(mixinField);
-            
+
             Field field = this.mixin.getClassInfo().findField(mixinField);
+            context.transformDescriptor(mixinField);
+            field.remapTo(mixinField.desc);
+            
             if (field.isUnique() && isShadow) {
                 throw new InvalidMixinException(this.mixin, "@Shadow field " + mixinField.name + " cannot be @Unique");
             }

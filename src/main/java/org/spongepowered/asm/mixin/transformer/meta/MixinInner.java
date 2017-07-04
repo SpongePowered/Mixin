@@ -30,30 +30,21 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * <p><b>For internal use only!</b> Contains small parts. Keep out of reach of
- * children.</p>
- * 
- * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * Decoration annotation used by the mixin inner class generator to mark inner
+ * classes which have been generated from an existing inner class in a mixin 
  */
-@Target({ ElementType.METHOD })
-@Retention(RetentionPolicy.RUNTIME)
-public @interface MixinMerged {
-    
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.CLASS)
+public @interface MixinInner {
+
     /**
-     * Mixin which merged this method
-     * 
-     * @return mixin name 
+     * The mixin which owns the original inner class
      */
     public String mixin();
     
     /**
-     * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
-     * lower priority.
-     * 
-     * @return mixin priority
+     * The original name of the inner class
      */
-    public int priority();
+    public String name();
     
 }

@@ -67,7 +67,7 @@ abstract class TreeInfo {
      * @param flags ClassReader flags
      * @return ASM Tree view of the specified class 
      */
-    protected static ClassNode getClassNode(byte[] classBytes, int flags) {
+    static ClassNode getClassNode(byte[] classBytes, int flags) {
         ClassNode classNode = new ClassNode();
         ClassReader classReader = new ClassReader(classBytes);
         classReader.accept(classNode, flags);
@@ -84,7 +84,7 @@ abstract class TreeInfo {
      * @throws ClassNotFoundException if the specified class could not be loaded
      * @throws IOException if an error occurs whilst reading the specified class
      */
-    protected static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
+    static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
         String transformedName = className.replace('/', '.');
         String name = MixinEnvironment.getCurrentEnvironment().unmap(transformedName);
         byte[] classBytes = TreeInfo.getClassBytes(name, transformedName);

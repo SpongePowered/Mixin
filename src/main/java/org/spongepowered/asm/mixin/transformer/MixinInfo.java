@@ -64,6 +64,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
 
 import com.google.common.base.Function;
@@ -104,6 +105,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
 
         public boolean isSurrogate() {
             return this.getVisibleAnnotation(Surrogate.class) != null;
+        }
+
+        public boolean isSynthetic() {
+            return Bytecode.hasFlag(this, Opcodes.ACC_SYNTHETIC);
         }
 
         public AnnotationNode getVisibleAnnotation(Class<? extends Annotation> annotationClass) {
@@ -191,6 +196,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
          * Synthetic inner classes
          */
         protected final Set<String> syntheticInnerClasses = new HashSet<String>();
+        
+        /**
+         * Non-synthetic inner classes
+         */
+        protected final Set<String> innerClasses = new HashSet<String>();
 
         /**
          * Initial ClassNode created for mixin validation, not used for actual
@@ -242,6 +252,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         
         Set<String> getSyntheticInnerClasses() {
             return this.syntheticInnerClasses;
+        }
+        
+        Set<String> getInnerClasses() {
+            return this.innerClasses;
         }
 
         Set<String> getInterfaces() {
@@ -325,7 +339,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                     this.validateRemappable(Shadow.class, method.name, Annotations.getVisible(method, Shadow.class));
                     AnnotationNode overwrite = Annotations.getVisible(method, Overwrite.class);
                     if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
-                        throw new InvalidMixinException(MixinInfo.this, "Found @Overwrite annotation on " + method.name + " in " + this);
+                        throw new InvalidMixinException(MixinInfo.this, "Found @Overwrite annotation on " + method.name + " in " + MixinInfo.this);
                     }
                 }
             }
@@ -374,12 +388,12 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         void readInnerClasses() {
             for (InnerClassNode inner : this.classNode.innerClasses) {
                 ClassInfo innerClass = ClassInfo.forName(inner.name);
-                if (innerClass.isSynthetic() && innerClass.isProbablyStatic()) {
-                    if ((inner.outerName != null && inner.outerName.equals(this.classInfo.getName()))
-                            || inner.name.startsWith(this.classNode.name + "$")) {
+                if ((inner.outerName != null && inner.outerName.equals(this.classInfo.getName()))
+                        || inner.name.startsWith(this.classNode.name + "$")) {
+                    if (innerClass.isProbablyStatic() && innerClass.isSynthetic()) {
                         this.syntheticInnerClasses.add(inner.name);
                     } else {
-                        throw new InvalidMixinException(MixinInfo.this, "Unhandled synthetic inner class found: " + inner.name);
+                        this.innerClasses.add(inner.name);
                     }
                 }
             }
@@ -1074,6 +1088,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     Set<String> getSyntheticInnerClasses() {
         return Collections.unmodifiableSet(this.getState().getSyntheticInnerClasses());
+    }
+    
+    /**
+     * Get the user-defined inner classes for this mixin
+     */
+    Set<String> getInnerClasses() {
+        return Collections.unmodifiableSet(this.getState().getInnerClasses());
     }
     
     /**

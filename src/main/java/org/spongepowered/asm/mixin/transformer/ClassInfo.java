@@ -246,6 +246,12 @@ public final class ClassInfo extends TreeInfo {
         private String currentName;
         
         /**
+         * Current descriptor of the member, may be different from
+         * {@link #memberDesc} if the member has been remapped
+         */
+        private String currentDesc;
+        
+        /**
          * True if this member is decorated with {@link Final} 
          */
         private boolean decoratedFinal;
@@ -263,6 +269,7 @@ public final class ClassInfo extends TreeInfo {
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
             this.currentName = member.currentName;
+            this.currentDesc = member.currentDesc;
             this.unique = member.unique;
         }
 
@@ -276,6 +283,7 @@ public final class ClassInfo extends TreeInfo {
             this.memberDesc = desc;
             this.isInjected = injected;
             this.currentName = name;
+            this.currentDesc = desc;
             this.modifiers = access;
         }
 
@@ -287,18 +295,26 @@ public final class ClassInfo extends TreeInfo {
             return this.currentName;
         }
 
-        public String getDesc() {
+        public String getOriginalDesc() {
             return this.memberDesc;
         }
 
+        public String getDesc() {
+            return this.currentDesc;
+        }
+        
         public boolean isInjected() {
             return this.isInjected;
         }
 
         public boolean isRenamed() {
-            return this.currentName != this.memberName;
+            return !this.currentName.equals(this.memberName);
         }
 
+        public boolean isRemapped() {
+            return !this.currentDesc.equals(this.memberDesc);
+        }
+        
         public boolean isPrivate() {
             return (this.modifiers & Opcodes.ACC_PRIVATE) != 0;
         }
@@ -364,11 +380,15 @@ public final class ClassInfo extends TreeInfo {
             this.currentName = name;
             return name;
         }
+        
+        public String remapTo(String desc) {
+            this.currentDesc = desc;
+            return desc;
+        }
 
         public boolean equals(String name, String desc) {
-            return (this.memberName.equals(name)
-                    || this.currentName.equals(name))
-                    && this.memberDesc.equals(desc);
+            return (this.memberName.equals(name) || this.currentName.equals(name))
+                    && (this.memberDesc.equals(desc) || this.currentDesc.equals(desc));
         }
 
         @Override
@@ -378,9 +398,8 @@ public final class ClassInfo extends TreeInfo {
             }
 
             Member other = (Member)obj;
-            return (other.memberName.equals(this.memberName)
-                    || other.currentName.equals(this.currentName))
-                    && other.memberDesc.equals(this.memberDesc);
+            return (other.memberName.equals(this.memberName) || other.currentName.equals(this.currentName))
+                    && (other.memberDesc.equals(this.memberDesc) || other.currentDesc.equals(this.currentDesc));
         }
 
         @Override
@@ -396,6 +415,7 @@ public final class ClassInfo extends TreeInfo {
         protected String getDisplayFormat() {
             return "%s%s";
         }
+        
     }
 
     /**
@@ -709,20 +729,20 @@ public final class ClassInfo extends TreeInfo {
 
         boolean isProbablyStatic = true;
         String outerName = classNode.outerClass;
-        if (outerName == null) {
-            for (FieldNode field : classNode.fields) {
-                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
-                    if (field.name.startsWith("this$")) {
-                        isProbablyStatic = false;
+        for (FieldNode field : classNode.fields) {
+            if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
+                if (field.name.startsWith("this$")) {
+                    isProbablyStatic = false;
+                    if (outerName == null) {
                         outerName = field.desc;
-                        if (outerName.startsWith("L")) {
+                        if (outerName != null && outerName.startsWith("L")) {
                             outerName = outerName.substring(1, outerName.length() - 1);
                         }
                     }
                 }
-
-                this.fields.add(new Field(field, this.isMixin));
             }
+
+            this.fields.add(new Field(field, this.isMixin));
         }
 
         this.isProbablyStatic = isProbablyStatic;

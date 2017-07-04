@@ -42,6 +42,8 @@ public abstract class Constants {
     public static final String OBJECT = "Ljava/lang/Object;";
     public static final String CLASS = "Ljava/lang/Class;";
     
+    public static final String SYNTHETIC_PACKAGE = "org.spongepowered.asm.synthetic";
+    
     private Constants() {}
     
     /**
