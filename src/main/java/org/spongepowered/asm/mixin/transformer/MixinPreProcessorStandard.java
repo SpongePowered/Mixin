@@ -41,6 +41,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
@@ -415,7 +416,7 @@ class MixinPreProcessorStandard {
             return false;
         }
         
-        String type = method.isUnique() ? "@Unique" : "synthetic";
+        String type = method.isSynthetic() ? "synthetic" : "@Unique";
         
         if (Bytecode.getVisibility(mixinMethod).ordinal() < Visibility.PUBLIC.ordinal()) {
             String uniqueName = context.getUniqueName(mixinMethod, false);
@@ -430,8 +431,11 @@ class MixinPreProcessorStandard {
                     + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
         }
         
-        MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
-                this.mixin, context.getTarget());
+        AnnotationNode unique = Annotations.getVisible(mixinMethod, Unique.class);
+        if (unique == null || !Annotations.<Boolean>getValue(unique, "silent", Boolean.FALSE).booleanValue()) {
+            MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
+                    this.mixin, context.getTarget());
+        }
 
         return true;
     }
