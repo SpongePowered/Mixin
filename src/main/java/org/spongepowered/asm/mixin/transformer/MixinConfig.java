@@ -46,6 +46,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -87,6 +88,9 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         @SerializedName("conformVisibility")
         boolean conformAccessModifiers;
+        
+        @SerializedName("requireAnnotations")
+        boolean requireOverwriteAnnotations;
         
     }
     
@@ -655,6 +659,16 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     public boolean conformOverwriteVisibility() {
         return this.overwriteOptions.conformAccessModifiers;
+    }
+    
+    /**
+     * Get whether {@link Overwrite} annotations are required to enable
+     * overwrite behaviour for mixins in this config
+     * 
+     * @return true to require overwriting methods to be annotated
+     */
+    public boolean requireOverwriteAnnotations() {
+        return this.overwriteOptions.requireOverwriteAnnotations;
     }
 
     // AMS - temp

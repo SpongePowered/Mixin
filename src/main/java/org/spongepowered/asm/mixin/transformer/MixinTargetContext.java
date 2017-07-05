@@ -25,8 +25,16 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +46,7 @@ import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
@@ -387,6 +396,15 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      */
     public InjectorGroupInfo.Map getInjectorGroups() {
         return this.injectorGroups;
+    }
+    
+    /**
+     * Get whether overwrite annotations are required for methods in this mixin
+     * 
+     * @return true if overwrite methods must be annoated with {@link Overwrite}
+     */
+    public boolean requireOverwriteAnnotations() {
+        return this.mixin.getParent().requireOverwriteAnnotations();
     }
 
     /**
