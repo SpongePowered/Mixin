@@ -32,8 +32,8 @@ import java.lang.annotation.Target;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
- * <p>Annotation used to indicate a mixin class member which must overwrite an
- * obfuscated method in the target class.</p>
+ * <p>Annotation used to indicate a mixin class member which must overwrite a
+ * method in the target class.</p>
  * 
  * <p>The default behaviour of mixin classes when merging mixin methods is to
  * replace methods in the target class which already exist, and simply add any
@@ -46,11 +46,8 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * traverse the obfuscation boundary, this association with the target method is
  * lost because the method name will change. The {@link Overwrite} annotation is
  * used to indicate to the annotation processor that this method is intended to
- * overwrite a member in the target class, and should therefore be added to the
- * obfuscation table.</p>
- * 
- * <p>Adding this annotation to a non-obfuscated method will cause the
- * annotation processor to raise an error at compile time.</p>
+ * overwrite a member in the target class, and should be added to the
+ * obfuscation table if {@link #remap} is true.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -79,5 +76,21 @@ public @interface Overwrite {
      * @return Aliases for this member
      */
     public String[] aliases() default { }; 
+
+    /**
+     * By default, the annotation processor will attempt to locate an
+     * obfuscation mapping for all {@link Overwrite} methods since it is
+     * anticipated that in general the target of a {@link Overwrite} annotation
+     * will be an obfuscated method in the target class. However since it is
+     * possible to also overwrite methods in non-obfuscated targets it may be
+     * necessary to suppress the compiler error which would otherwise be
+     * generated. Setting this value to <em>false</em> will cause the annotation
+     * processor to skip this annotation when attempting to build the
+     * obfuscation table for the mixin.
+     * 
+     * @return True to instruct the annotation processor to search for
+     *      obfuscation mappings for this method 
+     */
+    public boolean remap() default true;
 
 }

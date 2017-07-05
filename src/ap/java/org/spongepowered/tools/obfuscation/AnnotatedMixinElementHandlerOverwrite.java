@@ -45,8 +45,15 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
      */
     static class AnnotatedElementOverwrite extends AnnotatedElement<ExecutableElement> {
         
-        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationHandle annotation) {
+        private final boolean shouldRemap;
+        
+        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation);
+            this.shouldRemap = shouldRemap;
+        }
+        
+        public boolean shouldRemap() {
+            return this.shouldRemap;
         }
 
     }
@@ -64,13 +71,11 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
         this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite", true, false);
         this.checkConstraints(elem.getElement(), elem.getAnnotation());
         
-        if (!this.mixin.remap()) {
-            return;
-        }
-        
-        for (TypeHandle target : this.mixin.getTargets()) {
-            if (!this.registerOverwriteForTarget(elem, target)) {
-                return;
+        if (elem.shouldRemap()) {
+            for (TypeHandle target : this.mixin.getTargets()) {
+                if (!this.registerOverwriteForTarget(elem, target)) {
+                    return;
+                }
             }
         }
         

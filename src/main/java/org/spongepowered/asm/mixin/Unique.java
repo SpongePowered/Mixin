@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
 
 /**
  * This annotation, when applied to a member method or field in a mixin,
- * indicates that the member <b>should never</b> overwrite a matching membver in
+ * indicates that the member <b>should never</b> overwrite a matching member in
  * the target class. This indicates that the member differs from the normal
  * "overlay-like" behaviour of mixins in general, and should only ever be
  * <em>added</em> to the target. For public fields, the annotation has no

@@ -340,9 +340,9 @@ class AnnotatedMixin {
         }
     }
 
-    public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite) {
+    public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite, boolean shouldRemap) {
         this.methods.remove(method);
-        this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite));
+        this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite, shouldRemap));
     }
 
     public void registerShadow(VariableElement field, AnnotationHandle shadow, boolean shouldRemap) {

@@ -387,7 +387,8 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             return;
         }
 
-        mixinClass.registerOverwrite(method, AnnotationHandle.of(method, Overwrite.class));
+        AnnotationHandle overwrite = AnnotationHandle.of(method, Overwrite.class);
+        mixinClass.registerOverwrite(method, overwrite, this.shouldRemap(mixinClass, overwrite));
     }
 
     /**
