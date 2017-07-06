@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -49,6 +48,7 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Constants;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 /**
@@ -215,15 +215,20 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
 
     }
 
+    private static final String CONSTANT_ANNOTATION_CLASS = Constant.class.getName().replace('.', '/');
+
     public ModifyConstantInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
-        super(mixin, method, annotation);
+        super(mixin, method, annotation, "constant");
     }
     
     @Override
     protected List<AnnotationNode> readInjectionPoints(String type) {
-        AnnotationNode constantAnnotation = Annotations.<AnnotationNode>getValue(this.annotation, "constant");
-        List<AnnotationNode> ats = new ArrayList<AnnotationNode>();
-        ats.add(constantAnnotation);
+        List<AnnotationNode> ats = super.readInjectionPoints(type);
+        if (ats.isEmpty()) {
+            AnnotationNode c = new AnnotationNode(ModifyConstantInjectionInfo.CONSTANT_ANNOTATION_CLASS);
+            c.visit("log", Boolean.TRUE);
+            ats = ImmutableList.<AnnotationNode>of(c);
+        }
         return ats;
     }
 

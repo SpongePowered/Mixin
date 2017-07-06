@@ -84,6 +84,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Method slice descriptors parsed from the annotation
      */
     protected final MethodSlices slices;
+    
+    /**
+     * The key into the annotation which contains the injection points
+     */
+    protected final String atKey;
 
     /**
      * Injection points parsed from
@@ -134,9 +139,14 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * @param annotation Annotation to parse
      */
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
+        this(mixin, method, annotation, "at");
+    }
+    
+    protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation, String atKey) {
         super(mixin, method, annotation);
         this.isStatic = Bytecode.methodIsStatic(method);
         this.slices = MethodSlices.parse(this);
+        this.atKey = atKey;
         this.readAnnotation();
     }
 
@@ -176,9 +186,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected List<AnnotationNode> readInjectionPoints(String type) {
-        List<AnnotationNode> ats = Annotations.<AnnotationNode>getValue(this.annotation, "at", false);
+        List<AnnotationNode> ats = Annotations.<AnnotationNode>getValue(this.annotation, this.atKey, false);
         if (ats == null) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing 'at' value(s)");
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing '" + this.atKey + "' value(s)");
         }
         return ats;
     }
