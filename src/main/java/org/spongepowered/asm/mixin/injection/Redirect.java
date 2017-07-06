@@ -145,7 +145,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  *   <tr>
  *     <td>Write element</td>
  *     <td><code>private void setElement(<b>ElementType</b>[] array, int index,
- *          ElementType value)</code></td>
+ *          <b>ElementType</b> value)</code></td>
  *   </tr>
  * </table>
  * 
@@ -153,6 +153,25 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * and the indices being accessed. See the
  * {@link BeforeFieldAccess BeforeFieldAccess args} for details
  * on matching array accesses using the <tt>FIELD</tt> injection point.</p>
+ * 
+ * <h4>Array Length Redirect Mode</h4>
+ * 
+ * <p>For fields of an array type, it is possible to redirect the call to the
+ * builtin pseudo-property <tt>length</tt>. To do so, specify the argument
+ * <tt>array=length</tt> and configure your handler signature to return <tt>int
+ * </tt> and consume the array as an argument:</p>
+ * 
+ * <blockquote><code>private int getLength(<b>ElementType</b>[] array)
+ * </code></blockquote>
+ * 
+ * <p>For multi-dimensional arrays, provide one <tt>int</tt> argument for each
+ * additional dimension of the array:</p>
+ * 
+ * <blockquote><code>// Multidimensional array<br />
+ * private <b>ElementType</b>[][] array;<br /><br />
+ * // Handler signature:<br /> 
+ * private <b>int</b> getLength(<b>ElementType</b>[][] array, int baseDim)
+ * </code></blockquote>
  * 
  * <h4>Constructor Redirect Mode</h4>
  * 

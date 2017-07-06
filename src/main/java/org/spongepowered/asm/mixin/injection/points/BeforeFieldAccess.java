@@ -67,9 +67,9 @@ import org.spongepowered.asm.util.Bytecode;
  * 
  * <p>Matching array access:</p>
  * <p>For array fields, it is possible to match field accesses followed by a
- * corresponding array element <em>get</em> or <em>set</em> operation. To enable
- * this behaviour specify the <tt>array</tt> named-argument with the desired
- * operation:</p> 
+ * corresponding array element <em>get</em>, <em>set</em> or <em>length</em>
+ * operation. To enable this behaviour specify the <tt>array</tt> named-argument
+ * with the desired operation:</p> 
  * 
  * <blockquote><pre>
  *   &#064;At(value = "FIELD", target="myIntArray:[I", args = "array=get")
@@ -86,6 +86,10 @@ import org.spongepowered.asm.util.Bytecode;
 @AtCode("FIELD")
 public class BeforeFieldAccess extends BeforeInvoke {
     
+    private static final String ARRAY_GET = "get";
+    private static final String ARRAY_SET = "set";
+    private static final String ARRAY_LENGTH = "length";
+
     /**
      * Default fuzz factor for searching for array access opcodes
      */
@@ -113,12 +117,25 @@ public class BeforeFieldAccess extends BeforeInvoke {
         this.opcode = data.getOpcode(-1, Opcodes.GETFIELD, Opcodes.PUTFIELD, Opcodes.GETSTATIC, Opcodes.PUTSTATIC, -1);
         
         String array = data.get("array", "");
-        this.arrOpcode = "get".equalsIgnoreCase(array) ? Opcodes.IALOAD : "set".equalsIgnoreCase(array) ? Opcodes.IASTORE : 0;
+        this.arrOpcode = BeforeFieldAccess.ARRAY_GET.equalsIgnoreCase(array) ? Opcodes.IALOAD
+                : BeforeFieldAccess.ARRAY_SET.equalsIgnoreCase(array) ? Opcodes.IASTORE
+                : BeforeFieldAccess.ARRAY_LENGTH.equalsIgnoreCase(array) ? Opcodes.ARRAYLENGTH : 0;
         this.fuzzFactor = Math.min(Math.max(data.get("fuzz", BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT), 1), 32);
     }
     
     public int getFuzzFactor() {
         return this.fuzzFactor;
+    }
+    
+    public int getArrayOpcode() {
+        return this.arrOpcode;
+    }
+
+    private int getArrayOpcode(String desc) {
+        if (this.arrOpcode != Opcodes.ARRAYLENGTH) {
+            return Type.getType(desc).getElementType().getOpcode(this.arrOpcode); 
+        }
+        return this.arrOpcode;
     }
 
     @Override
@@ -142,7 +159,7 @@ public class BeforeFieldAccess extends BeforeInvoke {
     protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
         if (this.arrOpcode > 0) {
             FieldInsnNode fieldInsn = (FieldInsnNode)insn;
-            int accOpcode = Type.getType(fieldInsn.desc).getElementType().getOpcode(this.arrOpcode);
+            int accOpcode = this.getArrayOpcode(fieldInsn.desc);
             this.log("{} > > > > searching for array access opcode {} fuzz={}", this.className, Bytecode.getOpcodeName(accOpcode), this.fuzzFactor);
             
             if (BeforeFieldAccess.findArrayNode(insns, fieldInsn, accOpcode, this.fuzzFactor) == null) {

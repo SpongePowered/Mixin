@@ -96,6 +96,7 @@ public class RedirectInjector extends InvokeInjector {
     private static final String KEY_NOMINATORS = "nominators";
     private static final String KEY_WILD = "wildcard";
     private static final String KEY_FUZZ = "fuzz";
+    private static final String KEY_OPCODE = "opcode";
 
     /**
      * Meta decoration object for redirector target nodes
@@ -169,6 +170,7 @@ public class RedirectInjector extends InvokeInjector {
         InjectionNode node = target.injectionNodes.get(insn);
         ConstructorRedirectData ctorData = null;
         int fuzz = BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT;
+        int opcode = 0;
         
         if (node != null ) {
             Meta other = node.getDecoration(Meta.KEY);
@@ -189,7 +191,9 @@ public class RedirectInjector extends InvokeInjector {
             if (ip instanceof BeforeNew && !((BeforeNew)ip).hasDescriptor()) {
                 ctorData = this.getCtorRedirect((BeforeNew)ip);
             } else if (ip instanceof BeforeFieldAccess) {
-                fuzz = ((BeforeFieldAccess)ip).getFuzzFactor();
+                BeforeFieldAccess bfa = (BeforeFieldAccess)ip;
+                fuzz = bfa.getFuzzFactor();
+                opcode = bfa.getArrayOpcode();
             }
         }
         
@@ -201,6 +205,7 @@ public class RedirectInjector extends InvokeInjector {
             targetNode.decorate(ConstructorRedirectData.KEY, ctorData);
         } else {
             targetNode.decorate(RedirectInjector.KEY_FUZZ, Integer.valueOf(fuzz));
+            targetNode.decorate(RedirectInjector.KEY_OPCODE, Integer.valueOf(opcode));
         }
         myNodes.add(targetNode);
     }
@@ -328,7 +333,8 @@ public class RedirectInjector extends InvokeInjector {
             throw new InvalidInjectionException(this.info, "Dimensionality of handler method is greater than target array on " + this);
         } else if (handlerDimensions == 0 && targetDimensions > 0) {
             int fuzz = node.<Integer>getDecoration(RedirectInjector.KEY_FUZZ).intValue();
-            this.injectAtArrayField(target, fieldNode, opCode, ownerType, fieldType, fuzz);
+            int opcode = node.<Integer>getDecoration(RedirectInjector.KEY_OPCODE).intValue();
+            this.injectAtArrayField(target, fieldNode, opCode, ownerType, fieldType, fuzz, opcode);
         } else {
             this.injectAtScalarField(target, fieldNode, opCode, ownerType, fieldType);
         }
@@ -337,12 +343,15 @@ public class RedirectInjector extends InvokeInjector {
     /**
      * Redirect an array element access
      */
-    private void injectAtArrayField(Target target, FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType, int fuzz) {
+    private void injectAtArrayField(Target target, FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType, int fuzz, int opcode) {
         Type elementType = fieldType.getElementType();
         if (opCode != Opcodes.GETSTATIC && opCode != Opcodes.GETFIELD) {
             throw new InvalidInjectionException(this.info, "Unspported opcode " + Bytecode.getOpcodeName(opCode) + " for array access " + this.info);
         } else if (this.returnType.getSort() != Type.VOID) {
-            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IALOAD), fuzz);
+            if (opcode != Opcodes.ARRAYLENGTH) {
+                opcode = elementType.getOpcode(Opcodes.IALOAD);
+            }
+            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, opcode, fuzz);
             this.injectAtGetArray(target, fieldNode, varNode, ownerType, fieldType);
         } else {
             AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IASTORE), fuzz);
@@ -351,10 +360,10 @@ public class RedirectInjector extends InvokeInjector {
     }
     
     /**
-     * Array element read (xALOAD)
+     * Array element read (xALOAD) or array.length (ARRAYLENGTH)
      */
     private void injectAtGetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = Bytecode.generateDescriptor(this.returnType, (Object[])RedirectInjector.getArrayArgs(fieldType));
+        String handlerDesc = RedirectInjector.getGetArrayHandlerDescriptor(varNode, this.returnType, fieldType);
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array getter");
         this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array getter");
     }
@@ -363,7 +372,7 @@ public class RedirectInjector extends InvokeInjector {
      * Array element write (xASTORE)
      */
     private void injectAtSetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = Bytecode.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, fieldType.getElementType()));
+        String handlerDesc = Bytecode.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, 1, fieldType.getElementType()));
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "array setter");
         this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array setter");
     }
@@ -572,9 +581,16 @@ public class RedirectInjector extends InvokeInjector {
         target.replaceNode(initNode, insns);
         meta.injected++;
     }
-    
-    private static Type[] getArrayArgs(Type fieldType, Type... extra) {
-        int dimensions = fieldType.getDimensions() + 1;
+
+    private static String getGetArrayHandlerDescriptor(AbstractInsnNode varNode, Type returnType, Type fieldType) {
+        if (varNode != null && varNode.getOpcode() == Opcodes.ARRAYLENGTH) {
+            return Bytecode.generateDescriptor(Type.INT_TYPE, (Object[])RedirectInjector.getArrayArgs(fieldType, 0));
+        }
+        return Bytecode.generateDescriptor(returnType, (Object[])RedirectInjector.getArrayArgs(fieldType, 1));
+    }
+
+    private static Type[] getArrayArgs(Type fieldType, int extraDimensions, Type... extra) {
+        int dimensions = fieldType.getDimensions() + extraDimensions;
         Type[] args = new Type[dimensions + extra.length];
         for (int i = 0; i < args.length; i++) {
             args[i] = i == 0 ? fieldType : i < dimensions ? Type.INT_TYPE : extra[dimensions - i];
