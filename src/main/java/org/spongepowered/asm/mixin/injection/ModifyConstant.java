@@ -77,13 +77,13 @@ public @interface ModifyConstant {
     public Slice slice() default @Slice;
 
     /**
-     * Discriminator for the constant to match (injection point), if not
+     * Discriminator for the constant(s) to match (injection points), if not
      * specified then all constants matching the annotated handler's return type
      * are matched
      * 
      * @return the constant discriminator
      */
-    public Constant constant() default @Constant;
+    public Constant[] constant() default {};
 
     /**
      * By default, the annotation processor will attempt to locate an

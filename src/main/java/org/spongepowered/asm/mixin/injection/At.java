@@ -27,15 +27,7 @@ package org.spongepowered.asm.mixin.injection;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-import org.spongepowered.asm.mixin.injection.points.AfterInvoke;
-import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
-import org.spongepowered.asm.mixin.injection.points.BeforeFinalReturn;
-import org.spongepowered.asm.mixin.injection.points.BeforeInvoke;
-import org.spongepowered.asm.mixin.injection.points.BeforeNew;
-import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
-import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
-import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
-import org.spongepowered.asm.mixin.injection.points.MethodHead;
+import org.spongepowered.asm.mixin.injection.points.*;
 
 /**
  * Annotation for specifying the type of {@link InjectionPoint} to use to
@@ -94,8 +86,9 @@ public @interface At {
      * {@link AfterInvoke INVOKE_ASSIGN},
      * {@link BeforeFieldAccess FIELD},
      * {@link BeforeNew NEW},
-     * {@link BeforeStringInvoke INVOKE_STRING} and
-     * {@link JumpInsnPoint JUMP}.
+     * {@link BeforeStringInvoke INVOKE_STRING},
+     * {@link JumpInsnPoint JUMP} and
+     * {@link BeforeConstant CONSTANT}.
      * See the javadoc for each type for more details on the scheme used by each
      * injection point.</p>
      * 
