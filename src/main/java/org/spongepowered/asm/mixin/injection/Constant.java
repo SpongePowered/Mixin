@@ -117,7 +117,6 @@ public @interface Constant {
         
     }
     
-    
     /**
      * Causes this injector to match <tt>ACONST_NULL</tt> (null object) literals
      * 

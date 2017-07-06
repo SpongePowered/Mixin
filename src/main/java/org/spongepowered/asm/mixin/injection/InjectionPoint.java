@@ -45,15 +45,7 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.modify.AfterStoreLocal;
 import org.spongepowered.asm.mixin.injection.modify.BeforeLoadLocal;
-import org.spongepowered.asm.mixin.injection.points.AfterInvoke;
-import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
-import org.spongepowered.asm.mixin.injection.points.BeforeFinalReturn;
-import org.spongepowered.asm.mixin.injection.points.BeforeInvoke;
-import org.spongepowered.asm.mixin.injection.points.BeforeNew;
-import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
-import org.spongepowered.asm.mixin.injection.points.BeforeStringInvoke;
-import org.spongepowered.asm.mixin.injection.points.JumpInsnPoint;
-import org.spongepowered.asm.mixin.injection.points.MethodHead;
+import org.spongepowered.asm.mixin.injection.points.*;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
@@ -153,6 +145,7 @@ public abstract class InjectionPoint {
         InjectionPoint.register(BeforeLoadLocal.class);
         InjectionPoint.register(AfterStoreLocal.class);
         InjectionPoint.register(BeforeFinalReturn.class);
+        InjectionPoint.register(BeforeConstant.class);
     }
     
     private final String slice;
