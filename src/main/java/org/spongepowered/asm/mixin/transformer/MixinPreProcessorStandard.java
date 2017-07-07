@@ -60,8 +60,8 @@ import org.spongepowered.asm.util.Constants;
 /**
  * <p>Mixin bytecode pre-processor. This class is responsible for bytecode pre-
  * processing tasks required to be performed on mixin bytecode before the mixin
- * can be applied. In previous versions the duties performed by this class were
- * performed by {@link MixinInfo}.</p>
+ * can be applied. It also performs some early sanity checking and validation on
+ * the mixin.</p>
  * 
  * <p>Before a mixin can be applied to the target class, it is necessary to
  * convert certain aspects of the mixin bytecode into the intended final form of
@@ -69,7 +69,9 @@ import org.spongepowered.asm.util.Constants;
  * soft-implemented methods. This preparation is done in two stages: first the
  * target-context-insensitive transformations are applied (this also acts as a
  * validation pass when the mixin is first loaded) and then transformations
- * which depend on the target class are applied in a second stage.</p>
+ * which depend on the target class are applied in a second stage. This class
+ * handles the first stage of transformations, and {@link MixinTargetContext}
+ * handles the second.</p>
  * 
  * <p>The validation pass propagates method renames into the metadata tree and
  * thus changes made during this phase are visible to all other mixins. The
@@ -77,6 +79,42 @@ import org.spongepowered.asm.util.Constants;
  * class members for obvious reasons.</p>  
  */
 class MixinPreProcessorStandard {
+    
+    /**
+     * Types of annotated special method handled by the preprocessor
+     */
+    enum SpecialMethod {
+        
+        MERGE(true),
+        OVERWRITE(true, Overwrite.class),
+        SHADOW(false, Shadow.class),
+        ACCESSOR(false, Accessor.class),
+        INVOKER(false, Invoker.class);
+        
+        final boolean isOverwrite;
+        
+        final Class<? extends Annotation> annotation;
+        
+        final String description;
+
+        private SpecialMethod(boolean isOverwrite, Class<? extends Annotation> type) {
+            this.isOverwrite = isOverwrite;
+            this.annotation = type;
+            this.description = "@" + Bytecode.getSimpleName(type);
+        }
+        
+        private SpecialMethod(boolean isOverwrite) {
+            this.isOverwrite = isOverwrite;
+            this.annotation = null;
+            this.description = "overwrite";
+        }
+        
+        @Override
+        public String toString() {
+            return this.description;
+        }
+        
+    }
     
     /**
      * Logger
@@ -229,6 +267,7 @@ class MixinPreProcessorStandard {
             }
             
             if (this.attachShadowMethod(context, mixinMethod)) {
+                context.addShadowMethod(mixinMethod);
                 iter.remove();
                 continue;
             }
@@ -257,16 +296,17 @@ class MixinPreProcessorStandard {
     }
 
     protected boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        return this.attachAccessorMethod(context, mixinMethod, Accessor.class) || this.attachAccessorMethod(context, mixinMethod, Invoker.class);
+        return this.attachAccessorMethod(context, mixinMethod, SpecialMethod.ACCESSOR)
+                || this.attachAccessorMethod(context, mixinMethod, SpecialMethod.INVOKER);
     }
 
-    protected boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
-        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type);
+    protected boolean attachAccessorMethod(MixinTargetContext context, MixinMethodNode mixinMethod, SpecialMethod type) {
+        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type.annotation);
         if (annotation == null) {
             return false;
         }
         
-        String description = "@" + Bytecode.getSimpleName(type) + " method " + mixinMethod.name;
+        String description = type + " method " + mixinMethod.name;
         Method method = this.getSpecialMethod(mixinMethod, type);
         if (MixinEnvironment.getCompatibilityLevel().isAtLeast(CompatibilityLevel.JAVA_8) && method.isStatic()) {
             if (this.mixin.getTargets().size() > 1) {
@@ -288,45 +328,38 @@ class MixinPreProcessorStandard {
             }
         }
         
-        context.addAccessorMethod(mixinMethod, type);
+        context.addAccessorMethod(mixinMethod, type.annotation);
         return true;
     }
 
     protected boolean attachShadowMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        if (this.attachSpecialMethod(context, mixinMethod, Shadow.class, false)) {
-            context.addShadowMethod(mixinMethod);
-            return true;
-        }
-        
-        return false;
+        return this.attachSpecialMethod(context, mixinMethod, SpecialMethod.SHADOW);
     }
     
     protected boolean attachOverwriteMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        return this.attachSpecialMethod(context, mixinMethod, Overwrite.class, true);
+        return this.attachSpecialMethod(context, mixinMethod, SpecialMethod.OVERWRITE);
     }
     
-    protected boolean attachSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, Class<? extends Annotation> type,
-            boolean overwrite) {
+    protected boolean attachSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, SpecialMethod type) {
         
-        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type);
+        AnnotationNode annotation = mixinMethod.getVisibleAnnotation(type.annotation);
         if (annotation == null) {
             return false;
         }
         
-        if (overwrite) {
+        if (type.isOverwrite) {
             this.checkMixinNotUnique(mixinMethod, type);
         }
         
-        String description = "@" + Bytecode.getSimpleName(type);
         Method method = this.getSpecialMethod(mixinMethod, type);
         MethodNode target = context.findMethod(mixinMethod, annotation);
         if (target == null) {
-            if (overwrite) {
+            if (type.isOverwrite) {
                 return false;
             }
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, description + " method " + mixinMethod.name + " in " + this.mixin
+                throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " in " + this.mixin
                         + " was not located in the target class");
             }
             mixinMethod.name = method.renameTo(target.name);
@@ -337,14 +370,14 @@ class MixinPreProcessorStandard {
         }
         
         if (!Bytecode.compareFlags(mixinMethod, target, Opcodes.ACC_STATIC)) {
-            throw new InvalidMixinException(this.mixin, "STATIC modifier of " + description + " method " + mixinMethod.name + " in " + this.mixin
+            throw new InvalidMixinException(this.mixin, "STATIC modifier of " + type + " method " + mixinMethod.name + " in " + this.mixin
                     + " does not match the target");
         }
         
-        this.conformVisibility(context, mixinMethod, description, overwrite, target);
+        this.conformVisibility(context, mixinMethod, type, target);
         
         if (!target.name.equals(mixinMethod.name)) {
-            if (!overwrite && (target.access & Opcodes.ACC_PRIVATE) == 0) {
+            if (type.isOverwrite && (target.access & Opcodes.ACC_PRIVATE) == 0) {
                 throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
             }
             
@@ -354,7 +387,7 @@ class MixinPreProcessorStandard {
         return true;
     }
 
-    private void conformVisibility(MixinTargetContext context, MixinMethodNode mixinMethod, String type, boolean overwrite, MethodNode target) {
+    private void conformVisibility(MixinTargetContext context, MixinMethodNode mixinMethod, SpecialMethod type, MethodNode target) {
         Visibility visTarget = Bytecode.getVisibility(target);
         Visibility visMethod = Bytecode.getVisibility(mixinMethod);
         if (visMethod.ordinal() >= visTarget.ordinal()) {
@@ -367,12 +400,12 @@ class MixinPreProcessorStandard {
         String message = String.format("%s %s method %s in %s cannot reduce visibiliy of %s target method", visMethod, type, mixinMethod.name,
                 this.mixin, visTarget);
         
-        if (overwrite && !this.mixin.getParent().conformOverwriteVisibility()) {
+        if (type.isOverwrite && !this.mixin.getParent().conformOverwriteVisibility()) {
             throw new InvalidMixinException(this.mixin, message);
         }
         
         if (visMethod == Visibility.PRIVATE) {
-            if (overwrite) {
+            if (type.isOverwrite) {
                 MixinPreProcessorStandard.logger.warn("Static binding violation: {}, visibility will be upgraded.", message);
             }
             context.addUpgradedMethod(mixinMethod);
@@ -380,23 +413,21 @@ class MixinPreProcessorStandard {
         }
     }
 
-    protected Method getSpecialMethod(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+    protected Method getSpecialMethod(MixinMethodNode mixinMethod, SpecialMethod type) {
         Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
         this.checkMethodNotUnique(method, type);
         return method;
     }
 
-    protected void checkMethodNotUnique(Method method, Class<? extends Annotation> type) {
+    protected void checkMethodNotUnique(Method method, SpecialMethod type) {
         if (method.isUnique()) {
-            String description = "@" + Bytecode.getSimpleName(type);
-            throw new InvalidMixinException(this.mixin, description + " method " + method.getName() + " cannot be @Unique");
+            throw new InvalidMixinException(this.mixin, type + " method " + method.getName() + " cannot be @Unique");
         }
     }
 
-    protected void checkMixinNotUnique(MixinMethodNode mixinMethod, Class<? extends Annotation> type) {
+    protected void checkMixinNotUnique(MixinMethodNode mixinMethod, SpecialMethod type) {
         if (this.mixin.isUnique()) {
-            String description = "@" + Bytecode.getSimpleName(type);
-            throw new InvalidMixinException(this.mixin, description + " method " + mixinMethod.name + " found in a @Unique mixin");
+            throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " found in a @Unique mixin");
         }
     }
 
@@ -453,7 +484,7 @@ class MixinPreProcessorStandard {
         
         MethodNode target = context.findMethod(mixinMethod, null);
         if (target != null) {
-            this.conformVisibility(context, mixinMethod, "overwrite", true, target);
+            this.conformVisibility(context, mixinMethod, SpecialMethod.MERGE, target);
         }
     }
 
