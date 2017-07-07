@@ -67,11 +67,13 @@ public class ModifyConstantInjector extends RedirectInjector {
         
         AbstractInsnNode targetNode = node.getCurrentTarget();
         if (targetNode instanceof JumpInsnNode) {
+            this.checkTargetModifiers(target, false);
             this.injectExpandedConstantModifier(target, (JumpInsnNode)targetNode);
             return;
         }
         
         if (Bytecode.isConstant(targetNode)) {
+            this.checkTargetModifiers(target, false);
             this.injectConstantModifier(target, targetNode);
             return;
         }

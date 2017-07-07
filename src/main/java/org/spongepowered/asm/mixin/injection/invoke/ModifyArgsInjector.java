@@ -56,9 +56,7 @@ public class ModifyArgsInjector extends InvokeInjector {
      */
     @Override
     protected void checkTarget(Target target) {
-        if (!this.isStatic && target.isStatic) {
-            throw new InvalidInjectionException(this.info, "non-static callback method " + this + " targets a static method which is not supported");
-        }
+        this.checkTargetModifiers(target, false);
     }
     
     @Override

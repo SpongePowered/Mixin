@@ -72,18 +72,22 @@ public abstract class InvokeInjector extends Injector {
      * @param target target
      */
     protected void checkTarget(Target target) {
-        this.checkTargetModifiers(target);
+        this.checkTargetModifiers(target, true);
     }
 
     /**
      * Check that the <tt>static</tt> modifier of the target method matches the
      * handler
      * 
-     * @param target
+     * @param target Target to check
+     * @param exactMatch True if static must match, false to only check if an
+     *      instance handler is targetting a static method
      */
-    protected final void checkTargetModifiers(Target target) {
-        if (target.isStatic != this.isStatic) {
+    protected final void checkTargetModifiers(Target target, boolean exactMatch) {
+        if (exactMatch && target.isStatic != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of handler method does not match target in " + this);
+        } else if (!exactMatch && !this.isStatic && target.isStatic) {
+            throw new InvalidInjectionException(this.info, "non-static callback method " + this + " targets a static method which is not supported");
         }
     }
 
@@ -110,7 +114,7 @@ public abstract class InvokeInjector extends Injector {
                 return;
             }
         }
-        this.checkTargetModifiers(target);
+        this.checkTargetModifiers(target, true);
     }
 
     /* (non-Javadoc)
