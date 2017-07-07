@@ -72,8 +72,18 @@ public abstract class InvokeInjector extends Injector {
      * @param target target
      */
     protected void checkTarget(Target target) {
+        this.checkTargetModifiers(target);
+    }
+
+    /**
+     * Check that the <tt>static</tt> modifier of the target method matches the
+     * handler
+     * 
+     * @param target
+     */
+    protected final void checkTargetModifiers(Target target) {
         if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
+            throw new InvalidInjectionException(this.info, "'static' modifier of handler method does not match target in " + this);
         }
     }
 
@@ -89,16 +99,18 @@ public abstract class InvokeInjector extends Injector {
      * @param node Injection location
      */
     protected void checkTargetForNode(Target target, InjectionNode node) {
-        if (!target.isCtor) {
-            return;
+        if (target.isCtor) {
+            MethodInsnNode superCall = target.findSuperInitNode();
+            int superCallIndex = target.indexOf(superCall);
+            int targetIndex = target.indexOf(node.getCurrentTarget());
+            if (targetIndex <= superCallIndex) {
+                if (!this.isStatic) {
+                    throw new InvalidInjectionException(this.info, "Pre-super " + this.annotationType + " invocation must be static in " + this);
+                }
+                return;
+            }
         }
-        
-        MethodInsnNode superCall = target.findSuperInitNode();
-        int superCallIndex = target.indexOf(superCall);
-        int targetIndex = target.indexOf(node.getCurrentTarget());
-        if (targetIndex <= superCallIndex && !this.isStatic) {
-            throw new InvalidInjectionException(this.info, "Pre-super " + this.annotationType + " invocation must be static in " + this);
-        }
+        this.checkTargetModifiers(target);
     }
 
     /* (non-Javadoc)

@@ -231,14 +231,12 @@ public class RedirectInjector extends InvokeInjector {
         
         if (node.getCurrentTarget() instanceof MethodInsnNode) {
             this.checkTargetForNode(target, node);
-            super.checkTarget(target);
             this.injectAtInvoke(target, node);
             return;
         }
         
         if (node.getCurrentTarget() instanceof FieldInsnNode) {
             this.checkTargetForNode(target, node);
-            super.checkTarget(target);
             this.injectAtFieldAccess(target, node);
             return;
         }
