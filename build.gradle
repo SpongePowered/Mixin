@@ -92,8 +92,8 @@ sourceSets {
 
 // Dependencies for renamed ASM
 dependencies {
-    asm 'org.ow2.asm:asm-debug-all:5.0.3'
-    asm 'org.ow2.asm:asm-debug-all:5.0.3:sources'
+    asm 'org.ow2.asm:asm-debug-all:5.2'
+    asm 'org.ow2.asm:asm-debug-all:5.2:sources'
     jarjar 'com.googlecode.jarjar:jarjar:1.1'
     compile 'com.googlecode.jarjar:jarjar:1.1'
 }
@@ -135,9 +135,9 @@ task renamedASM {
         }
     }
     
-    project.dependencies.add('compile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
-    project.dependencies.add('apCompile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
-    project.dependencies.add('agentCompile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
+    project.dependencies.add('compile', 'org.spongepowered:mixin-asm-debug-all:5.2')
+    project.dependencies.add('apCompile', 'org.spongepowered:mixin-asm-debug-all:5.2')
+    project.dependencies.add('agentCompile', 'org.spongepowered:mixin-asm-debug-all:5.2')
 
 }
 eclipseClasspath.dependsOn(renamedASM)
@@ -246,7 +246,7 @@ jar {
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0]).matching {
         include 'org/spongepowered/asm/lib/*'
-        include 'org/spongepowered/asm/lib/commons/R*'
+        include 'org/spongepowered/asm/lib/commons/ClassRemapper*'
         include 'org/spongepowered/asm/lib/signature/**'
         include 'org/spongepowered/asm/lib/tree/**'
         include 'org/spongepowered/asm/lib/util/**'
@@ -351,7 +351,8 @@ ext.excludePomDeps = [
     'jarjar',
     'hamcrest-library',
     'junit',
-    'mockito-core'
+    'mockito-core',
+    'mixin-asm-debug-all'
 ]
 
 uploadArchives {

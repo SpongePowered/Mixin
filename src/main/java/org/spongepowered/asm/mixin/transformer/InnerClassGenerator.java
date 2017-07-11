@@ -37,7 +37,7 @@ import org.spongepowered.asm.lib.ClassVisitor;
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.commons.Remapper;
-import org.spongepowered.asm.lib.commons.RemappingClassAdapter;
+import org.spongepowered.asm.lib.commons.ClassRemapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
@@ -162,7 +162,7 @@ final class InnerClassGenerator implements IClassGenerator {
      * Just a basic remapping adapter, but we also decorate the transformed
      * class with a meta annotation describing the original class.
      */
-    static class InnerClassAdapter extends RemappingClassAdapter {
+    static class InnerClassAdapter extends ClassRemapper {
         
         private final InnerClassInfo info;
         

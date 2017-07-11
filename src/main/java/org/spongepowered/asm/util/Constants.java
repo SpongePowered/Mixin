@@ -43,6 +43,7 @@ public abstract class Constants {
     public static final String CLASS = "Ljava/lang/Class;";
     
     public static final String SYNTHETIC_PACKAGE = "org.spongepowered.asm.synthetic";
+    public static final char UNICODE_SNOWMAN = '\u2603';
     
     private Constants() {}
     
