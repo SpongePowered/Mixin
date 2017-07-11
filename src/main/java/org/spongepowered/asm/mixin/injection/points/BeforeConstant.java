@@ -88,7 +88,7 @@ import com.google.common.primitives.Longs;
  *   <dd>Enable debug logging when searching for matching opcodes.</dd>
  *   <dt><em>named argument</em> expandZeroConditions</dt>
  *   <dd>See the {@link Constant#expandZeroConditions} option, this argument
- *   should be a list of {@link Constant.Condition} names</dd>
+ *   should be a list of {@link Condition} names</dd>
  * </dl>
  * 
  * <p>Examples:</p>

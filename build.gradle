@@ -36,6 +36,9 @@ ext.buildNumber = project.hasProperty("buildNumber") ? buildNumber : '0'
 ext.ciSystem = project.hasProperty("ciSystem") ? ciSystem : 'unknown'
 ext.commit = project.hasProperty("commit") ? commit : 'unknown'
 
+// Location to store renamed packages
+ext.renamedPackageRoot = new File("build/renamed-packages/");
+
 // Minimum version of Java required
 sourceCompatibility = '1.6'
 targetCompatibility = '1.6'
@@ -47,9 +50,9 @@ repositories {
         name = 'minecraft'
         url = 'https://libraries.minecraft.net/'
     }
-    flatDir {
+    maven {
         name = 'renamed-packages'
-        dirs = files("build/renamed-packages/")
+        url = file(renamedPackageRoot)
     }
     maven {
         // For fernflower
@@ -97,20 +100,32 @@ dependencies {
 
 // Task to read ASM library and rename packages
 task renamedASM {
-    outputs.file files(configurations.asm.files.findAll{!it.name.contains("sources")}.collect { file ->
-        new File(project.repositories['renamed-packages'].dirs[0], "mixin-" + file.name).path
+    outputs.file files(configurations.asm.files.withIndex().collect { file, i -> def dep = configurations.asm.dependencies[i]
+        new File(new File(renamedPackageRoot, "org/spongepowered/mixin-" + dep.name + "/" + dep.version), "mixin-" + file.name).path
     })
-    doLast {
-        ant {
-            taskdef (
-                name: "jarjar",
-                classname: "com.tonicsystems.jarjar.JarJarTask",
-                classpath: configurations.jarjar.asPath,
-            )
-            outputs.files.eachWithIndex { elem, index ->
-                logger.info "Generating renamed jar {}", elem.name
+    ant {
+        taskdef (
+            name: "jarjar",
+            classname: "com.tonicsystems.jarjar.JarJarTask",
+            classpath: configurations.jarjar.asPath,
+        )
+        outputs.files.eachWithIndex { elem, index ->
+            logger.info "Generating renamed jar {}", elem.name
+            def inJar = configurations.asm.files[index]
+            if (elem.name.contains("sources")) {
+                def tmpDir = new File(temporaryDir, elem.name + ".tmp")
+                def rootOld = new File(tmpDir, "org/objectweb")
+                def tmpOld = new File(rootOld, "asm")
+                def tmpNew = new File(tmpDir, "org/spongepowered/asm/lib")
+                unzip (src: inJar, dest: tmpDir)
+                replace (dir: tmpDir, token: "org.objectweb.asm", value: "org.spongepowered.asm.lib")
+                move (file: tmpOld, tofile: tmpNew)
+                delete rootOld
+                jar (destFile: new File(elem.path)) { fileset(dir: tmpDir) }
+                delete tmpDir
+            } else {
                 jarjar (jarfile: elem.path) {
-                    zipfileset (src: configurations.asm.files[index])
+                    zipfileset (src: inJar)
                     rule (
                         pattern: "org.objectweb.asm.**",
                         result: "org.spongepowered.asm.lib.@1"
@@ -119,6 +134,11 @@ task renamedASM {
             }
         }
     }
+    
+    project.dependencies.add('compile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
+    project.dependencies.add('apCompile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
+    project.dependencies.add('agentCompile', 'org.spongepowered:mixin-asm-debug-all:5.0.3')
+
 }
 eclipseClasspath.dependsOn(renamedASM)
 
@@ -136,14 +156,12 @@ dependencies {
     exampleCompile 'com.google.code.gson:gson:2.2.4'
     exampleCompile 'com.google.guava:guava:17.0'
     exampleCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
-    
+
     // maven
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
 
-    // remapped ASM
-    compile tasks.renamedASM.outputs.files
-    apCompile tasks.renamedASM.outputs.files
-    agentCompile tasks.renamedASM.outputs.files
+    // Establish implicit dependency on remapped ASM
+    compile files(tasks.renamedASM.outputs.files[0])
 
     // fernflower bridge
     fernflowerCompile 'commons-io:commons-io:2.4'
