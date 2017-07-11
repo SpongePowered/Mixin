@@ -166,7 +166,7 @@ public final class Locals {
                 FrameNode frameNode = (FrameNode)insn;
                 FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
                 
-                locals = frameData != null && frameData.type == Opcodes.F_FULL ? Math.max(locals, frameNode.local.size()) : frameNode.local.size();
+                locals = frameData != null && frameData.type == Opcodes.F_FULL ? Math.min(locals, frameData.locals) : frameNode.local.size();
 
                 // localPos tracks the location in the frame node's locals list, which doesn't leave space for TOP entries
                 for (int localPos = 0, framePos = 0; framePos < frame.length; framePos++, localPos++) {
