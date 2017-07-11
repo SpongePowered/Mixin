@@ -25,6 +25,7 @@
 package org.spongepowered.asm.obfuscation.mapping.common;
 
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
+import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Objects;
 
@@ -73,6 +74,10 @@ public class MappingMethod implements IMapping<MappingMethod> {
     @Override
     public String getDesc() {
         return this.desc;
+    }
+    
+    public boolean isConstructor() {
+        return Constants.CTOR.equals(this.name);
     }
     
     @Override

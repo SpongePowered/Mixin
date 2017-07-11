@@ -226,11 +226,15 @@ jar {
     from sourceSets.bridge.output
     
     // Renamed ASM
-    from zipTree(tasks.renamedASM.outputs.files[0])
+    from zipTree(tasks.renamedASM.outputs.files[0]).matching {
+        include 'org/spongepowered/asm/lib/*'
+        include 'org/spongepowered/asm/lib/commons/R*'
+        include 'org/spongepowered/asm/lib/signature/**'
+        include 'org/spongepowered/asm/lib/tree/**'
+        include 'org/spongepowered/asm/lib/util/**'
+    }
     
     exclude 'org/objectweb/**'
-    exclude 'org/spongepowered/asm/lib/commons/**'
-    exclude 'org/spongepowered/asm/lib/xml/**'
     
     // JAR manifest configuration
     manifest.mainAttributes(

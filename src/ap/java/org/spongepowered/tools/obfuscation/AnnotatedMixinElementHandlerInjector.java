@@ -40,7 +40,6 @@ import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorExcep
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.CompilerEnvironment;
@@ -191,7 +190,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             } else if (target.isImaginary()) {
                 elem.printMessage(this.ap, error, elem + " target requires method signature because enclosing type information for " 
                         + target + " is unavailable");
-            } else if (!Constants.CTOR.equals(targetMember.name)) {
+            } else if (!targetMember.isInitialiser()) {
                 elem.printMessage(this.ap, error, "Unable to determine signature for " + elem + " target method");
             }
             return true;
@@ -203,8 +202,10 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         if (obfData.isEmpty()) {
             if (target.isSimulated()) {
                 obfData = this.obf.getDataProvider().getRemappedMethod(targetMethod);
+            } else if (targetMember.isClassInitialiser()) {
+                return true;
             } else {
-                Kind error = Constants.CTOR.equals(targetMember.name) ? Kind.WARNING : Kind.ERROR;
+                Kind error = targetMember.isConstructor() ? Kind.WARNING : Kind.ERROR;
                 elem.addMessage(error, "No obfuscation mapping for " + targetName, elem.getElement(), elem.getAnnotation());
                 return false;
             }

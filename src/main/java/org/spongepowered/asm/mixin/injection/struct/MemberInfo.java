@@ -34,6 +34,7 @@ import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 import com.google.common.base.Strings;
@@ -397,6 +398,34 @@ public class MemberInfo {
      */
     public boolean isField() {
         return this.forceField || (this.desc != null && !this.desc.startsWith("("));
+    }
+    
+    /**
+     * Get whether this member represents a constructor
+     * 
+     * @return true if member name is <tt>&lt;init&gt;</tt>
+     */
+    public boolean isConstructor() {
+        return Constants.CTOR.equals(this.name);
+    }
+    
+    /**
+     * Get whether this member represents a class initialiser
+     * 
+     * @return true if member name is <tt>&lt;clinit&gt;</tt>
+     */
+    public boolean isClassInitialiser() {
+        return Constants.CLINIT.equals(this.name);
+    }
+    
+    /**
+     * Get whether this member represents a constructor or class initialiser
+     * 
+     * @return true if member name is <tt>&lt;init&gt;</tt> or
+     *      <tt>&lt;clinit&gt;</tt>
+     */
+    public boolean isInitialiser() {
+        return this.isConstructor() || this.isClassInitialiser();
     }
     
     /**
