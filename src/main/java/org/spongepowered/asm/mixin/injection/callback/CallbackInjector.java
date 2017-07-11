@@ -174,7 +174,7 @@ public class CallbackInjector extends Injector {
                     if (l < locals.length && locals[l] != null) {
                         this.localTypes[l] = Type.getType(locals[l].desc);
                         if (l >= baseArgIndex) {
-                            argNames.add(locals[l].name);
+                            argNames.add(CallbackInjector.meltSnowman(l, locals[l].name));
                         }
                     }
                 }
@@ -192,7 +192,7 @@ public class CallbackInjector extends Injector {
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
             this.marshallVar = target.allocateLocal();
         }
-        
+
         /**
          * Returns true if the supplied opcode represents a <em>non-void</em>
          * RETURN opcode
@@ -496,7 +496,7 @@ public class CallbackInjector extends Injector {
                 String marker = l == callback.frameSize ? ">" : " ";
                 if (callback.locals[l] != null) {
                     printer.add("%s [%3d]  %20s  %-50s %s", marker, l, SignaturePrinter.getTypeName(callback.localTypes[l], false),
-                            callback.locals[l].name, l >= callback.frameSize ? "<capture>" : "");
+                            CallbackInjector.meltSnowman(l, callback.locals[l].name), l >= callback.frameSize ? "<capture>" : "");
                 } else {
                     boolean isTop = l > 0 && callback.localTypes[l - 1] != null && callback.localTypes[l - 1].getSize() > 1;
                     printer.add("%s [%3d]  %20s", marker, l, isTop ? "<top>" : "-");
@@ -680,4 +680,8 @@ public class CallbackInjector extends Injector {
         return list;
     }
 
+    static String meltSnowman(int index, String varName) {
+        return varName != null && Constants.UNICODE_SNOWMAN == varName.charAt(0) ? "var" + index : varName;
+    }
+    
 }
