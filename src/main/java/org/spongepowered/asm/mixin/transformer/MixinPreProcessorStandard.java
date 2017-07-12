@@ -473,7 +473,7 @@ class MixinPreProcessorStandard {
                             type, mixinMethod.name, this.mixin, context.getTarget());
                 } catch (SyntheticBridgeException ex) {
                     if (this.verboseLogging || this.env.getOption(Option.DEBUG_VERIFY)) {
-                        // Show analysis if 
+                        // Show analysis if debug options are active, implying we're in a dev environment
                         ex.printAnalysis(context, target, mixinMethod);
                     }
                     throw new InvalidMixinException(this.mixin, ex.getMessage());
