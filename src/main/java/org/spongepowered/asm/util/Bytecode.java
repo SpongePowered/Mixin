@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -50,6 +51,8 @@ import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
+import org.spongepowered.asm.util.throwables.SyntheticBridgeException.Problem;
 
 import com.google.common.base.Joiner;
 import com.google.common.primitives.Ints;
@@ -416,7 +419,7 @@ public final class Bytecode {
      *      the {@link Opcodes} class have the same value as opcodes
      */
     public static String getOpcodeName(AbstractInsnNode node) {
-        return Bytecode.getOpcodeName(node.getOpcode());
+        return node != null ? Bytecode.getOpcodeName(node.getOpcode()) : "";
     }
 
     /**
@@ -1103,6 +1106,55 @@ public final class Bytecode {
             sb.append(Bytecode.MERGEABLE_MIXIN_ANNOTATIONS[i].getName().replace('.', '/'));
         }
         return Pattern.compile(sb.append(");$").toString());
+    }
+    
+    /**
+     * Compares two synthetic bridge methods and throws an exception if they are
+     * not compatible.
+     * 
+     * @param a Incumbent method
+     * @param b Incoming method
+     */
+    public static void compareBridgeMethods(MethodNode a, MethodNode b) {
+        ListIterator<AbstractInsnNode> ia = a.instructions.iterator();
+        ListIterator<AbstractInsnNode> ib = b.instructions.iterator();
+        
+        int index = 0;
+        for (; ia.hasNext() && ib.hasNext(); index++) {
+            AbstractInsnNode na = ia.next();
+            AbstractInsnNode nb = ib.next();
+            if (na instanceof LabelNode) {
+                continue;
+            } 
+            
+            if (na instanceof MethodInsnNode) {
+                MethodInsnNode ma = (MethodInsnNode)na;
+                MethodInsnNode mb = (MethodInsnNode)nb;
+                if (!ma.name.equals(mb.name)) {
+                    throw new SyntheticBridgeException(Problem.BAD_INVOKE_NAME, a.name, a.desc, index, na, nb);
+                } else if (!ma.desc.equals(mb.desc)) {
+                    throw new SyntheticBridgeException(Problem.BAD_INVOKE_DESC, a.name, a.desc, index, na, nb);
+                }
+            } else if (na.getOpcode() != nb.getOpcode()) {
+                throw new SyntheticBridgeException(Problem.BAD_INSN, a.name, a.desc, index, na, nb);
+            } else if (na instanceof VarInsnNode) {
+                VarInsnNode va = (VarInsnNode)na;
+                VarInsnNode vb = (VarInsnNode)nb;
+                if (va.var != vb.var) {
+                    throw new SyntheticBridgeException(Problem.BAD_LOAD, a.name, a.desc, index, na, nb);
+                }
+            } else if (na instanceof TypeInsnNode) {
+                TypeInsnNode ta = (TypeInsnNode)na;
+                TypeInsnNode tb = (TypeInsnNode)nb;
+                if (ta.getOpcode() == Opcodes.CHECKCAST && !ta.desc.equals(tb.desc)) {
+                    throw new SyntheticBridgeException(Problem.BAD_CAST, a.name, a.desc, index, na, nb);
+                }
+            }
+        }
+        
+        if (ia.hasNext() || ib.hasNext()) {
+            throw new SyntheticBridgeException(Problem.BAD_LENGTH, a.name, a.desc, index, null, null);
+        }
     }
     
 }

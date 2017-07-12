@@ -225,6 +225,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     void addMixinMethod(MethodNode method) {
+        Annotations.setVisible(method, MixinMerged.class, "mixin", this.getClassName());
         this.getTarget().addMixinMethod(method);
     }
     
@@ -313,6 +314,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return the reference of the target class (only valid on single-target
      *      mixins)
      */
+    @Override
     public String getTargetClassRef() {
         return this.getTarget().getClassRef();
     }

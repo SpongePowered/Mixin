@@ -56,6 +56,7 @@ import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
 
 /**
  * <p>Mixin bytecode pre-processor. This class is responsible for bytecode pre-
@@ -464,8 +465,23 @@ class MixinPreProcessorStandard {
         
         AnnotationNode unique = Annotations.getVisible(mixinMethod, Unique.class);
         if (unique == null || !Annotations.<Boolean>getValue(unique, "silent", Boolean.FALSE).booleanValue()) {
-            MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
-                    this.mixin, context.getTarget());
+            if (Bytecode.hasFlag(mixinMethod, Opcodes.ACC_BRIDGE)) {
+                try {
+                    // will throw exception if bridge methods are incompatible
+                    Bytecode.compareBridgeMethods(target, mixinMethod);
+                    MixinPreProcessorStandard.logger.debug("Discarding sythetic bridge method {} in {} because existing method in {} is compatible",
+                            type, mixinMethod.name, this.mixin, context.getTarget());
+                } catch (SyntheticBridgeException ex) {
+                    if (this.verboseLogging || this.env.getOption(Option.DEBUG_VERIFY)) {
+                        // Show analysis if 
+                        ex.printAnalysis(context, target, mixinMethod);
+                    }
+                    throw new InvalidMixinException(this.mixin, ex.getMessage());
+                }
+            } else {
+                MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
+                        this.mixin, context.getTarget());
+            }
         }
 
         return true;

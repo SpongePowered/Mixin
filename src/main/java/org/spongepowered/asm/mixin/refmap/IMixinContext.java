@@ -47,6 +47,13 @@ public interface IMixinContext {
     public abstract String getClassRef();
 
     /**
+     * Get the internal name of the target class for this context
+     * 
+     * @return internal target class name
+     */
+    public abstract String getTargetClassRef();
+
+    /**
      * Get the reference mapper for this mixin
      * 
      * @return ReferenceMapper instance (can be null)

@@ -160,6 +160,11 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     public String getClassRef() {
         return this.mixin.getClassRef();
     }
+    
+    @Override
+    public String getTargetClassRef() {
+        throw new UnsupportedOperationException("Target class not available at compile time");
+    }
 
     @Override
     public IMixinInfo getMixin() {
