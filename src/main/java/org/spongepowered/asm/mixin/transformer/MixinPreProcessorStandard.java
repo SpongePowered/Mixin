@@ -274,11 +274,11 @@ class MixinPreProcessorStandard {
             }
 
             if (this.attachOverwriteMethod(context, mixinMethod)) {
+                context.addMixinMethod(mixinMethod);
                 continue;
             }
 
             if (this.attachUniqueMethod(context, mixinMethod)) {
-                context.addMixinMethod(mixinMethod);
                 iter.remove();
                 continue;
             }
@@ -471,6 +471,7 @@ class MixinPreProcessorStandard {
                     Bytecode.compareBridgeMethods(target, mixinMethod);
                     MixinPreProcessorStandard.logger.debug("Discarding sythetic bridge method {} in {} because existing method in {} is compatible",
                             type, mixinMethod.name, this.mixin, context.getTarget());
+                    return true;
                 } catch (SyntheticBridgeException ex) {
                     if (this.verboseLogging || this.env.getOption(Option.DEBUG_VERIFY)) {
                         // Show analysis if debug options are active, implying we're in a dev environment
@@ -478,12 +479,14 @@ class MixinPreProcessorStandard {
                     }
                     throw new InvalidMixinException(this.mixin, ex.getMessage());
                 }
-            } else {
-                MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
-                        this.mixin, context.getTarget());
             }
+            
+            MixinPreProcessorStandard.logger.warn("Discarding {} public method {} in {} because it already exists in {}", type, mixinMethod.name,
+                    this.mixin, context.getTarget());
+            return true;
         }
 
+        context.addMixinMethod(mixinMethod);
         return true;
     }
     

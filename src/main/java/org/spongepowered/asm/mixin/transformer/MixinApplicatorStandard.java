@@ -438,6 +438,7 @@ class MixinApplicatorStandard {
             AnnotationNode intrinsic = Annotations.getInvisible(method, Intrinsic.class);
             if (intrinsic != null) {
                 if (this.mergeIntrinsic(mixin, method, isOverwrite, target, intrinsic)) {
+                    mixin.getTarget().methodMerged(method);
                     return;
                 }
             } else {
