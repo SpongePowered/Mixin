@@ -150,18 +150,20 @@ public abstract class InjectionPoint {
     
     private final String slice;
     private final Selector selector;
+    private final String id;
     
     protected InjectionPoint() {
-        this("", Selector.DEFAULT);
+        this("", Selector.DEFAULT, null);
     }
     
     protected InjectionPoint(InjectionPointData data) {
-        this(data.getSlice(), data.getSelector());
+        this(data.getSlice(), data.getSelector(), data.getId());
     }
     
-    public InjectionPoint(String slice, Selector selector) {
+    public InjectionPoint(String slice, Selector selector, String id) {
         this.slice = slice;
         this.selector = selector;
+        this.id = id;
     }
 
     public String getSlice() {
@@ -170,6 +172,10 @@ public abstract class InjectionPoint {
     
     public Selector getSelector() {
         return this.selector;
+    }
+    
+    public String getId() {
+        return this.id;
     }
 
     /**
@@ -452,7 +458,7 @@ public abstract class InjectionPoint {
      */
     public static InjectionPoint parse(IInjectionPointContext owner, At at) {
         return InjectionPoint.parse(owner.getContext(), owner.getMethod(), owner.getAnnotation(), at.value(), at.shift(), at.by(),
-                Arrays.asList(at.args()), at.target(), at.slice(), at.ordinal(), at.opcode());
+                Arrays.asList(at.args()), at.target(), at.slice(), at.ordinal(), at.opcode(), at.id());
     }
 
     /**
@@ -468,7 +474,7 @@ public abstract class InjectionPoint {
      */
     public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, At at) {
         return InjectionPoint.parse(context, method, parent, at.value(), at.shift(), at.by(), Arrays.asList(at.args()), at.target(), at.slice(),
-                at.ordinal(), at.opcode());
+                at.ordinal(), at.opcode(), at.id());
     }
     
     /**
@@ -506,12 +512,13 @@ public abstract class InjectionPoint {
         int by = Annotations.<Integer>getValue(node, "by", Integer.valueOf(0));
         int ordinal = Annotations.<Integer>getValue(node, "ordinal", Integer.valueOf(-1));
         int opcode = Annotations.<Integer>getValue(node, "opcode", Integer.valueOf(0));
+        String id = Annotations.<String>getValue(node, "id");
 
         if (args == null) {
             args = ImmutableList.<String>of();
         }
 
-        return InjectionPoint.parse(context, method, parent, at, shift, by, args, target, slice, ordinal, opcode);
+        return InjectionPoint.parse(context, method, parent, at, shift, by, args, target, slice, ordinal, opcode, id);
     }
 
     /**
@@ -530,12 +537,13 @@ public abstract class InjectionPoint {
      * @param slice Slice id for injectors which support multiple slices
      * @param ordinal Ordinal offset for supported injection points
      * @param opcode Bytecode opcode for supported injection points
+     * @param id Injection point id from annotation
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
     public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
-            List<String> args, String target, String slice, int ordinal, int opcode) {
-        InjectionPointData data = new InjectionPointData(context, method, parent, at, args, target, slice, ordinal, opcode);
+            List<String> args, String target, String slice, int ordinal, int opcode, String id) {
+        InjectionPointData data = new InjectionPointData(context, method, parent, at, args, target, slice, ordinal, opcode, id);
         Class<? extends InjectionPoint> ipClass = findClass(context, data);
         InjectionPoint point = InjectionPoint.create(context, data, ipClass);
         return InjectionPoint.shift(point, shift, by);

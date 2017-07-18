@@ -109,8 +109,13 @@ public class InjectionPointData {
      */
     private final int opcode;
     
+    /**
+     * Injection point id from annotation 
+     */
+    private final String id;
+    
     public InjectionPointData(IMixinContext context, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
-            String slice, int ordinal, int opcode) {
+            String slice, int ordinal, int opcode, String id) {
         this.context = context;
         this.method = method;
         this.parent = parent;
@@ -119,6 +124,7 @@ public class InjectionPointData {
         this.slice = Strings.nullToEmpty(slice);
         this.ordinal = Math.max(-1, ordinal);
         this.opcode = opcode;
+        this.id = id;
         
         this.parseArgs(args);
         
@@ -313,6 +319,13 @@ public class InjectionPointData {
             }
         }
         return defaultOpcode;
+    }
+    
+    /**
+     * Get the id specified on the injection point (or null if not specified)
+     */
+    public String getId() {
+        return this.id;
     }
     
     @Override
