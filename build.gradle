@@ -37,7 +37,10 @@ ext.ciSystem = project.hasProperty("ciSystem") ? ciSystem : 'unknown'
 ext.commit = project.hasProperty("commit") ? commit : 'unknown'
 
 // Location to store renamed packages
-ext.renamedPackageRoot = new File("build/renamed-packages/");
+ext.renamedPackageRoot = new File("build/renamed-packages/")
+
+// True to do jar signing task
+ext.doSignJar = project.hasProperty("keyStorePath")
 
 // Minimum version of Java required
 sourceCompatibility = '1.6'
@@ -267,6 +270,10 @@ jar {
         "Can-Redefine-Classes": true,
         "Can-Retransform-Classes": true
     )
+
+    if (project.doSignJar) {
+        classifier = 'unsigned'
+    }
 }
 
 task thinJar(type: Jar) {
@@ -311,6 +318,34 @@ shadowJar  {
 }
 build.dependsOn(shadowJar)
 
+if (project.doSignJar) {
+    // Clear artifacts because jar will be there by default
+    configurations.archives.artifacts.clear()
+
+    // Define signjar task    
+    task signJar() {
+        inputs.files(jar.outputs)
+        outputs.file jar.outputs.files.collect {
+            new File(it.parent, it.name.replace('-unsigned', ''))
+        }
+        doLast {
+            jar.outputs.files.each {
+                ant.signjar(
+                    alias: project.keyStoreCert,
+                    jar: it,
+                    signedJar: new File(it.parent, it.name.replace('-unsigned', '')),
+                    keystore: project.keyStorePath,
+                    storepass: project.keyStoreSecret,
+                    keypass: project.keyStoreSecret,
+                    tsaurl: project.timestampAuthority,
+                    preservelastmodified: 'true'
+                )
+            }
+        }
+    }
+    build.dependsOn(signJar)
+}
+
 // Run this task instead of build to generate a timestamped shadow jar (for dev)
 task timestamp(type: Jar, dependsOn: build) {
     if (gradle.startParameter.taskNames.contains(name)) {
@@ -340,7 +375,9 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 artifacts {
-    archives jar
+    if (project.doSignJar) {
+        archives signJar.outputs.files[0]
+    }
     archives thinJar
     archives sourceJar
     archives javadocJar
@@ -361,8 +398,7 @@ uploadArchives {
         mavenDeployer {
             configuration = configurations.deployerJars
 
-            if (project.hasProperty("chRepo"))
-            {
+            if (project.hasProperty("chRepo")) {
                 repository(url: project.chRepo) {
                     authentication(userName: project.chUsername, password: project.chPassword)
                 }
