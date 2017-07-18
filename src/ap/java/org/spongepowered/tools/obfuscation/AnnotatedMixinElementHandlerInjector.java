@@ -154,29 +154,30 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        String reference = elem.getAnnotation().<String>getValue("method");
-        MemberInfo targetMember = MemberInfo.parse(reference);
-        if (targetMember.name == null) {
-            return;
-        }
-
-        try {
-            targetMember.validate();
-        } catch (InvalidMemberDescriptorException ex) {
-            elem.printMessage(this.ap, Kind.ERROR, ex.getMessage());
-        }
-        
-        if (targetMember.desc != null) {
-            this.validateReferencedTarget(elem.getElement(), elem.getAnnotation(), targetMember, elem.toString());
-        }
-        
-        if (!elem.shouldRemap()) {
-            return;
-        }
-        
-        for (TypeHandle target : this.mixin.getTargets()) {
-            if (!this.registerInjector(elem, reference, targetMember, target)) {
-                break;
+        for (String reference : elem.getAnnotation().<String>getList("method")) {
+            MemberInfo targetMember = MemberInfo.parse(reference);
+            if (targetMember.name == null) {
+                continue;
+            }
+            
+            try {
+                targetMember.validate();
+            } catch (InvalidMemberDescriptorException ex) {
+                elem.printMessage(this.ap, Kind.ERROR, ex.getMessage());
+            }
+            
+            if (targetMember.desc != null) {
+                this.validateReferencedTarget(elem.getElement(), elem.getAnnotation(), targetMember, elem.toString());
+            }
+            
+            if (!elem.shouldRemap()) {
+                continue;
+            }
+            
+            for (TypeHandle target : this.mixin.getTargets()) {
+                if (!this.registerInjector(elem, reference, targetMember, target)) {
+                    break;
+                }
             }
         }
     }

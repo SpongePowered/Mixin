@@ -37,6 +37,7 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 /**
@@ -79,7 +80,7 @@ import com.google.common.base.Strings;
  *   foo.bar.Baz.func_1234_a(DDD)V</pre>
  * </blockquote>
  */
-public class MemberInfo {
+public final class MemberInfo {
     
     /**
      * Member owner in internal form but without L;, can be null
@@ -553,6 +554,30 @@ public class MemberInfo {
         return (this.name == null || this.name.equals(name)) 
             && (this.desc == null || (desc != null && desc.equals(this.desc)))
             && (ordinal == 0 || this.matchAll);
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || obj.getClass() != MemberInfo.class) {
+            return false;
+        }
+        
+        MemberInfo other = (MemberInfo)obj;
+        return this.matchAll == other.matchAll && this.forceField == other.forceField
+                && Objects.equal(this.owner, other.owner)
+                && Objects.equal(this.name, other.name)
+                && Objects.equal(this.desc, other.desc);
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#hashCode()
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(this.matchAll, this.owner, this.name, this.desc);
     }
     
     /**

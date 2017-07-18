@@ -68,13 +68,13 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 public @interface ModifyVariable {
     
     /**
-     * String representation of a
-     * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo
-     * MemberInfo} which identifies the target method.
+     * String representation of one or more
+     * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
+     * MemberInfo} which identify the target methods.
      * 
-     * @return target method
+     * @return target method(s) for this injector
      */
-    public String method();
+    public String[] method();
     
     /**
      * A {@link Slice} annotation which describes the method bisection used in

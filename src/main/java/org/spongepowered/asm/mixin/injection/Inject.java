@@ -55,13 +55,13 @@ public @interface Inject {
     public String id() default "";
     
     /**
-     * String representation of a
+     * String representation of one or more
      * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
-     * MemberInfo} which identifies the target method.
+     * MemberInfo} which identify the target methods.
      * 
-     * @return target method for this injector
+     * @return target method(s) for this injector
      */
-    public String method();
+    public String[] method();
     
     /**
      * Array of {@link Slice} annotations which describe the method bisections
