@@ -129,6 +129,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     private int requiredCallbackCount = 0;
     
     /**
+     * Maximum number of callbacks allowed to be injected 
+     */
+    private int maxCallbackCount = Integer.MAX_VALUE;
+
+    /**
      * Actual number of injected callbacks
      */
     private int injectedCallbackCount = 0;
@@ -217,6 +222,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         } else if (this.group.isDefault()) {
             this.requiredCallbackCount = this.mixin.getDefaultRequiredInjections();
         }
+        
+        Integer allow = Annotations.<Integer>getValue(this.annotation, "allow");
+        if (allow != null) {
+            this.maxCallbackCount = Math.max(Math.max(this.requiredCallbackCount, 1), allow);
+        }
     }
 
     // stub
@@ -271,6 +281,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded",
                     this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
+        } else if (this.injectedCallbackCount > this.maxCallbackCount) {
+            throw new InjectionError(
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed",
+                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount));
         }
     }
     

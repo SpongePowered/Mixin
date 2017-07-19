@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.util;
 
-import static org.spongepowered.asm.lib.ClassWriter.*;
-
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
@@ -319,7 +317,7 @@ public final class Bytecode {
      * @param classNode the classNode to verify
      */
     public static void dumpClass(ClassNode classNode) {
-        ClassWriter cw = new ClassWriter(COMPUTE_MAXS | COMPUTE_FRAMES);
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
         classNode.accept(cw);
         Bytecode.dumpClass(cw.toByteArray());
     }

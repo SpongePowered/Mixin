@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.refmap;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -32,6 +31,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -232,13 +232,7 @@ public final class ReferenceMapper implements Serializable {
         } catch (Exception ex) {
             logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException ex) {
-                    // don't really care
-                }
-            }
+            IOUtils.closeQuietly(reader);
         }
         
         return ReferenceMapper.DEFAULT_MAPPER;

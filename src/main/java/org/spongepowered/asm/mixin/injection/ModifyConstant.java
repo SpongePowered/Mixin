@@ -137,6 +137,32 @@ public @interface ModifyConstant {
     public int expect() default 1;
     
     /**
+     * Injection points are in general expected to match every candidate
+     * instruction in the target method or slice, except in cases where options
+     * such as {@link At#ordinal} are specified which naturally limit the number
+     * of results.
+     * 
+     * <p>This option allows for sanity-checking to be performed on the results
+     * of an injection point by specifying a maximum allowed number of matches,
+     * similar to that afforded by {@link Group#max}. For example if your
+     * injection is expected to match 4 invocations of a target method, but
+     * instead matches 5, this can become a detectable tamper condition by
+     * setting this value to <tt>4</tt>.
+     * 
+     * <p>Setting any value 1 or greater is allowed. Values less than 1 or less
+     * than {@link #require} are ignored. {@link #require} supercedes this
+     * argument such that if <tt>allow</tt> is less than <tt>require</tt> the
+     * value of <tt>require</tt> is always used.</p>
+     * 
+     * <p>Note that this option is not a <i>limit</i> on the query behaviour of
+     * this injection point. It is only a sanity check used to ensure that the
+     * number of matches is not too high 
+     * 
+     * @return Maximum allowed number of injections for this 
+     */
+    public int allow() default -1;
+    
+    /**
      * Returns constraints which must be validated for this injector to
      * succeed. See {@link Constraint} for details of constraint formats.
      * 
