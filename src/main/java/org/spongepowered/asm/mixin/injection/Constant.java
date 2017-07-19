@@ -184,6 +184,15 @@ public @interface Constant {
     public int ordinal() default -1;
     
     /**
+     * This specifies the ID of the slice to use for this query.
+     * 
+     * <p>For more details see the {@link Slice#id}</p>
+     * 
+     * @return the slice identifier, or empty string to use the default slice
+     */
+    public String slice() default "";
+
+    /**
      * Whilst most constants can be located in the compiled method with relative
      * ease, there exists a special case when a <tt>zero</tt> is used in a
      * conditional expression. For example:

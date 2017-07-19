@@ -35,6 +35,7 @@ import org.spongepowered.asm.mixin.injection.invoke.ModifyConstantInjector;
 import org.spongepowered.asm.mixin.injection.points.BeforeConstant;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -78,4 +79,9 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         return "Constant modifier method";
     }
     
+    @Override
+    public String getSliceId(String id) {
+        return Strings.nullToEmpty(id);
+    }
+
 }

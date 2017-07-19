@@ -143,6 +143,8 @@ public class BeforeConstant extends InjectionPoint {
     private final boolean log;
 
     public BeforeConstant(IMixinContext context, AnnotationNode node, String returnType) {
+        super(Annotations.<String>getValue(node, "slice", ""), Selector.DEFAULT, null);
+        
         Boolean empty = Annotations.<Boolean>getValue(node, "nullValue", (Boolean)null);
         this.ordinal = Annotations.<Integer>getValue(node, "ordinal", Integer.valueOf(-1));
         this.nullValue = empty != null ? empty.booleanValue() : false;
