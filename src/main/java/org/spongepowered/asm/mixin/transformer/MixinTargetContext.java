@@ -392,6 +392,15 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     /**
+     * Get the max shift "by" value for the parent config 
+     * 
+     * @return max shift by value
+     */
+    public int getMaxShiftByValue() {
+        return this.mixin.getParent().getMaxShiftByValue();
+    }
+    
+    /**
      * Get the injector groups for this target
      * 
      * @return injector groups

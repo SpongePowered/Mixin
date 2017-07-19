@@ -48,6 +48,7 @@ import org.spongepowered.asm.launch.Blackboard;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
@@ -381,6 +382,26 @@ public final class MixinEnvironment implements ITokenProvider {
         DEFAULT_COMPATIBILITY_LEVEL(Option.ENVIRONMENT, Inherit.INDEPENDENT, "compatLevel"),
         
         /**
+         * Behaviour when the maximum defined {@link At#by} value is exceeded in
+         * a mixin. Currently the behaviour is to <tt>warn</tt>. In later
+         * versions of Mixin this may be promoted to <tt>error</tt>.
+         * 
+         * <p>Available values for this option are:</p>
+         * 
+         * <dl>
+         *   <dt>ignore</dt>
+         *   <dd>Pre-0.7 behaviour, no action is taken when a violation is
+         *     encountered</dd>
+         *   <dt>warn</dt>
+         *   <dd>Current behaviour, a <tt>WARN</tt>-level message is raised for
+         *     violations</dd>
+         *   <dt>error</dt>
+         *   <dd>Violations throw an exception</dd>
+         * </dl>
+         */
+        SHIFT_BY_VIOLATION_BEHAVIOUR(Option.ENVIRONMENT, Inherit.INDEPENDENT, "shiftByViolation", "warn"),
+        
+        /**
          * Behaviour for initialiser injections, current supported options are
          * "default" and "safe"
          */
@@ -465,7 +486,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
 
         private Option(String property, String defaultStringValue) {
-            this(null, Inherit.INHERIT, property, false, defaultStringValue);
+            this(null, Inherit.INDEPENDENT, property, false, defaultStringValue);
         }
         
         private Option(Option parent, String property) {
@@ -1144,6 +1165,18 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     public String getOptionValue(Option option) {
         return option.getStringValue();
+    }
+    
+    /**
+     * Get the specified option from the current environment
+     * 
+     * @param option Option to get
+     * @param defaultValue value to use if the user-defined value is invalid
+     * @param <E> enum type
+     * @return Option value
+     */
+    public <E extends Enum<E>> E getOption(Option option, E defaultValue) {
+        return option.getEnumValue(defaultValue);
     }
     
     /**

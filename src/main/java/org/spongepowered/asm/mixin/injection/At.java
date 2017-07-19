@@ -134,7 +134,11 @@ public @interface At {
     
     /**
      * If {@link #shift} is specified as {@link At.Shift#BY BY}, specifies the
-     * number of opcodes to shift by (negative numbers are allowed).
+     * number of opcodes to shift by (negative numbers are allowed). Note that
+     * values above <tt>3</tt> should be avoided and in general either replaced
+     * with a custom injection point or with sliced injection points. The
+     * warning/error threshold is defined by the config (with a hard limit on
+     * value of {@link InjectionPoint#MAX_ALLOWED_SHIFT_BY})
      * 
      * @return Amount of shift to apply for the {@link At.Shift#BY BY} shift
      */

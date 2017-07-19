@@ -43,13 +43,17 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.modify.AfterStoreLocal;
 import org.spongepowered.asm.mixin.injection.modify.BeforeLoadLocal;
 import org.spongepowered.asm.mixin.injection.points.*;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -126,6 +130,40 @@ public abstract class InjectionPoint {
         public static final Selector DEFAULT = Selector.FIRST;
         
     }
+    
+    /**
+     * Behaviour for when the defined allowed value of {@link At#by} is exceeded
+     */
+    enum ShiftByViolationBehaviour {
+        
+        /**
+         * Shift-by violations are ignored
+         */
+        IGNORE,
+        
+        /**
+         * Shift-by violations cause a warning message 
+         */
+        WARN,
+        
+        /**
+         * Shift-by violations throw an exception
+         */
+        ERROR
+        
+    }
+    
+    /**
+     * Initial limit on the value of {@link At#by} which triggers warning/error
+     * (based on environment)
+     */
+    public static final int DEFAULT_ALLOWED_SHIFT_BY = 0;
+    
+    /**
+     * Hard limit on the value of {@link At#by} which triggers warning/error
+     * (based on environment)
+     */
+    public static final int MAX_ALLOWED_SHIFT_BY = 0;
 
     /**
      * Available injection point types
@@ -197,7 +235,7 @@ public abstract class InjectionPoint {
      */
     @Override
     public String toString() {
-        return "InjectionPoint(" + this.getClass().getSimpleName() + ")";
+        return String.format("@At(\"%s\")", this.getAtCode());
     }
     
     /**
@@ -546,7 +584,7 @@ public abstract class InjectionPoint {
         InjectionPointData data = new InjectionPointData(context, method, parent, at, args, target, slice, ordinal, opcode, id);
         Class<? extends InjectionPoint> ipClass = findClass(context, data);
         InjectionPoint point = InjectionPoint.create(context, data, ipClass);
-        return InjectionPoint.shift(point, shift, by);
+        return InjectionPoint.shift(context, method, parent, point, shift, by);
     }
 
     @SuppressWarnings("unchecked")
@@ -587,18 +625,53 @@ public abstract class InjectionPoint {
         return point;
     }
 
-    private static InjectionPoint shift(InjectionPoint point, At.Shift shift, int by) {
+    private static InjectionPoint shift(IMixinContext context, MethodNode method, AnnotationNode parent, InjectionPoint point,
+            At.Shift shift, int by) {
+        
         if (point != null) {
             if (shift == At.Shift.BEFORE) {
                 return InjectionPoint.before(point);
             } else if (shift == At.Shift.AFTER) {
                 return InjectionPoint.after(point);
             } else if (shift == At.Shift.BY) {
+                InjectionPoint.validateByValue(context, method, parent, point, by);
                 return InjectionPoint.shift(point, by);
             }
         }
 
         return point;
+    }
+
+    private static void validateByValue(IMixinContext context, MethodNode method, AnnotationNode parent, InjectionPoint point, int by) {
+        MixinEnvironment env = context.getMixin().getConfig().getEnvironment();
+        ShiftByViolationBehaviour err = env.<ShiftByViolationBehaviour>getOption(Option.SHIFT_BY_VIOLATION_BEHAVIOUR, ShiftByViolationBehaviour.WARN);
+        if (err == ShiftByViolationBehaviour.IGNORE) {
+            return;
+        }
+        
+        int allowed = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
+        if (context instanceof MixinTargetContext) {
+            allowed = ((MixinTargetContext)context).getMaxShiftByValue();
+        }
+        
+        if (by <= allowed) {
+            return;
+        }
+        
+        String message = String.format("@%s(%s) Shift.BY=%d on %s::%s exceeds the maximum allowed value %d.", Bytecode.getSimpleName(parent), point,
+                by, context, method.name, allowed);
+        
+        if (err == ShiftByViolationBehaviour.WARN) {
+            LogManager.getLogger("mixin").warn("{} Increase the value of maxShiftBy to suppress this warning.", message);
+            return;
+        }
+
+        throw new InvalidInjectionException(context, message);
+    }
+    
+    private String getAtCode() {
+        AtCode code = this.getClass().<AtCode>getAnnotation(AtCode.class);
+        return code == null ? this.getClass().getName() : code.value(); 
     }
 
     /**
