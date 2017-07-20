@@ -33,10 +33,13 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
+import org.spongepowered.asm.lib.tree.FrameNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.LabelNode;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Constant.Condition;
@@ -101,7 +104,7 @@ import com.google.common.primitives.Longs;
  *   &#064;At(value = "CONSTANT", args = "stringValue=foo"</pre>
  * </blockquote> 
  * <blockquote><pre>
- *   // Find all integer constans with value 0 and expand conditionals
+ *   // Find all integer constants with value 0 and expand conditionals
  *   &#064;At(
  *     value = "CONSTANT",
  *     args = {
@@ -225,10 +228,10 @@ public class BeforeConstant extends InjectionPoint {
         this.log("BeforeConstant is searching for constants in method with descriptor {}", desc);
         
         ListIterator<AbstractInsnNode> iter = insns.iterator();
-        for (int ordinal = 0; iter.hasNext();) {
+        for (int ordinal = 0, last = 0; iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
 
-            boolean matchesInsn = this.expand ? this.matchesConditionalInsn(insn) : this.matchesConstantInsn(insn);
+            boolean matchesInsn = this.expand ? this.matchesConditionalInsn(last, insn) : this.matchesConstantInsn(insn);
             if (matchesInsn) {
                 this.log("    BeforeConstant found a matching constant{} at ordinal {}", this.matchByType != null ? " TYPE" : " value", ordinal);
                 if (this.ordinal == -1 || this.ordinal == ordinal) {
@@ -238,15 +241,25 @@ public class BeforeConstant extends InjectionPoint {
                 }
                 ordinal++;
             }
+            
+            if (!(insn instanceof LabelNode) && !(insn instanceof FrameNode)) {
+                last = insn.getOpcode();
+            }
         }
 
         return found;
     }
 
-    private boolean matchesConditionalInsn(AbstractInsnNode insn) {
+    private boolean matchesConditionalInsn(int last, AbstractInsnNode insn) {
         for (int conditionalOpcode : this.expandOpcodes) {
-            if (insn.getOpcode() == conditionalOpcode) {
-                this.log("  BeforeConstant found %s instruction", Bytecode.getOpcodeName(conditionalOpcode));
+            int opcode = insn.getOpcode();
+            if (opcode == conditionalOpcode) {
+                if (last == Opcodes.LCMP || last == Opcodes.FCMPL || last == Opcodes.FCMPG || last == Opcodes.DCMPL || last == Opcodes.DCMPG) {
+                    this.log("  BeforeConstant is ignoring {} following {}", Bytecode.getOpcodeName(opcode), Bytecode.getOpcodeName(last));
+                    return false;
+                }
+                
+                this.log("  BeforeConstant found {} instruction", Bytecode.getOpcodeName(opcode));
                 return true;
             }
         }
