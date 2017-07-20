@@ -343,7 +343,7 @@ class MixinApplicatorStandard {
      */
     protected void applyAnnotations(MixinTargetContext mixin) {
         ClassNode sourceClass = mixin.getClassNode();
-        this.mergeAnnotations(sourceClass, this.targetClass);
+        Bytecode.mergeAnnotations(sourceClass, this.targetClass);
     }
     
     /**
@@ -364,7 +364,7 @@ class MixinApplicatorStandard {
             FieldNode shadow = entry.getKey();
             FieldNode target = this.findTargetField(shadow);
             if (target != null) {
-                this.mergeAnnotations(shadow, target);
+                Bytecode.mergeAnnotations(shadow, target);
                 
                 // Strip the FINAL flag from @Mutable non-private fields
                 if (entry.getValue().isDecoratedMutable() && !Bytecode.hasFlag(target, Opcodes.ACC_PRIVATE)) {
@@ -402,7 +402,7 @@ class MixinApplicatorStandard {
     protected void applyShadowMethod(MixinTargetContext mixin, MethodNode shadow) {
         MethodNode target = this.findTargetMethod(shadow);
         if (target != null) {
-            this.mergeAnnotations(shadow, target);
+            Bytecode.mergeAnnotations(shadow, target);
         }
     }
 
@@ -438,9 +438,16 @@ class MixinApplicatorStandard {
             AnnotationNode intrinsic = Annotations.getInvisible(method, Intrinsic.class);
             if (intrinsic != null) {
                 if (this.mergeIntrinsic(mixin, method, isOverwrite, target, intrinsic)) {
+                    mixin.getTarget().methodMerged(method);
                     return;
                 }
             } else {
+                if (mixin.requireOverwriteAnnotations() && !isOverwrite) {
+                    throw new InvalidMixinException(mixin,
+                            String.format("%s%s in %s cannot overwrite method in %s because @Overwrite is required by the parent configuration",
+                            method.name, method.desc, mixin, mixin.getTarget().getClassName()));
+                }
+                
                 this.targetClass.methods.remove(target);
             }
         } else if (isOverwrite) {
@@ -535,10 +542,12 @@ class MixinApplicatorStandard {
             throw new InvalidMixinException(mixin, "@Intrinsic method cannot be static, found " + methodName + " in " + mixin);
         }
         
-        AnnotationNode renamed = Annotations.getVisible(method, MixinRenamed.class);
-        if (renamed == null || !Annotations.getValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
-            throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
-                    + methodName + " in " + mixin);
+        if (!Bytecode.hasFlag(method, Opcodes.ACC_SYNTHETIC)) {
+            AnnotationNode renamed = Annotations.getVisible(method, MixinRenamed.class);
+            if (renamed == null || !Annotations.getValue(renamed, "isInterfaceMember", Boolean.FALSE)) {
+                throw new InvalidMixinException(mixin, "@Intrinsic method must be prefixed interface method, no rename encountered on "
+                        + methodName + " in " + mixin);
+            }
         }
         
         if (!Annotations.getValue(intrinsic, "displace", Boolean.FALSE)) {
@@ -649,7 +658,7 @@ class MixinApplicatorStandard {
         MethodNode ctor = null;
         
         for (MethodNode mixinMethod : mixin.getMethods()) {
-            if (Constants.CTOR.equals(mixinMethod.name) && MixinApplicatorStandard.hasLineNumbers(mixinMethod)) {
+            if (Constants.CTOR.equals(mixinMethod.name) && Bytecode.methodHasLineNumbers(mixinMethod)) {
                 if (ctor == null) {
                     ctor = mixinMethod;
                 } else {
@@ -964,116 +973,6 @@ class MixinApplicatorStandard {
         } catch (InvalidConstraintException ex) {
             throw new InvalidMixinException(mixin, ex.getMessage());
         }
-    }
-
-    /**
-     * Merge annotations from the specified source ClassNode to the destination
-     * ClassNode, replaces annotations of the equivalent type on the target with
-     * annotations from the source. If the source node has no annotations then
-     * no action will take place, if the target node has no annotations then a
-     * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
-     * @param from ClassNode to merge annotations from
-     * @param to ClassNode to merge annotations to
-     */
-    protected final void mergeAnnotations(ClassNode from, ClassNode to) {
-        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
-        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
-    }
-        
-    /**
-     * Merge annotations from the specified source MethodNode to the destination
-     * MethodNode, replaces annotations of the equivalent type on the target
-     * with annotations from the source. If the source node has no annotations
-     * then no action will take place, if the target node has no annotations
-     * then a new annotation list will be created. Annotations from the mixin
-     * package are not merged. 
-     * 
-     * @param from MethodNode to merge annotations from
-     * @param to MethodNode to merge annotations to
-     */
-    protected final void mergeAnnotations(MethodNode from, MethodNode to) {
-        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
-        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
-    }
-    
-    /**
-     * Merge annotations from the specified source FieldNode to the destination
-     * FieldNode, replaces annotations of the equivalent type on the target with
-     * annotations from the source. If the source node has no annotations then
-     * no action will take place, if the target node has no annotations then a
-     * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
-     * @param from FieldNode to merge annotations from
-     * @param to FieldNode to merge annotations to
-     */
-    protected final void mergeAnnotations(FieldNode from, FieldNode to) {
-        to.visibleAnnotations = this.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, from.name);
-        to.invisibleAnnotations = this.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, from.name);
-    }
-    
-    /**
-     * Merge annotations from the source list to the target list. Returns the
-     * target list or a new list if the target list was null.
-     * 
-     * @param from Annotations to merge
-     * @param to Annotation list to merge into
-     * @param name Name of the item being merged, for debugging purposes
-     * @return The merged list (or a new list if the target list was null)
-     */
-    private List<AnnotationNode> mergeAnnotations(List<AnnotationNode> from, List<AnnotationNode> to, String name) {
-        try {
-            if (from == null) {
-                return to;
-            }
-            
-            if (to == null) {
-                to = new ArrayList<AnnotationNode>();
-            }
-            
-            for (AnnotationNode annotation : from) {
-                if (!this.isMergeableAnnotation(annotation)) {
-                    continue;
-                }
-                
-                for (Iterator<AnnotationNode> iter = to.iterator(); iter.hasNext();) {
-                    if (iter.next().desc.equals(annotation.desc)) {
-                        iter.remove();
-                        break;
-                    }
-                }
-                
-                to.add(annotation);
-            }
-        } catch (Exception ex) {
-            this.logger.warn("Exception encountered whilst merging annotations for {}", name);
-        }
-        
-        return to;
-    }
-
-    private boolean isMergeableAnnotation(AnnotationNode annotation) {
-        if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
-            return annotation.desc.endsWith("Debug;");
-        }
-        return true;
-    }
-
-    /**
-     * Returns true if the supplied method contains any line number information
-     * 
-     * @param method Method to scan
-     * @return true if a line number node is located
-     */
-    private static boolean hasLineNumbers(MethodNode method) {
-        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
-            if (iter.next() instanceof LineNumberNode) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

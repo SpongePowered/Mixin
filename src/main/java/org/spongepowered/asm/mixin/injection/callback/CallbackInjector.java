@@ -25,7 +25,10 @@
 package org.spongepowered.asm.mixin.injection.callback;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
@@ -72,7 +75,7 @@ public class CallbackInjector extends Injector {
         /**
          * Target node, callback injected <b>before</b> this node 
          */
-        final AbstractInsnNode node;
+        final InjectionNode node;
         
         /**
          * Calculated local variables 
@@ -158,7 +161,7 @@ public class CallbackInjector extends Injector {
         Callback(MethodNode handler, Target target, final InjectionNode node, final LocalVariableNode[] locals, boolean captureLocals) {
             this.handler = handler;
             this.target = target;
-            this.node = node.getCurrentTarget();
+            this.node = node;
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
             this.frameSize = Bytecode.getFirstNonArgLocalIndex(target.arguments, !CallbackInjector.this.isStatic());
@@ -174,7 +177,7 @@ public class CallbackInjector extends Injector {
                     if (l < locals.length && locals[l] != null) {
                         this.localTypes[l] = Type.getType(locals[l].desc);
                         if (l >= baseArgIndex) {
-                            argNames.add(locals[l].name);
+                            argNames.add(CallbackInjector.meltSnowman(l, locals[l].name));
                         }
                     }
                 }
@@ -184,7 +187,7 @@ public class CallbackInjector extends Injector {
             this.extraArgs = Math.max(0, Bytecode.getFirstNonArgLocalIndex(this.handler) - (this.frameSize + 1));
             this.argNames = argNames != null ? argNames.toArray(new String[argNames.size()]) : null;
             this.canCaptureLocals = captureLocals && locals != null && locals.length > this.frameSize;
-            this.isAtReturn = this.node instanceof InsnNode && this.isValueReturnOpcode(this.node.getOpcode());
+            this.isAtReturn = this.node.getCurrentTarget() instanceof InsnNode && this.isValueReturnOpcode(this.node.getCurrentTarget().getOpcode());
             this.desc = target.getCallbackDescriptor(this.localTypes, target.arguments);
             this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize, this.extraArgs);
 //            this.typeCasts = new Type[this.frameSize + this.extraArgs];
@@ -192,7 +195,7 @@ public class CallbackInjector extends Injector {
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
             this.marshallVar = target.allocateLocal();
         }
-        
+
         /**
          * Returns true if the supplied opcode represents a <em>non-void</em>
          * RETURN opcode
@@ -231,7 +234,7 @@ public class CallbackInjector extends Injector {
          * for the method based on our calculated values
          */
         void inject() {
-            this.target.insns.insertBefore(this.node, this);
+            this.target.insertBefore(this.node, this);
             this.target.addToStack(Math.max(this.invoke, this.ctor));
         }
 
@@ -299,6 +302,11 @@ public class CallbackInjector extends Injector {
     private final String identifier;
     
     /**
+     * Injection point ids
+     */
+    private final Map<Integer, String> ids = new HashMap<Integer, String>();
+    
+    /**
      * Make a new CallbackInjector with the supplied args
      * 
      * @param info information about this injector
@@ -334,6 +342,34 @@ public class CallbackInjector extends Injector {
                 }
             }
         }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.code.Injector#addTargetNode(
+     *      org.spongepowered.asm.mixin.injection.struct.Target, java.util.List,
+     *      org.spongepowered.asm.lib.tree.AbstractInsnNode, java.util.Set)
+     */
+    @Override
+    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
+        InjectionNode injectionNode = target.injectionNodes.add(node);
+        
+        for (InjectionPoint ip : nominators) {
+            String id = ip.getId();
+            if (Strings.isNullOrEmpty(id)) {
+                continue;
+            }
+            
+            String existingId = this.ids.get(Integer.valueOf(injectionNode.getId()));
+            if (existingId != null && !existingId.equals(id)) {
+                Injector.logger.warn("Conflicting id for {} insn in {}, found id {} on {}, previously defined as {}", Bytecode.getOpcodeName(node),
+                        target.toString(), id, this.info, existingId);
+                break;
+            }
+            
+            this.ids.put(Integer.valueOf(injectionNode.getId()), id);
+        }
+        
+        myNodes.add(injectionNode);
     }
 
     /* (non-Javadoc)
@@ -442,7 +478,7 @@ public class CallbackInjector extends Injector {
      * @return generated message
      */
     private String generateBadLVTMessage(final Callback callback) {
-        int position = callback.target.method.instructions.indexOf(callback.node);
+        int position = callback.target.indexOf(callback.node);
         List<String> expected = CallbackInjector.summariseLocals(this.methodNode.desc, callback.target.arguments.length + 1);
         List<String> found = CallbackInjector.summariseLocals(callback.getDescriptorWithAllLocals(), callback.frameSize);
         String message = String.format("LVT in %s has incompatible changes at opcode %d in callback %s.\nExpected: %s\n   Found: %s",
@@ -488,7 +524,8 @@ public class CallbackInjector extends Injector {
         printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
         printer.kv("Initial Frame Size", callback.frameSize);
         printer.kv("Callback Name", this.methodNode.name);
-        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(), Bytecode.getOpcodeName(callback.node.getOpcode()));
+        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(),
+                Bytecode.getOpcodeName(callback.node.getCurrentTarget().getOpcode()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
             printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");
@@ -496,7 +533,7 @@ public class CallbackInjector extends Injector {
                 String marker = l == callback.frameSize ? ">" : " ";
                 if (callback.locals[l] != null) {
                     printer.add("%s [%3d]  %20s  %-50s %s", marker, l, SignaturePrinter.getTypeName(callback.localTypes[l], false),
-                            callback.locals[l].name, l >= callback.frameSize ? "<capture>" : "");
+                            CallbackInjector.meltSnowman(l, callback.locals[l].name), l >= callback.frameSize ? "<capture>" : "");
                 } else {
                     boolean isTop = l > 0 && callback.localTypes[l - 1] != null && callback.localTypes[l - 1].getSize() > 1;
                     printer.add("%s [%3d]  %20s", marker, l, isTop ? "<top>" : "-");
@@ -605,7 +642,9 @@ public class CallbackInjector extends Injector {
      * @return Identifier to use
      */
     private String getIdentifier(Callback callback) {
-        return Strings.isNullOrEmpty(this.identifier) ? callback.target.method.name : this.identifier;
+        String baseId = Strings.isNullOrEmpty(this.identifier) ? callback.target.method.name : this.identifier;
+        String locationId = this.ids.get(Integer.valueOf(callback.node.getId()));
+        return baseId + (Strings.isNullOrEmpty(locationId) ? "" : ":" + locationId);
     }
 
     /**
@@ -680,4 +719,8 @@ public class CallbackInjector extends Injector {
         return list;
     }
 
+    static String meltSnowman(int index, String varName) {
+        return varName != null && Constants.UNICODE_SNOWMAN == varName.charAt(0) ? "var" + index : varName;
+    }
+    
 }

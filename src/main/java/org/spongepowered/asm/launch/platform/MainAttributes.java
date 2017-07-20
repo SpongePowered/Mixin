@@ -33,6 +33,8 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import org.apache.commons.io.IOUtils;
+
 /**
  * "Main" attribute cache for a URI container, mainly to avoid constantly
  * opening jar files just to read odd values out of the manifest.
@@ -76,13 +78,7 @@ final class MainAttributes {
         } catch (IOException ex) {
             // be quiet checkstyle
         } finally {
-            if (jarFile != null) {
-                try {
-                    jarFile.close();
-                } catch (IOException ex) {
-                    // this could be an issue later on :(
-                }
-            }
+            IOUtils.closeQuietly(jarFile);
         }
         return new Attributes();
     }

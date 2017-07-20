@@ -246,6 +246,12 @@ public final class ClassInfo extends TreeInfo {
         private String currentName;
         
         /**
+         * Current descriptor of the member, may be different from
+         * {@link #memberDesc} if the member has been remapped
+         */
+        private String currentDesc;
+        
+        /**
          * True if this member is decorated with {@link Final} 
          */
         private boolean decoratedFinal;
@@ -263,6 +269,7 @@ public final class ClassInfo extends TreeInfo {
         protected Member(Member member) {
             this(member.type, member.memberName, member.memberDesc, member.modifiers, member.isInjected);
             this.currentName = member.currentName;
+            this.currentDesc = member.currentDesc;
             this.unique = member.unique;
         }
 
@@ -276,6 +283,7 @@ public final class ClassInfo extends TreeInfo {
             this.memberDesc = desc;
             this.isInjected = injected;
             this.currentName = name;
+            this.currentDesc = desc;
             this.modifiers = access;
         }
 
@@ -287,18 +295,26 @@ public final class ClassInfo extends TreeInfo {
             return this.currentName;
         }
 
-        public String getDesc() {
+        public String getOriginalDesc() {
             return this.memberDesc;
         }
 
+        public String getDesc() {
+            return this.currentDesc;
+        }
+        
         public boolean isInjected() {
             return this.isInjected;
         }
 
         public boolean isRenamed() {
-            return this.currentName != this.memberName;
+            return !this.currentName.equals(this.memberName);
         }
 
+        public boolean isRemapped() {
+            return !this.currentDesc.equals(this.memberDesc);
+        }
+        
         public boolean isPrivate() {
             return (this.modifiers & Opcodes.ACC_PRIVATE) != 0;
         }
@@ -364,11 +380,15 @@ public final class ClassInfo extends TreeInfo {
             this.currentName = name;
             return name;
         }
+        
+        public String remapTo(String desc) {
+            this.currentDesc = desc;
+            return desc;
+        }
 
         public boolean equals(String name, String desc) {
-            return (this.memberName.equals(name)
-                    || this.currentName.equals(name))
-                    && this.memberDesc.equals(desc);
+            return (this.memberName.equals(name) || this.currentName.equals(name))
+                    && (this.memberDesc.equals(desc) || this.currentDesc.equals(desc));
         }
 
         @Override
@@ -378,9 +398,8 @@ public final class ClassInfo extends TreeInfo {
             }
 
             Member other = (Member)obj;
-            return (other.memberName.equals(this.memberName)
-                    || other.currentName.equals(this.currentName))
-                    && other.memberDesc.equals(this.memberDesc);
+            return (other.memberName.equals(this.memberName) || other.currentName.equals(this.currentName))
+                    && (other.memberDesc.equals(this.memberDesc) || other.currentDesc.equals(this.currentDesc));
         }
 
         @Override
@@ -396,6 +415,7 @@ public final class ClassInfo extends TreeInfo {
         protected String getDisplayFormat() {
             return "%s%s";
         }
+        
     }
 
     /**
@@ -709,20 +729,20 @@ public final class ClassInfo extends TreeInfo {
 
         boolean isProbablyStatic = true;
         String outerName = classNode.outerClass;
-        if (outerName == null) {
-            for (FieldNode field : classNode.fields) {
-                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
-                    if (field.name.startsWith("this$")) {
-                        isProbablyStatic = false;
+        for (FieldNode field : classNode.fields) {
+            if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
+                if (field.name.startsWith("this$")) {
+                    isProbablyStatic = false;
+                    if (outerName == null) {
                         outerName = field.desc;
-                        if (outerName.startsWith("L")) {
+                        if (outerName != null && outerName.startsWith("L")) {
                             outerName = outerName.substring(1, outerName.length() - 1);
                         }
                     }
                 }
-
-                this.fields.add(new Field(field, this.isMixin));
             }
+
+            this.fields.add(new Field(field, this.isMixin));
         }
 
         this.isProbablyStatic = isProbablyStatic;
@@ -1013,7 +1033,7 @@ public final class ClassInfo extends TreeInfo {
      *      anywhere
      */
     public boolean hasSuperClass(ClassInfo superClass) {
-        return this.hasSuperClass(superClass, Traversal.NONE);
+        return this.hasSuperClass(superClass, Traversal.NONE, false);
     }
 
     /**
@@ -1025,11 +1045,24 @@ public final class ClassInfo extends TreeInfo {
      *      anywhere
      */
     public boolean hasSuperClass(ClassInfo superClass, Traversal traversal) {
+        return this.hasSuperClass(superClass, traversal, false);
+    }
+    
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     *
+     * @param superClass Superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @param includeInterfaces True to include interfaces in the lookup
+     * @return true if the specified class appears in the class's hierarchy
+     *      anywhere
+     */
+    public boolean hasSuperClass(ClassInfo superClass, Traversal traversal, boolean includeInterfaces) {
         if (ClassInfo.OBJECT == superClass) {
             return true;
         }
-
-        return this.findSuperClass(superClass.name, traversal) != null;
+        
+        return this.findSuperClass(superClass.name, traversal, includeInterfaces) != null;
     }
 
     /**
@@ -1052,26 +1085,45 @@ public final class ClassInfo extends TreeInfo {
      * @return Matched superclass or null if not found
      */
     public ClassInfo findSuperClass(String superClass, Traversal traversal) {
+        return this.findSuperClass(superClass, traversal, false, new HashSet<String>());
+    }
+    
+    /**
+     * Search for the specified superclass in this class's hierarchy. If found
+     * returns the ClassInfo, otherwise returns null
+     *
+     * @param superClass Superclass name to search for
+     * @param traversal Traversal type to allow during this lookup
+     * @param includeInterfaces True to include interfaces in the lookup
+     * @return Matched superclass or null if not found
+     */
+    public ClassInfo findSuperClass(String superClass, Traversal traversal, boolean includeInterfaces) {
         if (ClassInfo.OBJECT.name == superClass) {
             return null;
         }
         
-        return this.findSuperClass(superClass, traversal, new HashSet<String>());
+        return this.findSuperClass(superClass, traversal, includeInterfaces, new HashSet<String>());
     }
     
-    private ClassInfo findSuperClass(String superClass, Traversal traversal, Set<String> traversed) {
+    private ClassInfo findSuperClass(String superClass, Traversal traversal, boolean includeInterfaces, Set<String> traversed) {
         ClassInfo superClassInfo = this.getSuperClass();
         if (superClassInfo != null) {
-            List<ClassInfo> targets = superClassInfo.getTargets();
-            for (ClassInfo superTarget : targets) {
+            for (ClassInfo superTarget : superClassInfo.getTargets()) {
                 if (superClass.equals(superTarget.getName())) {
                     return superClassInfo;
                 }
 
-                ClassInfo found = superTarget.findSuperClass(superClass, traversal.next(), traversed);
+                ClassInfo found = superTarget.findSuperClass(superClass, traversal.next(), includeInterfaces, traversed);
                 if (found != null) {
                     return found;
                 }
+            }
+        }
+        
+        if (includeInterfaces) {
+            ClassInfo iface = this.findInterface(superClass);
+            if (iface != null) {
+                return iface;
             }
         }
         
@@ -1086,13 +1138,27 @@ public final class ClassInfo extends TreeInfo {
                 if (superClass.equals(mixinClass.getName())) {
                     return mixinClass;
                 }
-                ClassInfo targetSuper = mixinClass.findSuperClass(superClass, Traversal.ALL, traversed);
+                ClassInfo targetSuper = mixinClass.findSuperClass(superClass, Traversal.ALL, includeInterfaces, traversed);
                 if (targetSuper != null) {
                     return targetSuper;
                 }
             }
         }
 
+        return null;
+    }
+
+    private ClassInfo findInterface(String superClass) {
+        for (String ifaceName : this.getInterfaces()) {
+            ClassInfo iface = ClassInfo.forName(ifaceName);
+            if (superClass.equals(ifaceName)) {
+                return iface;
+            }
+            ClassInfo superIface = iface.findInterface(superClass);
+            if (superIface != null) {
+                return superIface;
+            }
+        }
         return null;
     }
 
@@ -1627,4 +1693,110 @@ public final class ClassInfo extends TreeInfo {
         }
         return ClassInfo.forName(type.getClassName().replace('.', '/'));
     }
+
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass of
+     * classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    public static ClassInfo getCommonSuperClass(String type1, String type2) {
+        if (type1 == null || type2 == null) {
+            return ClassInfo.OBJECT;
+        }
+        return ClassInfo.getCommonSuperClass(ClassInfo.forName(type1), ClassInfo.forName(type2));
+    }
+    
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass of
+     * classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    public static ClassInfo getCommonSuperClass(org.spongepowered.asm.lib.Type type1, org.spongepowered.asm.lib.Type type2) {
+        if (type1 == null || type2 == null
+                || type1.getSort() != org.spongepowered.asm.lib.Type.OBJECT || type2.getSort() != org.spongepowered.asm.lib.Type.OBJECT) {
+            return ClassInfo.OBJECT;
+        }
+        return ClassInfo.getCommonSuperClass(ClassInfo.forType(type1), ClassInfo.forType(type2));
+    }
+
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass of
+     * classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    private static ClassInfo getCommonSuperClass(ClassInfo type1, ClassInfo type2) {
+        return ClassInfo.getCommonSuperClass(type1, type2, false);
+    }
+
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass of
+     * classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    public static ClassInfo getCommonSuperClassOrInterface(String type1, String type2) {
+        if (type1 == null || type2 == null) {
+            return ClassInfo.OBJECT;
+        }
+        return ClassInfo.getCommonSuperClassOrInterface(ClassInfo.forName(type1), ClassInfo.forName(type2));
+    }
+    
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass of
+     * classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    public static ClassInfo getCommonSuperClassOrInterface(org.spongepowered.asm.lib.Type type1, org.spongepowered.asm.lib.Type type2) {
+        if (type1 == null || type2 == null
+                || type1.getSort() != org.spongepowered.asm.lib.Type.OBJECT || type2.getSort() != org.spongepowered.asm.lib.Type.OBJECT) {
+            return ClassInfo.OBJECT;
+        }
+        return ClassInfo.getCommonSuperClassOrInterface(ClassInfo.forType(type1), ClassInfo.forType(type2));
+    }
+
+    /**
+     * ASM logic applied via ClassInfo, returns first common superclass or
+     * interface of classes specified by <tt>type1</tt> and <tt>type2</tt>.
+     * 
+     * @param type1 First type
+     * @param type2 Second type
+     * @return common superclass info
+     */
+    public static ClassInfo getCommonSuperClassOrInterface(ClassInfo type1, ClassInfo type2) {
+        return ClassInfo.getCommonSuperClass(type1, type2, true);
+    }
+
+    private static ClassInfo getCommonSuperClass(ClassInfo type1, ClassInfo type2, boolean includeInterfaces) {
+        if (type1.hasSuperClass(type2, Traversal.NONE, includeInterfaces)) {
+            return type2;
+        } else if (type2.hasSuperClass(type1, Traversal.NONE, includeInterfaces)) {
+            return type1;
+        } else if (type1.isInterface() || type2.isInterface()) {
+            return ClassInfo.OBJECT;
+        }
+        
+        do {
+            type1 = type1.getSuperClass();
+            if (type1 == null) {
+                return ClassInfo.OBJECT;
+            }
+        } while (!type2.hasSuperClass(type1, Traversal.NONE, includeInterfaces));
+        
+        return type1;
+    }
+
 }

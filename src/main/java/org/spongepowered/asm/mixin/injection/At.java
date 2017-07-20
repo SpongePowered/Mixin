@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.injection;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.points.*;
 
 /**
@@ -74,6 +75,19 @@ public @interface At {
     }
     
     /**
+     * The identifier for this injection point, can be retrieved via the
+     * {@link CallbackInfo#getId} accessor. If specified, the ID is appended to
+     * the value specified in the outer annotion. Eg. specifying "foo" for this
+     * attribute and "bar" for the <tt>Inject.{@link Inject#id}</tt> attribute
+     * will result in a combined id of <tt>"bar:foo"</tt>. Note that if no id
+     * is specified for the outer injector, the name of the calling method is
+     * used.
+     * 
+     * @return the injection point id to use
+     */
+    public String id() default "";
+
+    /**
      * <p>Type of {@link InjectionPoint} to use. Can be a built-in class or the
      * fully-qualified name of a custom class which extends
      * {@link InjectionPoint}.</p>
@@ -120,7 +134,11 @@ public @interface At {
     
     /**
      * If {@link #shift} is specified as {@link At.Shift#BY BY}, specifies the
-     * number of opcodes to shift by (negative numbers are allowed).
+     * number of opcodes to shift by (negative numbers are allowed). Note that
+     * values above <tt>3</tt> should be avoided and in general either replaced
+     * with a custom injection point or with sliced injection points. The
+     * warning/error threshold is defined by the config (with a hard limit on
+     * value of {@link InjectionPoint#MAX_ALLOWED_SHIFT_BY})
      * 
      * @return Amount of shift to apply for the {@link At.Shift#BY BY} shift
      */

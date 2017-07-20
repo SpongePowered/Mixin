@@ -54,6 +54,16 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
     public static class InjectionNode implements Comparable<InjectionNode> {
         
         /**
+         * Next unique id 
+         */
+        private static int nextId = 0;
+        
+        /**
+         * Injection node unique id
+         */
+        private final int id;
+        
+        /**
          * The original node targetted
          */
         private final AbstractInsnNode originalTarget;
@@ -77,6 +87,14 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          */
         public InjectionNode(AbstractInsnNode node) {
             this.currentTarget = this.originalTarget = node;
+            this.id = InjectionNode.nextId++;
+        }
+        
+        /**
+         * Get the unique id for this injector
+         */
+        public int getId() {
+            return this.id;
         }
         
         /**

@@ -22,32 +22,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.meta;
 
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassWriter;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * ClassWriter which resolves common superclasses using Mixin's metadata instead
- * of calling Class.forName
+ * Decoration annotation used by the mixin inner class generator to mark inner
+ * classes which have been generated from an existing inner class in a mixin 
  */
-public class MixinClassWriter extends ClassWriter {
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.CLASS)
+public @interface MixinInner {
 
-    public MixinClassWriter(int flags) {
-        super(flags);
-    }
-
-    public MixinClassWriter(ClassReader classReader, int flags) {
-        super(classReader, flags);
-    }
-
-    /* (non-Javadoc)
-     * @see org.objectweb.asm.ClassWriter#getCommonSuperClass(java.lang.String,
-     *      java.lang.String)
+    /**
+     * The mixin which owns the original inner class
      */
-    @Override
-    protected String getCommonSuperClass(final String type1, final String type2) {
-        return ClassInfo.getCommonSuperClass(type1, type2).getName();
-    }
-
+    public String mixin();
+    
+    /**
+     * The original name of the inner class
+     */
+    public String name();
+    
 }

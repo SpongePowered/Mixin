@@ -31,7 +31,6 @@ import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
@@ -159,7 +158,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     public ObfuscationData<MappingMethod> getObfMethod(MemberInfo method) {
-        return this.getRemappedMethod(method, Constants.CTOR.equals(method.name));
+        return this.getRemappedMethod(method, method.isConstructor());
     }
     
     @Override
@@ -191,7 +190,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     public ObfuscationData<MappingMethod> getObfMethod(MappingMethod method) {
-        return this.getRemappedMethod(method, Constants.CTOR.equals(method.getSimpleName()));
+        return this.getRemappedMethod(method, method.isConstructor());
     }
     
     @Override

@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
 
 /**
  * This annotation, when applied to a member method or field in a mixin,
- * indicates that the member <b>should never</b> overwrite a matching membver in
+ * indicates that the member <b>should never</b> overwrite a matching member in
  * the target class. This indicates that the member differs from the normal
  * "overlay-like" behaviour of mixins in general, and should only ever be
  * <em>added</em> to the target. For public fields, the annotation has no
@@ -48,7 +48,8 @@ import java.lang.annotation.Target;
  * <dl>
  *   <dt>public methods</dt>
  *   <dd>public methods marked with this annotation are <b>discarded</b> if a
- *   matching target exists. A <tt>warning</tt>-level message is generated.</dd>
+ *   matching target exists. Unless {@link #silent} is set to <tt>true</tt>, a
+ *   <tt>warning</tt>-level message is generated.</dd>
  *   <dt>private and protected methods</dt>
  *   <dd>non-public methods are <b>renamed</b> if a matching target method is
  *   found, this allows utility methods to be safely assigned meaningful names
@@ -68,5 +69,16 @@ import java.lang.annotation.Target;
 @Target({ ElementType.METHOD, ElementType.FIELD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Unique {
+    
+    /**
+     * If this annotation is applied to a public method in a mixin and a
+     * conflicting method is found in a target class, then a
+     * <tt>warning</tt>-level message is generated in the log. To suppress this
+     * message, set this value to <tt>true</tt>.
+     * 
+     * @return true to suppress warning message when a public method is
+     *      discarded
+     */
+    public boolean silent() default false;
 
 }

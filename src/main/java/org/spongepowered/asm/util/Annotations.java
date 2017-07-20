@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.util;
 
-import static com.google.common.base.Preconditions.*;
-
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +35,8 @@ import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Utility class for working with ASM annotations
@@ -351,7 +351,7 @@ public final class Annotations {
      */
     @SuppressWarnings("unchecked")
     public static <T> T getValue(AnnotationNode annotation, String key, Class<?> annotationClass) {
-        checkNotNull(annotationClass, "annotationClass cannot be null");
+        Preconditions.checkNotNull(annotationClass, "annotationClass cannot be null");
         T value = Annotations.getValue(annotation, key);
         if (value == null) {
             try {

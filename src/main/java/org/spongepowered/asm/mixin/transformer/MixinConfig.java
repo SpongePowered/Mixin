@@ -46,8 +46,10 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
@@ -78,6 +80,9 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         @SerializedName("injectionPoints")
         List<String> injectionPoints;
         
+        @SerializedName("maxShiftBy")
+        int maxShiftBy = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
+        
     }
     
     /**
@@ -87,6 +92,9 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         @SerializedName("conformVisibility")
         boolean conformAccessModifiers;
+        
+        @SerializedName("requireAnnotations")
+        boolean requireOverwriteAnnotations;
         
     }
     
@@ -390,6 +398,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
 
     private boolean checkVersion() throws MixinInitialisationError {
+        if (this.version == null) {
+            this.logger.error("Mixin config {} does not specify \"minVersion\" property", this.name);
+        }
+        
         VersionNumber minVersion = VersionNumber.parse(this.version);
         VersionNumber curVersion = VersionNumber.parse(this.env.getVersion());
         if (minVersion.compareTo(curVersion) > 0) {
@@ -655,6 +667,28 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     public boolean conformOverwriteVisibility() {
         return this.overwriteOptions.conformAccessModifiers;
+    }
+    
+    /**
+     * Get whether {@link Overwrite} annotations are required to enable
+     * overwrite behaviour for mixins in this config
+     * 
+     * @return true to require overwriting methods to be annotated
+     */
+    public boolean requireOverwriteAnnotations() {
+        return this.overwriteOptions.requireOverwriteAnnotations;
+    }
+    
+    /**
+     * Get the maximum allowed value of {@link At#by}. High values of shift can
+     * indicate very brittle injectors and in general should be replaced with
+     * slices. This value determines the warning/error threshold (behaviour
+     * determined by the environment) for the value of <tt>by</tt>.
+     * 
+     * @return defined shift warning threshold for this config
+     */
+    public int getMaxShiftByValue() {
+        return Math.min(Math.max(this.injectorOptions.maxShiftBy, 0), InjectionPoint.MAX_ALLOWED_SHIFT_BY);
     }
 
     // AMS - temp

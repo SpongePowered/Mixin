@@ -55,4 +55,5 @@ public @interface MixinMerged {
      * @return mixin priority
      */
     public int priority();
+    
 }

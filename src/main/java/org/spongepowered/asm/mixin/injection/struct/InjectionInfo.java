@@ -29,9 +29,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
@@ -127,6 +129,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     private int requiredCallbackCount = 0;
     
     /**
+     * Maximum number of callbacks allowed to be injected 
+     */
+    private int maxCallbackCount = Integer.MAX_VALUE;
+
+    /**
      * Actual number of injected callbacks
      */
     private int injectedCallbackCount = 0;
@@ -160,29 +167,33 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         String type = "@" + Bytecode.getSimpleName(this.annotation);
         List<AnnotationNode> injectionPoints = this.readInjectionPoints(type);
-        this.findMethods(this.parseTarget(type), type);
+        this.findMethods(this.parseTargets(type), type);
         this.parseInjectionPoints(injectionPoints);
         this.parseRequirements();
         this.injector = this.parseInjector(this.annotation);
     }
 
-    protected MemberInfo parseTarget(String type) {
-        String method = Annotations.<String>getValue(this.annotation, "method");
-        if (method == null) {
+    protected Set<MemberInfo> parseTargets(String type) {
+        List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
+        if (methods == null) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
         }
         
-        try {
-            MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
-            if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
-                throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
-                        + targetMember.owner + "', which is not supported");
+        Set<MemberInfo> members = new LinkedHashSet<MemberInfo>();
+        for (String method : methods) {
+            try {
+                MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
+                if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
+                    throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
+                            + targetMember.owner + "', which is not supported");
+                }
+                members.add(targetMember);
+            } catch (InvalidMemberDescriptorException ex) {
+                throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
+                        + method + "\"");
             }
-            return targetMember;
-        } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
-                    + method + "\"");
         }
+        return members;
     }
 
     protected List<AnnotationNode> readInjectionPoints(String type) {
@@ -210,6 +221,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             this.requiredCallbackCount = require.intValue();
         } else if (this.group.isDefault()) {
             this.requiredCallbackCount = this.mixin.getDefaultRequiredInjections();
+        }
+        
+        Integer allow = Annotations.<Integer>getValue(this.annotation, "allow");
+        if (allow != null) {
+            this.maxCallbackCount = Math.max(Math.max(this.requiredCallbackCount, 1), allow);
         }
     }
 
@@ -265,6 +281,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded",
                     this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
+        } else if (this.injectedCallbackCount > this.maxCallbackCount) {
+            throw new InjectionError(
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed",
+                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount));
         }
     }
     
@@ -353,29 +373,32 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     /**
      * Finds methods in the target class which match searchFor
      * 
-     * @param searchFor member info to search for
+     * @param searchFor members to search for
      * @param type annotation type
      */
-    private void findMethods(MemberInfo searchFor, String type) {
+    private void findMethods(Set<MemberInfo> searchFor, String type) {
         this.targets.clear();
-        int ordinal = 0;
-        
-        for (MethodNode target : this.classNode.methods) {
-            if (searchFor.matches(target.name, target.desc, ordinal)) {
-                boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
-                if (searchFor.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
-                    continue;
+
+        for (MemberInfo member : searchFor) {
+            int ordinal = 0;
+            for (MethodNode target : this.classNode.methods) {
+                if (member.matches(target.name, target.desc, ordinal)) {
+                    boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
+                    if (member.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
+                        continue;
+                    }
+                    
+                    this.checkTarget(target);
+                    
+                    this.targets.add(target);
+                    ordinal++;
                 }
-                
-                this.checkTarget(target);
-                
-                this.targets.add(target);
-                ordinal++;
             }
         }
         
         if (this.targets.size() == 0) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find '" + searchFor.name + "'");
+            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find any targets matching "
+                    + InjectionInfo.namesOf(searchFor));
         }
     }
 
@@ -485,6 +508,29 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 
     static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
         return String.format("%s->@%s::%s%s", mixin.toString(), Bytecode.getSimpleName(annotation), method.name, method.desc);
+    }
+
+    /**
+     * Print the names of the specified members as a human-readable list 
+     * 
+     * @param members members to print
+     * @return human-readable list of member names
+     */
+    private static String namesOf(Collection<MemberInfo> members) {
+        int index = 0, count = members.size();
+        StringBuilder sb = new StringBuilder();
+        for (MemberInfo member : members) {
+            if (index > 0) {
+                if (index == (count - 1)) {
+                    sb.append(" or ");
+                } else {
+                    sb.append(", ");
+                }
+            }
+            sb.append('\'').append(member.name).append('\'');
+            index++;
+        }
+        return sb.toString();
     }
 
 }

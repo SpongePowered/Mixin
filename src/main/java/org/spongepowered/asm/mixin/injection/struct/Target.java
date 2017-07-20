@@ -35,6 +35,7 @@ import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionNodes;
+import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
@@ -319,6 +320,16 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         }
         return this.toString().compareTo(o.toString());
     }
+    
+    /**
+     * Return the index of the specified instruction in this instruction list
+     * 
+     * @param node instruction to locate, must exist in the target
+     * @return opcode index
+     */
+    public int indexOf(InjectionNode node) {
+        return this.insns.indexOf(node.getCurrentTarget());
+    }
 
     /**
      * Return the index of the specified instruction in this instruction list
@@ -382,6 +393,26 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         }
 
         return Bytecode.findSuperInit(this.method, ClassInfo.forName(this.classNode.name).getSuperName());
+    }
+    
+    /**
+     * Insert the supplied instructions before the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insns Instructions to insert
+     */
+    public void insertBefore(InjectionNode location, final InsnList insns) {
+        this.insns.insertBefore(location.getCurrentTarget(), insns);
+    }
+    
+    /**
+     * Insert the supplied instructions before the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insns Instructions to insert
+     */
+    public void insertBefore(AbstractInsnNode location, final InsnList insns) {
+        this.insns.insertBefore(location, insns);
     }
     
     /**

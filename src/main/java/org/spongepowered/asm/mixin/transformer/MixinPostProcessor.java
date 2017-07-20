@@ -30,11 +30,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.ClassVisitor;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.lib.FieldVisitor;
+import org.spongepowered.asm.lib.MethodVisitor;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
@@ -50,7 +53,9 @@ import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
- * TODO Description for MixinPostProcessor
+ * Performs post-processing tasks required for certain classes which pass
+ * through the mixin transformer, such as transforming synthetic inner classes
+ * and populating accessor methods in accessor mixins.
  */
 class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListener {
     
@@ -138,26 +143,37 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
      * new home in the target class
      */
     private byte[] processSyntheticInner(byte[] bytes) {
-        ClassNode classNode = this.readClass(bytes, true);
+        ClassReader cr = new ClassReader(bytes);
+        ClassWriter cw = new MixinClassWriter(cr, 0);
 
-        // Make the class public
-        classNode.access |= Opcodes.ACC_PUBLIC;
-        
-        // Make package-private fields public
-        for (FieldNode field : classNode.fields) {
-            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                field.access |= Opcodes.ACC_PUBLIC;
+        ClassVisitor visibilityVisitor = new ClassVisitor(Opcodes.ASM5, cw) {
+            
+            @Override
+            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+                super.visit(version, access | Opcodes.ACC_PUBLIC, name, signature, superName, interfaces);
             }
-        }
-        
-        // Make package-private methods public
-        for (MethodNode method : classNode.methods) {
-            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                method.access |= Opcodes.ACC_PUBLIC;
+            
+            
+            @Override
+            public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+                if ((access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                    access |= Opcodes.ACC_PUBLIC;
+                }
+                return super.visitField(access, name, desc, signature, value);
             }
-        }
+            
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                if ((access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                    access |= Opcodes.ACC_PUBLIC;
+                }
+                return super.visitMethod(access, name, desc, signature, exceptions);
+            }
+            
+        };
         
-        return this.writeClass(classNode);
+        cr.accept(visibilityVisitor, ClassReader.EXPAND_FRAMES);
+        return cw.toByteArray();
     }
 
     private byte[] processAccessor(byte[] bytes, MixinInfo mixin) {

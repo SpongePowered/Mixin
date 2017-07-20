@@ -329,7 +329,9 @@ public class AccessorInfo extends SpecialMethodInfo {
      * @return generated accessor method
      */
     public MethodNode generate() {
-        return this.type.getGenerator(this).generate();
+        MethodNode generatedAccessor = this.type.getGenerator(this).generate();
+        Bytecode.mergeAnnotations(this.method, generatedAccessor);
+        return generatedAccessor;
     }
 
     private FieldNode findTargetField() {

@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection.code;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,7 +62,7 @@ public abstract class Injector {
     /**
      * A nominated target node
      */
-    class TargetNode {
+    public static final class TargetNode {
         
         final AbstractInsnNode node;
         
@@ -70,6 +71,29 @@ public abstract class Injector {
         TargetNode(AbstractInsnNode node) {
             this.node = node;
         }
+        
+        public AbstractInsnNode getNode() {
+            return this.node;
+        }
+        
+        public Set<InjectionPoint> getNominators() {
+            return Collections.<InjectionPoint>unmodifiableSet(this.nominators);
+        }
+        
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null || obj.getClass() != TargetNode.class) {
+                return false;
+            }
+            
+            return ((TargetNode)obj).node == this.node;
+        }
+        
+        @Override
+        public int hashCode() {
+            return this.node.hashCode();
+        }
+        
     }
     
     /**

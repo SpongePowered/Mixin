@@ -241,7 +241,8 @@ public abstract class MemberRef {
             if (tag == 0) {
                 throw new MixinTransformerError("Invalid opcode " + Bytecode.getOpcodeName(opcode) + " for method handle " + this.handle + ".");
             }
-            this.handle = new org.spongepowered.asm.lib.Handle(tag, this.handle.getOwner(), this.handle.getName(), this.handle.getDesc());
+            boolean itf = tag == Opcodes.H_INVOKEINTERFACE;
+            this.handle = new org.spongepowered.asm.lib.Handle(tag, this.handle.getOwner(), this.handle.getName(), this.handle.getDesc(), itf);
         }
 
         @Override
@@ -251,7 +252,8 @@ public abstract class MemberRef {
 
         @Override
         public void setOwner(String owner) {
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc());
+            boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc(), itf);
         }
 
         @Override
@@ -261,7 +263,8 @@ public abstract class MemberRef {
 
         @Override
         public void setName(String name) {
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), name, this.handle.getDesc());
+            boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), name, this.handle.getDesc(), itf);
         }
 
         @Override
@@ -271,7 +274,8 @@ public abstract class MemberRef {
 
         @Override
         public void setDesc(String desc) {
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc);
+            boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
+            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc, itf);
         }
     }
     

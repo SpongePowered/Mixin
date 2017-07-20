@@ -25,8 +25,16 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +46,7 @@ import org.spongepowered.asm.lib.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
@@ -62,6 +71,9 @@ import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
+
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 
 /**
  * This object keeps track of data for applying a mixin to a specific target
@@ -102,6 +114,11 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * Target ClassInfo
      */
     private final ClassInfo targetClassInfo;
+    
+    /**
+     * 
+     */
+    private final BiMap<String, String> innerClasses = HashBiMap.<String, String>create();
 
     /**
      * Shadow method list
@@ -171,6 +188,11 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.detachedSuper = !this.classNode.superName.equals(this.getTarget().getClassNode().superName);
         this.sessionId = context.getSessionId();
         this.requireVersion(classNode.version);
+        
+        InnerClassGenerator icg = InnerClassGenerator.getInstance();
+        for (String innerClass : this.mixin.getInnerClasses()) {
+            this.innerClasses.put(innerClass, icg.registerInnerClass(this.mixin, innerClass, this));
+        }
     }
     
     /**
@@ -203,6 +225,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     void addMixinMethod(MethodNode method) {
+        Annotations.setVisible(method, MixinMerged.class, "mixin", this.getClassName());
         this.getTarget().addMixinMethod(method);
     }
     
@@ -291,6 +314,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return the reference of the target class (only valid on single-target
      *      mixins)
      */
+    @Override
     public String getTargetClassRef() {
         return this.getTarget().getClassRef();
     }
@@ -368,12 +392,30 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     /**
+     * Get the max shift "by" value for the parent config 
+     * 
+     * @return max shift by value
+     */
+    public int getMaxShiftByValue() {
+        return this.mixin.getParent().getMaxShiftByValue();
+    }
+    
+    /**
      * Get the injector groups for this target
      * 
      * @return injector groups
      */
     public InjectorGroupInfo.Map getInjectorGroups() {
         return this.injectorGroups;
+    }
+    
+    /**
+     * Get whether overwrite annotations are required for methods in this mixin
+     * 
+     * @return true if overwrite methods must be annoated with {@link Overwrite}
+     */
+    public boolean requireOverwriteAnnotations() {
+        return this.mixin.getParent().requireOverwriteAnnotations();
     }
 
     /**
@@ -396,7 +438,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         
         return type;
     }
-
+    
     /**
      * Handles "re-parenting" the method supplied, changes all references to the
      * mixin class to refer to the target class (for field accesses and method
@@ -408,6 +450,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     public void transformMethod(MethodNode method) {
         this.validateMethod(method);
         this.transformDescriptor(method);
+        this.transformLVT(method);
 
         // Offset line numbers per the stratum
         this.stratum.applyOffset(method);
@@ -452,6 +495,25 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
 
     /**
+     * Transform the Local Variable Table (LVT) for the specified mixin method.
+     * 
+     * @param method Method node to transform
+     */
+    private void transformLVT(MethodNode method) {
+        if (method.localVariables == null) {
+            return;
+        }
+        
+        for (LocalVariableNode local : method.localVariables) {
+            if (local == null || local.desc == null) {
+                continue;
+            }
+
+            local.desc = this.transformSingleDescriptor(Type.getType(local.desc));
+        }
+    }
+
+    /**
      * Transforms a method invocation/reference in the method. Updates static
      * and dynamic bindings.
      * 
@@ -469,6 +531,9 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
                 methodRef.setName(md.getName());
             }
             this.upgradeMethodRef(method, methodRef, md);
+        } else if (this.innerClasses.containsKey(methodRef.getOwner())) {
+            methodRef.setOwner(this.innerClasses.get(methodRef.getOwner()));
+            methodRef.setDesc(this.transformMethodDescriptor(methodRef.getDesc()));
         } else if (this.detachedSuper || this.inheritsFromMixin) {
             if (methodRef.getOpcode() == Opcodes.INVOKESPECIAL) {
                 this.updateStaticBinding(method, methodRef);
@@ -576,6 +641,11 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         
         if (typeInsn.desc.equals(this.getClassRef())) {
             typeInsn.desc = this.getTarget().getClassRef();
+        } else {
+            String newName = this.innerClasses.get(typeInsn.desc);
+            if (newName != null) {
+                typeInsn.desc = newName;
+            }
         }
         
         this.transformDescriptor(typeInsn);
@@ -745,7 +815,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param field Field node to transform
      */
     public void transformDescriptor(FieldNode field) {
-        if (!this.inheritsFromMixin) {
+        if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
         field.desc = this.transformSingleDescriptor(field.desc, false);
@@ -757,7 +827,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param method Method node to transform
      */
     public void transformDescriptor(MethodNode method) {
-        if (!this.inheritsFromMixin) {
+        if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
         method.desc = this.transformMethodDescriptor(method.desc);
@@ -770,7 +840,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param member Reference to the method or field
      */
     public void transformDescriptor(MemberRef member) {
-        if (!this.inheritsFromMixin) {
+        if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
         if (member.isField()) {
@@ -786,7 +856,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param typeInsn Type instruction node to transform
      */
     public void transformDescriptor(TypeInsnNode typeInsn) {
-        if (!this.inheritsFromMixin) {
+        if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
         typeInsn.desc = this.transformSingleDescriptor(typeInsn.desc, true);
@@ -819,6 +889,15 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         }
         
         if (!isObject) {
+            return desc;
+        }
+        
+        String innerClassName = this.innerClasses.get(type);
+        if (innerClassName != null) {
+            return desc.replace(type, innerClassName);
+        }
+        
+        if (this.innerClasses.inverse().containsKey(type)) {
             return desc;
         }
         
