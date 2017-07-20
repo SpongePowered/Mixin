@@ -519,5 +519,37 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">July 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.6.15</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add support for multiple constants in <tt>ModifyConstant</tt></li>
+          <li>Add <tt>CONSTANT</tt> as general-purpose injection point</li>
+          <li>Add support for redirecting array length access in field
+          redirectors</li>
+        </ul>
+      </td>
+      <td valign="top">July 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.7</b></td>
+      <td valign="top">
+        <ul>
+          <li>All official binaries are now signed</li>
+          <li>Upgrade to ASM 5.2</li>
+          <li>Add support for inner classes in Mixins</li>
+          <li>Injectors can now have multiple explicit targets</li>
+          <li><tt>&#064;At</tt> annotations can now have their own <tt>id</tt></li>
+          <li>Add support for using <tt>&#064;Overwrite</tt> on non-obfuscated
+          methods as a way of verifying that an overwrite target exists</li>
+          <li>Improve support for synthetic bridges, detect conflicting bridge
+          methods</li>
+          <li>Detect and warn of excessive At.Shift.BY values</li>
+          <li><tt>ModifyConstant</tt> can now support multiple slices</li>
+          <li>Add <tt>allow</tt> to injectors to detect over-injection</li>
+        </ul>
+      </td>
+      <td valign="top">July 2017</td>
+    </tr>
   </tbody>
 </table>
