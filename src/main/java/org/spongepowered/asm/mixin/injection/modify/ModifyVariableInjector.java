@@ -81,7 +81,7 @@ public class ModifyVariableInjector extends Injector {
 
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
-            throw new InvalidInjectionException(this.context, "STORE injection point must be used in conjunction with @ModifyVariable");
+            throw new InvalidInjectionException(this.context, this.getAtCode() + " injection point must be used in conjunction with @ModifyVariable");
         }
 
         abstract boolean find(Target target, Collection<AbstractInsnNode> nodes);

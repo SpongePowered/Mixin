@@ -669,7 +669,7 @@ public abstract class InjectionPoint {
         throw new InvalidInjectionException(context, message);
     }
     
-    private String getAtCode() {
+    protected String getAtCode() {
         AtCode code = this.getClass().<AtCode>getAnnotation(AtCode.class);
         return code == null ? this.getClass().getName() : code.value(); 
     }
