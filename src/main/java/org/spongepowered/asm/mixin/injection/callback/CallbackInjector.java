@@ -427,7 +427,7 @@ public class CallbackInjector extends Injector {
                     switch (this.localCapture) {
                         case CAPTURE_FAILEXCEPTION:
                             Injector.logger.error("Injection error: {}", message);
-                            callbackMethod = this.generateErrorMethod(callback, "org/spongepowered/asm/mixin/injection/InjectionError", message);
+                            callbackMethod = this.generateErrorMethod(callback, "org/spongepowered/asm/mixin/injection/throwables/InjectionError", message);
                             break;
                         case CAPTURE_FAILSOFT:
                             Injector.logger.warn("Injection warning: {}", message);
