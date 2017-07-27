@@ -67,7 +67,7 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
 
     @Override
     public MethodNode generate() {
-        int size = Bytecode.getArgsSize(this.argTypes) + this.returnType.getSize();
+        int size = Bytecode.getArgsSize(this.argTypes) + this.returnType.getSize() + (this.isInstanceMethod ? 1 : 0);
         MethodNode method = this.createMethod(size, size);
         if (this.isInstanceMethod) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
