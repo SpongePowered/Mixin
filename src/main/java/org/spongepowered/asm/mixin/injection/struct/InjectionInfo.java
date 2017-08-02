@@ -273,14 +273,15 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             this.classNode.methods.add(method);
         }
         
+        String refMapStatus = this.mixin.getReferenceMapper().getStatus();
         if ((MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
-                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded",
-                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount));
+                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. %s", this.getDescription(),
+                            this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount, refMapStatus));
         } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
             throw new InjectionError(
-                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded",
-                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount));
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. %s", this.getDescription(),
+                            this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount, refMapStatus));
         } else if (this.injectedCallbackCount > this.maxCallbackCount) {
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed",
@@ -398,7 +399,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         if (this.targets.size() == 0) {
             throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find any targets matching "
-                    + InjectionInfo.namesOf(searchFor));
+                    + InjectionInfo.namesOf(searchFor) + ". " + this.mixin.getReferenceMapper().getStatus());
         }
     }
 

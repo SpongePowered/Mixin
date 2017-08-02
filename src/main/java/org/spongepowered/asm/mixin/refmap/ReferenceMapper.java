@@ -144,7 +144,7 @@ public final class ReferenceMapper implements Serializable {
      * @return status message
      */
     public String getStatus() {
-        return this.isDefault() ? "No refMap loaded" : "Using refmap " + this.getResourceName();
+        return this.isDefault() ? "No refMap loaded." : "Using refmap " + this.getResourceName();
     }
 
     /**
