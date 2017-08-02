@@ -167,7 +167,7 @@ public class RedirectInjector extends InvokeInjector {
 
     @Override
     protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn, Set<InjectionPoint> nominators) {
-        InjectionNode node = target.injectionNodes.get(insn);
+        InjectionNode node = target.getInjectionNode(insn);
         ConstructorRedirectData ctorData = null;
         int fuzz = BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT;
         int opcode = 0;
@@ -197,7 +197,7 @@ public class RedirectInjector extends InvokeInjector {
             }
         }
         
-        InjectionNode targetNode = target.injectionNodes.add(insn);
+        InjectionNode targetNode = target.addInjectionNode(insn);
         targetNode.decorate(Meta.KEY, this.meta);
         targetNode.decorate(RedirectInjector.KEY_NOMINATORS, nominators);
         if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
@@ -307,7 +307,7 @@ public class RedirectInjector extends InvokeInjector {
             int argSize = Bytecode.getArgsSize(target.arguments);
             extraLocals += argSize;
             extraStack += argSize;
-            argMap = Ints.concat(argMap, target.argIndices);
+            argMap = Ints.concat(argMap, target.getArgIndices());
         }
         AbstractInsnNode insn = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
         target.replaceNode(methodNode, insn, insns);
@@ -402,7 +402,7 @@ public class RedirectInjector extends InvokeInjector {
         
         InsnList invokeInsns = new InsnList();
         if (withArgs) {
-            this.pushArgs(target.arguments, invokeInsns, target.argIndices, 0, target.arguments.length);
+            this.pushArgs(target.arguments, invokeInsns, target.getArgIndices(), 0, target.arguments.length);
             target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         target.replaceNode(varNode, this.invokeHandler(invokeInsns), invokeInsns);
@@ -449,7 +449,7 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
             target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
@@ -481,7 +481,7 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
             target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         
@@ -554,7 +554,7 @@ public class RedirectInjector extends InvokeInjector {
         
         InsnList insns = new InsnList();
         if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.argIndices, 0, target.arguments.length);
+            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
             target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         

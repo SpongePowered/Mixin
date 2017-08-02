@@ -121,7 +121,7 @@ public class ModifyConstantInjector extends RedirectInjector {
         }
         
         if (withArgs) {
-            this.pushArgs(target.arguments, after, target.argIndices, 0, target.arguments.length);
+            this.pushArgs(target.arguments, after, target.getArgIndices(), 0, target.arguments.length);
             target.addToStack(Bytecode.getArgsSize(target.arguments));
         }
         

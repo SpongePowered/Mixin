@@ -24,13 +24,18 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
+import org.spongepowered.asm.lib.Label;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.InsnList;
+import org.spongepowered.asm.lib.tree.LabelNode;
+import org.spongepowered.asm.lib.tree.LocalVariableNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.TypeInsnNode;
@@ -78,29 +83,9 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     public final Type[] arguments;
     
     /**
-     * Method argument slots 
-     */
-    public final int[] argIndices;
-    
-    /**
      * Return type computed from the method descriptor 
      */
     public final Type returnType;
-    
-    /**
-     * Callback method descriptor based on this target 
-     */
-    public final String callbackDescriptor;
-    
-    /**
-     * Callback info class
-     */
-    public final String callbackInfoClass;
-    
-    /**
-     * Nodes targetted by injectors 
-     */
-    public final InjectionNodes injectionNodes = new InjectionNodes();
 
     /**
      * Method's (original) MAXS 
@@ -111,6 +96,36 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * Method's original max locals 
      */
     private final int maxLocals;
+    
+    /**
+     * Nodes targetted by injectors 
+     */
+    private final InjectionNodes injectionNodes = new InjectionNodes();
+
+    /**
+     * Callback info class
+     */
+    private String callbackInfoClass;
+    
+    /**
+     * Callback method descriptor based on this target 
+     */
+    private String callbackDescriptor;
+    
+    /**
+     * Method argument slots 
+     */
+    private int[] argIndices;
+
+    /**
+     * Local variables used for argmap slots
+     */
+    private List<Integer> argMapVars;
+    
+    /**
+     * Labels for LVT ranges, generated as needed 
+     */
+    private LabelNode start, end;
 
     /**
      * Make a new Target for the supplied method
@@ -124,13 +139,32 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.isStatic = Bytecode.methodIsStatic(method);
         this.isCtor = method.name.equals(Constants.CTOR);
         this.arguments = Type.getArgumentTypes(method.desc);
-        this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
 
         this.returnType = Type.getReturnType(method.desc);
         this.maxStack = method.maxStack;
         this.maxLocals = method.maxLocals;
-        this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
-        this.callbackDescriptor = String.format("(%sL%s;)V", method.desc.substring(1, method.desc.indexOf(')')), this.callbackInfoClass);
+    }
+    
+    /**
+     * Add an injection node to this target if it does not already exist,
+     * returns the existing node if it exists
+     * 
+     * @param node Instruction node to add
+     * @return wrapper for the specified node
+     */
+    public InjectionNode addInjectionNode(AbstractInsnNode node) {
+        return this.injectionNodes.add(node);
+    }
+    
+    /**
+     * Get an injection node from this collection if it already exists, returns
+     * null if the node is not tracked
+     * 
+     * @param node instruction node
+     * @return wrapper node or null if not tracked
+     */
+    public InjectionNode getInjectionNode(AbstractInsnNode node) {
+        return this.injectionNodes.get(node);
     }
     
     /**
@@ -244,13 +278,71 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      *      of the supplied args array
      */
     public int[] generateArgMap(Type[] args, int start) {
-        int local = this.maxLocals;
+        if (this.argMapVars == null) {
+            this.argMapVars = new ArrayList<Integer>();
+        }
+        
         int[] argMap = new int[args.length];
-        for (int arg = start; arg < args.length; arg++) {
-            argMap[arg] = local;
-            local += args[arg].getSize();
+        for (int arg = start, index = 0; arg < args.length; arg++) {
+            int size = args[arg].getSize();
+            argMap[arg] = this.allocateArgMapLocal(index, size);
+            index += size;
         }
         return argMap;
+    }
+
+    /**
+     * Allocates a local variable to be used for argmap. Since argmaps do not
+     * overlap we can safely reuse local variables allocated for this purpose.
+     * We do however need to deal with expanding the argmap allocation when
+     * necessary, which is complicated slightly by the fact that some variables
+     * occupy more than one local slot.
+     * 
+     * @param index Argmap index
+     * @param size Size of variable
+     * @return local offset to use
+     */
+    private int allocateArgMapLocal(int index, int size) {
+        // Allocate extra space if we've reached the end
+        if (index >= this.argMapVars.size()) {
+            int base = this.allocateLocals(size);
+            for (int offset = 0; offset < size; offset++) {
+                this.argMapVars.add(Integer.valueOf(base + offset));
+            }
+            return base;
+        }
+
+        int local = this.argMapVars.get(index);
+        
+        // Allocate extra space if the variable is oversize
+        if (size > 1 && index + size > this.argMapVars.size()) {
+            int nextLocal = this.allocateLocals(1);
+            if (nextLocal == local + 1) {
+                // Next allocated was contiguous, so we can continue
+                this.argMapVars.add(Integer.valueOf(nextLocal));
+                return local;
+            }
+            
+            // Next allocated was not contiguous, allocate a new local slot so
+            // that indexes are contiguous
+            this.argMapVars.set(index, Integer.valueOf(nextLocal));
+            this.argMapVars.add(Integer.valueOf(this.allocateLocals(1)));
+            return nextLocal;
+        }
+
+        return local;
+    }
+    
+    /**
+     * Get the argument indices for this target, calculated on first use
+     * 
+     * @return argument indices for this target
+     */
+    public int[] getArgIndices() {
+        if (this.argIndices == null) {
+            this.argIndices = this.calcArgIndices(this.isStatic ? 0 : 1);
+        }
+        return this.argIndices;
     }
 
     private int[] calcArgIndices(int local) {
@@ -260,6 +352,19 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
             local += this.arguments[arg].getSize();
         }
         return argIndices;
+    }
+    
+    /**
+     * Get the CallbackInfo class used for this target, based on the target
+     * return type
+     * 
+     * @return CallbackInfo class name
+     */
+    public String getCallbackInfoClass() {
+        if (this.callbackInfoClass == null) {
+            this.callbackInfoClass = CallbackInfo.getCallInfoClassName(this.returnType);
+        }
+        return this.callbackInfoClass;
     }
     
     /**
@@ -293,6 +398,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @return generated descriptor
      */
     public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex, int extra) {
+        if (this.callbackDescriptor == null) {
+            this.callbackDescriptor = String.format("(%sL%s;)V", this.method.desc.substring(1, this.method.desc.indexOf(')')),
+                    this.callbackInfoClass);
+        }
+        
         if (!captureLocals || locals == null) {
             return this.callbackDescriptor;
         }
@@ -478,6 +588,39 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     public void removeNode(AbstractInsnNode insn) {
         this.insns.remove(insn);
         this.injectionNodes.remove(insn);
+    }
+
+    /**
+     * Add an entry to the target LVT
+     * 
+     * @param index local variable index
+     * @param name local variable name
+     * @param desc local variable type
+     */
+    public void addLocalVariable(int index, String name, String desc) {
+        if (this.start == null) {
+            this.start = new LabelNode(new Label());
+            this.end = new LabelNode(new Label());
+            this.insns.insert(this.start);
+            this.insns.add(this.end);
+        }
+        this.addLocalVariable(index, name, desc, this.start, this.end);
+    }
+
+    /**
+     * Add an entry to the target LVT between the specified start and end labels
+     * 
+     * @param index local variable index
+     * @param name local variable name
+     * @param desc local variable type
+     * @param start start of range
+     * @param end end of range
+     */
+    private void addLocalVariable(int index, String name, String desc, LabelNode start, LabelNode end) {
+        if (this.method.localVariables == null) {
+            this.method.localVariables = new ArrayList<LocalVariableNode>();
+        }
+        this.method.localVariables.add(new LocalVariableNode(name, desc, null, start, end, index));
     }
     
 }

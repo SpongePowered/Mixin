@@ -43,8 +43,8 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -66,6 +66,11 @@ public class CallbackInjector extends Injector {
          * Handler method
          */
         private final MethodNode handler;
+        
+        /**
+         * HEAD instruction 
+         */
+        private final AbstractInsnNode head;
         
         /**
          * Target method handle
@@ -142,14 +147,14 @@ public class CallbackInjector extends Injector {
         int ctor, invoke;
 
         /**
-         * Marshall var is the local where we marshall the utility references we
+         * Marshal var is the local where we marshal the utility references we
          * need during invoke of the callback, those being the current return
          * value for value-return scenarios (we store the topmost stack entry
          * and then push it into the ctor of the CallbackInfo) and also the
          * CallbackInfo reference itself (we use the same local var for these
          * two purposes because they don't exist at the same time).
          */
-        final int marshallVar;
+        private int marshalVar = -1;
         
         /**
          * True if this callback expects the target method arguments to be
@@ -161,6 +166,7 @@ public class CallbackInjector extends Injector {
         Callback(MethodNode handler, Target target, final InjectionNode node, final LocalVariableNode[] locals, boolean captureLocals) {
             this.handler = handler;
             this.target = target;
+            this.head = target.insns.getFirst();
             this.node = node;
             this.locals = locals;
             this.localTypes = locals != null ? new Type[locals.length] : null;
@@ -193,7 +199,6 @@ public class CallbackInjector extends Injector {
 //            this.typeCasts = new Type[this.frameSize + this.extraArgs];
 
             this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
-            this.marshallVar = target.allocateLocal();
         }
 
         /**
@@ -215,6 +220,10 @@ public class CallbackInjector extends Injector {
             return this.target.getCallbackDescriptor(true, this.localTypes, this.target.arguments, this.frameSize, Short.MAX_VALUE);
         }
 
+        String getCallbackInfoConstructorDescriptor() {
+            return this.isAtReturn ? CallbackInfo.getConstructorDescriptor(this.target.returnType) : CallbackInfo.getConstructorDescriptor();
+        }
+
         /**
          * Add an instruction to this callback and increment the appropriate
          * stack sizes
@@ -224,10 +233,18 @@ public class CallbackInjector extends Injector {
          * @param invokeStack true if this insn contributes to the invoke stack
          */
         void add(AbstractInsnNode insn, boolean ctorStack, boolean invokeStack) {
-            this.add(insn);
+            this.add(insn, ctorStack, invokeStack, false);
+        }
+        
+        void add(AbstractInsnNode insn, boolean ctorStack, boolean invokeStack, boolean head) {
+            if (head) {
+                this.target.insns.insertBefore(this.head, insn);
+            } else {
+                this.add(insn);
+            }
             this.ctor += (ctorStack ? 1 : 0);
             this.invoke += (invokeStack ? 1 : 0);
-        }
+        }        
         
         /**
          * Inject our generated code into the method and set the max stack size
@@ -284,6 +301,15 @@ public class CallbackInjector extends Injector {
         boolean captureArgs() {
             return this.captureArgs;
         }
+
+        int marshalVar() {
+            if (this.marshalVar < 0) {
+                this.marshalVar = this.target.allocateLocal();
+            }
+            
+            return this.marshalVar;
+        }
+        
     }
     
     /**
@@ -305,6 +331,16 @@ public class CallbackInjector extends Injector {
      * Injection point ids
      */
     private final Map<Integer, String> ids = new HashMap<Integer, String>();
+    
+    /**
+     * Total number of times this injector will be injected into the target. If
+     * greater than 1 we will cache the generated CallbackInfo
+     */
+    private int totalInjections = 0;
+    private int callbackInfoVar = -1;
+    private String lastId, lastDesc;
+    private Target lastTarget;
+    private String callbackInfoClass;
     
     /**
      * Make a new CallbackInjector with the supplied args
@@ -351,7 +387,7 @@ public class CallbackInjector extends Injector {
      */
     @Override
     protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
-        InjectionNode injectionNode = target.injectionNodes.add(node);
+        InjectionNode injectionNode = target.addInjectionNode(node);
         
         for (InjectionPoint ip : nominators) {
             String id = ip.getId();
@@ -370,6 +406,7 @@ public class CallbackInjector extends Injector {
         }
         
         myNodes.add(injectionNode);
+        this.totalInjections++;
     }
 
     /* (non-Javadoc)
@@ -462,7 +499,7 @@ public class CallbackInjector extends Injector {
         }
         
         this.dupReturnValue(callback);
-        if (this.cancellable) {
+        if (this.cancellable || this.totalInjections > 1) {
             this.createCallbackInfo(callback, true);
         }
         this.invokeCallback(callback, callbackMethod);
@@ -552,21 +589,30 @@ public class CallbackInjector extends Injector {
      * @param store store the callback info in a local variable
      */
     private void createCallbackInfo(final Callback callback, boolean store) {
-        callback.add(new TypeInsnNode(Opcodes.NEW, callback.target.callbackInfoClass), true, !store);
-        callback.add(new InsnNode(Opcodes.DUP), true, true);
-        
-        this.invokeCallbackInfoCtor(callback, store);
-        if (store) {
-            callback.add(new VarInsnNode(Opcodes.ASTORE, callback.marshallVar));
+        // Reset vars on new target
+        if (callback.target != this.lastTarget) {
+            this.lastId = null;
+            this.lastDesc = null;
         }
+        this.lastTarget = callback.target;
+
+        String id = this.getIdentifier(callback);
+        String desc = callback.getCallbackInfoConstructorDescriptor();
+        
+        // If ID and descriptor match, and if we're not handling a returnable or cancellable CI, just re-use the last one
+        if (id.equals(this.lastId) && desc.equals(this.lastDesc) && !callback.isAtReturn && !this.cancellable) {
+            return;
+        }
+
+        this.instanceCallbackInfo(callback, id, desc, store);
     }
 
     /**
      * @param callback callback handle
      */
     private void loadOrCreateCallbackInfo(final Callback callback) {
-        if (this.cancellable) {
-            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar), false, true);
+        if (this.cancellable || this.totalInjections > 1) {
+            callback.add(new VarInsnNode(Opcodes.ALOAD, this.callbackInfoVar), false, true);
         } else {
             this.createCallbackInfo(callback, false);
         }
@@ -586,25 +632,43 @@ public class CallbackInjector extends Injector {
         }
         
         callback.add(new InsnNode(Opcodes.DUP));
-        callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ISTORE), callback.marshallVar));
+        callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ISTORE), callback.marshalVar()));
     }
 
     /**
      * @param callback callback handle
+     * @param id callback id
+     * @param desc constructor descriptor
      * @param store true if storing in a local, false if this is happening at an
      *      invoke
      */
-    protected void invokeCallbackInfoCtor(final Callback callback, boolean store) {
-        callback.add(new LdcInsnNode(this.getIdentifier(callback)), true, !store);
-        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, !store);
+    protected void instanceCallbackInfo(final Callback callback, String id, String desc, boolean store) {
+        this.lastId = id;
+        this.lastDesc = desc;
+        this.callbackInfoVar = callback.marshalVar();
+        this.callbackInfoClass = callback.target.getCallbackInfoClass();
+        
+        // If we were going to store the CI anyway, and if we need it again, and if the current injection isn't at
+        // return or cancellable, inject the CI creation at the method head so that it's available everywhere
+        boolean head = store && this.totalInjections > 1 && !callback.isAtReturn && !this.cancellable;
+        
+        callback.add(new TypeInsnNode(Opcodes.NEW, this.callbackInfoClass), true, !store, head);
+        callback.add(new InsnNode(Opcodes.DUP), true, true, head);
+        callback.add(new LdcInsnNode(id), true, !store, head);
+        callback.add(new InsnNode(this.cancellable ? Opcodes.ICONST_1 : Opcodes.ICONST_0), true, !store, head);
 
         if (callback.isAtReturn) {
-            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshallVar), true, !store);
+            callback.add(new VarInsnNode(callback.target.returnType.getOpcode(Opcodes.ILOAD), callback.marshalVar()), true, !store);
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(callback.target.returnType), false));
+                    this.callbackInfoClass, Constants.CTOR, desc, false));
         } else {
             callback.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
-                    callback.target.callbackInfoClass, Constants.CTOR, CallbackInfo.getConstructorDescriptor(), false));
+                    this.callbackInfoClass, Constants.CTOR, desc, false), false, false, head);
+        }
+        
+        if (store) {
+            callback.target.addLocalVariable(this.callbackInfoVar, "callbackInfo" + this.callbackInfoVar, "L" + this.callbackInfoClass + ";");
+            callback.add(new VarInsnNode(Opcodes.ASTORE, this.callbackInfoVar), false, false, head);
         }
     }
 
@@ -658,8 +722,8 @@ public class CallbackInjector extends Injector {
             return;
         }
         
-        callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
-        callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, callback.target.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
+        callback.add(new VarInsnNode(Opcodes.ALOAD, this.callbackInfoVar));
+        callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, this.callbackInfoClass, CallbackInfo.getIsCancelledMethodName(),
                 CallbackInfo.getIsCancelledMethodSig(), false));
 
         LabelNode notCancelled = new LabelNode();
@@ -684,10 +748,10 @@ public class CallbackInjector extends Injector {
         } else {
             // Non-void method, so work out which accessor to call to get the
             // return value, and return it
-            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshallVar));
+            callback.add(new VarInsnNode(Opcodes.ALOAD, callback.marshalVar()));
             String accessor = CallbackInfoReturnable.getReturnAccessor(callback.target.returnType);
             String descriptor = CallbackInfoReturnable.getReturnDescriptor(callback.target.returnType);
-            callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, callback.target.callbackInfoClass, accessor, descriptor, false));
+            callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, this.callbackInfoClass, accessor, descriptor, false));
             if (callback.target.returnType.getSort() == Type.OBJECT) {
                 callback.add(new TypeInsnNode(Opcodes.CHECKCAST, callback.target.returnType.getInternalName()));
             }
