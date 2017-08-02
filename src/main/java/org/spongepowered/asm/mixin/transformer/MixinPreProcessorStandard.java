@@ -361,7 +361,7 @@ class MixinPreProcessorStandard {
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
                 throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " in " + this.mixin
-                        + " was not located in the target class");
+                        + " was not located in the target class." + context.getReferenceMapper().getStatus());
             }
             mixinMethod.name = method.renameTo(target.name);
         }

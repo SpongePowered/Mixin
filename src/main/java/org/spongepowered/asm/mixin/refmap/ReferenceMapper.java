@@ -64,7 +64,7 @@ public final class ReferenceMapper implements Serializable {
     /**
      * Passthrough mapper, used as failover 
      */
-    public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true);
+    public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true, "invalid");
 
     /**
      * "Default" mappings. The set of mappings to use as "default" is specified
@@ -91,10 +91,15 @@ public final class ReferenceMapper implements Serializable {
     private transient String context = null;
     
     /**
+     * Resource name this refmap was loaded from (if available) 
+     */
+    private transient String resource;
+    
+    /**
      * Create an empty refmap
      */
     public ReferenceMapper() {
-        this(false);
+        this(false, ReferenceMapper.DEFAULT_RESOURCE);
     }
     
     /**
@@ -102,10 +107,46 @@ public final class ReferenceMapper implements Serializable {
      * 
      * @param readOnly flag to indicate read-only
      */
-    private ReferenceMapper(boolean readOnly) {
+    private ReferenceMapper(boolean readOnly, String resource) {
         this.readOnly = readOnly;
+        this.resource = resource;
     }
     
+    /**
+     * Get whether this mapper is defaulted. Use this flag rather than reference
+     * comparison to {@link #DEFAULT_MAPPER} because of classloader shenanigans
+     * 
+     * @return true if this mapper is a defaulted mapper
+     */
+    public boolean isDefault() {
+        return this.readOnly;
+    }
+    
+    private void setResourceName(String resource) {
+        if (!this.readOnly) {
+            this.resource = resource != null ? resource : "<unknown resource>";
+        }
+    }
+    
+    /**
+     * Get the resource name this refmap was loaded from (if available).
+     * 
+     * @return name of the resource
+     */
+    public String getResourceName() {
+        return this.resource;
+    }
+
+    /**
+     * Get a user-readable "status" string for this refmap for use in error 
+     * messages
+     * 
+     * @return status message
+     */
+    public String getStatus() {
+        return this.isDefault() ? "No refMap loaded" : "Using refmap " + this.getResourceName();
+    }
+
     /**
      * Get the current context
      * 
@@ -225,7 +266,9 @@ public final class ReferenceMapper implements Serializable {
             InputStream resource = Launch.classLoader.getResourceAsStream(resourcePath);
             if (resource != null) {
                 reader = new InputStreamReader(resource);
-                return ReferenceMapper.readJson(reader);
+                ReferenceMapper mapper = ReferenceMapper.readJson(reader);
+                mapper.setResourceName(resourcePath);
+                return mapper;
             }
         } catch (JsonParseException ex) {
             logger.error("Invalid REFMAP JSON in " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
@@ -242,11 +285,14 @@ public final class ReferenceMapper implements Serializable {
      * Read a new refmap instance from the specified reader 
      * 
      * @param reader Reader to read from
+     * @param name Name of the resource being read from
      * @return new refmap
      */
-    public static ReferenceMapper read(Reader reader) {
+    public static ReferenceMapper read(Reader reader, String name) {
         try {
-            return ReferenceMapper.readJson(reader);
+            ReferenceMapper mapper = ReferenceMapper.readJson(reader);
+            mapper.setResourceName(name);
+            return mapper;
         } catch (Exception ex) {
             return ReferenceMapper.DEFAULT_MAPPER;
         }

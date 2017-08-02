@@ -190,7 +190,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                 members.add(targetMember);
             } catch (InvalidMemberDescriptorException ex) {
                 throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
-                        + method + "\"");
+                        + method + "\". " + this.mixin.getReferenceMapper().getStatus());
             }
         }
         return members;

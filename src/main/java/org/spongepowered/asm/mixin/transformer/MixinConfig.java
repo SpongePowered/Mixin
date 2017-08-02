@@ -449,18 +449,26 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.mixinPackage += ".";
         }
         
+        boolean suppressRefMapWarning = false; 
+        
         if (this.refMapperConfig == null) {
             if (this.plugin != null) {
                 this.refMapperConfig = this.plugin.getRefMapperConfig();
             }
             
             if (this.refMapperConfig == null) {
+                suppressRefMapWarning = true;
                 this.refMapperConfig = ReferenceMapper.DEFAULT_RESOURCE;
             }
         }
         
         this.refMapper = ReferenceMapper.read(this.refMapperConfig);
         this.verboseLogging |= this.env.getOption(Option.DEBUG_VERBOSE);
+        
+        if (!suppressRefMapWarning && this.refMapper.isDefault() && !this.env.getOption(Option.DISABLE_REFMAP)) {
+            this.logger.warn("Reference map '{}' for {} could not be read. If this is a development environment you can ignore this message",
+                    this.refMapperConfig, this);
+        }
     }
 
     /**
