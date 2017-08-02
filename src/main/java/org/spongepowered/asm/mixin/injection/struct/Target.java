@@ -373,7 +373,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @return generated descriptor
      */
     public String getSimpleCallbackDescriptor() {
-        return String.format("(L%s;)V", this.callbackInfoClass);
+        return String.format("(L%s;)V", this.getCallbackInfoClass());
     }
     
     /**
