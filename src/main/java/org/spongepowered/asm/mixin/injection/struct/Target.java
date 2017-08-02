@@ -400,7 +400,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex, int extra) {
         if (this.callbackDescriptor == null) {
             this.callbackDescriptor = String.format("(%sL%s;)V", this.method.desc.substring(1, this.method.desc.indexOf(')')),
-                    this.callbackInfoClass);
+                    this.getCallbackInfoClass());
         }
         
         if (!captureLocals || locals == null) {
