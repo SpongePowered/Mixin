@@ -102,7 +102,13 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     private ITweaker initFMLCoreMod() {
         try {
-            this.clCoreModManager = MixinPlatformAgentFML.getCoreModManagerClass();
+            try {
+                this.clCoreModManager = MixinPlatformAgentFML.getCoreModManagerClass();
+            } catch (ClassNotFoundException ex) {
+                MixinPlatformAgentAbstract.logger.info("FML platform manager could not load class {}. Proceeding without FML support.",
+                        ex.getMessage());
+                return null;
+            }
 
             if ("true".equalsIgnoreCase(this.attributes.get(MixinPlatformAgentFML.MFATT_FORCELOADASMOD))) {
                 MixinPlatformAgentAbstract.logger.debug("ForceLoadAsMod was specified for {}, attempting force-load", this.fileName);
