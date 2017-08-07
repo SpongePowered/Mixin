@@ -111,6 +111,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
 
             return this.injectCorePlugin();
         } catch (Exception ex) {
+            MixinPlatformAgentAbstract.logger.catching(ex);
             return null;
         }
     }
@@ -153,7 +154,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
                 reparsedCoremods.add(this.fileName);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            MixinPlatformAgentAbstract.logger.catching(ex);
         }
     }
 
