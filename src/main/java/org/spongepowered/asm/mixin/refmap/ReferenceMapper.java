@@ -52,7 +52,7 @@ import net.minecraft.launchwrapper.Launch;
  * refmap is absent the environment is assumed to be deobfuscated (eg. dev-time)
  * and injections and other transformations will fail if this is not the case. 
  */
-public final class ReferenceMapper implements Serializable {
+public final class ReferenceMapper implements IReferenceMapper, Serializable {
     
     private static final long serialVersionUID = 2L;
 
@@ -83,7 +83,7 @@ public final class ReferenceMapper implements Serializable {
      * True if this refmap cannot be written. Only true for the
      * {@link #DEFAULT_MAPPER}
      */
-    private final transient boolean readOnly; 
+    private final transient boolean readOnly;
     
     /**
      * Current remapping context, used as the key into {@link data}
@@ -112,12 +112,10 @@ public final class ReferenceMapper implements Serializable {
         this.resource = resource;
     }
     
-    /**
-     * Get whether this mapper is defaulted. Use this flag rather than reference
-     * comparison to {@link #DEFAULT_MAPPER} because of classloader shenanigans
-     * 
-     * @return true if this mapper is a defaulted mapper
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper#isDefault()
      */
+    @Override
     public boolean isDefault() {
         return this.readOnly;
     }
@@ -128,62 +126,55 @@ public final class ReferenceMapper implements Serializable {
         }
     }
     
-    /**
-     * Get the resource name this refmap was loaded from (if available).
-     * 
-     * @return name of the resource
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper
+     *      #getResourceName()
      */
+    @Override
     public String getResourceName() {
         return this.resource;
     }
 
-    /**
-     * Get a user-readable "status" string for this refmap for use in error 
-     * messages
-     * 
-     * @return status message
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper#getStatus()
      */
+    @Override
     public String getStatus() {
         return this.isDefault() ? "No refMap loaded." : "Using refmap " + this.getResourceName();
     }
 
-    /**
-     * Get the current context
-     * 
-     * @return current context key, can be null
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper#getContext()
      */
+    @Override
     public String getContext() {
         return this.context;
     }
     
-    /**
-     * Set the current remap context, can be null
-     * 
-     * @param context remap context
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper#setContext(
+     *      java.lang.String)
      */
+    @Override
     public void setContext(String context) {
         this.context = context;
     }
     
-    /**
-     * Remap a reference for the specified owning class in the current context
-     * 
-     * @param className Owner class
-     * @param reference Reference to remap
-     * @return remapped reference, returns original reference if not remapped
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper#remap(
+     *      java.lang.String, java.lang.String)
      */
+    @Override
     public String remap(String className, String reference) {
         return this.remapWithContext(this.context, className, reference);
     }
     
-    /**
-     * Remap a reference for the specified owning class in the specified context
-     * 
-     * @param context Remap context to use
-     * @param className Owner class
-     * @param reference Reference to remap
-     * @return remapped reference, returns original reference if not remapped
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IReferenceMapper
+     *      #remapWithContext(java.lang.String, java.lang.String,
+     *      java.lang.String)
      */
+    @Override
     public String remapWithContext(String context, String className, String reference) {
         Map<String, Map<String, String>> mappings = this.mappings;
         if (context != null) {

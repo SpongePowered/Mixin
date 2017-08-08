@@ -58,7 +58,7 @@ public interface IMixinContext {
      * 
      * @return ReferenceMapper instance (can be null)
      */
-    public abstract ReferenceMapper getReferenceMapper();
+    public abstract IReferenceMapper getReferenceMapper();
 
     /**
      * Retrieve the value of the specified <tt>option</tt> from the environment

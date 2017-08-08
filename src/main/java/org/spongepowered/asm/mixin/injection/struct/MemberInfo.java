@@ -29,7 +29,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
@@ -593,6 +593,18 @@ public final class MemberInfo {
     }
     
     /**
+     * Create a new version of this member with a different descriptor
+     * 
+     * @param newDesc New descriptor for this member
+     */
+    public MemberInfo transform(String newDesc) {
+        if ((newDesc == null && this.desc == null) || (newDesc != null && newDesc.equals(this.desc))) {
+            return this;
+        }
+        return new MemberInfo(this.name, this.owner, newDesc, this.matchAll); 
+    }
+    
+    /**
      * Create a remapped version of this member using the supplied method data
      * 
      * @param srgMethod SRG method data to use
@@ -653,7 +665,7 @@ public final class MemberInfo {
      * @param mixinClass Mixin class to use for remapping
      * @return parsed MemberInfo
      */
-    private static MemberInfo parse(String input, ReferenceMapper refMapper, String mixinClass) {
+    private static MemberInfo parse(String input, IReferenceMapper refMapper, String mixinClass) {
         String desc = null;
         String owner = null;
         String name = Strings.nullToEmpty(input).replaceAll("\\s", "");

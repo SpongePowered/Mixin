@@ -380,20 +380,31 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     private void findMethods(Set<MemberInfo> searchFor, String type) {
         this.targets.clear();
 
+        // When remapping refmap is enabled this implies we are in a development
+        // environment. In certain circumstances including the descriptor for
+        // the method may actually fail, so we will do a second pass without the
+        // descriptor if this happens.
+        int passes = this.mixin.getEnvironment().getOption(Option.REFMAP_REMAP) ? 2 : 1;
+        
         for (MemberInfo member : searchFor) {
-            int ordinal = 0;
-            for (MethodNode target : this.classNode.methods) {
-                if (member.matches(target.name, target.desc, ordinal)) {
-                    boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
-                    if (member.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
-                        continue;
+            for (int count = 0, pass = 0; pass < passes && count < 1; pass++) {
+                int ordinal = 0;
+                for (MethodNode target : this.classNode.methods) {
+                    if (member.matches(target.name, target.desc, ordinal)) {
+                        boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
+                        if (member.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
+                            continue;
+                        }
+                        
+                        this.checkTarget(target);
+                        this.targets.add(target);
+                        ordinal++;
+                        count++;
                     }
-                    
-                    this.checkTarget(target);
-                    
-                    this.targets.add(target);
-                    ordinal++;
                 }
+                
+                // Second pass ignores descriptor
+                member = member.transform(null);
             }
         }
         

@@ -372,6 +372,33 @@ public final class MixinEnvironment implements ITokenProvider {
         DISABLE_REFMAP(Option.ENVIRONMENT, Inherit.INDEPENDENT, "disableRefMap"),
         
         /**
+         * Rather than disabling the refMap, you may wish to remap existing
+         * refMaps at runtime. This can be achieved by setting this property and
+         * supplying values for <tt>mixin.env.refMapRemappingFile</tt> and
+         * <tt>mixin.env.refMapRemappingEnv</tt>. Though those properties can be
+         * ignored if starting via <tt>GradleStart</tt> (this property is also
+         * automatically enabled if loading via GradleStart). 
+         */
+        REFMAP_REMAP(Option.ENVIRONMENT, Inherit.INDEPENDENT, "remapRefMap"),
+        
+        /**
+         * If <tt>mixin.env.remapRefMap</tt> is enabled, this setting can be
+         * used to override the name of the SRG file to read mappings from. The
+         * mappings must have a source type of <tt>searge</tt> and a target type
+         * matching the current development environment. If the source type is
+         * not <tt>searge</tt> then the <tt>mixin.env.refMapRemappingEnv</tt>
+         * should be set to the correct source environment type.
+         */
+        REFMAP_REMAP_RESOURCE(Option.ENVIRONMENT, Inherit.INDEPENDENT, "refMapRemappingFile", ""),
+        
+        /**
+         * When using <tt>mixin.env.refMapRemappingFile</tt>, this setting
+         * overrides the default source environment (searge). However note that
+         * the specified environment type must exist in the orignal refmap.
+         */
+        REFMAP_REMAP_SOURCE_ENV(Option.ENVIRONMENT, Inherit.INDEPENDENT, "refMapRemappingEnv", "searge"),
+        
+        /**
          * Globally ignore the "required" attribute of all configurations
          */
         IGNORE_REQUIRED(Option.ENVIRONMENT, Inherit.INDEPENDENT, "ignoreRequired"),

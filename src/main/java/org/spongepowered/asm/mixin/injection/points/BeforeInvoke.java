@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
@@ -67,7 +68,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 @AtCode("INVOKE")
 public class BeforeInvoke extends InjectionPoint {
 
-    protected final MemberInfo target;
+    protected final MemberInfo target, permissiveTarget;
 
     /**
      * This strategy can be used to identify a particular invocation if the same
@@ -95,6 +96,7 @@ public class BeforeInvoke extends InjectionPoint {
         this.ordinal = data.getOrdinal();
         this.log = data.get("log", false);
         this.className = this.getClassName();
+        this.permissiveTarget = data.getContext().getOption(Option.REFMAP_REMAP) ? this.target.transform(null) : null;
     }
 
     private String getClassName() {
@@ -133,7 +135,7 @@ public class BeforeInvoke extends InjectionPoint {
                 MemberInfo nodeInfo = new MemberInfo(insn);
                 this.log("{} is considering insn {}", this.className, nodeInfo);
 
-                if (this.target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
+                if (this.matches(nodeInfo)) {
                     this.log("{} > found a matching insn, checking preconditions...", this.className);
                     
                     if (this.matchesInsn(nodeInfo, ordinal)) {
@@ -154,6 +156,14 @@ public class BeforeInvoke extends InjectionPoint {
         }
 
         return found;
+    }
+
+    private boolean matches(MemberInfo nodeInfo) {
+        if (this.target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
+            return true;
+        }
+
+        return this.permissiveTarget != null && this.permissiveTarget.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc);
     }
 
     protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {

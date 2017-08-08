@@ -52,7 +52,9 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.refmap.RemappingReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.VersionNumber;
 
@@ -290,7 +292,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Reference mapper for injectors
      */
-    private transient ReferenceMapper refMapper;
+    private transient IReferenceMapper refMapper;
 
     /**
      * Keep track of initialisation state 
@@ -468,6 +470,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         if (!suppressRefMapWarning && this.refMapper.isDefault() && !this.env.getOption(Option.DISABLE_REFMAP)) {
             this.logger.warn("Reference map '{}' for {} could not be read. If this is a development environment you can ignore this message",
                     this.refMapperConfig, this);
+        }
+        
+        if (this.env.getOption(Option.REFMAP_REMAP)) {
+            this.refMapper = RemappingReferenceMapper.of(this.env, this.refMapper);
         }
     }
 
@@ -746,7 +752,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Get the reference remapper for injectors
      */
-    public ReferenceMapper getReferenceMapper() {
+    public IReferenceMapper getReferenceMapper() {
         if (this.env.getOption(Option.DISABLE_REFMAP)) {
             return ReferenceMapper.DEFAULT_MAPPER;
         }

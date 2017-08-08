@@ -57,7 +57,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
@@ -1102,7 +1102,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      *      #getReferenceMapper()
      */
     @Override
-    public ReferenceMapper getReferenceMapper() {
+    public IReferenceMapper getReferenceMapper() {
         return this.mixin.getParent().getReferenceMapper();
     }
 

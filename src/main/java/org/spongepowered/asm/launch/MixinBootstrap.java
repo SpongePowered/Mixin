@@ -145,7 +145,7 @@ public abstract class MixinBootstrap {
             
             String command = System.getProperty("sun.java.command");
             if (command != null && command.contains("GradleStart")) {
-                System.setProperty("mixin.env.disableRefMap", "true");
+                System.setProperty("mixin.env.remapRefMap", "true");
             }
             
             if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
