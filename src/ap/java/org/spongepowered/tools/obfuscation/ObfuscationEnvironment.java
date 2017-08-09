@@ -220,25 +220,28 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
     public MappingMethod getObfMethod(MappingMethod method, boolean lazyRemap) {
         if (this.initMappings()) {
             boolean remapped = true;
-            MappingMethod originalMethod = method.copy();
-            MappingMethod methodMapping = this.mappingProvider.getMethodMapping(method);
+            MappingMethod mapping = null;
+            for (MappingMethod md = method; md != null && mapping == null; md = md.getSuper()) {
+                mapping = this.mappingProvider.getMethodMapping(md);
+            }
+            
             // If no obf mapping, we can attempt to remap the owner class
-            if (methodMapping == null) {
+            if (mapping == null) {
                 if (lazyRemap) {
                     return null;
                 }
-                methodMapping = originalMethod;
+                mapping = method.copy();
                 remapped = false;
             }
-            String remappedOwner = this.getObfClass(methodMapping.getOwner());
-            if (remappedOwner == null || remappedOwner.equals(method.getOwner()) || remappedOwner.equals(methodMapping.getOwner())) {
-                return remapped ? methodMapping : null;
+            String remappedOwner = this.getObfClass(mapping.getOwner());
+            if (remappedOwner == null || remappedOwner.equals(method.getOwner()) || remappedOwner.equals(mapping.getOwner())) {
+                return remapped ? mapping : null;
             }
             if (remapped) {
-                return methodMapping.move(remappedOwner);
+                return mapping.move(remappedOwner);
             }
-            String desc = ObfuscationUtil.mapDescriptor(methodMapping.getDesc(), this.remapper);
-            return new MappingMethod(remappedOwner, methodMapping.getSimpleName(), desc);
+            String desc = ObfuscationUtil.mapDescriptor(mapping.getDesc(), this.remapper);
+            return new MappingMethod(remappedOwner, mapping.getSimpleName(), desc);
         }
         return null;
     }
@@ -311,19 +314,19 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
             return null;
         }
         
-        MappingField fieldMapping = this.mappingProvider.getFieldMapping(field);
+        MappingField mapping = this.mappingProvider.getFieldMapping(field);
         // If no obf mapping, we can attempt to remap the owner class
-        if (fieldMapping == null) {
+        if (mapping == null) {
             if (lazyRemap) {
                 return null;
             }
-            fieldMapping = field;
+            mapping = field;
         }
-        String remappedOwner = this.getObfClass(fieldMapping.getOwner());
-        if (remappedOwner == null || remappedOwner.equals(field.getOwner()) || remappedOwner.equals(fieldMapping.getOwner())) {
-            return fieldMapping != field ? fieldMapping : null;
+        String remappedOwner = this.getObfClass(mapping.getOwner());
+        if (remappedOwner == null || remappedOwner.equals(field.getOwner()) || remappedOwner.equals(mapping.getOwner())) {
+            return mapping != field ? mapping : null;
         }
-        return fieldMapping.move(remappedOwner);
+        return mapping.move(remappedOwner);
     }
     
     /**

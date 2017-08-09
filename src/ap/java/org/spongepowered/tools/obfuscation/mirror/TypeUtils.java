@@ -152,8 +152,8 @@ public abstract class TypeUtils {
      * 
      * <pre>(int,int)boolean</pre>
      * 
-     * @param element element to generate descriptor for
-     * @return descriptor
+     * @param element element to generate java signature for
+     * @return java signature
      */
     public static String getJavaSignature(Element element) {
         if (element instanceof ExecutableElement) {
@@ -171,6 +171,88 @@ public abstract class TypeUtils {
             return desc.toString();
         }
         return TypeUtils.getTypeName(element.asType());
+    }
+    
+    /**
+     * Get a java-style signature from the specified bytecode descriptor
+     * 
+     * @param descriptor descriptor to convert to java signature
+     * @return java signature
+     */
+    public static String getJavaSignature(String descriptor) {
+        if (descriptor == null) {
+            return null;
+        }
+        StringBuilder signature = new StringBuilder().append('(');
+        char[] desc = descriptor.toCharArray();
+        for (int pos = 1; pos < desc.length;) {
+            pos += TypeUtils.appendToSignature(signature, desc, pos);
+            if (pos < desc.length && desc[pos] != ')' && desc[pos - 1] != ')') {
+                signature.append(',');
+            }
+        }
+        return signature.toString();
+    }
+    
+    private static int appendToSignature(final StringBuilder signature, final char[] desc, int pos) {
+        switch (desc[pos]) {
+            case 'V':
+                signature.append("void");
+                return 1;
+            case 'Z':
+                signature.append("boolean");
+                return 1;
+            case 'C':
+                signature.append("char");
+                return 1;
+            case 'B':
+                signature.append("byte");
+                return 1;
+            case 'S':
+                signature.append("short");
+                return 1;
+            case 'I':
+                signature.append("int");
+                return 1;
+            case 'F':
+                signature.append("float");
+                return 1;
+            case 'J':
+                signature.append("long");
+                return 1;
+            case 'D':
+                signature.append("double");
+                return 1;
+            case '[':
+                int arraySize = 0;
+                while (desc[pos] == '[') {
+                    ++arraySize;
+                    ++pos;
+                }
+                int length = TypeUtils.appendToSignature(signature, desc, pos);
+                for (int i = 0; i < arraySize; i++) {
+                    signature.append("[]");
+                }
+                return length + arraySize;
+            case 'L':
+                length = 0;
+                pos++;
+                while (desc[pos] != ';') {
+                    ++length;
+                    if (desc[pos] == '/') {
+                        signature.append('.');
+                    } else {
+                        signature.append(desc[pos]);
+                    }
+                    ++pos;
+                }
+                return length + 2;
+            case ')':
+                signature.append(')');
+                return 1;
+            default:
+                throw new IllegalStateException("Unexpected character '" + desc[pos] + "' in signature");
+        }
     }
 
     /**

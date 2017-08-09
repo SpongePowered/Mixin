@@ -58,14 +58,6 @@ public class TypeHandleSimulated extends TypeHandle {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.tools.obfuscation.mirror.TypeHandle#getElement()
-     */
-    @Override
-    public TypeElement getElement() {
-        return null;
-    }
-    
-    /* (non-Javadoc)
      * @see org.spongepowered.tools.obfuscation.mirror.TypeHandle
      *      #getTargetElement()
      */
@@ -160,15 +152,16 @@ public class TypeHandleSimulated extends TypeHandle {
         String rawSignature = TypeUtils.stripGenerics(signature);
         
         // Try to locate a member anywhere in the hierarchy which matches
-        MethodHandle method = TypeHandleSimulated.findMethodRecursive(this.getTargetElement(), name, signature, rawSignature, true);
+        MethodHandle method = TypeHandleSimulated.findMethodRecursive(this, name, signature, rawSignature, true);
         
         // If we find one, return it otherwise just simulate the method
         return method != null ? method.asMapping(true) : super.getMappingMethod(name, desc);
 
     }
 
-    private static MethodHandle findMethodRecursive(TypeElement target, String name, String signature, String rawSignature, boolean matchCase) {
-        if (target == null) {
+    private static MethodHandle findMethodRecursive(TypeHandle target, String name, String signature, String rawSignature, boolean matchCase) {
+        TypeElement elem = target.getTargetElement();
+        if (elem == null) {
             return null;
         }
         
@@ -177,14 +170,14 @@ public class TypeHandleSimulated extends TypeHandle {
             return method;
         }
         
-        for (TypeMirror iface : target.getInterfaces()) {
+        for (TypeMirror iface : elem.getInterfaces()) {
             method = TypeHandleSimulated.findMethodRecursive(iface, name, signature, rawSignature, matchCase);
             if (method != null) {
                 return method;
             }
         }
         
-        TypeMirror superClass = target.getSuperclass();
+        TypeMirror superClass = elem.getSuperclass();
         if (superClass == null || superClass.getKind() == TypeKind.NONE) {
             return null;
         }
@@ -196,7 +189,8 @@ public class TypeHandleSimulated extends TypeHandle {
         if (!(target instanceof DeclaredType)) {
             return null;
         }
-        return TypeHandleSimulated.findMethodRecursive((TypeElement)((DeclaredType)target).asElement(), name, signature, rawSignature, matchCase);
+        TypeElement element = (TypeElement)((DeclaredType)target).asElement();
+        return TypeHandleSimulated.findMethodRecursive(new TypeHandle(element), name, signature, rawSignature, matchCase);
     }
     
 }

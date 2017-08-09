@@ -100,7 +100,7 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
     }
 
     private boolean registerOverwriteForTarget(AnnotatedElementOverwrite elem, TypeHandle target) {
-        MappingMethod targetMethod = new MappingMethod(target.getName(), elem.getSimpleName(), elem.getDesc());
+        MappingMethod targetMethod = target.getMappingMethod(elem.getSimpleName(), elem.getDesc());
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         
         if (obfData.isEmpty()) {

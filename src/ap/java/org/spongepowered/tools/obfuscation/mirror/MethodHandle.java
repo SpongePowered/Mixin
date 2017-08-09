@@ -25,9 +25,9 @@
 package org.spongepowered.tools.obfuscation.mirror;
 
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.TypeElement;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.tools.obfuscation.mirror.mapping.ResolvableMappingMethod;
 
 import com.google.common.base.Strings;
 
@@ -40,22 +40,24 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
      * Actual element, can be null
      */
     private final ExecutableElement element;
-
-    public MethodHandle(TypeElement owner, ExecutableElement element) {
-        this(TypeUtils.getInternalName(owner), element);
-    }
     
-    public MethodHandle(String owner, ExecutableElement element) {
+    /**
+     * Handle to the owner, if available
+     */
+    private final TypeHandle ownerHandle;
+    
+    public MethodHandle(TypeHandle owner, ExecutableElement element) {
         this(owner, element, TypeUtils.getName(element), TypeUtils.getDescriptor(element));
     }
     
-    protected MethodHandle(String owner, String name, String desc) {
+    protected MethodHandle(TypeHandle owner, String name, String desc) {
         this(owner, null, name, desc);
     }
 
-    private MethodHandle(String owner, ExecutableElement element, String name, String desc) {
-        super(owner, name, desc);
+    private MethodHandle(TypeHandle owner, ExecutableElement element, String name, String desc) {
+        super(owner != null ? owner.getName() : null, name, desc);
         this.element = element;
+        this.ownerHandle = owner;
     }
     
     /**
@@ -79,7 +81,13 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
 
     @Override
     public MappingMethod asMapping(boolean includeOwner) {
-        return new MappingMethod(includeOwner ? this.getOwner() : null, this.getName(), this.getDesc());
+        if (includeOwner) {
+            if (this.ownerHandle != null) {
+                return new ResolvableMappingMethod(this.ownerHandle, this.getName(), this.getDesc());
+            }
+            return new MappingMethod(this.getOwner(), this.getName(), this.getDesc());
+        }
+        return new MappingMethod(null, this.getName(), this.getDesc());
     }
 
     @Override

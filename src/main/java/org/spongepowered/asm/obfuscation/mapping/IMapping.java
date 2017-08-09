@@ -109,6 +109,17 @@ public interface IMapping<TMapping> {
      * @return the mapping descriptor
      */
     public abstract String getDesc();
+    
+    /**
+     * Get the next most immediate super-implementation of this mapping. For
+     * example if the mapping is a method and the method overrides a method in
+     * the immediate superclass, return that method. Can return null if no
+     * superclass is available or if no superclass definition exists.
+     * 
+     * @return the method immediately overridden by this method, or null if not
+     *      present or not resolvable 
+     */
+    public abstract TMapping getSuper();
 
     /**
      * Get a representation of this mapping for serialisation. Individual

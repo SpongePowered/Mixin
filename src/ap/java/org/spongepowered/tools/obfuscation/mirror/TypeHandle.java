@@ -41,6 +41,7 @@ import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.tools.obfuscation.mirror.mapping.ResolvableMappingMethod;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -131,12 +132,13 @@ public class TypeHandle {
     /**
      * Returns the actual element (returns null for imaginary elements)
      */
-    public TypeElement getElement() {
+    public final TypeElement getElement() {
         return this.element;
     }
     
     /**
-     * Returns the actual element (returns null for imaginary elements)
+     * Returns the actual element (returns simulated value for imaginary
+     * elements)
      */
     protected TypeElement getTargetElement() {
         return this.element;
@@ -253,7 +255,7 @@ public class TypeHandle {
      * @return this handle as a mapping method
      */
     public MappingMethod getMappingMethod(String name, String desc) {
-        return new MappingMethod(this.getName(), name, desc);
+        return new ResolvableMappingMethod(this, name, desc);
     }
 
     /**
@@ -379,11 +381,12 @@ public class TypeHandle {
      */
     public MethodHandle findMethod(String name, String signature, boolean matchCase) {
         String rawSignature = TypeUtils.stripGenerics(signature);
-        return TypeHandle.findMethod(this.getTargetElement(), name, signature, rawSignature, matchCase);
+        return TypeHandle.findMethod(this, name, signature, rawSignature, matchCase);
     }
 
-    protected static MethodHandle findMethod(TypeElement target, String name, String signature, String rawSignature, boolean matchCase) {
-        for (ExecutableElement method : TypeHandle.<ExecutableElement>getEnclosedElements(target, ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
+    protected static MethodHandle findMethod(TypeHandle target, String name, String signature, String rawSignature, boolean matchCase) {
+        for (ExecutableElement method : TypeHandle.<ExecutableElement>getEnclosedElements(target.getTargetElement(),
+                ElementKind.CONSTRUCTOR, ElementKind.METHOD)) {
             if (TypeHandle.compareElement(method, name, signature, matchCase) || TypeHandle.compareElement(method, name, rawSignature, matchCase)) {
                 return new MethodHandle(target, method);
             }

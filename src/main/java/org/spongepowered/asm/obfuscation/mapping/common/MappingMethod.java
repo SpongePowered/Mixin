@@ -76,6 +76,11 @@ public class MappingMethod implements IMapping<MappingMethod> {
         return this.desc;
     }
     
+    @Override
+    public MappingMethod getSuper() {
+        return null;
+    }
+    
     public boolean isConstructor() {
         return Constants.CTOR.equals(this.name);
     }

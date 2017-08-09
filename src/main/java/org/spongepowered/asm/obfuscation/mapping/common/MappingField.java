@@ -76,6 +76,11 @@ public class MappingField implements IMapping<MappingField> {
     }
     
     @Override
+    public MappingField getSuper() {
+        return null;
+    }
+    
+    @Override
     public MappingField move(String newOwner) {
         return new MappingField(newOwner, this.getName(), this.getDesc());
     }
