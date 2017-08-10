@@ -37,6 +37,8 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 
+import org.spongepowered.asm.util.SignaturePrinter;
+
 /**
  * Convenience functions for mirror types
  */
@@ -180,79 +182,7 @@ public abstract class TypeUtils {
      * @return java signature
      */
     public static String getJavaSignature(String descriptor) {
-        if (descriptor == null) {
-            return null;
-        }
-        StringBuilder signature = new StringBuilder().append('(');
-        char[] desc = descriptor.toCharArray();
-        for (int pos = 1; pos < desc.length;) {
-            pos += TypeUtils.appendToSignature(signature, desc, pos);
-            if (pos < desc.length && desc[pos] != ')' && desc[pos - 1] != ')') {
-                signature.append(',');
-            }
-        }
-        return signature.toString();
-    }
-    
-    private static int appendToSignature(final StringBuilder signature, final char[] desc, int pos) {
-        switch (desc[pos]) {
-            case 'V':
-                signature.append("void");
-                return 1;
-            case 'Z':
-                signature.append("boolean");
-                return 1;
-            case 'C':
-                signature.append("char");
-                return 1;
-            case 'B':
-                signature.append("byte");
-                return 1;
-            case 'S':
-                signature.append("short");
-                return 1;
-            case 'I':
-                signature.append("int");
-                return 1;
-            case 'F':
-                signature.append("float");
-                return 1;
-            case 'J':
-                signature.append("long");
-                return 1;
-            case 'D':
-                signature.append("double");
-                return 1;
-            case '[':
-                int arraySize = 0;
-                while (desc[pos] == '[') {
-                    ++arraySize;
-                    ++pos;
-                }
-                int length = TypeUtils.appendToSignature(signature, desc, pos);
-                for (int i = 0; i < arraySize; i++) {
-                    signature.append("[]");
-                }
-                return length + arraySize;
-            case 'L':
-                length = 0;
-                pos++;
-                while (desc[pos] != ';') {
-                    ++length;
-                    if (desc[pos] == '/') {
-                        signature.append('.');
-                    } else {
-                        signature.append(desc[pos]);
-                    }
-                    ++pos;
-                }
-                return length + 2;
-            case ')':
-                signature.append(')');
-                return 1;
-            default:
-                throw new IllegalStateException("Unexpected character '" + desc[pos] + "' in signature");
-        }
+        return new SignaturePrinter("", descriptor).setFullyQualified(true).toDescriptor();
     }
 
     /**

@@ -229,7 +229,7 @@ public class SignaturePrinter {
     private StringBuilder appendType(StringBuilder sb, Type type, String name) {
         switch (type.getSort()) {
             case Type.ARRAY:
-                return this.appendType(sb, type.getElementType(), name).append("[]");
+                return SignaturePrinter.appendArraySuffix(this.appendType(sb, type.getElementType(), name), type);
             case Type.OBJECT:
                 return this.appendType(sb, type.getClassName(), name);
             default:
@@ -287,7 +287,7 @@ public class SignaturePrinter {
             case Type.FLOAT:   return box ? "Float"     : "float";
             case Type.LONG:    return box ? "Long"      : "long";
             case Type.DOUBLE:  return box ? "Double"    : "double";
-            case Type.ARRAY:   return SignaturePrinter.getTypeName(type.getElementType(), box, fullyQualified) + "[]";
+            case Type.ARRAY:   return SignaturePrinter.getTypeName(type.getElementType(), box, fullyQualified) + SignaturePrinter.arraySuffix(type);
             case Type.OBJECT:
                 String typeName = type.getClassName();
                 if (!fullyQualified) {
@@ -297,5 +297,17 @@ public class SignaturePrinter {
             default:
                 return "Object";
         }
+    }
+    
+    private static String arraySuffix(Type type) {
+        return Strings.repeat("[]", type.getDimensions());
+    }
+    
+    
+    private static StringBuilder appendArraySuffix(StringBuilder sb, Type type) {
+        for (int i = 0; i < type.getDimensions(); i++) {
+            sb.append("[]");
+        }
+        return sb;
     }
 }
