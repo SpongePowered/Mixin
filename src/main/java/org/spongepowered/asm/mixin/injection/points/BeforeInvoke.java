@@ -122,11 +122,22 @@ public class BeforeInvoke extends InjectionPoint {
      */
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
+        this.log("{} is searching for an injection point in method with descriptor {}", this.className, desc);
+        
+        if (!this.find(desc, insns, nodes, this.target)) {
+            return this.find(desc, insns, nodes, this.permissiveTarget);
+        }
+        return true;
+    }
+
+    protected boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes, MemberInfo target) {
+        if (target == null) {
+            return false;
+        }
+        
         int ordinal = 0;
         boolean found = false;
-
-        this.log("{} is searching for an injection point in method with descriptor {}", this.className, desc);
-
+        
         ListIterator<AbstractInsnNode> iter = insns.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
@@ -135,7 +146,7 @@ public class BeforeInvoke extends InjectionPoint {
                 MemberInfo nodeInfo = new MemberInfo(insn);
                 this.log("{} is considering insn {}", this.className, nodeInfo);
 
-                if (this.matches(nodeInfo)) {
+                if (target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
                     this.log("{} > found a matching insn, checking preconditions...", this.className);
                     
                     if (this.matchesInsn(nodeInfo, ordinal)) {
@@ -156,14 +167,6 @@ public class BeforeInvoke extends InjectionPoint {
         }
 
         return found;
-    }
-
-    private boolean matches(MemberInfo nodeInfo) {
-        if (this.target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
-            return true;
-        }
-
-        return this.permissiveTarget != null && this.permissiveTarget.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc);
     }
 
     protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
