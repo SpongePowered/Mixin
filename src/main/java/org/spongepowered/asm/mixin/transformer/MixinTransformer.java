@@ -645,7 +645,7 @@ public class MixinTransformer extends TreeTransformer {
         
         if (basicClass == null) {
             for (IClassGenerator generator : this.generators) {
-                Section genTimer = this.profiler.begin("generator.", generator.getClass().getSimpleName().toLowerCase());
+                Section genTimer = this.profiler.begin("generator", generator.getClass().getSimpleName().toLowerCase());
                 if ((basicClass = generator.generate(transformedName)) != null) {
                     genTimer.end();
                     this.exporter.export(transformedName.replace('.', '/'), false, basicClass);
