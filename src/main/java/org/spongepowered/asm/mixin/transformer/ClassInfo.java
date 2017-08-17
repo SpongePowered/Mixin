@@ -54,6 +54,8 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -576,6 +578,8 @@ public final class ClassInfo extends TreeInfo {
     }
 
     private static final Logger logger = LogManager.getLogger("mixin");
+    
+    private static final Profiler profiler = MixinEnvironment.getProfiler();
 
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
 
@@ -711,44 +715,49 @@ public final class ClassInfo extends TreeInfo {
      * @param classNode Class node to inspect
      */
     private ClassInfo(ClassNode classNode) {
-        this.name = classNode.name;
-        this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
-        this.methods = new HashSet<Method>();
-        this.fields = new HashSet<Field>();
-        this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
-        this.interfaces = new HashSet<String>();
-        this.access = classNode.access;
-        this.isMixin = classNode instanceof MixinClassNode;
-        this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
+        Section timer = ClassInfo.profiler.begin(Profiler.ROOT, "class.meta");
+        try {
+            this.name = classNode.name;
+            this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
+            this.methods = new HashSet<Method>();
+            this.fields = new HashSet<Field>();
+            this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
+            this.interfaces = new HashSet<String>();
+            this.access = classNode.access;
+            this.isMixin = classNode instanceof MixinClassNode;
+            this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
 
-        this.interfaces.addAll(classNode.interfaces);
+            this.interfaces.addAll(classNode.interfaces);
 
-        for (MethodNode method : classNode.methods) {
-            this.addMethod(method, this.isMixin);
-        }
+            for (MethodNode method : classNode.methods) {
+                this.addMethod(method, this.isMixin);
+            }
 
-        boolean isProbablyStatic = true;
-        String outerName = classNode.outerClass;
-        for (FieldNode field : classNode.fields) {
-            if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
-                if (field.name.startsWith("this$")) {
-                    isProbablyStatic = false;
-                    if (outerName == null) {
-                        outerName = field.desc;
-                        if (outerName != null && outerName.startsWith("L")) {
-                            outerName = outerName.substring(1, outerName.length() - 1);
+            boolean isProbablyStatic = true;
+            String outerName = classNode.outerClass;
+            for (FieldNode field : classNode.fields) {
+                if ((field.access & Opcodes.ACC_SYNTHETIC) != 0) {
+                    if (field.name.startsWith("this$")) {
+                        isProbablyStatic = false;
+                        if (outerName == null) {
+                            outerName = field.desc;
+                            if (outerName != null && outerName.startsWith("L")) {
+                                outerName = outerName.substring(1, outerName.length() - 1);
+                            }
                         }
                     }
                 }
+
+                this.fields.add(new Field(field, this.isMixin));
             }
 
-            this.fields.add(new Field(field, this.isMixin));
+            this.isProbablyStatic = isProbablyStatic;
+            this.outerName = outerName;
+            this.methodMapper = new MethodMapper(MixinEnvironment.getCurrentEnvironment(), this);
+            this.signature = ClassSignature.ofLazy(classNode);
+        } finally {
+            timer.end();
         }
-
-        this.isProbablyStatic = isProbablyStatic;
-        this.outerName = outerName;
-        this.methodMapper = new MethodMapper(MixinEnvironment.getCurrentEnvironment(), this);
-        this.signature = ClassSignature.ofLazy(classNode);
     }
 
     void addInterface(String iface) {

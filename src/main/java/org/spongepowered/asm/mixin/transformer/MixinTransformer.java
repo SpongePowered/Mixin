@@ -27,16 +27,10 @@ package org.spongepowered.asm.mixin.transformer;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
@@ -68,6 +62,8 @@ import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.PrettyPrinter;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -362,10 +358,12 @@ public class MixinTransformer extends TreeTransformer {
             if (force || environment.getOption(Option.DEBUG_EXPORT)) {
                 String filter = environment.getOptionValue(Option.DEBUG_EXPORT_FILTER);
                 if (force || filter == null || this.applyFilter(filter, transformedName)) {
+                    Section exportTimer = MixinEnvironment.getProfiler().begin("debug.export");
                     File outputFile = this.dumpClass(transformedName.replace('.', '/'), bytes);
                     if (this.decompiler != null) {
                         this.decompiler.decompile(outputFile);
                     }
+                    exportTimer.end();
                 }
             }
         }
@@ -435,6 +433,11 @@ public class MixinTransformer extends TreeTransformer {
      * Postprocessor for passthrough 
      */
     private final MixinPostProcessor postProcessor;
+    
+    /**
+     * Profiler 
+     */
+    private final Profiler profiler;
 
     /**
      * Current environment 
@@ -478,6 +481,8 @@ public class MixinTransformer extends TreeTransformer {
         
         this.generators.add(ArgsClassGenerator.getInstance());
         this.generators.add(InnerClassGenerator.getInstance());
+        
+        this.profiler = MixinEnvironment.getProfiler();
     }
 
     private IHotSwap initHotSwapper() {
@@ -527,6 +532,105 @@ public class MixinTransformer extends TreeTransformer {
                 auditLogger.error("Could not force-load " + target, ex);
             }
         }
+        
+        if (MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_PROFILER)) {
+            this.printProfilerSummary();
+        }
+    }
+
+    private void printProfilerSummary() {
+        DecimalFormat threedp = new DecimalFormat("(###0.000");
+        DecimalFormat onedp = new DecimalFormat("(###0.0");
+        PrettyPrinter printer = this.profiler.printer(false, true);
+        
+        long prepareTime = this.profiler.get("mixin.prepare").getTotalTime();
+        long readTime = this.profiler.get("mixin.read").getTotalTime();
+        long applyTime = this.profiler.get("mixin.apply").getTotalTime();
+        long writeTime = this.profiler.get("mixin.write").getTotalTime();
+        long totalMixinTime = this.profiler.get("mixin").getTotalTime();
+        
+        long loadTime = this.profiler.get("class.load").getTotalTime();
+        long transformTime = this.profiler.get("class.transform").getTotalTime();
+        long actualTime = totalMixinTime - loadTime - transformTime;
+        double timeSliceMixin = ((double)actualTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceLoad = ((double)loadTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceTransform = ((double)transformTime / (double)totalMixinTime) * 100.0D;
+        
+        long worstTransformerTime = 0L;
+        Section worstTransformer = null;
+        
+        for (Section section : this.profiler.getSections()) {
+            long transformerTime = section.getName().startsWith("class.transform.") ? section.getTotalTime() : 0L;
+            if (transformerTime > worstTransformerTime) {
+                worstTransformerTime = transformerTime;
+                worstTransformer = section;
+            }
+        }
+        
+        printer.hr().add("Summary").hr().add();
+        
+        String format = "%9d ms %12s seconds)";
+        printer.kv("Total mixin time", format, totalMixinTime, threedp.format(totalMixinTime * 0.001)).add();
+        printer.kv("Preparing mixins", format, prepareTime, threedp.format(prepareTime * 0.001));
+        printer.kv("Reading input", format, readTime, threedp.format(readTime * 0.001));
+        printer.kv("Applying mixins", format, applyTime, threedp.format(applyTime * 0.001));
+        printer.kv("Writing output", format, writeTime, threedp.format(writeTime * 0.001)).add();
+        
+        printer.kv("of which","");
+        printer.kv("Time spent loading from disk", format, loadTime, threedp.format(loadTime * 0.001));
+        printer.kv("Time spent transforming classes", format, transformTime, threedp.format(transformTime * 0.001)).add();
+        
+        if (worstTransformer != null) {
+            printer.kv("Worst transformer", worstTransformer.getName());
+            printer.kv("Class", worstTransformer.getInfo());
+            printer.kv("Time spent", "%s seconds", worstTransformer.getTotalSeconds());
+            printer.kv("called", "%d times", worstTransformer.getTotalCount()).add();
+        }
+        
+        printer.kv("   Time allocation:     Processing mixins", "%9d ms %10s%% of total)", actualTime, onedp.format(timeSliceMixin));
+        printer.kv("Loading classes", "%9d ms %10s%% of total)", loadTime, onedp.format(timeSliceLoad));
+        printer.kv("Running transformers", "%9d ms %10s%% of total)", transformTime, onedp.format(timeSliceTransform));
+        printer.add();
+        
+        try {
+            Class<?> agent = Class.forName("org.spongepowered.metronome.Agent", false, Launch.class.getClassLoader());
+            Method mdGetTimes = agent.getDeclaredMethod("getTimes");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Long> times = (Map<String, Long>)mdGetTimes.invoke(null);
+            
+            printer.hr().add("Transformer Times").hr().add();
+
+            int longest = 10;
+            for (Entry<String, Long> entry : times.entrySet()) {
+                longest = Math.max(longest, entry.getKey().length());
+            }
+            
+            for (Entry<String, Long> entry : times.entrySet()) {
+                String name = entry.getKey();
+                long mixinTime = 0L;
+                for (Section section : this.profiler.getSections()) {
+                    if (name.equals(section.getInfo())) {
+                        mixinTime = section.getTotalTime();
+                        break;
+                    }
+                }
+                
+                if (mixinTime > 0L) {
+                    printer.add("%-" + longest + "s %8s ms %8s ms in mixin)", name, entry.getValue() + mixinTime, "(" + mixinTime);
+                } else {
+                    printer.add("%-" + longest + "s %8s ms", name, entry.getValue());
+                }
+            }
+            
+            printer.add();
+            
+        } catch (Throwable th) {
+            // Metronome agent not loaded
+        }
+
+        
+        printer.print();
     }
 
     /* (non-Javadoc)
@@ -541,7 +645,9 @@ public class MixinTransformer extends TreeTransformer {
         
         if (basicClass == null) {
             for (IClassGenerator generator : this.generators) {
+                Section genTimer = this.profiler.begin("generator.", generator.getClass().getSimpleName().toLowerCase());
                 if ((basicClass = generator.generate(transformedName)) != null) {
+                    genTimer.end();
                     this.exporter.export(transformedName.replace('.', '/'), false, basicClass);
                     return basicClass;
                 }
@@ -552,19 +658,23 @@ public class MixinTransformer extends TreeTransformer {
         boolean locked = this.lock.push().check();
         
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
-        
+        Section mixinTimer = this.profiler.begin("mixin");
+
         if (!locked) {
             try {
                 this.checkSelect(environment);
             } catch (Exception ex) {
                 this.lock.pop();
+                mixinTimer.end();
                 throw new MixinException(ex);
             }
         }
         
         try {
             if (this.postProcessor.canTransform(transformedName)) {
+                Section postTimer = this.profiler.begin("postprocessor");
                 byte[] bytes = this.postProcessor.transform(name, transformedName, basicClass);
+                postTimer.end();
                 this.exporter.export(transformedName, false, bytes);
                 return bytes;
             }
@@ -605,8 +715,10 @@ public class MixinTransformer extends TreeTransformer {
 
                 try {
                     // Tree for target class
+                    Section timer = this.profiler.begin("read");
                     ClassNode targetClassNode = this.readClass(basicClass, true);
                     TargetClassContext context = new TargetClassContext(this.sessionId, transformedName, targetClassNode, mixins);
+                    timer.end();
                     basicClass = this.applyMixins(context);
                     this.transformedCount++;
                 } catch (InvalidMixinException th) {
@@ -622,6 +734,7 @@ public class MixinTransformer extends TreeTransformer {
             throw new MixinTransformerError("An unexpected critical error was encountered", th);
         } finally {
             this.lock.pop();
+            mixinTimer.end();
         }
     }
 
@@ -662,20 +775,34 @@ public class MixinTransformer extends TreeTransformer {
         }
         String action = this.currentEnvironment == environment ? "Checking for additional" : "Preparing";
         MixinTransformer.logger.log(this.verboseLoggingLevel, "{} mixins for {}", action, environment);
-        long startTime = System.currentTimeMillis();
+        
+        this.profiler.setActive(true);
+        this.profiler.mark(environment.getPhase().toString() + ":prepare");
+        Section prepareTimer = this.profiler.begin("prepare");
         
         this.selectConfigs(environment);
         this.selectModules(environment);
         int totalMixins = this.prepareConfigs(environment);
         this.currentEnvironment = environment;
         this.transformedCount = 0;
+
+        prepareTimer.end();
         
-        double elapsedTime = (System.currentTimeMillis() - startTime) * 0.001D;
+        long elapsedMs = prepareTimer.getTime();
+        double elapsedTime = prepareTimer.getSeconds();
         if (elapsedTime > 0.25D) {
+            long loadTime = this.profiler.get("class.load").getTime();
+            long transformTime = this.profiler.get("class.transform").getTime();
+            long pluginTime = this.profiler.get("mixin.plugin").getTime();
             String elapsed = new DecimalFormat("###0.000").format(elapsedTime);
-            String perMixinTime = new DecimalFormat("###0.0").format((elapsedTime / totalMixins) * 1000.0);
-            MixinTransformer.logger.log(this.verboseLoggingLevel, "Prepared {} mixins in {} sec ({} msec avg.)", totalMixins, elapsed, perMixinTime);
+            String perMixinTime = new DecimalFormat("###0.0").format(((double)elapsedMs) / totalMixins);
+            
+            MixinTransformer.logger.log(this.verboseLoggingLevel, "Prepared {} mixins in {} sec ({}ms avg) ({}ms load, {}ms transform, {}ms plugin)",
+                    totalMixins, elapsed, perMixinTime, loadTime, transformTime, pluginTime);
         }
+
+        this.profiler.mark(environment.getPhase().toString() + ":apply");
+        this.profiler.setActive(environment.getOption(Option.DEBUG_PROFILER));
     }
 
     /**
@@ -801,8 +928,11 @@ public class MixinTransformer extends TreeTransformer {
      * @return class bytecode after application of mixins
      */
     private byte[] applyMixins(TargetClassContext context) {
+        Section timer = this.profiler.begin("preapply");
         this.preApply(context);
+        timer = timer.next("apply");
         this.apply(context);
+        timer = timer.next("postapply");
         try {
             this.postApply(context);
         } catch (ValidationFailedException ex) {
@@ -812,6 +942,7 @@ public class MixinTransformer extends TreeTransformer {
                 this.writeClass(context);
             }
         }
+        timer.end();
         return this.writeClass(context);
     }
 
@@ -927,7 +1058,9 @@ public class MixinTransformer extends TreeTransformer {
     
     private byte[] writeClass(String transformedName, ClassNode targetClass, boolean forceExport) {
         // Collapse tree to bytes
+        Section writeTimer = this.profiler.begin("write");
         byte[] bytes = this.writeClass(targetClass);
+        writeTimer.end();
         this.exporter.export(transformedName, forceExport, bytes);
         return bytes;
     }

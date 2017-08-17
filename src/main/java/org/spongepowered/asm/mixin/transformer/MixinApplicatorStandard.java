@@ -64,6 +64,8 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
 
@@ -230,6 +232,11 @@ class MixinApplicatorStandard {
      */
     protected final ClassNode targetClass;
     
+    /**
+     * Profiler 
+     */
+    protected final Profiler profiler = MixinEnvironment.getProfiler();
+    
     MixinApplicatorStandard(TargetClassContext context) {
         this.context = context;
         this.targetName = context.getClassName();
@@ -255,9 +262,11 @@ class MixinApplicatorStandard {
             }
             
             for (ApplicatorPass pass : ApplicatorPass.values()) {
+                Section timer = this.profiler.begin("pass", pass.name().toLowerCase());
                 for (MixinTargetContext context : mixinContexts) {
                     this.applyMixin(current = context, pass);
                 }
+                timer.end();
             }
             
             for (MixinTargetContext context : mixinContexts) {

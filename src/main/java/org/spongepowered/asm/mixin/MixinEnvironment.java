@@ -56,6 +56,7 @@ import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.JavaVersion;
 import org.spongepowered.asm.util.PrettyPrinter;
+import org.spongepowered.asm.util.perf.Profiler;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
@@ -320,6 +321,12 @@ public final class MixinEnvironment implements ITokenProvider {
          * Enable strict checking for mixin targets
          */
         DEBUG_TARGETS(Option.DEBUG_STRICT, "targets"),
+        
+        /**
+         * Enable the performance profiler for all mixin operations (normally it
+         * is only enabled during mixin prepare operations)
+         */
+        DEBUG_PROFILER(Option.DEBUG_ALL, Inherit.ALLOW_OVERRIDE, "profiler"),
 
         /**
          * Dumps the bytecode for the target class to disk when mixin
@@ -857,6 +864,11 @@ public final class MixinEnvironment implements ITokenProvider {
      * Logger 
      */
     private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Performance profiler 
+     */
+    private static final Profiler profiler = new Profiler();
 
     /**
      * The phase for this environment
@@ -947,9 +959,10 @@ public final class MixinEnvironment implements ITokenProvider {
         String codeSource = this.getCodeSource();
         MixinEnvironment.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
         
-        if (this.getOption(Option.DEBUG_VERBOSE)) {
+        boolean verbose = this.getOption(Option.DEBUG_VERBOSE);
+        if (verbose || this.getOption(Option.DEBUG_EXPORT) || this.getOption(Option.DEBUG_PROFILER)) {
             PrettyPrinter printer = new PrettyPrinter(32);
-            printer.add("SpongePowered MIXIN (Verbose debugging enabled)").centre().hr();
+            printer.add("SpongePowered MIXIN%s", verbose ? " (Verbose debugging enabled)" : "").centre().hr();
             printer.kv("Code source", codeSource);
             printer.kv("Internal Version", version);
             printer.kv("Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
@@ -1359,7 +1372,8 @@ public final class MixinEnvironment implements ITokenProvider {
     public static void init(Phase phase) {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
             MixinEnvironment.currentPhase = phase;
-            MixinEnvironment.getEnvironment(phase);
+            MixinEnvironment env = MixinEnvironment.getEnvironment(phase);
+            MixinEnvironment.getProfiler().setActive(env.getOption(Option.DEBUG_PROFILER));
             
             @SuppressWarnings("unused")
             MixinLogger logSpy = new MixinLogger();
@@ -1430,6 +1444,15 @@ public final class MixinEnvironment implements ITokenProvider {
             MixinEnvironment.compatibility = level;
             MixinEnvironment.logger.info("Compatibility level set to {}", level);
         }
+    }
+    
+    /**
+     * Get the performance profiler
+     * 
+     * @return profiler
+     */
+    public static Profiler getProfiler() {
+        return MixinEnvironment.profiler;
     }
     
     /**

@@ -66,6 +66,8 @@ import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoad
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -678,6 +680,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     private final transient Logger logger = LogManager.getLogger("mixin");
     
     /**
+     * Profiler 
+     */
+    private final transient Profiler profiler = MixinEnvironment.getProfiler();
+    
+    /**
      * Parent configuration which declares this mixin 
      */
     private final transient MixinConfig parent;
@@ -875,7 +882,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 this.logger.error(message);
             }
             
-            if (this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetName, this.className)) {
+            if (this.shouldApplyMixin(suppressPlugin, targetName)) {
                 ClassInfo targetInfo = this.getTarget(targetName, checkPublic);
                 if (targetInfo != null && !outTargets.contains(targetInfo)) {
                     outTargets.add(targetInfo);
@@ -883,6 +890,13 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
                 }
             }
         }
+    }
+
+    private boolean shouldApplyMixin(boolean suppressPlugin, String targetName) {
+        Section pluginTimer = this.profiler.begin("plugin");
+        boolean result = this.plugin == null || suppressPlugin || this.plugin.shouldApplyMixin(targetName, this.className);
+        pluginTimer.end();
+        return result;
     }
 
     private ClassInfo getTarget(String targetName, boolean checkPublic) throws InvalidMixinException {
@@ -1121,7 +1135,10 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     MixinTargetContext createContextFor(TargetClassContext target) {
         MixinClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
-        return this.type.createPreProcessor(classNode).prepare().createContextFor(target);
+        Section preTimer = this.profiler.begin("pre");
+        MixinTargetContext preProcessor = this.type.createPreProcessor(classNode).prepare().createContextFor(target);
+        preTimer.end();
+        return preProcessor;
     }
 
     /**
@@ -1179,7 +1196,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     public void preApply(String transformedName, ClassNode targetClass) {
         if (this.plugin != null) {
+            Section pluginTimer = this.profiler.begin("plugin");
             this.plugin.preApply(transformedName, targetClass, this.className, this);
+            pluginTimer.end();
         }
     }
 
@@ -1188,7 +1207,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      */
     public void postApply(String transformedName, ClassNode targetClass) {
         if (this.plugin != null) {
+            Section pluginTimer = this.profiler.begin("plugin");
             this.plugin.postApply(transformedName, targetClass, this.className, this);
+            pluginTimer.end();
         }
         
         this.parent.postApply(transformedName, targetClass);
