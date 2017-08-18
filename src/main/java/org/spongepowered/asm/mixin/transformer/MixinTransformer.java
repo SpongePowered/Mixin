@@ -541,7 +541,7 @@ public class MixinTransformer extends TreeTransformer {
     private void printProfilerSummary() {
         DecimalFormat threedp = new DecimalFormat("(###0.000");
         DecimalFormat onedp = new DecimalFormat("(###0.0");
-        PrettyPrinter printer = this.profiler.printer(false, true);
+        PrettyPrinter printer = this.profiler.printer(false, false);
         
         long prepareTime = this.profiler.get("mixin.prepare").getTotalTime();
         long readTime = this.profiler.get("mixin.read").getTotalTime();
@@ -646,8 +646,9 @@ public class MixinTransformer extends TreeTransformer {
         if (basicClass == null) {
             for (IClassGenerator generator : this.generators) {
                 Section genTimer = this.profiler.begin("generator", generator.getClass().getSimpleName().toLowerCase());
-                if ((basicClass = generator.generate(transformedName)) != null) {
-                    genTimer.end();
+                basicClass = generator.generate(transformedName);
+                genTimer.end();
+                if (basicClass != null) {
                     this.exporter.export(transformedName.replace('.', '/'), false, basicClass);
                     return basicClass;
                 }

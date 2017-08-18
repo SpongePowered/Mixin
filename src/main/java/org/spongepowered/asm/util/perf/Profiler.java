@@ -153,6 +153,7 @@ public final class Profiler {
          * @return fluent
          */
         public Section end() {
+            Profiler.this.end(this);
             return this;
         }
         
