@@ -56,10 +56,19 @@ public final class Profiler {
      */
     public class Section {
         
+        static final String SEPARATOR_ROOT = " -> ";
+        
+        static final String SEPARATOR_CHILD = ".";
+
         /**
          * Section name
          */
         private final String name;
+        
+        /**
+         * True if this is a ROOT section
+         */
+        private boolean root;
 
         /**
          * True if this is a FINE section
@@ -67,10 +76,15 @@ public final class Profiler {
         private boolean fine;
         
         /**
+         * True if this section has been invalidated by a call to Profiler#clear
+         */
+        protected boolean invalidated;
+        
+        /**
          * Auxilliary info for this section, used for context
          */
         private String info;
-
+        
         Section(String name) {
             this.name = name;
             this.info = name;
@@ -83,8 +97,32 @@ public final class Profiler {
             return this;
         }
         
+        Section invalidate() {
+            this.invalidated = true;
+            return this;
+        }
+        
+        /**
+         * Mark this section as ROOT
+         * 
+         * @return fluent
+         */
+        Section setRoot(boolean root) {
+            this.root = root;
+            return this;
+        }
+        
+        /**
+         * Get whether this is a root section
+         */
+        public boolean isRoot() {
+            return this.root;
+        }
+        
         /**
          * Set this section as FINE
+         * 
+         * @return fluent
          */
         Section setFine(boolean fine) {
             this.fine = fine;
@@ -153,7 +191,9 @@ public final class Profiler {
          * @return fluent
          */
         public Section end() {
-            Profiler.this.end(this);
+            if (!this.invalidated) {
+                Profiler.this.end(this);
+            }
             return this;
         }
         
@@ -309,7 +349,9 @@ public final class Profiler {
         @Override
         public Section end() {
             this.stop();
-            Profiler.this.end(this);
+            if (!this.invalidated) {
+                Profiler.this.end(this);
+            }
             return this;
         }
         
@@ -400,6 +442,12 @@ public final class Profiler {
         }
         
         @Override
+        Section invalidate() {
+            this.root.invalidate();
+            return super.invalidate();
+        }
+        
+        @Override
         public String getBaseName() {
             return this.baseName;
         }
@@ -476,6 +524,10 @@ public final class Profiler {
      * Reset all profiler state
      */
     public void reset() {
+        for (Section section : this.sections.values()) {
+            section.invalidate();
+        }
+        
         this.sections.clear();
         this.phases.clear();
         this.phases.add("Initial");
@@ -557,7 +609,12 @@ public final class Profiler {
         String path = name;
         Section head = this.stack.peek();
         if (head != null) {
-            path = head.getName() + (root ? " -> " : ".") + path;
+            path = head.getName() + (root ? Section.SEPARATOR_ROOT : Section.SEPARATOR_CHILD) + path;
+            if (head.isRoot() && !root) {
+                int pos = head.getName().lastIndexOf(Section.SEPARATOR_ROOT);
+                name = (pos > -1 ? head.getName().substring(pos + 4) : head.getName()) + Section.SEPARATOR_CHILD + name;
+                root = true;
+            }
         }
         
         Section section = this.get(root ? name : path);
@@ -565,8 +622,9 @@ public final class Profiler {
             section = this.getSubSection(path, head.getName(), section);
         }
         
-        section.setFine(fine);
+        section.setFine(fine).setRoot(root);
         this.stack.push(section);
+        
         return section.start();
     }
     
@@ -577,13 +635,17 @@ public final class Profiler {
      * @param section section ending
      */
     void end(Section section) {
-        for (Section head = this.stack.pop(), next = head; next != section; next = this.stack.pop()) {
-            if (next == null) {
-                if (head == null) {
-                    throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
+        try {
+            for (Section head = this.stack.pop(), next = head; next != section; next = this.stack.pop()) {
+                if (next == null) {
+                    if (head == null) {
+                        throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
+                    }
+                    throw new IllegalStateException("Attempted to pop " + section + " which was not in the stack, head was " + head);
                 }
-                throw new IllegalStateException("Attempted to pop " + section + " which was not in the stack, head was " + head);
             }
+        } catch (NoSuchElementException ex) {
+            throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
         }
     }
     

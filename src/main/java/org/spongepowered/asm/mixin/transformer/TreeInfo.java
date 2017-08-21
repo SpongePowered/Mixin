@@ -158,7 +158,7 @@ abstract class TreeInfo {
             }
             
             Class<? extends IClassTransformer> clazz = transformer.getClass();
-            Section transformTime = profiler.begin(Profiler.ROOT | Profiler.FINE, "class.transform", clazz.getSimpleName().toLowerCase());
+            Section transformTime = profiler.begin(Profiler.FINE, clazz.getSimpleName().toLowerCase());
             transformTime.setInfo(clazz.getName());
             basicClass = transformer.transform(name, transformedName, basicClass);
             transformTime.end();

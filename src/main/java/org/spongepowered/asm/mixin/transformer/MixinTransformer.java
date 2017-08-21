@@ -551,10 +551,12 @@ public class MixinTransformer extends TreeTransformer {
         
         long loadTime = this.profiler.get("class.load").getTotalTime();
         long transformTime = this.profiler.get("class.transform").getTotalTime();
-        long actualTime = totalMixinTime - loadTime - transformTime;
+        long exportTime = this.profiler.get("mixin.debug.export").getTotalTime();
+        long actualTime = totalMixinTime - loadTime - transformTime - exportTime;
         double timeSliceMixin = ((double)actualTime / (double)totalMixinTime) * 100.0D;
         double timeSliceLoad = ((double)loadTime / (double)totalMixinTime) * 100.0D;
         double timeSliceTransform = ((double)transformTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceExport = ((double)exportTime / (double)totalMixinTime) * 100.0D;
         
         long worstTransformerTime = 0L;
         Section worstTransformer = null;
@@ -590,6 +592,9 @@ public class MixinTransformer extends TreeTransformer {
         printer.kv("   Time allocation:     Processing mixins", "%9d ms %10s%% of total)", actualTime, onedp.format(timeSliceMixin));
         printer.kv("Loading classes", "%9d ms %10s%% of total)", loadTime, onedp.format(timeSliceLoad));
         printer.kv("Running transformers", "%9d ms %10s%% of total)", transformTime, onedp.format(timeSliceTransform));
+        if (exportTime > 0L) {
+            printer.kv("Exporting classes (debug)", "%9d ms %10s%% of total)", exportTime, onedp.format(timeSliceExport));
+        }
         printer.add();
         
         try {
