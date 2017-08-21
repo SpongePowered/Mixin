@@ -551,5 +551,27 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">July 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.7.1</b></td>
+      <td valign="top">
+        <ul>
+          <li>Fixes and improvements to the Mixin AP, fixing handling of multi-
+          dimensional arrays and resolving methods in superclasses of derived
+          types of obfuscated classes</li>
+          <li>Add runtime refmap remapping to support using deobfCompile
+          dependencies with different mapping versions.</li>
+        </ul>
+      </td>
+      <td valign="top">August 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.7.2</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add profiler for inspecting mixin performance.</li>
+        </ul>
+      </td>
+      <td valign="top">August 2017</td>
+    </tr>
   </tbody>
 </table>
