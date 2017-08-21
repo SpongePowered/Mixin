@@ -36,6 +36,8 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer.ReEntranceState;
 import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 import net.minecraft.launchwrapper.Launch;
@@ -87,10 +89,16 @@ abstract class TreeInfo {
     static byte[] loadClass(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
         String transformedName = className.replace('/', '.');
         String name = MixinEnvironment.getCurrentEnvironment().unmap(transformedName);
+        
+        Profiler profiler = MixinEnvironment.getProfiler();
+        Section loadTime = profiler.begin(Profiler.ROOT, "class.load");
         byte[] classBytes = TreeInfo.getClassBytes(name, transformedName);
+        loadTime.end();
 
         if (runTransformers) {
-            classBytes = TreeInfo.applyTransformers(name, transformedName, classBytes);
+            Section transformTime = profiler.begin(Profiler.ROOT, "class.transform");
+            classBytes = TreeInfo.applyTransformers(name, transformedName, classBytes, profiler);
+            transformTime.end();
         }
 
         if (classBytes == null) {
@@ -136,7 +144,7 @@ abstract class TreeInfo {
      * @return class bytecode after processing by all registered transformers
      *      except the excluded transformers
      */
-    private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass) {
+    private static byte[] applyTransformers(String name, String transformedName, byte[] basicClass, Profiler profiler) {
         if (LaunchClassLoaderUtil.forClassLoader(Launch.classLoader).isClassExcluded(name, transformedName)) {
             return basicClass;
         }
@@ -149,15 +157,19 @@ abstract class TreeInfo {
                 TreeInfo.lock.clear();
             }
             
+            Class<? extends IClassTransformer> clazz = transformer.getClass();
+            Section transformTime = profiler.begin(Profiler.FINE, clazz.getSimpleName().toLowerCase());
+            transformTime.setInfo(clazz.getName());
             basicClass = transformer.transform(name, transformedName, basicClass);
-
+            transformTime.end();
+            
             if (TreeInfo.lock != null && TreeInfo.lock.isSet()) {
                 // Also add it to the exclusion list so we can exclude it if the environment triggers a rebuild
-                environment.addTransformerExclusion(transformer.getClass().getName());
+                environment.addTransformerExclusion(clazz.getName());
                 
                 TreeInfo.lock.clear();
                 TreeInfo.logger.info("A re-entrant transformer '{}' was detected and will no longer process meta class data",
-                        transformer.getClass().getName());
+                        clazz.getName());
             }
         }
 

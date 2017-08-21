@@ -36,6 +36,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
+import org.spongepowered.asm.util.Counter;
 
 import com.google.common.base.Strings;
 
@@ -43,13 +44,6 @@ import com.google.common.base.Strings;
  * Maintains method remaps for a target class
  */
 public class MethodMapper {
-    
-    /**
-     * Mutable integer
-     */
-    static class Counter {
-        public int value;
-    }
 
     /**
      * Logger

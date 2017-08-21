@@ -56,6 +56,8 @@ import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
 
 /**
@@ -134,6 +136,8 @@ class MixinPreProcessorStandard {
     
     protected final MixinEnvironment env;
     
+    protected final Profiler profiler = MixinEnvironment.getProfiler();
+    
     private final boolean verboseLogging, strictUnique;
     
     private boolean prepared, attached;
@@ -151,12 +155,14 @@ class MixinPreProcessorStandard {
      * 
      * @return Prepared classnode
      */
-    MixinPreProcessorStandard prepare() {
+    final MixinPreProcessorStandard prepare() {
         if (this.prepared) {
             return this;
         }
         
         this.prepared = true;
+        
+        Section prepareTimer = this.profiler.begin("prepare");
         
         for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
             Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
@@ -167,6 +173,7 @@ class MixinPreProcessorStandard {
             this.prepareField(mixinField);
         }
         
+        prepareTimer.end();
         return this;
     }
 
@@ -201,17 +208,21 @@ class MixinPreProcessorStandard {
         // stub
     }
     
-    MixinPreProcessorStandard conform(TargetClassContext target) {
+    final MixinPreProcessorStandard conform(TargetClassContext target) {
         return this.conform(target.getClassInfo());
     }
     
-    MixinPreProcessorStandard conform(ClassInfo target) {
+    final MixinPreProcessorStandard conform(ClassInfo target) {
+        Section conformTimer = this.profiler.begin("conform");
+        
         for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
             if (mixinMethod.isInjector()) {
                 Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
                 this.conformInjector(target, mixinMethod, method);
             }
         }
+        
+        conformTimer.end();
         return this;
     }
     
@@ -232,19 +243,27 @@ class MixinPreProcessorStandard {
      * 
      * @param context mixin target context
      */
-    MixinPreProcessorStandard attach(MixinTargetContext context) {
+    final MixinPreProcessorStandard attach(MixinTargetContext context) {
         if (this.attached) {
             throw new IllegalStateException("Preprocessor was already attached");
         }
         
         this.attached = true;
         
+        Section attachTimer = this.profiler.begin("attach");
+
         // Perform context-sensitive attachment phase
+        Section timer = this.profiler.begin("methods");
         this.attachMethods(context);
+        timer = timer.next("fields");
         this.attachFields(context);
         
         // Apply transformations to the mixin bytecode
+        timer = timer.next("transform");
         this.transform(context);
+        timer.end();
+        
+        attachTimer.end();
         return this;
     }
 
@@ -637,20 +656,41 @@ class MixinPreProcessorStandard {
             for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
                 AbstractInsnNode insn = iter.next();
                 if (insn instanceof MethodInsnNode) {
-                    MethodInsnNode methodNode = (MethodInsnNode)insn;
-                    Method method = ClassInfo.forName(methodNode.owner).findMethodInHierarchy(methodNode, SearchType.ALL_CLASSES,
-                            ClassInfo.INCLUDE_PRIVATE);
-                    if (method != null && method.isRenamed()) {
-                        methodNode.name = method.getName();
-                    }
+                    this.transformMethod((MethodInsnNode)insn);
                 } else if (insn instanceof FieldInsnNode) {
-                    FieldInsnNode fieldNode = (FieldInsnNode)insn;
-                    Field field = ClassInfo.forName(fieldNode.owner).findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);
-                    if (field != null && field.isRenamed()) {
-                        fieldNode.name = field.getName();
-                    }
+                    this.transformField((FieldInsnNode)insn);
                 }
             }
+        }
+    }
+
+    protected void transformMethod(MethodInsnNode methodNode) {
+        Section metaTimer = this.profiler.begin("meta");
+        ClassInfo owner = ClassInfo.forName(methodNode.owner);
+        if (owner == null) {
+            throw new RuntimeException(new ClassNotFoundException(methodNode.owner.replace('/', '.')));
+        }
+
+        Method method = owner.findMethodInHierarchy(methodNode, SearchType.ALL_CLASSES, ClassInfo.INCLUDE_PRIVATE);
+        metaTimer.end();
+        
+        if (method != null && method.isRenamed()) {
+            methodNode.name = method.getName();
+        }
+    }
+
+    protected void transformField(FieldInsnNode fieldNode) {
+        Section metaTimer = this.profiler.begin("meta");
+        ClassInfo owner = ClassInfo.forName(fieldNode.owner);
+        if (owner == null) {
+            throw new RuntimeException(new ClassNotFoundException(fieldNode.owner.replace('/', '.')));
+        }
+        
+        Field field = owner.findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);
+        metaTimer.end();
+        
+        if (field != null && field.isRenamed()) {
+            fieldNode.name = field.getName();
         }
     }
 

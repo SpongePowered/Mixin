@@ -212,7 +212,8 @@ public class MixinPlatformManager {
      * mixin tweaker in their manifest) and add agents for them
      */
     private void scanClasspath() {
-        for (URL url : Launch.classLoader.getSources()) {
+        URL[] sources = Launch.classLoader.getSources().toArray(new URL[0]);
+        for (URL url : sources) {
             try {
                 URI uri = url.toURI();
                 if (this.containers.containsKey(uri)) {
