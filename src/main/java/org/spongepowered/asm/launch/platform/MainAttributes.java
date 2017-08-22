@@ -78,7 +78,13 @@ final class MainAttributes {
         } catch (IOException ex) {
             // be quiet checkstyle
         } finally {
-            IOUtils.closeQuietly(jarFile);
+            try {
+                if (jarFile != null) {
+                    jarFile.close();
+                }
+            } catch (IOException e) {
+                // ignore
+            }
         }
         return new Attributes();
     }

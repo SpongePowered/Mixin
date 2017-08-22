@@ -90,11 +90,11 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
             return this.getName().setObfuscatedName(name);
         }
         
-        public ObfuscationData<M> getObfuscationData(IObfuscationDataProvider provider, String owner) {
+        public ObfuscationData<M> getObfuscationData(IObfuscationDataProvider provider, TypeHandle owner) {
             return provider.getObfEntry(this.getMapping(owner, this.getName().toString(), this.getDesc()));
         }
         
-        public abstract M getMapping(String owner, String name, String desc);
+        public abstract M getMapping(TypeHandle owner, String name, String desc);
 
         public abstract void addMapping(ObfuscationType type, IMapping<?> remapped);
 
@@ -110,8 +110,8 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         }
         
         @Override
-        public MappingField getMapping(String owner, String name, String desc) {
-            return new MappingField(owner, name, desc);
+        public MappingField getMapping(TypeHandle owner, String name, String desc) {
+            return new MappingField(owner.getName(), name, desc);
         }
         
         @Override
@@ -131,8 +131,8 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         }
         
         @Override
-        public MappingMethod getMapping(String owner, String name, String desc) {
-            return new MappingMethod(owner, name, desc);
+        public MappingMethod getMapping(TypeHandle owner, String name, String desc) {
+            return owner.getMappingMethod(name, desc);
         }
         
         @Override
@@ -162,7 +162,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
     }
 
     private void registerShadowForTarget(AnnotatedElementShadow<?, ?> elem, TypeHandle target) {
-        ObfuscationData<? extends IMapping<?>> obfData = elem.getObfuscationData(this.obf.getDataProvider(), target.getName());
+        ObfuscationData<? extends IMapping<?>> obfData = elem.getObfuscationData(this.obf.getDataProvider(), target);
         
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
