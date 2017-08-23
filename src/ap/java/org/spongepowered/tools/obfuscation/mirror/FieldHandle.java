@@ -63,7 +63,7 @@ public class FieldHandle extends MemberHandle<MappingField> {
         this(owner, element, rawType, TypeUtils.getName(element), TypeUtils.getInternalName(element));
     }
     
-    protected FieldHandle(String owner, String name, String desc) {
+    public FieldHandle(String owner, String name, String desc) {
         this(owner, null, false, name, desc);
     }
     

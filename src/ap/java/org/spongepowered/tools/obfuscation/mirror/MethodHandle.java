@@ -50,7 +50,7 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
         this(owner, element, TypeUtils.getName(element), TypeUtils.getDescriptor(element));
     }
     
-    protected MethodHandle(TypeHandle owner, String name, String desc) {
+    public MethodHandle(TypeHandle owner, String name, String desc) {
         this(owner, null, name, desc);
     }
 

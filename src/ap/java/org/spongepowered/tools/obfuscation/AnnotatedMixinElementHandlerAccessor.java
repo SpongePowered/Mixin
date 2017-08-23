@@ -216,8 +216,12 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     private void registerAccessorForTarget(AnnotatedElementAccessor elem, TypeHandle target) {
         FieldHandle targetField = target.findField(elem.getTargetName(), elem.getTargetTypeName(), false);
         if (targetField == null) {
-            elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Accessor target " + elem + " in target " + target);
-            return;
+            if (!target.isImaginary()) {
+                elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Accessor target " + elem + " in target " + target);
+                return;
+            }
+            
+            targetField = new FieldHandle(target.getName(), elem.getTargetName(), elem.getDesc());
         }
 
         if (!elem.shouldRemap()) {
@@ -244,8 +248,12 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     private void registerInvokerForTarget(AnnotatedElementInvoker elem, TypeHandle target) {
         MethodHandle targetMethod = target.findMethod(elem.getTargetName(), elem.getTargetTypeName(), false);
         if (targetMethod == null) {
-            elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Invoker target " + elem + " in target " + target);
-            return;
+            if (!target.isImaginary()) {
+                elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Invoker target " + elem + " in target " + target);
+                return;
+            }
+            
+            targetMethod = new MethodHandle(target, elem.getTargetName(), elem.getDesc());
         }
 
         if (!elem.shouldRemap()) {
