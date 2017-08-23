@@ -637,7 +637,7 @@ public final class Profiler {
     void end(Section section) {
         try {
             for (Section head = this.stack.pop(), next = head; next != section; next = this.stack.pop()) {
-                if (next == null) {
+                if (next == null && this.active) {
                     if (head == null) {
                         throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
                     }
@@ -645,7 +645,9 @@ public final class Profiler {
                 }
             }
         } catch (NoSuchElementException ex) {
-            throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
+            if (this.active) {
+                throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
+            }
         }
     }
     
