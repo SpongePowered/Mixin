@@ -52,6 +52,7 @@ import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
 
 /**
@@ -167,7 +168,7 @@ class AnnotatedMixin {
         this.methods = new ArrayList<ExecutableElement>(this.handle.<ExecutableElement>getEnclosedElements(ElementKind.METHOD));
         this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);
-        this.classRef = type.getQualifiedName().toString().replace('.', '/');
+        this.classRef = TypeUtils.getInternalName(type);
         this.primaryTarget = this.initTargets();
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
 
