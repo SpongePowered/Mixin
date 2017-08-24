@@ -62,16 +62,22 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
     private static final String LOAD_CORE_MOD_METHOD = "loadCoreMod";
     private static final String GET_REPARSEABLE_COREMODS_METHOD = "getReparseableCoremods";
     private static final String CORE_MOD_MANAGER_CLASS = "net.minecraftforge.fml.relauncher.CoreModManager";
+    private static final String CORE_MOD_MANAGER_CLASS_LEGACY = "cpw.mods.fml.relauncher.CoreModManager";
     private static final String GET_IGNORED_MODS_METHOD = "getIgnoredMods";
+    private static final String GET_IGNORED_MODS_METHOD_LEGACY = "getLoadedCoremods";
     
     private static final String FML_REMAPPER_ADAPTER_CLASS = "org.spongepowered.asm.bridge.RemapperAdapterFML";
     private static final String FML_CMDLINE_COREMODS = "fml.coreMods.load";
     private static final String FML_PLUGIN_WRAPPER_CLASS = "FMLPluginWrapper";
-    private static final String FML_COREMOD_INSTANCE_FIELD = "coreModInstance";
+    private static final String FML_CORE_MOD_INSTANCE_FIELD = "coreModInstance";
 
     private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
     private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
     private static final String MFATT_COREMODCONTAINSMOD = "FMLCorePluginContainsFMLMod";
+    
+    private static final String FML_TWEAKER_DEOBF = "FMLDeobfTweaker";
+    private static final String FML_TWEAKER_INJECTION = "FMLInjectionAndSortingTweaker";
+    private static final String FML_TWEAKER_TERMINAL = "TerminalTweaker";
 
     /**
      * Coremod classes which have already been bootstrapped, so that we know not
@@ -111,6 +117,11 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      * Core mod manager class
      */
     private Class<?> clCoreModManager;
+    
+    /**
+     * True if this agent is initialised during pre-injection 
+     */
+    private boolean initInjectionState;
 
     /**
      * @param manager platform manager
@@ -209,6 +220,10 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             MixinPlatformAgentAbstract.logger.debug("Core plugin {} could not be loaded.", coreModName);
             return null;
         }
+        
+        // If the injection tweaker is queued, we are most likely in development
+        // and will NOT need to co-init the coremod
+        this.initInjectionState = MixinPlatformAgentFML.isTweakerQueued(MixinPlatformAgentFML.FML_TWEAKER_INJECTION);
 
         MixinPlatformAgentFML.loadedCoreMods.add(coreModName);
         return wrapper;
@@ -230,7 +245,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             for (ITweaker tweaker : tweakers) {
                 Class<? extends ITweaker> tweakClass = tweaker.getClass();
                 if (MixinPlatformAgentFML.FML_PLUGIN_WRAPPER_CLASS.equals(tweakClass.getSimpleName())) {
-                    Field fdCoreModInstance = tweakClass.getField(MixinPlatformAgentFML.FML_COREMOD_INSTANCE_FIELD);
+                    Field fdCoreModInstance = tweakClass.getField(MixinPlatformAgentFML.FML_CORE_MOD_INSTANCE_FIELD);
+                    fdCoreModInstance.setAccessible(true);
                     Object coreMod = fdCoreModInstance.get(tweaker);
                     if (coreModName.equals(coreMod.getClass().getName())) {
                         return true;
@@ -254,6 +270,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     @Override
     public void prepare() {
+        this.initInjectionState |= MixinPlatformAgentFML.isTweakerQueued(MixinPlatformAgentFML.FML_TWEAKER_INJECTION);
     }
     
     /* (non-Javadoc)
@@ -286,13 +303,9 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (this.coreModWrapper != null) {
-            if (!this.isFMLInjected()) {
-                MixinPlatformAgentAbstract.logger.debug("FML agent is co-initialising coremod instance {} for {}", this.coreModWrapper, this.uri);
-                this.coreModWrapper.injectIntoClassLoader(classLoader);
-            } else {
-                MixinPlatformAgentAbstract.logger.debug("FML agent is skipping co-init for {} because FML already started", this.coreModWrapper);
-            }
+        if (this.coreModWrapper != null && this.checkForCoInitialisation()) {
+            MixinPlatformAgentAbstract.logger.debug("FML agent is co-initiralising coremod instance {} for {}", this.coreModWrapper, this.uri);
+            this.coreModWrapper.injectIntoClassLoader(classLoader);
         }
     }
 
@@ -316,9 +329,27 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      * 
      * @return true if FML was already injected
      */
-    protected final boolean isFMLInjected() {
+    protected final boolean checkForCoInitialisation() {
+        boolean injectionTweaker = MixinPlatformAgentFML.isTweakerQueued(MixinPlatformAgentFML.FML_TWEAKER_INJECTION);
+        boolean terminalTweaker = MixinPlatformAgentFML.isTweakerQueued(MixinPlatformAgentFML.FML_TWEAKER_TERMINAL);
+        if ((this.initInjectionState && terminalTweaker) || injectionTweaker) {
+            MixinPlatformAgentAbstract.logger.debug("FML agent is skipping co-init for {} because FML will inject it normally", this.coreModWrapper);
+            return false;
+        }
+        
+        return !MixinPlatformAgentFML.isTweakerQueued(MixinPlatformAgentFML.FML_TWEAKER_DEOBF);
+    }
+
+    /**
+     * Check whether a tweaker ending with <tt>tweakName</tt> has been enqueued
+     * but not yet visited.
+     * 
+     * @param tweakerName Tweaker name to 
+     * @return true if a tweaker with the specified name is queued
+     */
+    private static boolean isTweakerQueued(String tweakerName) {
         for (String tweaker : Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES)) {
-            if (tweaker.endsWith("FMLDeobfTweaker")) {
+            if (tweaker.endsWith(tweakerName)) {
                 return true;
             }
         }
@@ -334,7 +365,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             return Class.forName(Blackboard.getString(
                     Blackboard.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS));
         } catch (ClassNotFoundException ex) {
-            return Class.forName("cpw.mods.fml.relauncher.CoreModManager");
+            return Class.forName(MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS_LEGACY);
         }
     }
 
@@ -348,7 +379,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         } catch (NoSuchMethodException ex1) {
             try {
                 // Legacy name
-                mdGetIgnoredMods = clCoreModManager.getDeclaredMethod("getLoadedCoremods");
+                mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(MixinPlatformAgentFML.GET_IGNORED_MODS_METHOD_LEGACY);
             } catch (NoSuchMethodException ex2) {
                 MixinPlatformAgentAbstract.logger.catching(Level.DEBUG, ex2);
                 return Collections.<String>emptyList();
