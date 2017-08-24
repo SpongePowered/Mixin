@@ -25,12 +25,15 @@
 package org.spongepowered.asm.launch.platform;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
 //import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.launch.Blackboard;
@@ -62,10 +65,32 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
     private static final String GET_IGNORED_MODS_METHOD = "getIgnoredMods";
     
     private static final String FML_REMAPPER_ADAPTER_CLASS = "org.spongepowered.asm.bridge.RemapperAdapterFML";
+    private static final String FML_CMDLINE_COREMODS = "fml.coreMods.load";
+    private static final String FML_PLUGIN_WRAPPER_CLASS = "FMLPluginWrapper";
+    private static final String FML_COREMOD_INSTANCE_FIELD = "coreModInstance";
 
     private static final String MFATT_FORCELOADASMOD = "ForceLoadAsMod";
     private static final String MFATT_FMLCOREPLUGIN = "FMLCorePlugin";
     private static final String MFATT_COREMODCONTAINSMOD = "FMLCorePluginContainsFMLMod";
+
+    /**
+     * Coremod classes which have already been bootstrapped, so that we know not
+     * to inject them
+     */
+    private static final Set<String> loadedCoreMods = new HashSet<String>();
+    
+    /**
+     * Discover mods specified to FML on the command line (via JVM arg) at
+     * startup so that we know to ignore them
+     */
+    static {
+        for (String cmdLineCoreMod : System.getProperty(MixinPlatformAgentFML.FML_CMDLINE_COREMODS, "").split(",")) {
+            if (!cmdLineCoreMod.isEmpty()) {
+                MixinPlatformAgentAbstract.logger.debug("FML platform agent will ignore coremod {} specified on the command line", cmdLineCoreMod);
+                MixinPlatformAgentFML.loadedCoreMods.add(cmdLineCoreMod);
+            }
+        }
+    }
     
     /**
      * If running under FML, we will attempt to inject any coremod specified in
@@ -169,7 +194,12 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         if (coreModName == null) {
             return null;
         }
-
+        
+        if (this.isAlreadyInjected(coreModName)) {
+            MixinPlatformAgentAbstract.logger.error("{} has core plugin {}. Skipping because it was already injected.", this.fileName, coreModName);
+            return null;
+        }
+        
         MixinPlatformAgentAbstract.logger.debug("{} has core plugin {}. Injecting it into FML for co-initialisation:", this.fileName, coreModName);
         Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
                 Blackboard.Keys.FML_LOAD_CORE_MOD, MixinPlatformAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
@@ -180,9 +210,40 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
             return null;
         }
 
+        MixinPlatformAgentFML.loadedCoreMods.add(coreModName);
         return wrapper;
     }
     
+    private boolean isAlreadyInjected(String coreModName) {
+        // Did we already inject this ourselves, or was it specified on the command line
+        if (MixinPlatformAgentFML.loadedCoreMods.contains(coreModName)) {
+            return true;
+        }
+        
+        // Was it already loaded, check the tweakers list
+        try {
+            List<ITweaker> tweakers = Blackboard.<List<ITweaker>>get(Blackboard.Keys.TWEAKS);
+            if (tweakers == null) {
+                return false;
+            }
+            
+            for (ITweaker tweaker : tweakers) {
+                Class<? extends ITweaker> tweakClass = tweaker.getClass();
+                if (MixinPlatformAgentFML.FML_PLUGIN_WRAPPER_CLASS.equals(tweakClass.getSimpleName())) {
+                    Field fdCoreModInstance = tweakClass.getField(MixinPlatformAgentFML.FML_COREMOD_INSTANCE_FIELD);
+                    Object coreMod = fdCoreModInstance.get(tweaker);
+                    if (coreModName.equals(coreMod.getClass().getName())) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+//            ex.printStackTrace();
+        }
+
+        return false;
+    }
+
     @Override
     public String getPhaseProvider() {
         return MixinPlatformAgentFML.class.getName() + "$PhaseProvider";

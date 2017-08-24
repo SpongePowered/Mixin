@@ -43,6 +43,7 @@ public final class Blackboard {
         public static final String AGENTS                       = "mixin.agents";
         public static final String CONFIGS                      = "mixin.configs";
         public static final String TRANSFORMER                  = "mixin.transformer";
+        public static final String PLATFORM_MANAGER             = "mixin.platform";
         
         public static final String FML_LOAD_CORE_MOD            = "mixin.launch.fml.loadcoremodmethod";
         public static final String FML_GET_REPARSEABLE_COREMODS = "mixin.launch.fml.reparseablecoremodsmethod";

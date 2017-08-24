@@ -110,7 +110,14 @@ public abstract class MixinBootstrap {
      */
     public static MixinPlatformManager getPlatform() {
         if (MixinBootstrap.platform == null) {
-            MixinBootstrap.platform = new MixinPlatformManager();
+            Object globalPlatformManager = Blackboard.<Object>get(Blackboard.Keys.PLATFORM_MANAGER);
+            if (globalPlatformManager instanceof MixinPlatformManager) {
+                MixinBootstrap.platform = (MixinPlatformManager)globalPlatformManager;
+            } else {
+                MixinBootstrap.platform = new MixinPlatformManager();
+                Blackboard.put(Blackboard.Keys.PLATFORM_MANAGER, MixinBootstrap.platform);
+                MixinBootstrap.platform.init();
+            }
         }
         return MixinBootstrap.platform;
     }

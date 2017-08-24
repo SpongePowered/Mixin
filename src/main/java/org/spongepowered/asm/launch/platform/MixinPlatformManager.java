@@ -91,7 +91,12 @@ public class MixinPlatformManager {
     
     public MixinPlatformManager() { //Delegate delegate) {
 //        this.delegate = delegate;
-
+    }
+    
+    /**
+     * Initialise this platform manager by scanning the classpath
+     */
+    public void init() {
         MixinPlatformManager.logger.debug("Initialising Mixin Platform Manager");
                 
         // Add agents for the tweak container 
