@@ -196,7 +196,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         }
         
         if (this.isAlreadyInjected(coreModName)) {
-            MixinPlatformAgentAbstract.logger.error("{} has core plugin {}. Skipping because it was already injected.", this.fileName, coreModName);
+            MixinPlatformAgentAbstract.logger.debug("{} has core plugin {}. Skipping because it was already injected.", this.fileName, coreModName);
             return null;
         }
         
