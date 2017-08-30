@@ -22,22 +22,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.ext;
+
+import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**
- * Base interface for class generators
+ * Interface for target classes passed into transformer modules via
+ * {@link IExtension}
  */
-public interface IClassGenerator {
+public interface ITargetClassContext {
 
     /**
-     * Generate (if possible) the specified class name. The generator should
-     * return <tt>null</tt> if it cannot generate the specified class, in order
-     * that the next generator in the chain can process the request. The first
-     * generator to return a value will halt further processing of the request.
-     * 
-     * @param name Class name to generate
-     * @return Class bytecode or null
+     * Get the target class metadata
      */
-    public abstract byte[] generate(String name);
+    public abstract ClassInfo getClassInfo();
+
+    /**
+     * Get the class tree
+     */
+    public abstract ClassNode getClassNode();
 
 }

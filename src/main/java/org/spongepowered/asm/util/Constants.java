@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.util;
 
+import java.io.File;
+
 import org.spongepowered.asm.mixin.Mixin;
 
 /**
@@ -44,6 +46,8 @@ public abstract class Constants {
     
     public static final String SYNTHETIC_PACKAGE = "org.spongepowered.asm.synthetic";
     public static final char UNICODE_SNOWMAN = '\u2603';
+    
+    public static final File DEBUG_OUTPUT_DIR = new File(Constants.DEBUG_OUTPUT_PATH);
     
     private Constants() {}
     

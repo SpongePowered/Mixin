@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
@@ -169,6 +170,11 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     @Override
     public IMixinInfo getMixin() {
         throw new UnsupportedOperationException("MixinInfo not available at compile time");
+    }
+    
+    @Override
+    public Extensions getExtensions() {
+        throw new UnsupportedOperationException("Mixin Extensions not available at compile time");
     }
 
     @Override

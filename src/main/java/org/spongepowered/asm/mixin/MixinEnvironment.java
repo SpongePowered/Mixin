@@ -1260,7 +1260,7 @@ public final class MixinEnvironment implements ITokenProvider {
         Object activeTransformer = this.getActiveTransformer();
         if (activeTransformer instanceof MixinTransformer) {
             MixinTransformer transformer = (MixinTransformer)activeTransformer;
-            transformer.audit();
+            transformer.audit(this);
         }
     }
 
@@ -1275,7 +1275,7 @@ public final class MixinEnvironment implements ITokenProvider {
             this.buildTransformerDelegationList();
         }
         
-        return Collections.unmodifiableList(this.transformers);
+        return Collections.<IClassTransformer>unmodifiableList(this.transformers);
     }
 
     /**
@@ -1465,7 +1465,7 @@ public final class MixinEnvironment implements ITokenProvider {
             throw new IllegalArgumentException("Cannot go to the specified phase, phase is null or invalid");
         }
         
-        if (phase.ordinal > getCurrentPhase().ordinal) {
+        if (phase.ordinal > MixinEnvironment.getCurrentPhase().ordinal) {
             MixinBootstrap.addProxy();
         }
         

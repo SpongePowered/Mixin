@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.ext.extensions;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,9 +38,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
+import org.spongepowered.asm.mixin.transformer.ext.IExtension;
+import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
 
@@ -53,7 +57,12 @@ import com.google.common.io.Files;
  * Checks whether interfaces declared on mixin target classes are actually fully
  * implemented and generates reports to the console and to files on disk
  */
-public class MixinTransformerModuleInterfaceChecker implements IMixinTransformerModule {
+public class ExtensionCheckInterfaces implements IExtension {
+
+    private static final String AUDIT_DIR = "audit";
+    private static final String IMPL_REPORT_FILENAME = "mixin_implementation_report";
+    private static final String IMPL_REPORT_CSV_FILENAME = ExtensionCheckInterfaces.IMPL_REPORT_FILENAME + ".csv";
+    private static final String IMPL_REPORT_TXT_FILENAME = ExtensionCheckInterfaces.IMPL_REPORT_FILENAME + ".txt";
 
     private static final Logger logger = LogManager.getLogger("mixin");
 
@@ -72,12 +81,17 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      * applied.
      */
     private final Multimap<ClassInfo, Method> interfaceMethods = HashMultimap.create();
+    
+    /**
+     * Strict mode 
+     */
+    private boolean strict;
 
-    public MixinTransformerModuleInterfaceChecker() {
-        File debugOutputFolder = new File(MixinTransformer.DEBUG_OUTPUT, "audit");
+    public ExtensionCheckInterfaces() {
+        File debugOutputFolder = new File(Constants.DEBUG_OUTPUT_DIR, ExtensionCheckInterfaces.AUDIT_DIR);
         debugOutputFolder.mkdirs();
-        this.csv = new File(debugOutputFolder, "mixin_implementation_report.csv");
-        this.report = new File(debugOutputFolder, "mixin_implementation_report.txt");
+        this.csv = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_CSV_FILENAME);
+        this.report = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_TXT_FILENAME);
 
         try {
             Files.write("Class,Method,Signature,Interface\n", this.csv, Charsets.ISO_8859_1);
@@ -92,13 +106,23 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             // hmm :(
         }
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension#checkActive(
+     *      org.spongepowered.asm.mixin.MixinEnvironment)
+     */
+    @Override
+    public boolean checkActive(MixinEnvironment environment) {
+        this.strict = environment.getOption(Option.CHECK_IMPLEMENTS_STRICT);
+        return environment.getOption(Option.CHECK_IMPLEMENTS);
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.IMixinTransformerModule
      *     #preApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void preApply(TargetClassContext context) {
+    public void preApply(ITargetClassContext context) {
         ClassInfo targetClassInfo = context.getClassInfo();
         for (Method m : targetClassInfo.getInterfaceMethods(false)) {
             this.interfaceMethods.put(targetClassInfo, m);
@@ -110,12 +134,12 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
      *    #postApply(org.spongepowered.asm.mixin.transformer.TargetClassContext)
      */
     @Override
-    public void postApply(TargetClassContext context) {
+    public void postApply(ITargetClassContext context) {
         ClassInfo targetClassInfo = context.getClassInfo();
         
         // If the target is abstract and strict mode is not enabled, skip this class
-        if (targetClassInfo.isAbstract() && !MixinEnvironment.getCurrentEnvironment().getOption(Option.CHECK_IMPLEMENTS_STRICT)) {
-            MixinTransformerModuleInterfaceChecker.logger.info("{} is skipping abstract target {}", this.getClass().getSimpleName(), context);
+        if (targetClassInfo.isAbstract() && !this.strict) {
+            ExtensionCheckInterfaces.logger.info("{} is skipping abstract target {}", this.getClass().getSimpleName(), context);
             return;
         }
 
@@ -162,6 +186,15 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             this.appendToTextReport(printer);
         }
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension#export(
+     *      org.spongepowered.asm.mixin.MixinEnvironment, java.lang.String,
+     *      boolean, byte[])
+     */
+    @Override
+    public void export(MixinEnvironment env, String name, boolean force, byte[] bytes) {
+    }
 
     private void appendToCSVReport(String className, Method method, String iface) {
         try {
@@ -185,4 +218,5 @@ public class MixinTransformerModuleInterfaceChecker implements IMixinTransformer
             IOUtils.closeQuietly(fos);
         }
     }
+
 }

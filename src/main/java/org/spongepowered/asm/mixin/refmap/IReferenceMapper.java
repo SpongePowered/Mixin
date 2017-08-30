@@ -31,7 +31,8 @@ public interface IReferenceMapper {
 
     /**
      * Get whether this mapper is defaulted. Use this flag rather than reference
-     * comparison to {@link #DEFAULT_MAPPER} because of classloader shenanigans
+     * comparison to {@link ReferenceMapper#DEFAULT_MAPPER} because of
+     * classloader shenanigans
      * 
      * @return true if this mapper is a defaulted mapper
      */

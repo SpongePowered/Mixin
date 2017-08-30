@@ -33,6 +33,7 @@ import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.struct.MemberRef;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 
 /**

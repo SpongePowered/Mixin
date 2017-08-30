@@ -30,10 +30,10 @@ import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
-import org.spongepowered.asm.mixin.injection.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
 
@@ -43,11 +43,15 @@ import org.spongepowered.asm.util.Bytecode;
  */
 public class ModifyArgsInjector extends InvokeInjector {
 
+    private final ArgsClassGenerator argsClassGenerator;
+
     /**
      * @param info Injection info
      */
     public ModifyArgsInjector(InjectionInfo info) {
         super(info, "@ModifyArgs");
+        
+        this.argsClassGenerator = info.getContext().getExtensions().<ArgsClassGenerator>getGenerator(ArgsClassGenerator.class);
     }
     
     /* (non-Javadoc)
@@ -78,7 +82,7 @@ public class ModifyArgsInjector extends InvokeInjector {
                     + targetMethod.name + targetMethod.desc + " with no arguments!");
         }
         
-        String clArgs = ArgsClassGenerator.getInstance().getClassRef(targetMethod.desc);
+        String clArgs = this.argsClassGenerator.getClassRef(targetMethod.desc);
         boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();

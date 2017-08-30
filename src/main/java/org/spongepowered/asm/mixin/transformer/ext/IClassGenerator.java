@@ -22,30 +22,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.debug;
+package org.spongepowered.asm.mixin.transformer.ext;
 
 /**
- * Interface to allow the hot-swap agent to be loaded on-demand
+ * Base interface for class generators
  */
-public interface IHotSwap {
+public interface IClassGenerator {
 
     /**
-     * Registers a mixin class with the agent.
-     *
-     * <p>This is needed as the mixin needs to be loaded to be redefined.</p>
-     *
-     * @param name Fully qualified name of the mixin class
+     * Generate (if possible) the specified class name. The generator should
+     * return <tt>null</tt> if it cannot generate the specified class, in order
+     * that the next generator in the chain can process the request. The first
+     * generator to return a value will halt further processing of the request.
+     * 
+     * @param name Class name to generate
+     * @return Class bytecode or null
      */
-    public abstract void registerMixinClass(String name);
+    public abstract byte[] generate(String name);
 
-    /**
-     * Registers a class targeted by at least one mixin.
-     *
-     * <p>This is used to rollback the target class to a state before the
-     * mixin's were applied.</p>
-     *
-     * @param name Name of the class
-     * @param bytecode Bytecode of the class before mixin's have been applied
-     */
-    public abstract void registerTargetClass(String name, byte[] bytecode);
 }

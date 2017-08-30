@@ -27,7 +27,6 @@ package org.spongepowered.asm.transformers;
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.mixin.transformer.MixinClassWriter;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 

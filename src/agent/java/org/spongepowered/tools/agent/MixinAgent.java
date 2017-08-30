@@ -35,7 +35,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
-import org.spongepowered.asm.mixin.transformer.debug.IHotSwap;
+import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 
 import net.minecraft.launchwrapper.Launch;

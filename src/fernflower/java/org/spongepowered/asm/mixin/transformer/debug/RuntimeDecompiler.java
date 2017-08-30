@@ -37,6 +37,7 @@ import org.jetbrains.java.decompiler.main.extern.IBytecodeProvider;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger;
 import org.jetbrains.java.decompiler.main.extern.IResultSaver;
 import org.jetbrains.java.decompiler.util.InterpreterUtil;
+import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;

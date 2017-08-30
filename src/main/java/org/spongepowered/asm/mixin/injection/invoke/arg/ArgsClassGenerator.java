@@ -37,11 +37,11 @@ import org.spongepowered.asm.lib.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
-import org.spongepowered.asm.mixin.transformer.IClassGenerator;
+import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
-import org.spongepowered.asm.util.visitor.MethodVisitorEx;
+import org.spongepowered.asm.util.asm.MethodVisitorEx;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -84,11 +84,6 @@ public final class ArgsClassGenerator implements IClassGenerator {
     private static final String ACE_CTOR_DESC = "(IILjava/lang/String;)V";
 
     /**
-     * Singleton instance
-     */
-    private static ArgsClassGenerator instance;
-
-    /**
      * The next subclass number, classes generated in sequence eg.
      * <tt>Args$1</tt>, <tt>Args$2</tt>, etc. 
      */
@@ -106,10 +101,6 @@ public final class ArgsClassGenerator implements IClassGenerator {
      * for the same class 
      */
     private final Map<String, byte[]> classBytes = new HashMap<String, byte[]>();
-    
-    private ArgsClassGenerator() {
-        // singleton (for now)
-    }
     
     /**
      * Get (or generate) the class name for the specified descriptor. The class
@@ -539,18 +530,6 @@ public final class ArgsClassGenerator implements IClassGenerator {
 
     private static String getSignature(Type[] args) {
         return new SignaturePrinter("", null, args).setFullyQualified(true).getFormattedArgs();
-    }
-
-    /**
-     * Get the singleton instance
-     * 
-     * @return the singleton instance
-     */
-    public static ArgsClassGenerator getInstance() {
-        if (ArgsClassGenerator.instance == null) {
-            ArgsClassGenerator.instance = new ArgsClassGenerator();
-        }
-        return ArgsClassGenerator.instance;
     }
     
 }

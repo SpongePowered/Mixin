@@ -160,7 +160,7 @@ public final class TargetMap extends HashMap<TypeReference, Set<TypeReference>> 
      * @return Collection of mixins registered as targetting the specified class
      */
     public Collection<TypeReference> getMixinsTargeting(TypeReference target) {
-        return Collections.unmodifiableCollection(this.getMixinsFor(target));
+        return Collections.<TypeReference>unmodifiableCollection(this.getMixinsFor(target));
     }
     
     /**

@@ -22,32 +22,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.ext;
 
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.mixin.MixinEnvironment;
 
 /**
- * ClassWriter which resolves common superclasses using Mixin's metadata instead
- * of calling Class.forName
+ * Mixin Transformer extension interface for pre- and post-processors
  */
-public class MixinClassWriter extends ClassWriter {
-
-    public MixinClassWriter(int flags) {
-        super(flags);
-    }
-
-    public MixinClassWriter(ClassReader classReader, int flags) {
-        super(classReader, flags);
-    }
-
-    /* (non-Javadoc)
-     * @see org.objectweb.asm.ClassWriter#getCommonSuperClass(java.lang.String,
-     *      java.lang.String)
+public interface IExtension {
+    
+    /**
+     * Check whether this extension is active for the specified environment
+     * 
+     * @param environment current environment
+     * @return true if the module should be active in the specified environment
      */
-    @Override
-    protected String getCommonSuperClass(final String type1, final String type2) {
-        return ClassInfo.getCommonSuperClass(type1, type2).getName();
-    }
+    public abstract boolean checkActive(MixinEnvironment environment);
+
+    /**
+     * Called before the mixins are applied
+     * 
+     * @param context Target class context
+     */
+    public abstract void preApply(ITargetClassContext context);
+
+    /**
+     * Called after the mixins are applied
+     * 
+     * @param context Target class context
+     */
+    public abstract void postApply(ITargetClassContext context);
+
+    /**
+     * Called when a class needs to be exported
+     * 
+     * @param env Environment
+     * @param name Class name
+     * @param force True to export even if the current environment settings
+     *      would normally disable it
+     * @param bytes Bytes to export
+     */
+    public abstract void export(MixinEnvironment env, String name, boolean force, byte[] bytes);
 
 }

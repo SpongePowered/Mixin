@@ -41,6 +41,11 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 public final class LaunchClassLoaderUtil {
     
+    private static final String CACHED_CLASSES_FIELD = "cachedClasses";
+    private static final String INVALID_CLASSES_FIELD = "invalidClasses";
+    private static final String CLASS_LOADER_EXCEPTIONS_FIELD = "classLoaderExceptions";
+    private static final String TRANSFORMER_EXCEPTIONS_FIELD = "transformerExceptions";
+
     /**
      * ClassLoader -> util mapping
      */
@@ -64,10 +69,10 @@ public final class LaunchClassLoaderUtil {
      */
     private LaunchClassLoaderUtil(LaunchClassLoader classLoader) {
         this.classLoader = classLoader;
-        this.cachedClasses = LaunchClassLoaderUtil.<Map<String, Class<?>>>getField(classLoader, "cachedClasses");
-        this.invalidClasses = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, "invalidClasses");
-        this.classLoaderExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, "classLoaderExceptions");
-        this.transformerExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, "transformerExceptions");
+        this.cachedClasses = LaunchClassLoaderUtil.<Map<String, Class<?>>>getField(classLoader, LaunchClassLoaderUtil.CACHED_CLASSES_FIELD);
+        this.invalidClasses = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.INVALID_CLASSES_FIELD);
+        this.classLoaderExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.CLASS_LOADER_EXCEPTIONS_FIELD);
+        this.transformerExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.TRANSFORMER_EXCEPTIONS_FIELD);
     }
     
     /**
@@ -199,4 +204,5 @@ public final class LaunchClassLoaderUtil {
         }
         return util;
     }
+
 }

@@ -42,7 +42,9 @@ import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.transformer.meta.SourceMap;
+import org.spongepowered.asm.mixin.struct.SourceMap;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
+import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
@@ -50,12 +52,22 @@ import org.spongepowered.asm.util.ClassSignature;
 /**
  * Struct for containing target class information during mixin application
  */
-class TargetClassContext extends ClassContext {
+class TargetClassContext extends ClassContext implements ITargetClassContext {
 
     /**
      * Logger
      */
     private static final Logger logger = LogManager.getLogger("mixin");
+
+    /**
+     * Mixin environment
+     */
+    private final MixinEnvironment env;
+
+    /**
+     * Mixin transformer extensions
+     */
+    private final Extensions extensions;
 
     /**
      * Transformer session ID
@@ -121,7 +133,9 @@ class TargetClassContext extends ClassContext {
      */
     private boolean forceExport;
 
-    TargetClassContext(String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
+    TargetClassContext(MixinEnvironment env, Extensions extensions, String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
+        this.env = env;
+        this.extensions = extensions;
         this.sessionId = sessionId;
         this.className = name;
         this.classNode = classNode;
@@ -143,6 +157,13 @@ class TargetClassContext extends ClassContext {
     
     boolean isExportForced() {
         return this.forceExport;
+    }
+    
+    /**
+     * Get the transformer extensions
+     */
+    Extensions getExtensions() {
+        return this.extensions;
     }
     
     /**
@@ -171,7 +192,7 @@ class TargetClassContext extends ClassContext {
      * Get the class tree
      */
     @Override
-    ClassNode getClassNode() {
+    public ClassNode getClassNode() {
         return this.classNode;
     }
 
@@ -193,7 +214,7 @@ class TargetClassContext extends ClassContext {
      * Get the target class metadata
      */
     @Override
-    ClassInfo getClassInfo() {
+    public ClassInfo getClassInfo() {
         return this.classInfo;
     }
     
@@ -358,7 +379,7 @@ class TargetClassContext extends ClassContext {
      * Process {@link Debug} annotations on the class after application
      */
     void processDebugTasks() {
-        if (!MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_VERBOSE)) {
+        if (!this.env.getOption(Option.DEBUG_VERBOSE)) {
             return;
         }
 

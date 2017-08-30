@@ -49,6 +49,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
+import org.spongepowered.asm.transformers.MixinClassWriter;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Bytecode;
 

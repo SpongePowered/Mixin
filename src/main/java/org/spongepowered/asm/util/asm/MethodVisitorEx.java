@@ -22,26 +22,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.throwables;
+package org.spongepowered.asm.util.asm;
 
-import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
+import org.spongepowered.asm.lib.MethodVisitor;
+import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
- * Thrown when an injector group fails an injection check
+ * MethodVisitor with some extra convenience functionality
  */
-public class InjectionValidationException extends Exception {
-    
-    private static final long serialVersionUID = 1L;
-    
-    private final InjectorGroupInfo group;
-    
-    public InjectionValidationException(InjectorGroupInfo group, String message) {
-        super(message);
-        this.group = group;
+public class MethodVisitorEx extends MethodVisitor {
+
+    public MethodVisitorEx(MethodVisitor mv) {
+        super(Opcodes.ASM5, mv);
     }
-    
-    public InjectorGroupInfo getGroup() {
-        return this.group;
+
+    /**
+     * Visit a byte constant instruction. The most specific constant instruction
+     * will be used where possible 
+     * 
+     * @param constant constant value to visit
+     */
+    public void visitConstant(byte constant) {
+        if (constant > -2 && constant < 6) {
+            this.visitInsn(Bytecode.CONSTANTS_INT[constant + 1]);
+            return;
+        }
+        this.visitIntInsn(Opcodes.BIPUSH, constant);
     }
     
 }

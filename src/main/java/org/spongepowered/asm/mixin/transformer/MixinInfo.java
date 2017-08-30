@@ -802,7 +802,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
             this.priority = this.readPriority(this.pendingState.getClassNode());
             this.virtual = this.readPseudo(this.pendingState.getClassNode());
             this.targetClasses = this.readTargetClasses(this.pendingState.getClassNode(), suppressPlugin);
-            this.targetClassNames = Collections.unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
+            this.targetClassNames = Collections.<String>unmodifiableList(Lists.transform(this.targetClasses, Functions.toStringFunction()));
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -1094,28 +1094,28 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Get the soft implementations for this mixin
      */
     List<InterfaceInfo> getSoftImplements() {
-        return Collections.unmodifiableList(this.getState().getSoftImplements());
+        return Collections.<InterfaceInfo>unmodifiableList(this.getState().getSoftImplements());
     }
 
     /**
      * Get the synthetic inner classes for this mixin
      */
     Set<String> getSyntheticInnerClasses() {
-        return Collections.unmodifiableSet(this.getState().getSyntheticInnerClasses());
+        return Collections.<String>unmodifiableSet(this.getState().getSyntheticInnerClasses());
     }
     
     /**
      * Get the user-defined inner classes for this mixin
      */
     Set<String> getInnerClasses() {
-        return Collections.unmodifiableSet(this.getState().getInnerClasses());
+        return Collections.<String>unmodifiableSet(this.getState().getInnerClasses());
     }
     
     /**
      * Get the target class list for this mixin
      */
     List<ClassInfo> getTargets() {
-        return Collections.unmodifiableList(this.targetClasses);
+        return Collections.<ClassInfo>unmodifiableList(this.targetClasses);
     }
 
     /**

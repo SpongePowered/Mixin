@@ -62,7 +62,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.7.2";
+    public static final String VERSION = "0.7.3";
     
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";

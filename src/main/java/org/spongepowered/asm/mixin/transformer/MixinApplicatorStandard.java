@@ -969,13 +969,12 @@ class MixinApplicatorStandard {
     protected final void checkConstraints(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         try {
             Constraint constraint = ConstraintParser.parse(annotation);
-            MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
             try {
-                constraint.check(environment);
+                constraint.check(mixin.getEnvironment());
             } catch (ConstraintViolationException ex) {
                 String message = String.format("Constraint violation: %s on %s in %s", ex.getMessage(), method, mixin);
                 this.logger.warn(message);
-                if (!environment.getOption(Option.IGNORE_CONSTRAINTS)) {
+                if (!mixin.getEnvironment().getOption(Option.IGNORE_CONSTRAINTS)) {
                     throw new InvalidMixinException(mixin, message, ex);
                 }
             }

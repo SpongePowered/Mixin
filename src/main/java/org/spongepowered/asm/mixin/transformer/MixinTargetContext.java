@@ -51,19 +51,21 @@ import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
+import org.spongepowered.asm.mixin.struct.MemberRef;
+import org.spongepowered.asm.mixin.struct.SourceMap.File;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
-import org.spongepowered.asm.mixin.transformer.meta.SourceMap.File;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
@@ -189,7 +191,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.sessionId = context.getSessionId();
         this.requireVersion(classNode.version);
         
-        InnerClassGenerator icg = InnerClassGenerator.getInstance();
+        InnerClassGenerator icg = context.getExtensions().getGenerator(InnerClassGenerator.class);
         for (String innerClass : this.mixin.getInnerClasses()) {
             this.innerClasses.put(innerClass, icg.registerInnerClass(this.mixin, innerClass, this));
         }
@@ -944,7 +946,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
 
     MethodNode findRemappedMethod(MethodNode method) {
-        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        RemapperChain remapperChain = this.getEnvironment().getRemappers();
         String remappedName = remapperChain.mapMethodName(this.getTarget().getClassRef(), method.name, method.desc);
         if (remappedName.equals(method.name)) {
             return null;
@@ -970,7 +972,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
 
     FieldNode findRemappedField(FieldNode field) {
-        RemapperChain remapperChain = MixinEnvironment.getCurrentEnvironment().getRemappers();
+        RemapperChain remapperChain = this.getEnvironment().getRemappers();
         String remappedName = remapperChain.mapFieldName(this.getTarget().getClassRef(), field.name, field.desc);
         if (remappedName.equals(field.name)) {
             return null;
@@ -999,8 +1001,15 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.refmap.IMixinContext
-     *      #getMixin()
+     * @see org.spongepowered.asm.mixin.refmap.IMixinContext#getExtensions()
+     */
+    @Override
+    public Extensions getExtensions() {
+        return this.targetClass.getExtensions();
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.refmap.IMixinContext#getMixin()
      */
     @Override
     public IMixinInfo getMixin() {

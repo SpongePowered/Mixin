@@ -22,33 +22,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util.visitor;
+package org.spongepowered.asm.transformers;
 
-import org.spongepowered.asm.lib.MethodVisitor;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.lib.ClassReader;
+import org.spongepowered.asm.lib.ClassWriter;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**
- * MethodVisitor with some extra convenience functionality
+ * ClassWriter which resolves common superclasses using Mixin's metadata instead
+ * of calling Class.forName
  */
-public class MethodVisitorEx extends MethodVisitor {
+public class MixinClassWriter extends ClassWriter {
 
-    public MethodVisitorEx(MethodVisitor mv) {
-        super(Opcodes.ASM5, mv);
+    public MixinClassWriter(int flags) {
+        super(flags);
     }
 
-    /**
-     * Visit a byte constant instruction. The most specific constant instruction
-     * will be used where possible 
-     * 
-     * @param constant constant value to visit
+    public MixinClassWriter(ClassReader classReader, int flags) {
+        super(classReader, flags);
+    }
+
+    /* (non-Javadoc)
+     * @see org.objectweb.asm.ClassWriter#getCommonSuperClass(java.lang.String,
+     *      java.lang.String)
      */
-    public void visitConstant(byte constant) {
-        if (constant > -2 && constant < 6) {
-            this.visitInsn(Bytecode.CONSTANTS_INT[constant + 1]);
-            return;
-        }
-        this.visitIntInsn(Opcodes.BIPUSH, constant);
+    @Override
+    protected String getCommonSuperClass(final String type1, final String type2) {
+        return ClassInfo.getCommonSuperClass(type1, type2).getName();
     }
-    
+
 }

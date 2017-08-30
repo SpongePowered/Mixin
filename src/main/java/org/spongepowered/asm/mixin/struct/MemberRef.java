@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.struct;
 
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;

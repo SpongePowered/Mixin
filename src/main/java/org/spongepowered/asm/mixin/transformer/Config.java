@@ -125,4 +125,5 @@ public class Config {
     public static Config create(String configFile) {
         return MixinConfig.create(configFile, MixinEnvironment.getDefaultEnvironment());
     }
+
 }

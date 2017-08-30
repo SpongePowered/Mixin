@@ -39,7 +39,9 @@ import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.commons.Remapper;
 import org.spongepowered.asm.lib.commons.ClassRemapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.transformers.MixinClassWriter;
 
 /**
  * Class generator which creates unique copies of inner classes within mixins
@@ -205,11 +207,6 @@ final class InnerClassGenerator implements IClassGenerator {
      * Logger
      */
     private static final Logger logger = LogManager.getLogger("mixin");
-
-    /**
-     * Singleton instance (for now)
-     */
-    private static InnerClassGenerator instance;
     
     /**
      * Mapping of target class context ids to generated inner class names, used
@@ -221,10 +218,6 @@ final class InnerClassGenerator implements IClassGenerator {
      * Mapping of generated class names to the respective inner class info
      */
     private final Map<String, InnerClassInfo> innerClasses = new HashMap<String, InnerClassInfo>();
-    
-    private InnerClassGenerator() {
-        // private, use factory
-    }
     
     /**
      * @param owner Mixin which owns the original inner class
@@ -296,16 +289,6 @@ final class InnerClassGenerator implements IClassGenerator {
             name = "Anonymous";
         }
         return String.format("%s$%s$%s", context.getTargetClassRef(), name, UUID.randomUUID().toString().replace("-", ""));
-    }
-
-    /**
-     * Get the singleton instance
-     */
-    public static InnerClassGenerator getInstance() {
-        if (InnerClassGenerator.instance == null) {
-            InnerClassGenerator.instance = new InnerClassGenerator();
-        }
-        return InnerClassGenerator.instance;
     }
 
 }

@@ -33,8 +33,6 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import org.apache.commons.io.IOUtils;
-
 /**
  * "Main" attribute cache for a URI container, mainly to avoid constantly
  * opening jar files just to read odd values out of the manifest.

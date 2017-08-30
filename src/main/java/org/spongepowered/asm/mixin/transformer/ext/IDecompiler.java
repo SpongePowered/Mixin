@@ -22,25 +22,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer;
+package org.spongepowered.asm.mixin.transformer.ext;
+
+import java.io.File;
 
 /**
- * Mixin Transformer Module interface for pre- and post-processors
+ * Interface to allow the actual decompiler to be loaded on-demand
  */
-public interface IMixinTransformerModule {
+public interface IDecompiler {
 
     /**
-     * Called before the mixins are applied
+     * Decompile a class file
      * 
-     * @param context Target class context
+     * @param file .class file to decompile
      */
-    public abstract void preApply(TargetClassContext context);
-
-    /**
-     * Called after the mixins are applied
-     * 
-     * @param context Target class context
-     */
-    public abstract void postApply(TargetClassContext context);
-
+    public abstract void decompile(File file);
+    
 }

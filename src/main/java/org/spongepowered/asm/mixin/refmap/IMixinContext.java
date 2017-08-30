@@ -28,6 +28,7 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 
 /**
  * Context for performing reference mapping
@@ -38,6 +39,11 @@ public interface IMixinContext {
      * Get the mixin info
      */
     public abstract IMixinInfo getMixin();
+    
+    /**
+     * Get the mixin transformer extension manager
+     */
+    public abstract Extensions getExtensions();
 
     /**
      * Get the internal mixin class name

@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.transformer.meta;
+package org.spongepowered.asm.mixin.struct;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -39,6 +39,7 @@ import org.spongepowered.asm.util.Bytecode;
  */
 public class SourceMap {
     
+    private static final String DEFAULT_STRATUM = "Mixin";
     private static final String NEWLINE = "\n";
     
     /**
@@ -154,6 +155,10 @@ public class SourceMap {
      */
     static class Stratum {
         
+        private static final String STRATUM_MARK = "*S";
+        private static final String FILE_MARK = "*F";
+        private static final String LINES_MARK = "*L";
+
         /**
          * Stratum name 
          */
@@ -175,14 +180,14 @@ public class SourceMap {
         }
 
         void appendTo(StringBuilder sb) {
-            sb.append("*S ").append(this.name).append(SourceMap.NEWLINE);
+            sb.append(Stratum.STRATUM_MARK).append(" ").append(this.name).append(SourceMap.NEWLINE);
             
-            sb.append("*F").append(SourceMap.NEWLINE);
+            sb.append(Stratum.FILE_MARK).append(SourceMap.NEWLINE);
             for (File file : this.files.values()) {
                 file.appendFile(sb);
             }
             
-            sb.append("*L").append(SourceMap.NEWLINE);
+            sb.append(Stratum.LINES_MARK).append(SourceMap.NEWLINE);
             for (File file : this.files.values()) {
                 file.appendLines(sb);
             }
@@ -202,7 +207,7 @@ public class SourceMap {
     
     private int nextLineOffset = 1;
     
-    private String defaultStratum = "Mixin";
+    private String defaultStratum = SourceMap.DEFAULT_STRATUM;
 
     public SourceMap(String sourceFile) {
         this.sourceFile = sourceFile;

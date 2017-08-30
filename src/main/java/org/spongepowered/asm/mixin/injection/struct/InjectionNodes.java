@@ -22,14 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
+package org.spongepowered.asm.mixin.injection.struct;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
