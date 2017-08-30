@@ -642,7 +642,22 @@ public final class MixinEnvironment implements ITokenProvider {
                 return JavaVersion.current() >= 1.8;
             }
             
+        },
+        
+        /**
+         * Java 9 and above
+         */
+        JAVA_9(9, CompatibilityLevel.CLASS_V1_9, true) {
+            
+            @Override
+            boolean isSupported() {
+                return false;
+            }
+            
         };
+        
+        // Temp, until ASM supports Java 9
+        private static final int CLASS_V1_9 = 0 << 16 | 53;
         
         private final int ver;
         
