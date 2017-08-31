@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.perf.Profiler;
@@ -65,7 +66,7 @@ import com.google.common.collect.ImmutableSet;
  * information needed to support more complex mixin behaviour such as detached
  * superclass and mixin inheritance.
  */
-public final class ClassInfo extends TreeInfo {
+public final class ClassInfo {
 
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
@@ -1671,7 +1672,7 @@ public final class ClassInfo extends TreeInfo {
         ClassInfo info = ClassInfo.cache.get(className);
         if (info == null) {
             try {
-                ClassNode classNode = TreeInfo.getClassNode(className);
+                ClassNode classNode = MixinService.getService().getClassNode(className);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
                 ClassInfo.logger.warn("Error loading class: {}", className);

@@ -22,60 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.mixin;
 
 import java.io.File;
 import java.util.List;
+
+import org.spongepowered.asm.launch.MixinBootstrap;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
- * TweakClass for running mixins in production. Being a tweaker ensures that we
- * get injected into the AppClassLoader but does mean that we will need to
- * inject the FML coremod by hand if running under FML.
+ * Tweaker used to notify the environment when we transition from preinit to
+ * default
  */
-public class MixinTweaker implements ITweaker {
-    
-    /**
-     * Hello world
-     */
-    public MixinTweaker() {
-        MixinBootstrap.start();
-    }
-    
-    /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#acceptOptions(java.util.List,
-     *      java.io.File, java.io.File, java.lang.String)
-     */
+public class EnvironmentStateTweaker implements ITweaker {
+
     @Override
-    public final void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        MixinBootstrap.doInit(args);
+    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
     }
 
-    /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#injectIntoClassLoader(
-     *      net.minecraft.launchwrapper.LaunchClassLoader)
-     */
     @Override
-    public final void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        MixinBootstrap.injectIntoClassLoader(classLoader);
+    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        MixinBootstrap.getPlatform().inject();
     }
 
-    /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#getLaunchTarget()
-     */
     @Override
     public String getLaunchTarget() {
-        return MixinBootstrap.getPlatform().getLaunchTarget();
+        return "";
     }
 
-    /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.ITweaker#getLaunchArguments()
-     */
     @Override
     public String[] getLaunchArguments() {
-        return new String[]{};
+        MixinEnvironment.gotoPhase(Phase.DEFAULT);
+        return new String[0];
     }
     
 }

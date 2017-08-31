@@ -38,16 +38,13 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 //import org.spongepowered.asm.launch.MixinBootstrap.Delegate;
-import org.spongepowered.asm.launch.MixinTweaker;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.mixin.Mixins;
 
 //import com.google.common.collect.ImmutableList;
-
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * Handler for platform-specific behaviour required in different mixin
@@ -57,6 +54,7 @@ public class MixinPlatformManager {
 
     private static final String MFATT_TWEAKER = "TweakClass";
     private static final String DEFAULT_MAIN_CLASS = "net.minecraft.client.main.Main";
+    private static final String MIXIN_TWEAKER_CLASS = "org.spongepowered.asm.launch.MixinTweaker";
     
     /**
      * Make with the logging already
@@ -85,7 +83,7 @@ public class MixinPlatformManager {
     private boolean prepared = false;
     
     /**
-     * Tracks whether {@link #injectIntoClassLoader} was called yet
+     * Tracks whether {@link #inject} was called yet
      */
     private boolean injected;
     
@@ -186,12 +184,9 @@ public class MixinPlatformManager {
     }
 
     /**
-     * Initialise the primary container and dispatch injectIntoClassLoader to
-     * all containers
-     * 
-     * @param classLoader classloader to inject into
+     * Initialise the primary container and dispatch inject to all containers
      */
-    public final void injectIntoClassLoader(LaunchClassLoader classLoader) {
+    public final void inject() {
         if (this.injected) {
             return;
         }
@@ -202,10 +197,10 @@ public class MixinPlatformManager {
         }
         
         this.scanClasspath();
-        MixinPlatformManager.logger.debug("injectIntoClassLoader running with {} agents", this.containers.size());
+        MixinPlatformManager.logger.debug("inject() running with {} agents", this.containers.size());
         for (MixinContainer container : this.containers.values()) {
             try {
-                container.injectIntoClassLoader(classLoader);
+                container.inject();
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -217,7 +212,7 @@ public class MixinPlatformManager {
      * mixin tweaker in their manifest) and add agents for them
      */
     private void scanClasspath() {
-        URL[] sources = Launch.classLoader.getSources().toArray(new URL[0]);
+        URL[] sources = MixinService.getService().getClassPath();
         for (URL url : sources) {
             try {
                 URI uri = url.toURI();
@@ -230,7 +225,7 @@ public class MixinPlatformManager {
                 }
                 MainAttributes attributes = MainAttributes.of(uri);
                 String tweaker = attributes.get(MixinPlatformManager.MFATT_TWEAKER);
-                if (MixinTweaker.class.getName().equals(tweaker)) {
+                if (MixinPlatformManager.MIXIN_TWEAKER_CLASS.equals(tweaker)) {
                     MixinPlatformManager.logger.debug("{} contains a mixin tweaker, adding agents", uri);
                     this.addContainer(uri);
                 }

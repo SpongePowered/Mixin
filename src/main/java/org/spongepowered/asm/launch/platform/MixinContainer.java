@@ -33,9 +33,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.Blackboard;
-
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.LaunchClassLoader;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * A collection of {@link IMixinPlatformAgent} platform agents)
@@ -46,7 +44,9 @@ public class MixinContainer {
     
     static {
         Blackboard.put(Blackboard.Keys.AGENTS, MixinContainer.agentClasses);
-        MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentFML");
+        for (String agent : MixinService.getService().getPlatformAgents()) {
+            MixinContainer.agentClasses.add(agent);
+        }
         MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentDefault");
     }
     
@@ -117,18 +117,16 @@ public class MixinContainer {
 
     /**
      * Notify all agents to inject into classLoader
-     * 
-     * @param classLoader classLoader to injec
      */
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+    public void inject() {
         for (IMixinPlatformAgent agent : this.agents) {
-            this.logger.debug("Processing injectIntoClassLoader() for {}", agent);
-            agent.injectIntoClassLoader(classLoader);
+            this.logger.debug("Processing inject() for {}", agent);
+            agent.inject();
         }
     }
 
     /**
-     * Analogue of {@link ITweaker#getLaunchTarget}, queries all agents and
+     * Analogue of <tt>ITweaker::getLaunchTarget</tt>, queries all agents and
      * returns first valid launch target. Returns null if no agents have launch
      * target.
      * 

@@ -56,12 +56,12 @@ import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.RemappingReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.VersionNumber;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
-
-import net.minecraft.launchwrapper.Launch;
 
 /**
  * Mixin configuration bundle
@@ -255,6 +255,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
 //     * Phase selector
 //     */
 //    private transient List<Selector> selectors;
+    
+    private transient IMixinService service;
 
     /**
      * Parent environment 
@@ -319,7 +321,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      *      returned, or false if initialisation failed and the config should
      *      be discarded
      */
-    private boolean onLoad(String name, MixinEnvironment fallbackEnvironment) {
+    private boolean onLoad(IMixinService service, String name, MixinEnvironment fallbackEnvironment) {
+        this.service = service;
         this.name = name;
         this.env = this.parseSelector(this.selector, fallbackEnvironment);
         this.required &= !this.env.getOption(Option.IGNORE_REQUIRED);
@@ -387,7 +390,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         for (String injectionPoint : this.injectorOptions.injectionPoints) {
             try {
-                Class<?> injectionPointClass = Class.forName(injectionPoint, true, Launch.classLoader);
+                Class<?> injectionPointClass = Class.forName(injectionPoint, true, this.service.getClassLoader());
                 if (InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
                     InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
                 } else {
@@ -435,7 +438,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     void onSelect() {
         if (this.pluginClassName != null) {
             try {
-                Class<?> pluginClass = Class.forName(this.pluginClassName, true, Launch.classLoader);
+                Class<?> pluginClass = Class.forName(this.pluginClassName, true, this.service.getClassLoader());
                 this.plugin = (IMixinConfigPlugin)pluginClass.newInstance();
                 
                 if (this.plugin != null) {
@@ -563,7 +566,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             MixinInfo mixin = null;
             
             try {
-                mixin = new MixinInfo(this, mixinClass, true, this.plugin, suppressPlugin);
+                mixin = new MixinInfo(this.service, this, mixinClass, true, this.plugin, suppressPlugin);
                 if (mixin.getTargetClasses().size() > 0) {
                     MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
@@ -886,8 +889,9 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     static Config create(String configFile, MixinEnvironment outer) {
         try {
-            MixinConfig config = new Gson().fromJson(new InputStreamReader(Launch.classLoader.getResourceAsStream(configFile)), MixinConfig.class);
-            if (config.onLoad(configFile, outer)) {
+            IMixinService service = MixinService.getService();
+            MixinConfig config = new Gson().fromJson(new InputStreamReader(service.getResourceAsStream(configFile)), MixinConfig.class);
+            if (config.onLoad(service, configFile, outer)) {
                 return config.getHandle();
             }
             return null;

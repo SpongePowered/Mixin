@@ -41,6 +41,7 @@ import org.spongepowered.asm.lib.commons.ClassRemapper;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.transformers.MixinClassWriter;
 
 /**
@@ -119,7 +120,7 @@ final class InnerClassGenerator implements IClassGenerator {
         }
         
         byte[] getClassBytes() throws ClassNotFoundException, IOException {
-            return TreeInfo.loadClass(this.originalName, true);
+            return MixinService.getService().getClassBytes(this.originalName, true);
         }
         
         /**

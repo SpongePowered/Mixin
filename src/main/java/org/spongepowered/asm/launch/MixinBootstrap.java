@@ -31,9 +31,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
@@ -64,13 +62,6 @@ public abstract class MixinBootstrap {
      */
     public static final String VERSION = "0.7.3";
     
-    // Consts
-    private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
-    private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
-    private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
-    private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
-    private static final String TRANSFORMER_PROXY_CLASS = MixinBootstrap.MIXIN_PACKAGE + "transformer.MixinTransformer$Proxy";
-    
     /**
      * Log all the things
      */
@@ -82,13 +73,7 @@ public abstract class MixinBootstrap {
     
     // Static initialiser, add classloader exclusions as early as possible
     static {
-        // The important ones
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.ASM_PACKAGE);
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.MIXIN_PACKAGE);
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.MIXIN_UTIL_PACKAGE);
-        
-        // Only needed in dev, in production this would be handled by the tweaker
-        Launch.classLoader.addClassLoaderExclusion(MixinBootstrap.LAUNCH_PACKAGE);
+        MixinService.getService().prepare();
     }
     
     /**
@@ -99,10 +84,11 @@ public abstract class MixinBootstrap {
     private MixinBootstrap() {}
     
     /**
-     * Register a new proxy transformer
+     * @deprecated use <tt>MixinService.getService().beginPhase()</tt> instead
      */
+    @Deprecated
     public static void addProxy() {
-        Launch.classLoader.registerTransformer(MixinBootstrap.TRANSFORMER_PROXY_CLASS);
+        MixinService.getService().beginPhase();
     }
 
     /**
@@ -155,7 +141,7 @@ public abstract class MixinBootstrap {
                 System.setProperty("mixin.env.remapRefMap", "true");
             }
             
-            if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") > 132) {
+            if (MixinBootstrap.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") > 132) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
                 MixinEnvironment.init(Phase.DEFAULT);
                 MixinBootstrap.getPlatform().prepare(null);
@@ -194,19 +180,16 @@ public abstract class MixinBootstrap {
         if (MixinBootstrap.initState) {
             MixinBootstrap.getPlatform().prepare(args);
 
-            if (MixinBootstrap.findInStackTrace(Launch.class.getName(), "launch") < 4) {
+            if (MixinBootstrap.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") < 4) {
                 MixinBootstrap.logger.warn("MixinBootstrap.doInit() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
             }
-            
-            List<String> tweakClasses = Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES);
-            if (tweakClasses != null) {
-                tweakClasses.add(MixinEnvironment.class.getName() + "$EnvironmentStateTweaker");
-            }
+
+            MixinService.getService().init();
         }
     }
 
-    static void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        MixinBootstrap.getPlatform().injectIntoClassLoader(classLoader);
+    static void inject() {
+        MixinBootstrap.getPlatform().inject();
     }
 
     private static boolean isSubsystemRegistered() {

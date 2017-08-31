@@ -37,8 +37,8 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
-
-import net.minecraft.launchwrapper.Launch;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * An agent that re-transforms a mixin's target classes if the mixin has been
@@ -71,7 +71,7 @@ public class MixinAgent implements IHotSwap {
             
             try {
                 MixinAgent.logger.info("Redefining class " + className);
-                return MixinAgent.this.classTransformer.transform(null, className, classfileBuffer);
+                return MixinAgent.this.classTransformer.transformClassBytes(null, className, classfileBuffer);
             } catch (Throwable th) {
                 MixinAgent.logger.error("Error while re-transforming class " + className, th);
                 return MixinAgent.ERROR_BYTECODE;
@@ -99,17 +99,19 @@ public class MixinAgent implements IHotSwap {
          *          failed
          */
         private boolean reApplyMixins(List<String> targets) {
+            IMixinService service = MixinService.getService();
+            
             for (String target : targets) {
                 String targetName = target.replace('/', '.');
                 MixinAgent.logger.debug("Re-transforming target class {}", target);
                 try {
-                    Class<?> targetClass = Launch.classLoader.findClass(targetName);
+                    Class<?> targetClass = service.findClass(targetName);
                     byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
                     if (targetBytecode == null) {
                         MixinAgent.logger.error("Target class {} bytecode is not registered", targetName);
                         return false;
                     }
-                    targetBytecode = MixinAgent.this.classTransformer.transform(null, targetName, targetBytecode);
+                    targetBytecode = MixinAgent.this.classTransformer.transformClassBytes(null, targetName, targetBytecode);
                     MixinAgent.instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                 } catch (Throwable th) {
                     MixinAgent.logger.error("Error while re-transforming target class " + target, th);

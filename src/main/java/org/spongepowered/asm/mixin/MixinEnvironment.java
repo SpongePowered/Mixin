@@ -24,9 +24,7 @@
  */
 package org.spongepowered.asm.mixin;
 
-import java.io.File;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,8 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import javax.annotation.Resource;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -53,6 +49,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTransformer;
 import org.spongepowered.asm.obfuscation.RemapperChain;
+import org.spongepowered.asm.service.ILegacyClassTransformer;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.ITransformer;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.JavaVersion;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -60,12 +60,6 @@ import org.spongepowered.asm.util.perf.Profiler;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-
-import net.minecraft.launchwrapper.IClassNameTransformer;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * The mixin environment manages global state information for the mixin
@@ -183,7 +177,7 @@ public final class MixinEnvironment implements ITokenProvider {
         CLIENT {
             @Override
             protected boolean detect() {
-                String sideName = this.getSideName();
+                String sideName = MixinService.getService().getSideName();
                 return "CLIENT".equals(sideName);
             }
         },
@@ -194,51 +188,12 @@ public final class MixinEnvironment implements ITokenProvider {
         SERVER {
             @Override
             protected boolean detect() {
-                String sideName = this.getSideName();
+                String sideName = MixinService.getService().getSideName();
                 return "SERVER".equals(sideName) || "DEDICATEDSERVER".equals(sideName);
             }
         };
         
         protected abstract boolean detect();
-
-        protected final String getSideName() {
-            // Using this method first prevents us from accidentally loading FML classes
-            // too early when using the tweaker in dev
-            for (ITweaker tweaker : Blackboard.<List<ITweaker>>get(Blackboard.Keys.TWEAKS)) {
-                if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
-                    return "SERVER";
-                } else if (tweaker.getClass().getName().endsWith(".common.launcher.FMLTweaker")) {
-                    return "CLIENT";
-                }
-            }
-            
-            String name = this.getSideName("net.minecraftforge.fml.relauncher.FMLLaunchHandler", "side");
-            if (name != null) {
-                return name;
-            }
-            
-            name = this.getSideName("cpw.mods.fml.relauncher.FMLLaunchHandler", "side");
-            if (name != null) {
-                return name;
-            }
-            
-            name = this.getSideName("com.mumfrey.liteloader.launch.LiteLoaderTweaker", "getEnvironmentType");
-            if (name != null) {
-                return name;
-            }
-            
-            return "UNKNOWN";
-        }
-
-        private String getSideName(String className, String methodName) {
-            try {
-                Class<?> clazz = Class.forName(className, false, Launch.classLoader);
-                Method method = clazz.getDeclaredMethod(methodName);
-                return ((Enum<?>)method.invoke(null)).name();
-            } catch (Exception ex) {
-                return null;
-            }
-        }
     }
     
     /**
@@ -742,34 +697,6 @@ public final class MixinEnvironment implements ITokenProvider {
     }
     
     /**
-     * Tweaker used to notify the environment when we transition from preinit to
-     * default
-     */
-    public static class EnvironmentStateTweaker implements ITweaker {
-
-        @Override
-        public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        }
-
-        @Override
-        public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-            MixinBootstrap.getPlatform().injectIntoClassLoader(classLoader);
-        }
-
-        @Override
-        public String getLaunchTarget() {
-            return "";
-        }
-
-        @Override
-        public String[] getLaunchArguments() {
-            MixinEnvironment.gotoPhase(Phase.DEFAULT);
-            return new String[0];
-        }
-        
-    }
-    
-    /**
      * Wrapper for providing a natural sorting order for providers
      */
     static class TokenProviderWrapper implements Comparable<TokenProviderWrapper> {
@@ -884,6 +811,11 @@ public final class MixinEnvironment implements ITokenProvider {
      * Performance profiler 
      */
     private static final Profiler profiler = new Profiler();
+    
+    /**
+     * Service 
+     */
+    private final IMixinService service;
 
     /**
      * The phase for this environment
@@ -931,12 +863,7 @@ public final class MixinEnvironment implements ITokenProvider {
      * re-entrant transformers. Detected re-entrant transformers will be
      * subsequently removed.
      */
-    private List<IClassTransformer> transformers;
-    
-    /**
-     * Class name transformer (if present)
-     */
-    private IClassNameTransformer nameTransformer;
+    private List<ILegacyClassTransformer> transformers;
     
     /**
      * Obfuscation context (refmap key to use in this environment) 
@@ -944,6 +871,7 @@ public final class MixinEnvironment implements ITokenProvider {
     private String obfuscationContext = null;
     
     MixinEnvironment(Phase phase) {
+        this.service = MixinService.getService();
         this.phase = phase;
         this.configsKey = Blackboard.Keys.CONFIGS + "." + this.phase.name.toLowerCase();
         
@@ -954,7 +882,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
         
         // Also sanity check
-        if (this.getClass().getClassLoader() != Launch.class.getClassLoader()) {
+        if (this.getClass().getClassLoader() != this.service.getApplicationClassLoader()) {
             throw new MixinException("Attempted to init the mixin environment in the wrong classloader");
         }
         
@@ -970,9 +898,10 @@ public final class MixinEnvironment implements ITokenProvider {
     }
 
     private void printHeader(Object version) {
-        Side side = this.getSide();
         String codeSource = this.getCodeSource();
-        MixinEnvironment.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Env={}", version, codeSource, side);
+        String serviceName = this.service.getName();
+        Side side = this.getSide();
+        MixinEnvironment.logger.info("SpongePowered MIXIN Subsystem Version={} Source={} Service={} Env={}", version, codeSource, serviceName, side);
         
         boolean verbose = this.getOption(Option.DEBUG_VERBOSE);
         if (verbose || this.getOption(Option.DEBUG_EXPORT) || this.getOption(Option.DEBUG_PROFILER)) {
@@ -981,6 +910,8 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.kv("Code source", codeSource);
             printer.kv("Internal Version", version);
             printer.kv("Java 8 Supported", CompatibilityLevel.JAVA_8.isSupported()).hr();
+            printer.kv("Service Name", serviceName);
+            printer.kv("Service Class", this.service.getClass().getName()).hr();
             for (Option option : Option.values()) {
                 StringBuilder indent = new StringBuilder();
                 for (int i = 0; i < option.depth; i++) {
@@ -1021,7 +952,7 @@ public final class MixinEnvironment implements ITokenProvider {
         List<String> mixinConfigs = Blackboard.<List<String>>get(this.configsKey);
         if (mixinConfigs == null) {
             mixinConfigs = new ArrayList<String>();
-            Launch.blackboard.put(this.configsKey, mixinConfigs);
+            this.service.setGlobalProperty(this.configsKey, mixinConfigs);
         }
         return mixinConfigs;
     }
@@ -1071,7 +1002,7 @@ public final class MixinEnvironment implements ITokenProvider {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends IEnvironmentTokenProvider> providerClass =
-                        (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, Launch.classLoader);
+                        (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, this.service.getClassLoader());
                 IEnvironmentTokenProvider provider = providerClass.newInstance();
                 this.registerTokenProvider(provider);
             } catch (Throwable th) {
@@ -1146,7 +1077,7 @@ public final class MixinEnvironment implements ITokenProvider {
      * 
      * @param transformer Mixin Transformer
      */
-    public void setActiveTransformer(IClassTransformer transformer) {
+    public void setActiveTransformer(ITransformer transformer) {
         if (transformer != null) {
             Blackboard.put(Blackboard.Keys.TRANSFORMER, transformer);        
         }
@@ -1285,12 +1216,12 @@ public final class MixinEnvironment implements ITokenProvider {
      * 
      * @return current transformer delegation list (read-only)
      */
-    public List<IClassTransformer> getTransformers() {
+    public List<ILegacyClassTransformer> getTransformers() {
         if (this.transformers == null) {
             this.buildTransformerDelegationList();
         }
         
-        return Collections.<IClassTransformer>unmodifiableList(this.transformers);
+        return Collections.<ILegacyClassTransformer>unmodifiableList(this.transformers);
     }
 
     /**
@@ -1306,24 +1237,6 @@ public final class MixinEnvironment implements ITokenProvider {
     }
 
     /**
-     * Map a class name back to its obfuscated counterpart 
-     * 
-     * @param className class name to unmap
-     * @return obfuscated name for the specified deobfuscated reference
-     */
-    public String unmap(String className) {
-        if (this.transformers == null) {
-            this.buildTransformerDelegationList();
-        }
-        
-        if (this.nameTransformer != null) {
-            return this.nameTransformer.unmapClassName(className);
-        }
-        
-        return className;
-    }
-
-    /**
      * Builds the transformer list to apply to loaded mixin bytecode. Since
      * generating this list requires inspecting each transformer by name (to
      * cope with the new wrapper functionality added by FML) we generate the
@@ -1331,9 +1244,14 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     private void buildTransformerDelegationList() {
         MixinEnvironment.logger.debug("Rebuilding transformer delegation list:");
-        this.transformers = new ArrayList<IClassTransformer>();
-        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-            String transformerName = transformer.getClass().getName();
+        this.transformers = new ArrayList<ILegacyClassTransformer>();
+        for (ITransformer transformer : this.service.getTransformers()) {
+            if (!(transformer instanceof ILegacyClassTransformer)) {
+                continue;
+            }
+            
+            ILegacyClassTransformer legacyTransformer = (ILegacyClassTransformer)transformer;
+            String transformerName = legacyTransformer.getName();
             boolean include = true;
             for (String excludeClass : MixinEnvironment.excludeTransformers) {
                 if (transformerName.contains(excludeClass)) {
@@ -1341,23 +1259,15 @@ public final class MixinEnvironment implements ITokenProvider {
                     break;
                 }
             }
-            boolean ignoreTransformer = transformer.getClass().getAnnotation(Resource.class) != null;
-            if (include && !ignoreTransformer && !transformerName.contains(MixinTransformer.class.getName())) {
+            if (include && !legacyTransformer.isDelegationExcluded()) {
                 MixinEnvironment.logger.debug("  Adding:    {}", transformerName);
-                this.transformers.add(transformer);
+                this.transformers.add(legacyTransformer);
             } else {
                 MixinEnvironment.logger.debug("  Excluding: {}", transformerName);
             }
         }
 
         MixinEnvironment.logger.debug("Transformer delegation list created with {} entries", this.transformers.size());
-        
-        for (IClassTransformer transformer : Launch.classLoader.getTransformers()) {
-            if (transformer instanceof IClassNameTransformer) {
-                MixinEnvironment.logger.debug("Found name transformer: {}", transformer.getClass().getName());
-                this.nameTransformer = (IClassNameTransformer) transformer;
-            }
-        }
     }
 
     /* (non-Javadoc)
@@ -1481,7 +1391,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
         
         if (phase.ordinal > MixinEnvironment.getCurrentPhase().ordinal) {
-            MixinBootstrap.addProxy();
+            MixinService.getService().beginPhase();
         }
         
         if (phase == Phase.DEFAULT) {

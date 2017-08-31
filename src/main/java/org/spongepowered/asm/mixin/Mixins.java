@@ -32,8 +32,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.Blackboard;
 import org.spongepowered.asm.mixin.transformer.Config;
-
-import net.minecraft.launchwrapper.Launch;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Entry point for registering global mixin resources. Compatibility with
@@ -143,7 +142,7 @@ public final class Mixins {
         Set<Config> mixinConfigs = Blackboard.<Set<Config>>get(Mixins.CONFIGS_KEY);
         if (mixinConfigs == null) {
             mixinConfigs = new LinkedHashSet<Config>();
-            Launch.blackboard.put(Mixins.CONFIGS_KEY, mixinConfigs);
+            MixinService.getService().setGlobalProperty(Mixins.CONFIGS_KEY, mixinConfigs);
         }
         return mixinConfigs;
     }

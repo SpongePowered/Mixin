@@ -119,13 +119,30 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
     boolean canTransform(String className) {
         return this.syntheticInnerClasses.contains(className) || this.loadable.contains(className);
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer#getName()
+     */
+    @Override
+    public String getName() {
+        return this.getClass().getName();
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer
+     *      #isDelegationExcluded()
+     */
+    @Override
+    public boolean isDelegationExcluded() {
+        return true;
+    }
 
     /* (non-Javadoc)
      * @see net.minecraft.launchwrapper.IClassTransformer
      *      #transform(java.lang.String, java.lang.String, byte[])
      */
     @Override
-    public byte[] transform(String name, String transformedName, byte[] bytes) {
+    public byte[] transformClassBytes(String name, String transformedName, byte[] bytes) {
         if (this.syntheticInnerClasses.contains(transformedName)) {
             return this.processSyntheticInner(bytes);
         }

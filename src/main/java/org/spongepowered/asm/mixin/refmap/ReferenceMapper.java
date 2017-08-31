@@ -34,13 +34,13 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
-
-import net.minecraft.launchwrapper.Launch;
 
 /**
  * Stores runtime information allowing field, method and type references which
@@ -254,7 +254,8 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
         Logger logger = LogManager.getLogger("mixin");
         Reader reader = null;
         try {
-            InputStream resource = Launch.classLoader.getResourceAsStream(resourcePath);
+            IMixinService service = MixinService.getService();
+            InputStream resource = service.getResourceAsStream(resourcePath);
             if (resource != null) {
                 reader = new InputStreamReader(resource);
                 ReferenceMapper mapper = ReferenceMapper.readJson(reader);

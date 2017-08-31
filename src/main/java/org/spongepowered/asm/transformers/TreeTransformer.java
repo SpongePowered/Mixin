@@ -27,13 +27,12 @@ package org.spongepowered.asm.transformers;
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.ClassWriter;
 import org.spongepowered.asm.lib.tree.ClassNode;
-
-import net.minecraft.launchwrapper.IClassTransformer;
+import org.spongepowered.asm.service.ILegacyClassTransformer;
 
 /**
  * Base class for transformers which work with ASM tree model
  */
-public abstract class TreeTransformer implements IClassTransformer {
+public abstract class TreeTransformer implements ILegacyClassTransformer {
 
     private ClassReader classReader;
     private ClassNode classNode;

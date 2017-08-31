@@ -63,9 +63,10 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
-import org.spongepowered.asm.util.launchwrapper.LaunchClassLoaderUtil;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -73,12 +74,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 
-import net.minecraft.launchwrapper.Launch;
-
 /**
  * Runtime information bundle about a mixin
  */
-class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
+class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     /**
      * A MethodNode in a mixin
@@ -664,9 +663,9 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
-     * Class loader utility
+     * Mixin service
      */
-    private static final LaunchClassLoaderUtil classLoaderUtil = LaunchClassLoaderUtil.forClassLoader(Launch.classLoader);
+    private static final IMixinService classLoaderUtil = MixinService.getService();
 
     /**
      * Global order of mixin infos, used to determine ordering between mixins
@@ -723,6 +722,11 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Intrinsic order (for sorting mixins with identical priority)
      */
     private final transient int order = MixinInfo.mixinOrder++;
+    
+    /**
+     * Service 
+     */
+    private final transient IMixinService service;
 
     /**
      * Configuration plugin
@@ -763,17 +767,18 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Internal ctor, called by {@link MixinConfig}
      * 
      * @param parent configuration which owns this mixin, the parent
-     * @param mixinName name of this mixin (class name stub)
+     * @param name name of this mixin (class name stub)
      * @param runTransformers true if this mixin should run transformers on its
      *      bytecode when loading
      * @param plugin mixin config companion plugin, may be null
      * @param suppressPlugin true to suppress the plugin from filtering targets
      *      of this mixin
      */
-    MixinInfo(MixinConfig parent, String mixinName, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin) {
+    MixinInfo(IMixinService service, MixinConfig parent, String name, boolean runTransformers, IMixinConfigPlugin plugin, boolean suppressPlugin) {
+        this.service = service;
         this.parent = parent;
-        this.name = mixinName;
-        this.className = parent.getMixinPackage() + mixinName;
+        this.name = name;
+        this.className = parent.getMixinPackage() + name;
         this.plugin = plugin;
         this.phase = parent.getEnvironment().getPhase();
         this.strict = parent.getEnvironment().getOption(Option.DEBUG_TARGETS);
@@ -1153,7 +1158,7 @@ class MixinInfo extends TreeInfo implements Comparable<MixinInfo>, IMixinInfo {
         byte[] mixinBytes = null;
 
         try {
-            mixinBytes = TreeInfo.loadClass(mixinClassName, runTransformers);
+            mixinBytes = this.service.getClassBytes(mixinClassName, runTransformers);
         } catch (ClassNotFoundException ex) {
             throw new ClassNotFoundException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {

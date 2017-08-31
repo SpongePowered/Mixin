@@ -28,8 +28,6 @@ import java.net.URI;
 
 import org.spongepowered.asm.util.Constants.ManifestAttributes;
 
-import net.minecraft.launchwrapper.LaunchClassLoader;
-
 /**
  * Default platform agent, handles the mixin manifest keys such as
  * <tt>MixinConfigs</tt> and <tt>MixinTokenProviders</tt>.
@@ -72,7 +70,7 @@ public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
     }
 
     @Override
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+    public void inject() {
     }
     
     @Override

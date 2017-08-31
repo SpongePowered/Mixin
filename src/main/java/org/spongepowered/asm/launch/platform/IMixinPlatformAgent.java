@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.launch.platform;
 
-import net.minecraft.launchwrapper.LaunchClassLoader;
-
 /**
  * Base interface for platform agents. Platform agents are environment-specific
  * handlers which are used by the Mixin subsystem to perform platform-specific
@@ -50,18 +48,16 @@ public interface IMixinPlatformAgent {
     public abstract void prepare();
     
     /**
-     * Called from <tt>injectIntoClassLoader</tt> in the parent tweaker but <b>
-     * only called on the primary tweak container</b>. This is useful if the
-     * agent needs to perform some environment-specific setup just once.
+     * Called from <tt>inject</tt> in the parent tweaker but <b>only called on
+     * the primary tweak container</b>. This is useful if the agent needs to
+     * perform some environment-specific setup just once.
      */
     public abstract void initPrimaryContainer();
     
     /**
-     * Called from <tt>injectIntoClassLoader</tt> in the parent tweaker
-     * 
-     * @param classLoader classLoader to inject into
+     * Called from <tt>inject</tt> in the parent tweaker
      */
-    public abstract void injectIntoClassLoader(LaunchClassLoader classLoader);
+    public abstract void inject();
     
     /**
      * Get the launch target from this container, should return null if no

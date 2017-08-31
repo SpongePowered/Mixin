@@ -24,10 +24,11 @@
  */
 package org.spongepowered.asm.launch;
 
-import net.minecraft.launchwrapper.Launch;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 
 /**
- * Abstractions for working with {@link Launch#blackboard}
+ * Abstractions for working with the blackboard
  */
 public final class Blackboard {
 
@@ -54,18 +55,26 @@ public final class Blackboard {
 
     }
     
+    private static IMixinService service;
+    
     private Blackboard() {}
+    
+    private static IMixinService getService() {
+        if (Blackboard.service == null) {
+            Blackboard.service = MixinService.getService();
+        }
+        return Blackboard.service;
+    }
     
     /**
      * Get a value from the blackboard and duck-type it to the specified type
      * 
      * @param key blackboard key
-     * @return value
      * @param <T> duck type
+     * @return value
      */
-    @SuppressWarnings("unchecked")
     public static <T> T get(String key) {
-        return (T)Launch.blackboard.get(key);
+        return Blackboard.getService().<T>getGlobalProperty(key);
     }
 
     /**
@@ -75,7 +84,7 @@ public final class Blackboard {
      * @param value new value
      */
     public static void put(String key, Object value) {
-        Launch.blackboard.put(key, value);
+        Blackboard.getService().setGlobalProperty(key, value);
     }
     
     /**
@@ -84,13 +93,11 @@ public final class Blackboard {
      * 
      * @param key blackboard key
      * @param defaultValue value to return if the key is not set or is null
-     * @return value from blackboard or default value
      * @param <T> duck type
+     * @return value from blackboard or default value
      */
-    @SuppressWarnings("unchecked")
     public static <T> T get(String key, T defaultValue) {
-        Object value = Launch.blackboard.get(key);
-        return value != null ? (T)value : defaultValue;
+        return Blackboard.getService().getGlobalProperty(key, defaultValue);
     }
     
     /**
@@ -103,8 +110,7 @@ public final class Blackboard {
      * @return value from blackboard or default
      */
     public static String getString(String key, String defaultValue) {
-        Object value = Launch.blackboard.get(key);
-        return value != null ? value.toString() : defaultValue;
+        return Blackboard.getService().getGlobalPropertyString(key, defaultValue);
     }
 
 }

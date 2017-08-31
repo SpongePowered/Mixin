@@ -59,13 +59,14 @@ import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionClassExpo
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
+import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.ITransformer;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.PrettyPrinter;
+import org.spongepowered.asm.util.ReEntranceLock;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
-
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
 
 /**
  * Transformer which manages the mixin configuration and application process
@@ -139,160 +140,6 @@ public class MixinTransformer extends TreeTransformer {
         
     }
     
-    /**
-     * Proxy transformer for the mixin transformer. These transformers are used
-     * to allow the mixin transformer to be re-registered in the transformer
-     * chain at a later stage in startup without having to fully re-initialise
-     * the mixin transformer itself. Only the latest proxy to be instantiated
-     * will actually provide callbacks to the underlying mixin transformer.
-     */
-    public static class Proxy implements IClassTransformer {
-        
-        /**
-         * All existing proxies
-         */
-        private static List<Proxy> proxies = new ArrayList<Proxy>();
-        
-        /**
-         * Actual mixin transformer instance
-         */
-        private static MixinTransformer transformer = new MixinTransformer();
-        
-        /**
-         * True if this is the active proxy, newer proxies disable their older
-         * siblings
-         */
-        private boolean isActive = true;
-        
-        public Proxy() {
-            for (Proxy hook : Proxy.proxies) {
-                hook.isActive = false;
-            }
-            
-            Proxy.proxies.add(this);
-            LogManager.getLogger("mixin").debug("Adding new mixin transformer proxy #{}", Proxy.proxies.size());
-        }
-        
-        @Override
-        public byte[] transform(String name, String transformedName, byte[] basicClass) {
-            if (this.isActive) {
-                return Proxy.transformer.transform(name, transformedName, basicClass);
-            }
-            
-            return basicClass;
-        }
-    }
-
-    /**
-     * Re-entrance semaphore used to share re-entrance data with the TreeInfo
-     */
-    class ReEntranceState {
-        
-        /**
-         * Max valid depth
-         */
-        private final int maxDepth;
-        
-        /**
-         * Re-entrance depth
-         */
-        private int depth = 0;
-        
-        /**
-         * Semaphore set when check exceeds a depth of 1
-         */
-        private boolean semaphore = false;
-        
-        public ReEntranceState(int maxDepth) {
-            this.maxDepth = maxDepth;
-        }
-        
-        /**
-         * Get max depth
-         */
-        public int getMaxDepth() {
-            return this.maxDepth;
-        }
-        
-        /**
-         * Get current depth
-         */
-        public int getDepth() {
-            return this.depth;
-        }
-        
-        /**
-         * Increase the re-entrance depth counter and set the semaphore if depth
-         * exceeds max depth
-         * 
-         * @return fluent interface
-         */
-        ReEntranceState push() {
-            this.depth++;
-            this.checkAndSet();
-            return this;
-        }
-        
-        /**
-         * Decrease the re-entrance depth
-         * 
-         * @return fluent interface
-         */
-        ReEntranceState pop() {
-            if (this.depth == 0) {
-                throw new IllegalStateException("ReEntranceState pop() with zero depth");
-            }
-            
-            this.depth--;
-            return this;
-        }
-        
-        /**
-         * Run the depth check but do not set the semaphore
-         * 
-         * @return true if depth has exceeded max
-         */
-        boolean check() {
-            return this.depth > this.maxDepth;
-        }
-        
-        /**
-         * Run the depth check and set the semaphore if depth is exceeded
-         * 
-         * @return true if semaphore is set
-         */
-        boolean checkAndSet() {
-            return this.semaphore |= this.check();
-        }
-        
-        /**
-         * Set the semaphore
-         * 
-         * @return fluent interface
-         */
-        ReEntranceState set() {
-            this.semaphore = true;
-            return this;
-        }
-        
-        /**
-         * Get whether the semaphore is set
-         */
-        boolean isSet() {
-            return this.semaphore;
-        }
-        
-        /**
-         * Clear the semaphore
-         * 
-         * @return fluent interface
-         */
-        ReEntranceState clear() {
-            this.semaphore = false;
-            return this;
-        }
-    }
-    
     private static final String MIXIN_AGENT_CLASS = "org.spongepowered.tools.agent.MixinAgent";
     private static final String METRONOME_AGENT_CLASS = "org.spongepowered.metronome.Agent";
 
@@ -300,6 +147,11 @@ public class MixinTransformer extends TreeTransformer {
      * Log all the things
      */
     static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Service 
+     */
+    private final IMixinService service = MixinService.getService();
     
     /**
      * All mixin configuration bundles
@@ -314,7 +166,7 @@ public class MixinTransformer extends TreeTransformer {
     /**
      * Re-entrance detector
      */
-    private final ReEntranceState lock = new ReEntranceState(1);
+    private final ReEntranceLock lock;
     
     /**
      * Session ID, used as a check when parsing {@link MixinMerged} annotations
@@ -370,14 +222,14 @@ public class MixinTransformer extends TreeTransformer {
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
         Object globalMixinTransformer = environment.getActiveTransformer();
-        if (globalMixinTransformer instanceof IClassTransformer) {
+        if (globalMixinTransformer instanceof ITransformer) {
             throw new MixinException("Terminating MixinTransformer instance " + this);
         }
         
         // I am a leaf on the wind
         environment.setActiveTransformer(this);
         
-        TreeInfo.setLock(this.lock);
+        this.lock = this.service.getReEntranceLock();
         
         this.extensions = new Extensions(this);
         this.hotSwapper = this.initHotSwapper(environment);
@@ -430,7 +282,7 @@ public class MixinTransformer extends TreeTransformer {
         for (String target : unhandled) {
             try {
                 auditLogger.info("Force-loading class {}", target);
-                Class.forName(target, true, Launch.classLoader);
+                Class.forName(target, true, this.service.getClassLoader());
             } catch (ClassNotFoundException ex) {
                 auditLogger.error("Could not force-load " + target, ex);
             }
@@ -508,7 +360,7 @@ public class MixinTransformer extends TreeTransformer {
         printer.add();
         
         try {
-            Class<?> agent = Class.forName(MixinTransformer.METRONOME_AGENT_CLASS, false, Launch.class.getClassLoader());
+            Class<?> agent = Class.forName(MixinTransformer.METRONOME_AGENT_CLASS, false, this.service.getApplicationClassLoader());
             Method mdGetTimes = agent.getDeclaredMethod("getTimes");
             
             @SuppressWarnings("unchecked")
@@ -547,13 +399,30 @@ public class MixinTransformer extends TreeTransformer {
         
         printer.print();
     }
-
+    
     /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.IClassTransformer
-     *      #transform(java.lang.String, java.lang.String, byte[])
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer#getName()
      */
     @Override
-    public synchronized byte[] transform(String name, String transformedName, byte[] basicClass) {
+    public String getName() {
+        return this.getClass().getName();
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer
+     *      #isDelegationExcluded()
+     */
+    @Override
+    public boolean isDelegationExcluded() {
+        return true;
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer#transform(
+     *      java.lang.String, java.lang.String, byte[])
+     */
+    @Override
+    public synchronized byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
         if (transformedName == null || this.errorState) {
             return basicClass;
         }
@@ -590,7 +459,7 @@ public class MixinTransformer extends TreeTransformer {
         try {
             if (this.postProcessor.canTransform(transformedName)) {
                 Section postTimer = this.profiler.begin("postprocessor");
-                byte[] bytes = this.postProcessor.transform(name, transformedName, basicClass);
+                byte[] bytes = this.postProcessor.transformClassBytes(name, transformedName, basicClass);
                 postTimer.end();
                 this.extensions.export(environment, transformedName, false, bytes);
                 return bytes;
@@ -917,7 +786,7 @@ public class MixinTransformer extends TreeTransformer {
         for (String handlerClassName : Mixins.getErrorHandlerClasses()) {
             try {
                 MixinTransformer.logger.info("Instancing error handler class {}", handlerClassName);
-                Class<?> handlerClass = Class.forName(handlerClassName, true, Launch.classLoader);
+                Class<?> handlerClass = Class.forName(handlerClassName, true, this.service.getClassLoader());
                 IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.newInstance();
                 if (handler != null) {
                     handlers.add(handler);

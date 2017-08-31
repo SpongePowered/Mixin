@@ -298,14 +298,13 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinPlatformAgent
-     *     #injectIntoClassLoader(net.minecraft.launchwrapper.LaunchClassLoader)
+     * @see org.spongepowered.asm.launch.platform.IMixinPlatformAgent#inject()
      */
     @Override
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+    public void inject() {
         if (this.coreModWrapper != null && this.checkForCoInitialisation()) {
             MixinPlatformAgentAbstract.logger.debug("FML agent is co-initiralising coremod instance {} for {}", this.coreModWrapper, this.uri);
-            this.coreModWrapper.injectIntoClassLoader(classLoader);
+            this.coreModWrapper.injectIntoClassLoader(Launch.classLoader);
         }
     }
 

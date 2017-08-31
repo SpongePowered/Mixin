@@ -91,6 +91,9 @@ sourceSets {
         compileClasspath += main.output
         compileClasspath += ap.output
     }
+    launchwrapper {
+        compileClasspath += main.output
+    }
 }
 
 // Dependencies for renamed ASM
@@ -98,7 +101,6 @@ dependencies {
     asm 'org.ow2.asm:asm-debug-all:5.2'
     asm 'org.ow2.asm:asm-debug-all:5.2:sources'
     jarjar 'com.googlecode.jarjar:jarjar:1.1'
-    compile 'com.googlecode.jarjar:jarjar:1.1'
 }
 
 // Task to read ASM library and rename packages
@@ -147,43 +149,51 @@ eclipseClasspath.dependsOn(renamedASM)
 
 // Project dependencies
 dependencies {
-    compile 'com.google.guava:guava:17.0'
-    compile 'com.google.code.gson:gson:2.2.4'
-    compile 'commons-io:commons-io:2.4'
-    apCompile 'com.google.guava:guava:17.0'
-    testCompile 'junit:junit:4.11'
-    testCompile 'org.hamcrest:hamcrest-library:1.3'
-    testCompile 'org.mockito:mockito-core:1.9.0'
+    def guava = 'com.google.guava:guava:17.0'
+    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     
-    // example
-    exampleCompile 'com.google.code.gson:gson:2.2.4'
-    exampleCompile 'com.google.guava:guava:17.0'
-    exampleCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
+    compile guava
+    compile log4j2
+    compile 'commons-io:commons-io:2.4'
+    compile 'com.google.code.gson:gson:2.2.4'
+    compile files(tasks.renamedASM.outputs.files[0])         // Establish implicit dependency on remapped ASM
 
-    // maven
+    // Tests
+//    testCompile 'junit:junit:4.11'
+//    testCompile 'org.hamcrest:hamcrest-library:1.3'
+//    testCompile 'org.mockito:mockito-core:1.9.0'
+    
+    // Annotation Processor
+    apCompile guava
+    
+    // AP extension example
+    exampleCompile configurations.compile
+
+    // Maven FTP
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
 
-    // Establish implicit dependency on remapped ASM
-    compile files(tasks.renamedASM.outputs.files[0])
-
-    // fernflower bridge
-    fernflowerCompile 'commons-io:commons-io:2.4'
-    fernflowerCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
-    fernflowerCompile 'com.google.guava:guava:17.0'
+    // Fernflower decompiler
+    fernflowerCompile configurations.compile
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
-    compile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 
-    compile('net.minecraft:launchwrapper:1.11') {
-        exclude module: 'lwjgl'
-    }
-    agentCompile('net.minecraft:launchwrapper:1.11') {
+    // LegacyLauncher service
+    launchwrapperCompile configurations.compile
+    launchwrapperCompile('net.minecraft:launchwrapper:1.11') {
         exclude module: 'lwjgl'
     }
     
+    // agent
+    agentCompile configurations.compile
+    
     // asm bridge
+    bridgeCompile log4j2
     bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
-    bridgeCompile 'org.apache.logging.log4j:log4j-core:2.0-beta9'
 }
+
+eclipse.classpath.plusConfigurations += [
+    configurations.fernflowerCompile,
+    configurations.launchwrapperCompile
+]
 
 // Filter, process, and include resources
 processResources {
@@ -245,6 +255,9 @@ jar {
     
     // Bridge
     from sourceSets.bridge.output
+    
+    // Launchwrapper
+    from sourceSets.launchwrapper.output
     
     // Renamed ASM
     from zipTree(tasks.renamedASM.outputs.files[0]).matching {
