@@ -229,7 +229,11 @@ public class MixinServiceLaunchWrapper implements IMixinService {
         List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
         List<ITransformer> wrapped = new ArrayList<ITransformer>(transformers.size());
         for (IClassTransformer transformer : transformers) {
-            wrapped.add(new LegacyTransformerHandle(transformer));
+            if (transformer instanceof ITransformer) {
+                wrapped.add((ITransformer)transformer);
+            } else {
+                wrapped.add(new LegacyTransformerHandle(transformer));
+            }
             
             if (transformer instanceof IClassNameTransformer) {
                 MixinServiceLaunchWrapper.logger.debug("Found name transformer: {}", transformer.getClass().getName());

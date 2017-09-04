@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
+import org.spongepowered.asm.service.ILegacyClassTransformer;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
@@ -38,7 +39,7 @@ import net.minecraft.launchwrapper.IClassTransformer;
  * the mixin transformer itself. Only the latest proxy to be instantiated
  * will actually provide callbacks to the underlying mixin transformer.
  */
-public final class Proxy implements IClassTransformer {
+public final class Proxy implements IClassTransformer, ILegacyClassTransformer {
     
     /**
      * All existing proxies
@@ -67,6 +68,25 @@ public final class Proxy implements IClassTransformer {
     
     @Override
     public byte[] transform(String name, String transformedName, byte[] basicClass) {
+        if (this.isActive) {
+            return Proxy.transformer.transformClassBytes(name, transformedName, basicClass);
+        }
+        
+        return basicClass;
+    }
+
+    @Override
+    public String getName() {
+        return this.getClass().getName();
+    }
+
+    @Override
+    public boolean isDelegationExcluded() {
+        return true;
+    }
+
+    @Override
+    public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
         if (this.isActive) {
             return Proxy.transformer.transformClassBytes(name, transformedName, basicClass);
         }
