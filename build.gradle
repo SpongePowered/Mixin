@@ -190,9 +190,18 @@ dependencies {
     bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
 }
 
+// Eclipse
 eclipse.classpath.plusConfigurations += [
     configurations.fernflowerCompile,
-    configurations.launchwrapperCompile
+    configurations.launchwrapperCompile,
+    configurations.bridgeCompile
+]
+
+// IntelliJ
+idea.module.scopes.COMPILE.plus += [
+    configurations.fernflowerCompile,
+    configurations.launchwrapperCompile,
+    configurations.bridgeCompile
 ]
 
 // Filter, process, and include resources
