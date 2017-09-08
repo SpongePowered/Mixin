@@ -1108,7 +1108,7 @@ public final class ClassInfo {
      * @return Matched superclass or null if not found
      */
     public ClassInfo findSuperClass(String superClass, Traversal traversal, boolean includeInterfaces) {
-        if (ClassInfo.OBJECT.name == superClass) {
+        if (ClassInfo.OBJECT.name.equals(superClass)) {
             return null;
         }
         

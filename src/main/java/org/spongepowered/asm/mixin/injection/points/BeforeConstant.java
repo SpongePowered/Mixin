@@ -150,7 +150,7 @@ public class BeforeConstant extends InjectionPoint {
         
         Boolean empty = Annotations.<Boolean>getValue(node, "nullValue", (Boolean)null);
         this.ordinal = Annotations.<Integer>getValue(node, "ordinal", Integer.valueOf(-1));
-        this.nullValue = empty != null ? empty.booleanValue() : false;
+        this.nullValue = empty != null && empty.booleanValue();
         this.intValue = Annotations.<Integer>getValue(node, "intValue", (Integer)null);
         this.floatValue = Annotations.<Float>getValue(node, "floatValue", (Float)null);
         this.longValue = Annotations.<Long>getValue(node, "longValue", (Long)null);
@@ -172,7 +172,7 @@ public class BeforeConstant extends InjectionPoint {
         Boolean empty = strNullValue != null ? Boolean.parseBoolean(strNullValue) : null;
         
         this.ordinal = data.getOrdinal();
-        this.nullValue = empty != null ? empty.booleanValue() : false;
+        this.nullValue = empty != null && empty.booleanValue();
         this.intValue = Ints.tryParse(data.get("intValue", ""));
         this.floatValue = Floats.tryParse(data.get("floatValue", ""));
         this.longValue = Longs.tryParse(data.get("longValue", ""));

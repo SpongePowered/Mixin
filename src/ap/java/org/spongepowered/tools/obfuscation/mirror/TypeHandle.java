@@ -218,7 +218,7 @@ public class TypeHandle {
      * Get whether the element is probably public
      */
     public boolean isPublic() {
-        return this.getTargetElement() != null ? this.getTargetElement().getModifiers().contains(Modifier.PUBLIC) : false;
+        return this.getTargetElement() != null && this.getTargetElement().getModifiers().contains(Modifier.PUBLIC);
     }
     
     /**

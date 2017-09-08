@@ -114,11 +114,7 @@ public final class LaunchClassLoaderUtil {
      * @return true if the class name exists in the cache
      */
     public boolean isClassLoaded(String name) {
-        if (this.cachedClasses != null && this.cachedClasses.containsKey(name)) {
-            return true;
-        }
-        
-        return false;
+        return this.cachedClasses != null && this.cachedClasses.containsKey(name);
     }
 
     /**

@@ -75,10 +75,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             }
             
             for (VariableElement param : this.element.getParameters()) {
-                AnnotationHandle coerce = AnnotationHandle.of(param, Coerce.class);
-                if (coerce != null) {
-                    return true;
-                }
+                return AnnotationHandle.of(param, Coerce.class).exists();
             }
             
             return false;

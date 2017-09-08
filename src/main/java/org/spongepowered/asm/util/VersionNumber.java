@@ -127,7 +127,7 @@ public final class VersionNumber implements Comparable<VersionNumber>, Serializa
      */
     @Override
     public int hashCode() {
-        return (int)(this.value >> 32) ^ (int)(this.value & 0xFFFFFFFF); 
+        return (int)(this.value >> 32) ^ (int)(this.value & 0xFFFFFFFFL); 
     }
 
     /**
@@ -161,7 +161,7 @@ public final class VersionNumber implements Comparable<VersionNumber>, Serializa
      * @param version Version number to parse
      * @return Version number
      */
-    public static final VersionNumber parse(String version) {
+    public static VersionNumber parse(String version) {
         return VersionNumber.parse(version, VersionNumber.NONE);
     }
 

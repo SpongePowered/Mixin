@@ -406,15 +406,15 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
             return this.callbackDescriptor;
         }
 
-        String descriptor = this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')'));
+        StringBuilder descriptor = new StringBuilder(this.callbackDescriptor.substring(0, this.callbackDescriptor.indexOf(')')));
         for (int l = startIndex; l < locals.length && extra > 0; l++) {
             if (locals[l] != null) {
-                descriptor += locals[l].getDescriptor();
+                descriptor.append(locals[l].getDescriptor());
                 extra--;
             }
         }
 
-        return descriptor + ")V";
+        return descriptor.append(")V").toString();
     }
     
     @Override

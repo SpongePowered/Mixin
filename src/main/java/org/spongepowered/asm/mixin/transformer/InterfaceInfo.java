@@ -232,7 +232,7 @@ public final class InterfaceInfo {
             throw new InvalidMixinException(mixin, String.format("@Interface annotation on %s is missing a required parameter", mixin));
         }
         
-        return new InterfaceInfo(mixin, prefix, iface, unique != null ? unique.booleanValue() : false);
+        return new InterfaceInfo(mixin, prefix, iface, unique != null && unique.booleanValue());
     }
 
     @Override

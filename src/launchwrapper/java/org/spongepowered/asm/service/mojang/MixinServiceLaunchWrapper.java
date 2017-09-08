@@ -320,10 +320,8 @@ public class MixinServiceLaunchWrapper implements IMixinService {
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         
         for (ILegacyClassTransformer transformer : environment.getTransformers()) {
-            if (this.lock != null) {
-                // Clear the re-entrance semaphore
-                this.lock.clear();
-            }
+            // Clear the re-entrance semaphore
+            this.lock.clear();
             
             int pos = transformer.getName().lastIndexOf('.');
             String simpleName = transformer.getName().substring(pos + 1);
@@ -332,7 +330,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
             basicClass = transformer.transformClassBytes(name, transformedName, basicClass);
             transformTime.end();
             
-            if (this.lock != null && this.lock.isSet()) {
+            if (this.lock.isSet()) {
                 // Also add it to the exclusion list so we can exclude it if the environment triggers a rebuild
                 environment.addTransformerExclusion(transformer.getName());
                 

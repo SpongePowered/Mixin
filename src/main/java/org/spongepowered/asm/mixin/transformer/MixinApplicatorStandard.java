@@ -933,7 +933,7 @@ class MixinApplicatorStandard {
         if (Bytecode.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
-                && !(Annotations.getVisible(mixinMethod, Overwrite.class) != null)) {
+                && Annotations.getVisible(mixinMethod, Overwrite.class) == null) {
             throw new InvalidMixinException(mixin, 
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
         }

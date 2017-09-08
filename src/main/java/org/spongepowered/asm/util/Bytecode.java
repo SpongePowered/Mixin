@@ -639,7 +639,7 @@ public final class Bytecode {
         } else if (arg instanceof Type) {
             return arg.toString();
         } else if (arg instanceof Class) {
-            return Type.getDescriptor((Class<?>)arg).toString();
+            return Type.getDescriptor((Class<?>)arg);
         }
         return arg == null ? "" : arg.toString();
     }

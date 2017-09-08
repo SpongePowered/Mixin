@@ -82,7 +82,7 @@ public class RuntimeDecompilerAsync extends RuntimeDecompiler implements Runnabl
 
     private void flush() {
         this.run = false;
-        for (File file = null; (file = this.queue.poll()) != null;) {
+        for (File file; (file = this.queue.poll()) != null;) {
             this.decompile(file);
         }
     }

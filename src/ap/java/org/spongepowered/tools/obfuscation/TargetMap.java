@@ -238,8 +238,7 @@ public final class TargetMap extends HashMap<TypeReference, Set<TypeReference>> 
         try {
             streamIn = new FileInputStream(sessionFile);
             objectinputstream = new ObjectInputStream(streamIn);
-            TargetMap map = (TargetMap)objectinputstream.readObject();
-            return map;
+            return (TargetMap)objectinputstream.readObject();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

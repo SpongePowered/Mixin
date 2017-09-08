@@ -36,7 +36,9 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * Utility class for working with ASM annotations
@@ -302,7 +304,11 @@ public final class Annotations {
         
         int foundNodes = nodes.size();
         if (foundNodes > 1) {
-            throw new IllegalArgumentException("Conflicting annotations found: " + annotationClasses);
+            throw new IllegalArgumentException("Conflicting annotations found: " + Lists.transform(nodes, new Function<AnnotationNode, String>() {
+                @Override public String apply(AnnotationNode input) {
+                    return input.desc;
+                }
+            }));
         }
     
         return foundNodes == 0 ? null : nodes.get(0);

@@ -385,15 +385,15 @@ class TargetClassContext extends ClassContext implements ITargetClassContext {
 
         AnnotationNode classDebugAnnotation = Annotations.getVisible(this.classNode, Debug.class);
         if (classDebugAnnotation != null) {
-            this.forceExport = Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "export"));
-            if (Boolean.TRUE.equals(Annotations.<String>getValue(classDebugAnnotation, "print"))) {
+            this.forceExport = Boolean.TRUE.equals(Annotations.<Boolean>getValue(classDebugAnnotation, "export"));
+            if (Boolean.TRUE.equals(Annotations.<Boolean>getValue(classDebugAnnotation, "print"))) {
                 Bytecode.textify(this.classNode, System.err);
             }
         }
         
         for (MethodNode method : this.classNode.methods) {
             AnnotationNode methodDebugAnnotation = Annotations.getVisible(method, Debug.class);
-            if (methodDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<String>getValue(methodDebugAnnotation, "print"))) {
+            if (methodDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<Boolean>getValue(methodDebugAnnotation, "print"))) {
                 Bytecode.textify(method, System.err);
             }
         }

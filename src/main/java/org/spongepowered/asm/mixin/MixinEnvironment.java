@@ -422,7 +422,7 @@ public final class MixinEnvironment implements ITokenProvider {
             /**
              * This option is always <tt>false</tt>.
              */
-            ALWAYS_FALSE;
+            ALWAYS_FALSE
             
         }
 

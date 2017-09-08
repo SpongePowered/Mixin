@@ -71,7 +71,7 @@ public abstract class MemberRef {
         
         @Override
         public void setOpcode(int opcode) {
-            if ((opcode | Method.OPCODES) == 0) {
+            if ((opcode & Method.OPCODES) == 0) {
                 throw new IllegalArgumentException("Invalid opcode for method instruction: 0x" + Integer.toHexString(opcode));
             }
 
@@ -142,7 +142,7 @@ public abstract class MemberRef {
         
         @Override
         public void setOpcode(int opcode) {
-            if ((opcode | Field.OPCODES) == 0) {
+            if ((opcode & Field.OPCODES) == 0) {
                 throw new IllegalArgumentException("Invalid opcode for field instruction: 0x" + Integer.toHexString(opcode));
             }
             
