@@ -36,6 +36,7 @@ import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.FieldNode;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -59,6 +60,8 @@ import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
+
+import com.google.common.base.Strings;
 
 /**
  * <p>Mixin bytecode pre-processor. This class is responsible for bytecode pre-
@@ -380,7 +383,8 @@ class MixinPreProcessorStandard {
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
                 throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " in " + this.mixin
-                        + " was not located in the target class." + context.getReferenceMapper().getStatus());
+                        + " was not located in the target class. " + context.getReferenceMapper().getStatus()
+                        + MixinPreProcessorStandard.getDynamicInfo(mixinMethod));
             }
             mixinMethod.name = method.renameTo(target.name);
         }
@@ -553,7 +557,9 @@ class MixinPreProcessorStandard {
                 target = context.findRemappedField(mixinField);
                 if (target == null) {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                    throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class");
+                    throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class"
+                            + context.getReferenceMapper().getStatus()
+                            + MixinPreProcessorStandard.getDynamicInfo(mixinField));
                 }
                 mixinField.name = field.renameTo(target.name);
             }
@@ -692,6 +698,37 @@ class MixinPreProcessorStandard {
         if (field != null && field.isRenamed()) {
             fieldNode.name = field.getName();
         }
+    }
+    
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     * 
+     * @param method method to inspect
+     * @return dynamic text in parentheses or empty string
+     */
+    protected static String getDynamicInfo(MethodNode method) {
+        return MixinPreProcessorStandard.getDynamicInfo("Method", Annotations.getInvisible(method, Dynamic.class));
+    }
+    
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     * 
+     * @param method method to inspect
+     * @return dynamic text in parentheses or empty string
+     */
+    protected static String getDynamicInfo(FieldNode method) {
+        return MixinPreProcessorStandard.getDynamicInfo("Field", Annotations.getInvisible(method, Dynamic.class));
+    }
+
+    private static String getDynamicInfo(String targetType, AnnotationNode annotation) {
+        String dynamic = Annotations.<String>getValue(annotation);
+        return Strings.isNullOrEmpty(dynamic) ? "" : String.format(" %s is @Dynamic(%s)", targetType, dynamic);
     }
 
 }
