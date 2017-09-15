@@ -30,6 +30,7 @@ import java.util.Iterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.FieldInsnNode;
@@ -382,20 +383,21 @@ class MixinPreProcessorStandard {
             }
             target = context.findRemappedMethod(mixinMethod);
             if (target == null) {
-                throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " in " + this.mixin
-                        + " was not located in the target class. " + context.getReferenceMapper().getStatus()
-                        + MixinPreProcessorStandard.getDynamicInfo(mixinMethod));
+                throw new InvalidMixinException(this.mixin,
+                        String.format("%s method %s in %s was not located in the target class %s. %s%s", type, mixinMethod.name, this.mixin,
+                                context.getTarget(), context.getReferenceMapper().getStatus(),
+                                MixinPreProcessorStandard.getDynamicInfo(mixinMethod)));
             }
             mixinMethod.name = method.renameTo(target.name);
         }
         
         if (Constants.CTOR.equals(target.name)) {
-            throw new InvalidMixinException(this.mixin, "Nice try! " + mixinMethod.name + " in " + this.mixin + " cannot alias a constructor!");
+            throw new InvalidMixinException(this.mixin, String.format("Nice try! %s in %s cannot alias a constructor", mixinMethod.name, this.mixin));
         }
         
         if (!Bytecode.compareFlags(mixinMethod, target, Opcodes.ACC_STATIC)) {
-            throw new InvalidMixinException(this.mixin, "STATIC modifier of " + type + " method " + mixinMethod.name + " in " + this.mixin
-                    + " does not match the target");
+            throw new InvalidMixinException(this.mixin, String.format("STATIC modifier of %s method %s in %s does not match the target", type,
+                    mixinMethod.name, this.mixin));
         }
         
         this.conformVisibility(context, mixinMethod, type, target);
@@ -445,13 +447,14 @@ class MixinPreProcessorStandard {
 
     protected void checkMethodNotUnique(Method method, SpecialMethod type) {
         if (method.isUnique()) {
-            throw new InvalidMixinException(this.mixin, type + " method " + method.getName() + " cannot be @Unique");
+            throw new InvalidMixinException(this.mixin, String.format("%s method %s in %s cannot be @Unique", type, method.getName(), this.mixin));
         }
     }
 
     protected void checkMixinNotUnique(MixinMethodNode mixinMethod, SpecialMethod type) {
         if (this.mixin.isUnique()) {
-            throw new InvalidMixinException(this.mixin, type + " method " + mixinMethod.name + " found in a @Unique mixin");
+            throw new InvalidMixinException(this.mixin, String.format("%s method %s found in a @Unique mixin %s", type, mixinMethod.name,
+                    this.mixin));
         }
     }
 
@@ -482,8 +485,8 @@ class MixinPreProcessorStandard {
         }
 
         if (this.strictUnique) {
-            throw new InvalidMixinException(this.mixin, "Method conflict, " + type + " method " + mixinMethod.name + " in " + this.mixin
-                    + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
+            throw new InvalidMixinException(this.mixin, String.format("Method conflict, %s method %s in %s cannot overwrite %s%s in %s",
+                    type, mixinMethod.name, this.mixin, target.name, target.desc, context.getTarget()));
         }
         
         AnnotationNode unique = Annotations.getVisible(mixinMethod, Unique.class);
@@ -546,7 +549,7 @@ class MixinPreProcessorStandard {
             field.remapTo(mixinField.desc);
             
             if (field.isUnique() && isShadow) {
-                throw new InvalidMixinException(this.mixin, "@Shadow field " + mixinField.name + " cannot be @Unique");
+                throw new InvalidMixinException(this.mixin, String.format("@Shadow field %s cannot be @Unique", mixinField.name));
             }
             
             FieldNode target = context.findField(mixinField, shadow);
@@ -557,16 +560,16 @@ class MixinPreProcessorStandard {
                 target = context.findRemappedField(mixinField);
                 if (target == null) {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                    throw new InvalidMixinException(this.mixin, "Shadow field " + mixinField.name + " was not located in the target class"
-                            + context.getReferenceMapper().getStatus()
-                            + MixinPreProcessorStandard.getDynamicInfo(mixinField));
+                    throw new InvalidMixinException(this.mixin, String.format("Shadow field %s was not located in the target class %s. %s%s",
+                            mixinField.name, context.getTarget(), context.getReferenceMapper().getStatus(),
+                            MixinPreProcessorStandard.getDynamicInfo(mixinField)));
                 }
                 mixinField.name = field.renameTo(target.name);
             }
             
             if (!Bytecode.compareFlags(mixinField, target, Opcodes.ACC_STATIC)) {
-                throw new InvalidMixinException(this.mixin, "STATIC modifier of @Shadow field " + mixinField.name + " in " + this.mixin
-                        + " does not match the target");
+                throw new InvalidMixinException(this.mixin, String.format("STATIC modifier of @Shadow field %s in %s does not match the target",
+                        mixinField.name, this.mixin));
             }
             
             if (field.isUnique()) {
@@ -579,8 +582,8 @@ class MixinPreProcessorStandard {
                 }
 
                 if (this.strictUnique) {
-                    throw new InvalidMixinException(this.mixin, "Field conflict, @Unique field " + mixinField.name + " in " + this.mixin
-                            + " cannot overwrite " + target.name + target.desc + " in " + context.getTarget());
+                    throw new InvalidMixinException(this.mixin, String.format("Field conflict, @Unique field %s in %s cannot overwrite %s%s in %s",
+                            mixinField.name, this.mixin, target.name, target.desc, context.getTarget()));
                 }
                 
                 MixinPreProcessorStandard.logger.warn("Discarding @Unique public field {} in {} because it already exists in {}. "
@@ -592,7 +595,8 @@ class MixinPreProcessorStandard {
             
             // Check that the shadow field has a matching descriptor
             if (!target.desc.equals(mixinField.desc)) {
-                throw new InvalidMixinException(this.mixin, "The field " + mixinField.name + " in the target class has a conflicting signature");
+                throw new InvalidMixinException(this.mixin, String.format("The field %s in the target class has a conflicting signature",
+                        mixinField.name));
             }
             
             if (!target.name.equals(mixinField.name)) {
@@ -640,12 +644,13 @@ class MixinPreProcessorStandard {
         // Imaginary super fields get stripped from the class, but first we validate them
         if (Constants.IMAGINARY_SUPER.equals(field.name)) {
             if (field.access != Opcodes.ACC_PRIVATE) {
-                throw new InvalidMixinException(this.mixin, "Imaginary super field " + context + "." + field.name
-                        + " must be private and non-final");
+                throw new InvalidMixinException(this.mixin, String.format("Imaginary super field %s.%s must be private and non-final", context,
+                        field.name));
             }
             if (!field.desc.equals("L" + this.mixin.getClassRef() + ";")) {
-                throw new InvalidMixinException(this.mixin, "Imaginary super field " + context + "." + field.name
-                        + " must have the same type as the parent mixin");
+                throw new InvalidMixinException(this.mixin,
+                        String.format("Imaginary super field %s.%s must have the same type as the parent mixin (%s)", context, field.name,
+                                this.mixin.getClassName()));
             }
             return false;
         }
@@ -727,8 +732,12 @@ class MixinPreProcessorStandard {
     }
 
     private static String getDynamicInfo(String targetType, AnnotationNode annotation) {
-        String dynamic = Annotations.<String>getValue(annotation);
-        return Strings.isNullOrEmpty(dynamic) ? "" : String.format(" %s is @Dynamic(%s)", targetType, dynamic);
+        String description = Strings.nullToEmpty(Annotations.<String>getValue(annotation));
+        Type upstream = Annotations.<Type>getValue(annotation, "mixin");
+        if (upstream != null) {
+            description = String.format("{%s} %s", upstream.getClassName(), description).trim();
+        }
+        return description.length() > 0 ? String.format(" %s is @Dynamic(%s)", targetType, description) : "";
     }
 
 }

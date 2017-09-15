@@ -65,15 +65,23 @@ import java.lang.annotation.Target;
  *   <li><tt>"All calls to Foo.bar are replaced at runtime by mod Y with a calls
  *     to Baz.flop"</tt></li>
  *   <li><tt>"Added by SomeOtherUpstreamMixin"</tt></li>
- *   <li><tt>"com.foo.bar.SomeOtherUpstreamMixin"</tt></li>
  * </ul>
  * 
  * <p>In other words, the contents of the <tt>&#064;Dynamic</tt> should try to
  * provide as much useful context for the decorated method without being overly
- * verbose. In the case of the last example, where the contents of the
- * annotation are the fully-qualified coordinates of an upstream mixin, it may
- * be possible for tooling to enable navigation or other enhanced functionality,
- * so deciding for a project </p>
+ * verbose.</p>
+ * 
+ * <p>In the case where the target method or field is added by an upstream
+ * mixin, and the mixin in question is on the classpath of the project, it is
+ * also possible to use the {@link #mixin} value to specify the mixin which
+ * contributes the target member. This provides both a useful navigable link in
+ * IDEs, and useful context for mixin tooling such as IDE plugins.</p>
+ * 
+ * <p>If the target member is contributed by an upstream mixin but the mixin is
+ * <em>not</em> on the classpath of the current project, using the fully-
+ * qualified name of the upstream mixin as the {@link #value} is a useful
+ * fallback, since developers reading the source code can still use the string
+ * value as a search term in their IDE or on Github.</p>
  */
 @Target({ ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.CLASS)
@@ -81,9 +89,19 @@ public @interface Dynamic {
     
     /**
      * Description of this <tt>&#064;Dynamic</tt> member. See the notes above.
+     * Can be omitted if {@link #mixin} is specified instead.
      * 
      * @return description of the member
      */
-    public String value();
+    public String value() default "";
+
+    /**
+     * If the target member is added by an upstream mixin, and the mixin in
+     * question is on the classpath, specify the mixin class here in order to
+     * provide useful context for the annotated member.
+     * 
+     * @return upstream mixin reference
+     */
+    public Class<?> mixin() default void.class;
 
 }
