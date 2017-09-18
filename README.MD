@@ -573,5 +573,24 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">August 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.7.3</b></td>
+      <td valign="top">
+        <ul>
+          <li>Internal changes to provide for support modlauncher and java 9</li>
+        </ul>
+      </td>
+      <td valign="top">August 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.7.4</b></td>
+      <td valign="top">
+        <ul>
+          <li>Added <tt>&#064;Dynamic</tt> annotation for decorating mixin
+          elements with dynamically-injected targets.</li>
+        </ul>
+      </td>
+      <td valign="top">September 2017</td>
+    </tr>
   </tbody>
 </table>
