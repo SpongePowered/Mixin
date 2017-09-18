@@ -36,8 +36,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.spongepowered.asm.lib.Opcodes;
+import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -63,6 +65,8 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+
+import com.google.common.base.Strings;
 
 /**
  * Contructs information about an injection from an {@link Inject} annotation
@@ -174,7 +178,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     protected Set<MemberInfo> parseTargets(String type) {
         List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
         if (methods == null) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing method name");
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name", type, this.method.name));
         }
         
         Set<MemberInfo> members = new LinkedHashSet<MemberInfo>();
@@ -182,13 +186,14 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             try {
                 MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
                 if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
-                    throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " specifies a target class '"
-                            + targetMember.owner + "', which is not supported");
+                    throw new InvalidInjectionException(this,
+                            String.format("%s annotation on %s specifies a target class '%s', which is not supported", type, this.method.name,
+                                    targetMember.owner));
                 }
                 members.add(targetMember);
             } catch (InvalidMemberDescriptorException ex) {
-                throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + ", has invalid target descriptor: \""
-                        + method + "\". " + this.mixin.getReferenceMapper().getStatus());
+                throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s", type,
+                        this.method.name, method, this.mixin.getReferenceMapper().getStatus()));
             }
         }
         return members;
@@ -197,7 +202,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     protected List<AnnotationNode> readInjectionPoints(String type) {
         List<AnnotationNode> ats = Annotations.<AnnotationNode>getValue(this.annotation, this.atKey, false);
         if (ats == null) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " is missing '" + this.atKey + "' value(s)");
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing '%s' value(s)", type, this.method.name,
+                    this.atKey));
         }
         return ats;
     }
@@ -271,19 +277,23 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             this.classNode.methods.add(method);
         }
         
+        String description = this.getDescription();
         String refMapStatus = this.mixin.getReferenceMapper().getStatus();
+        String dynamicInfo = this.getDynamicInfo();
         if ((this.mixin.getEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
-                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. %s", this.getDescription(),
-                            this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount, refMapStatus));
+                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. %s%s", description,
+                            this.method.name, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount, refMapStatus,
+                            dynamicInfo));
         } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
             throw new InjectionError(
-                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. %s", this.getDescription(),
-                            this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount, refMapStatus));
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. %s%s", description,
+                            this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount, refMapStatus,
+                            dynamicInfo));
         } else if (this.injectedCallbackCount > this.maxCallbackCount) {
             throw new InjectionError(
-                    String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed",
-                    this.getDescription(), this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount));
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed.%s",
+                    description, this.method.name, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount, dynamicInfo));
         }
     }
     
@@ -407,8 +417,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         
         if (this.targets.size() == 0) {
-            throw new InvalidInjectionException(this, type + " annotation on " + this.method.name + " could not find any targets matching "
-                    + InjectionInfo.namesOf(searchFor) + ". " + this.mixin.getReferenceMapper().getStatus());
+            throw new InvalidInjectionException(this,
+                    String.format("%s annotation on %s could not find any targets matching %s in the target class %s. %s%s", 
+                            type, this.method.name, InjectionInfo.namesOf(searchFor), this.mixin.getTarget(),
+                            this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
         }
     }
 
@@ -422,14 +434,30 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         int priority = Annotations.<Integer>getValue(merged, "priority");
         
         if (priority >= this.mixin.getPriority() && !owner.equals(this.mixin.getClassName())) {
-            throw new InvalidInjectionException(this, this + " cannot inject into " + this.classNode.name + "::" + target.name + target.desc
-                    + " merged by " + owner + " with priority " + priority);
+            throw new InvalidInjectionException(this, String.format("%s cannot inject into %s::%s%s merged by %s with priority %d", this,
+                    this.classNode.name, target.name, target.desc, owner, priority));
         }
         
         if (Annotations.getVisible(target, Final.class) != null) {
-            throw new InvalidInjectionException(this, this + " cannot inject into @Final method " + this.classNode.name + "::" + target.name
-                    + target.desc + " merged by " + owner);
+            throw new InvalidInjectionException(this, String.format("%s cannot inject into @Final method %s::%s%s merged by %s", this,
+                    this.classNode.name, target.name, target.desc, owner));
         }
+    }
+    
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     */
+    protected String getDynamicInfo() {
+        AnnotationNode annotation = Annotations.getInvisible(this.method, Dynamic.class);
+        String description = Strings.nullToEmpty(Annotations.<String>getValue(annotation));
+        Type upstream = Annotations.<Type>getValue(annotation, "mixin");
+        if (upstream != null) {
+            description = String.format("{%s} %s", upstream.getClassName(), description).trim();
+        }
+        return description.length() > 0 ? String.format(" Method is @Dynamic(%s)", description) : "";
     }
     
     /**
@@ -487,8 +515,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                 ModifyConstant.class
             );
         } catch (IllegalArgumentException ex) {
-            throw new InvalidMixinException(mixin, "Error parsing annotations on " + method.name + " in " + mixin.getClassName() + ": "
-                    + ex.getMessage());
+            throw new InvalidMixinException(mixin, String.format("Error parsing annotations on %s in %s: %s", method.name, mixin.getClassName(),
+                    ex.getMessage()));
         }
         return annotation;
     }
