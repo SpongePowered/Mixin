@@ -81,6 +81,11 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
     static class SearchState {
         
         /**
+         * Print LVT search, be permissive 
+         */
+        private final boolean print;
+        
+        /**
          * The target ordinal from the injection point 
          */
         private final int targetOrdinal;
@@ -106,8 +111,9 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
          */
         private VarInsnNode varNode;
         
-        SearchState(int targetOrdinal) {
+        SearchState(int targetOrdinal, boolean print) {
             this.targetOrdinal = targetOrdinal;
+            this.print = print;
         }
 
         boolean success() {
@@ -128,7 +134,7 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
         
         void check(Collection<AbstractInsnNode> nodes, AbstractInsnNode insn, int local) {
             this.pendingCheck = false;
-            if (local != this.varNode.var) {
+            if (local != this.varNode.var && (local > -2 || !this.print)) {
                 return;
             }
             
@@ -186,7 +192,7 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
 
     @Override
     boolean find(Target target, Collection<AbstractInsnNode> nodes) {
-        SearchState state = new SearchState(this.ordinal);
+        SearchState state = new SearchState(this.ordinal, this.discriminator.printLVT());
 
         ListIterator<AbstractInsnNode> iter = target.method.instructions.iterator();
         while (iter.hasNext()) {

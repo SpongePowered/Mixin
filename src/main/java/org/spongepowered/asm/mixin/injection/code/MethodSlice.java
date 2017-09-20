@@ -51,7 +51,7 @@ public final class MethodSlice {
     
     /**
      * A read-only wrapper for an {@link InsnList} which only allows the segment
-     * identified by {@link #start} and {@link end} to be accessed. In essence
+     * identified by {@link #start} and {@link #end} to be accessed. In essence
      * this class provides a <em>view</em> of the underlying InsnList.
      */
     static final class InsnListSlice extends ReadOnlyInsnList { 

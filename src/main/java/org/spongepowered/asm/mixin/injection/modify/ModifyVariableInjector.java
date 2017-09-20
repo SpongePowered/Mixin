@@ -89,23 +89,16 @@ public class ModifyVariableInjector extends Injector {
     }
     
     /**
-     * Print LVT 
-     */
-    private final boolean print;
-    
-    /**
      * True to consider only method args
      */
     private final LocalVariableDiscriminator discriminator;
 
     /**
      * @param info Injection info
-     * @param print True to print this injector's discovered LVT
      * @param discriminator discriminator
      */
-    public ModifyVariableInjector(InjectionInfo info, boolean print, LocalVariableDiscriminator discriminator) {
+    public ModifyVariableInjector(InjectionInfo info, LocalVariableDiscriminator discriminator) {
         super(info);
-        this.print = print;
         this.discriminator = discriminator;
     }
     
@@ -152,7 +145,7 @@ public class ModifyVariableInjector extends Injector {
         
         Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
         
-        if (this.print) {
+        if (this.discriminator.printLVT()) {
             this.printLocals(context);
         }
 
@@ -162,6 +155,10 @@ public class ModifyVariableInjector extends Injector {
                 this.inject(context, local);
             }
         } catch (InvalidImplicitDiscriminatorException ex) {
+            if (this.discriminator.printLVT()) {
+                this.info.addCallbackInvocation(this.methodNode);
+                return;
+            }
             throw new InvalidInjectionException(this.info, "Implicit variable modifier injection failed in " + this, ex);
         }
         

@@ -206,7 +206,9 @@ public final class Locals {
             } else if (insn instanceof VarInsnNode) {
                 VarInsnNode varNode = (VarInsnNode) insn;
                 frame[varNode.var] = Locals.getLocalVariableAt(classNode, method, node, varNode.var);
-            } else if (insn == node) {
+            } 
+            
+            if (insn == node) {
                 break;
             }
         }

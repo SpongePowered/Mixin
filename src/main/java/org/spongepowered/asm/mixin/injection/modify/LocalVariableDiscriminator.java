@@ -209,18 +209,25 @@ public class LocalVariableDiscriminator {
      * single local by type
      */
     private final Set<String> names;
+    
+    /**
+     * True to request print of the LVT 
+     */
+    private final boolean print;
 
     /**
      * @param argsOnly true to only search within the method arguments
      * @param ordinal target variable ordinal
      * @param index target variable index
      * @param names target variable names
+     * @param print true to print lvt
      */
-    public LocalVariableDiscriminator(boolean argsOnly, int ordinal, int index, Set<String> names) {
+    public LocalVariableDiscriminator(boolean argsOnly, int ordinal, int index, Set<String> names, boolean print) {
         this.argsOnly = argsOnly;
         this.ordinal = ordinal;
         this.index = index;
         this.names = Collections.<String>unmodifiableSet(names);
+        this.print = print;
     }
     
     /**
@@ -258,7 +265,14 @@ public class LocalVariableDiscriminator {
     public boolean hasNames() {
         return !this.names.isEmpty();
     }
-    
+
+    /**
+     * True if the injector should print the LVT
+     */
+    public boolean printLVT() {
+        return this.print;
+    }
+
     /**
      * If the user specifies no values for <tt>ordinal</tt>, <tt>index</tt> or 
      * <tt>names</tt> then we are considered to be operating in "implicit mode"
@@ -285,7 +299,7 @@ public class LocalVariableDiscriminator {
         try {
             return this.findLocal(new Context(returnType, argsOnly, target, node));
         } catch (InvalidImplicitDiscriminatorException ex) {
-            return -1;
+            return -2;
         }
     }
     
@@ -372,6 +386,7 @@ public class LocalVariableDiscriminator {
         boolean argsOnly = Annotations.<Boolean>getValue(annotation, "argsOnly", Boolean.FALSE).booleanValue();
         int ordinal = Annotations.<Integer>getValue(annotation, "ordinal", -1);
         int index = Annotations.<Integer>getValue(annotation, "index", -1);
+        boolean print = Annotations.<Boolean>getValue(annotation, "print", Boolean.FALSE).booleanValue();
         
         Set<String> names = new HashSet<String>();
         List<String> namesList = Annotations.<List<String>>getValue(annotation, "name", (List<String>)null);
@@ -379,7 +394,7 @@ public class LocalVariableDiscriminator {
             names.addAll(namesList);
         }
         
-        return new LocalVariableDiscriminator(argsOnly, ordinal, index, names);
+        return new LocalVariableDiscriminator(argsOnly, ordinal, index, names, print);
     }
 
 }

@@ -208,7 +208,7 @@ public abstract class Injector {
      * Use the supplied InjectionPoints to find target insns in the target
      * method
      * 
-     * @param target.method Target method
+     * @param injectorTarget Target method
      * @param injectionPoints List of injection points parsed from At
      *      annotations on the callback method
      * @return Target insn nodes in the target method
