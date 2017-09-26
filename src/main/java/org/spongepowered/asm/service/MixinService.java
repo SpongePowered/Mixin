@@ -65,9 +65,12 @@ public final class MixinService {
         ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
         if (MixinService.class.getClassLoader() != systemClassLoader) {
             try {
+                String self = Thread.currentThread().getStackTrace()[1].getMethodName();
                 Class<?> contextServiceClass = Class.forName(MixinService.class.getName(), true, systemClassLoader);
-                Method mdGetInstance = contextServiceClass.getMethod("getInstance");
-                MixinService.instance = (MixinService)mdGetInstance.invoke(null);
+                if (contextServiceClass != MixinService.class) {
+                    Method mdGetInstance = contextServiceClass.getDeclaredMethod(self);
+                    MixinService.instance = (MixinService)mdGetInstance.invoke(null);
+                }
             } catch (Exception ex) {
                 ex.printStackTrace();
             } 
