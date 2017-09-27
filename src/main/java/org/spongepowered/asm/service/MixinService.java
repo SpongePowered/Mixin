@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.service;
 
-import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
@@ -62,20 +61,6 @@ public final class MixinService {
      * Singleton pattern, get or create the instance
      */
     private static MixinService getCanonicalInstance() {
-        ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-        if (MixinService.class.getClassLoader() != systemClassLoader) {
-            try {
-                String self = Thread.currentThread().getStackTrace()[1].getMethodName();
-                Class<?> contextServiceClass = Class.forName(MixinService.class.getName(), true, systemClassLoader);
-                if (contextServiceClass != MixinService.class) {
-                    Method mdGetInstance = contextServiceClass.getDeclaredMethod(self);
-                    MixinService.instance = (MixinService)mdGetInstance.invoke(null);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            } 
-        }
-        
         if (MixinService.instance == null) {
             MixinService.instance = new MixinService();
         }

@@ -158,6 +158,11 @@ dependencies {
     compile 'com.google.code.gson:gson:2.2.4'
     compile files(tasks.renamedASM.outputs.files[0])         // Establish implicit dependency on remapped ASM
 
+    // AMS - temp fix, see #210
+    compile('net.minecraft:launchwrapper:1.11') {
+        exclude module: 'lwjgl'
+    }
+
     // Tests
 //    testCompile 'junit:junit:4.11'
 //    testCompile 'org.hamcrest:hamcrest-library:1.3'
@@ -411,7 +416,8 @@ ext.excludePomDeps = [
     'hamcrest-library',
     'junit',
     'mockito-core',
-    'mixin-asm-debug-all'
+    'mixin-asm-debug-all',
+    'log4j-core'
 ]
 
 uploadArchives {

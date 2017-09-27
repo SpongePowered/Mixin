@@ -33,6 +33,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.MixinService;
 
+import net.minecraft.launchwrapper.Launch;
+
 /**
  * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
  * subsystem and the tweaker or coremod which is boostrapping it. Without this
@@ -73,6 +75,8 @@ public abstract class MixinBootstrap {
     
     // Static initialiser, add classloader exclusions as early as possible
     static {
+        // AMS - temp fix, see #210
+        Launch.classLoader.addClassLoaderExclusion("org.spongepowered.asm.service.");
         MixinService.getService().prepare();
     }
     
