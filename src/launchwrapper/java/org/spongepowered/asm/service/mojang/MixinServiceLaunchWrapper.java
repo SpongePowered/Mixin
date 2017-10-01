@@ -237,7 +237,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
             
             if (transformer instanceof IClassNameTransformer) {
                 MixinServiceLaunchWrapper.logger.debug("Found name transformer: {}", transformer.getClass().getName());
-                this.nameTransformer = (IClassNameTransformer) transformer;
+                this.nameTransformer = (IClassNameTransformer)transformer;
             }
 
         }
@@ -344,11 +344,25 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     }
 
     private String unmapClassName(String className) {
+        if (this.nameTransformer == null) {
+            this.findNameTransformer();
+        }
+        
         if (this.nameTransformer != null) {
             return this.nameTransformer.unmapClassName(className);
         }
         
         return className;
+    }
+
+    private void findNameTransformer() {
+        List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
+        for (IClassTransformer transformer : transformers) {
+            if (transformer instanceof IClassNameTransformer) {
+                MixinServiceLaunchWrapper.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                this.nameTransformer = (IClassNameTransformer) transformer;
+            }
+        }
     }
 
     /* (non-Javadoc)
