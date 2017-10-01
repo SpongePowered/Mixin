@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.Opcodes;
@@ -1675,7 +1676,8 @@ public final class ClassInfo {
                 ClassNode classNode = MixinService.getService().getClassNode(className);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
-                ClassInfo.logger.warn("Error loading class: {}", className);
+                ClassInfo.logger.catching(Level.TRACE, ex);
+                ClassInfo.logger.warn("Error loading class: {} ({}: {})", className, ex.getClass().getName(), ex.getMessage());
 //                ex.printStackTrace();
             }
 
