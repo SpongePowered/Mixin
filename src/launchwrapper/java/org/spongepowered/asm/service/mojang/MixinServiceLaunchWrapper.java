@@ -60,6 +60,10 @@ import net.minecraft.launchwrapper.Launch;
  */
 public class MixinServiceLaunchWrapper implements IMixinService {
 
+    // Blackboard keys
+    public static final String BLACKBOARD_KEY_TWEAKCLASSES = "TweakClasses";
+    public static final String BLACKBOARD_KEY_TWEAKS = "Tweaks";
+    
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
@@ -128,7 +132,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
             MixinServiceLaunchWrapper.logger.error("MixinBootstrap.doInit() called during a tweak constructor!");
         }
 
-        List<String> tweakClasses = GlobalProperties.<List<String>>get(GlobalProperties.Keys.TWEAKCLASSES);
+        List<String> tweakClasses = GlobalProperties.<List<String>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKCLASSES);
         if (tweakClasses != null) {
             tweakClasses.add(MixinServiceLaunchWrapper.STATE_TWEAKER);
         }
@@ -404,7 +408,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     public final String getSideName() {
         // Using this method first prevents us from accidentally loading FML classes
         // too early when using the tweaker in dev
-        for (ITweaker tweaker : GlobalProperties.<List<ITweaker>>get(GlobalProperties.Keys.TWEAKS)) {
+        for (ITweaker tweaker : GlobalProperties.<List<ITweaker>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKS)) {
             if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
                 return "SERVER";
             } else if (tweaker.getClass().getName().endsWith(".common.launcher.FMLTweaker")) {

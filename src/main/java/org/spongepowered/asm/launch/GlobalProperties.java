@@ -39,9 +39,6 @@ public final class GlobalProperties {
      */
     public static final class Keys {
 
-        public static final String TWEAKCLASSES                 = "TweakClasses";
-        public static final String TWEAKS                       = "Tweaks";
-        
         public static final String INIT                         = "mixin.initialised";
         public static final String AGENTS                       = "mixin.agents";
         public static final String CONFIGS                      = "mixin.configs";

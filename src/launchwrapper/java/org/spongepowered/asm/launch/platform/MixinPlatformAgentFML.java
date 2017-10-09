@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 //import org.spongepowered.asm.mixin.environment.PhaseDefinition;
 //import org.spongepowered.asm.mixin.environment.phase.OnLogMessage;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
+import org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapper;
 
 //import com.google.common.collect.ImmutableList;
 
@@ -237,7 +238,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         
         // Was it already loaded, check the tweakers list
         try {
-            List<ITweaker> tweakers = GlobalProperties.<List<ITweaker>>get(GlobalProperties.Keys.TWEAKS);
+            List<ITweaker> tweakers = GlobalProperties.<List<ITweaker>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKS);
             if (tweakers == null) {
                 return false;
             }
@@ -347,7 +348,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      * @return true if a tweaker with the specified name is queued
      */
     private static boolean isTweakerQueued(String tweakerName) {
-        for (String tweaker : GlobalProperties.<List<String>>get(GlobalProperties.Keys.TWEAKCLASSES)) {
+        for (String tweaker : GlobalProperties.<List<String>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKCLASSES)) {
             if (tweaker.endsWith(tweakerName)) {
                 return true;
             }
