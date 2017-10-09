@@ -1673,7 +1673,7 @@ public final class ClassInfo {
         ClassInfo info = ClassInfo.cache.get(className);
         if (info == null) {
             try {
-                ClassNode classNode = MixinService.getService().getClassNode(className);
+                ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(className);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
                 ClassInfo.logger.catching(Level.TRACE, ex);

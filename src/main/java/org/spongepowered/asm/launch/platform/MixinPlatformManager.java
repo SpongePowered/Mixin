@@ -212,7 +212,7 @@ public class MixinPlatformManager {
      * mixin tweaker in their manifest) and add agents for them
      */
     private void scanClasspath() {
-        URL[] sources = MixinService.getService().getClassPath();
+        URL[] sources = MixinService.getService().getClassProvider().getClassPath();
         for (URL url : sources) {
             try {
                 URI uri = url.toURI();

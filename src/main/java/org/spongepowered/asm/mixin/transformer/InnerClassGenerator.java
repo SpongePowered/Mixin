@@ -120,7 +120,7 @@ final class InnerClassGenerator implements IClassGenerator {
         }
         
         byte[] getClassBytes() throws ClassNotFoundException, IOException {
-            return MixinService.getService().getClassBytes(this.originalName, true);
+            return MixinService.getService().getBytecodeProvider().getClassBytes(this.originalName, true);
         }
         
         /**

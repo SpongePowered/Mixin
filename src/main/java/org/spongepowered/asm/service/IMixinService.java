@@ -24,12 +24,9 @@
  */
 package org.spongepowered.asm.service;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.Collection;
 
-import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.ReEntranceLock;
 
@@ -94,6 +91,11 @@ public interface IMixinService {
     public abstract IClassProvider getClassProvider();
     
     /**
+     * Return the class bytecode provider for this service
+     */
+    public abstract IClassBytecodeProvider getBytecodeProvider();
+    
+    /**
      * Get additional platform agents for this service 
      */
     public abstract Collection<String> getPlatformAgents();
@@ -107,15 +109,6 @@ public interface IMixinService {
      * @return input stream or null if resource not found
      */
     public abstract InputStream getResourceAsStream(String name);
-
-    /**
-     * Find a class in the service classloader
-     * 
-     * @param name class name
-     * @return resultant class
-     * @throws ClassNotFoundException if the class was not found
-     */
-    public abstract Class<?> findClass(final String name) throws ClassNotFoundException;
 
     /**
      * Register an invalid class with the service classloader
@@ -132,59 +125,11 @@ public interface IMixinService {
      * @return true if the class was already loaded
      */
     public abstract boolean isClassLoaded(String className);
-    
-    /**
-     * Check whether the specified class is excluded in the service classloader
-     * 
-     * @param name class name to check
-     * @param transformedName transformed name to check
-     * @return true if the class is excluded in the service classloader
-     */
-    public abstract boolean isClassExcluded(String name, String transformedName);
-
-    /**
-     * Get the current classpath from the service classloader
-     */
-    public abstract URL[] getClassPath();
 
     /**
      * Get currently available transformers in the environment
      */
     public abstract Collection<ITransformer> getTransformers();
-
-    /**
-     * Retrieve class bytes using available classloaders, does not transform the
-     * class
-     * 
-     * @param name class name
-     * @param transformedName transformed class name
-     * @return class bytes or null if not found
-     * @throws IOException propagated
-     */
-    public abstract byte[] getClassBytes(String name, String transformedName) throws IOException;
-    
-    /**
-     * Retrieve transformed class bytes by using available classloaders and
-     * running transformer delegation chain on the result if the runTransformers
-     * option is enabled 
-     * 
-     * @param name full class name
-     * @param runTransformers true to run transformers on the loaded bytecode
-     * @return transformed bytes
-     * @throws ClassNotFoundException if class not found
-     * @throws IOException propagated
-     */
-    public abstract byte[] getClassBytes(String name, boolean runTransformers) throws ClassNotFoundException, IOException;
-
-    /**
-     * Retrieve transformed class as an ASM tree
-     * 
-     * @param name full class name
-     * @return tree
-     * @throws ClassNotFoundException if class not found
-     * @throws IOException propagated
-     */
-    public abstract ClassNode getClassNode(String name) throws ClassNotFoundException, IOException;
 
     /**
      * Get the detected side name for this environment

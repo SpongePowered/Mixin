@@ -105,7 +105,7 @@ public class MixinAgent implements IHotSwap {
                 String targetName = target.replace('/', '.');
                 MixinAgent.logger.debug("Re-transforming target class {}", target);
                 try {
-                    Class<?> targetClass = service.findClass(targetName);
+                    Class<?> targetClass = service.getClassProvider().findClass(targetName);
                     byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
                     if (targetBytecode == null) {
                         MixinAgent.logger.error("Target class {} bytecode is not registered", targetName);

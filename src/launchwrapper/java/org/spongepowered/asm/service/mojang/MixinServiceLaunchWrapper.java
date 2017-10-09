@@ -42,6 +42,7 @@ import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
 import org.spongepowered.asm.service.IMixinService;
@@ -60,7 +61,7 @@ import net.minecraft.launchwrapper.Launch;
 /**
  * Mixin service for launchwrapper
  */
-public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider {
+public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider, IClassBytecodeProvider {
 
     // Blackboard keys
     public static final String BLACKBOARD_KEY_TWEAKCLASSES = "TweakClasses";
@@ -77,8 +78,15 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
      */
     private static final Logger logger = LogManager.getLogger("mixin");
 
+    /**
+     * Utility for reflecting into Launch ClassLoader
+     */
     private final LaunchClassLoaderUtil classLoaderUtil = new LaunchClassLoaderUtil(Launch.classLoader);
     
+    /**
+     * Transformer re-entrance lock, shared between the mixin transformer and
+     * the metadata service
+     */
     private final ReEntranceLock lock = new ReEntranceLock(1);
     
     /**
@@ -167,6 +175,23 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
     }
     
     /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getBytecodeProvider()
+     */
+    @Override
+    public IClassBytecodeProvider getBytecodeProvider() {
+        return this;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IClassProvider#findClass(
+     *      java.lang.String)
+     */
+    @Override
+    public Class<?> findClass(String name) throws ClassNotFoundException {
+        return Launch.classLoader.findClass(name);
+    }
+
+    /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IClassProvider#findClass(
      *      java.lang.String, boolean)
      */
@@ -213,15 +238,6 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#findClass(
-     *      java.lang.String)
-     */
-    @Override
-    public Class<?> findClass(String name) throws ClassNotFoundException {
-        return Launch.classLoader.findClass(name);
-    }
-    
-    /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#registerInvalidClass(
      *      java.lang.String)
      */
@@ -240,16 +256,7 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#isClassExcluded(
-     *      java.lang.String, java.lang.String)
-     */
-    @Override
-    public boolean isClassExcluded(String name, String transformedName) {
-        return this.classLoaderUtil.isClassExcluded(name, transformedName);
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#getClassPath()
+     * @see org.spongepowered.asm.service.IClassProvider#getClassPath()
      */
     @Override
     public URL[] getClassPath() {
@@ -348,7 +355,7 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
      *      except the excluded transformers
      */
     private byte[] applyTransformers(String name, String transformedName, byte[] basicClass, Profiler profiler) {
-        if (this.isClassExcluded(name, transformedName)) {
+        if (this.classLoaderUtil.isClassExcluded(name, transformedName)) {
             return basicClass;
         }
 
@@ -428,8 +435,8 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider 
      */
     @Override
     public final String getSideName() {
-        // Using this method first prevents us from accidentally loading FML classes
-        // too early when using the tweaker in dev
+        // Using this method first prevents us from accidentally loading FML
+        // classes too early when using the tweaker in dev
         for (ITweaker tweaker : GlobalProperties.<List<ITweaker>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKS)) {
             if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
                 return "SERVER";

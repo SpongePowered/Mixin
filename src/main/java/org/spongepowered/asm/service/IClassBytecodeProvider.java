@@ -24,43 +24,47 @@
  */
 package org.spongepowered.asm.service;
 
-import java.net.URL;
+import java.io.IOException;
+
+import org.spongepowered.asm.lib.tree.ClassNode;
 
 /**
- * Interface for marshal object which can retrieve classes from the environment
+ * Interface for object which can provide class bytecode
  */
-public interface IClassProvider {
+public interface IClassBytecodeProvider {
 
     /**
-     * Get the current classpath from the service classloader
-     */
-    public abstract URL[] getClassPath();
-
-    /**
-     * Find a class in the service classloader
+     * Retrieve class bytes using available classloaders, does not transform the
+     * class
      * 
      * @param name class name
-     * @return resultant class
-     * @throws ClassNotFoundException if the class was not found
+     * @param transformedName transformed class name
+     * @return class bytes or null if not found
+     * @throws IOException propagated
      */
-    public abstract Class<?> findClass(final String name) throws ClassNotFoundException;
+    public abstract byte[] getClassBytes(String name, String transformedName) throws IOException;
     
     /**
-     * Marshal a call to <tt>Class.forName</tt> for a regular class
+     * Retrieve transformed class bytes by using available classloaders and
+     * running transformer delegation chain on the result if the runTransformers
+     * option is enabled 
      * 
-     * @param name class name
-     * @param initialize init flag
-     * @return Klass
+     * @param name full class name
+     * @param runTransformers true to run transformers on the loaded bytecode
+     * @return transformed bytes
+     * @throws ClassNotFoundException if class not found
+     * @throws IOException propagated
      */
-    public abstract Class<?> findClass(String name, boolean initialize) throws ClassNotFoundException;
+    public abstract byte[] getClassBytes(String name, boolean runTransformers) throws ClassNotFoundException, IOException;
 
     /**
-     * Marshal a call to <tt>Class.forName</tt> for an agent class
+     * Retrieve transformed class as an ASM tree
      * 
-     * @param name agent class name
-     * @param initialize init flag
-     * @return Klass
+     * @param name full class name
+     * @return tree
+     * @throws ClassNotFoundException if class not found
+     * @throws IOException propagated
      */
-    public abstract Class<?> findAgentClass(String name, boolean initialize) throws ClassNotFoundException;
+    public abstract ClassNode getClassNode(String name) throws ClassNotFoundException, IOException;
 
 }
