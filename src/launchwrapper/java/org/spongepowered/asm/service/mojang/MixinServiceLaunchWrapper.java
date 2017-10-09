@@ -41,6 +41,8 @@ import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.ITransformer;
@@ -58,7 +60,7 @@ import net.minecraft.launchwrapper.Launch;
 /**
  * Mixin service for launchwrapper
  */
-public class MixinServiceLaunchWrapper implements IMixinService {
+public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider {
 
     // Blackboard keys
     public static final String BLACKBOARD_KEY_TWEAKCLASSES = "TweakClasses";
@@ -157,20 +159,29 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#getClassLoader()
+     * @see org.spongepowered.asm.service.IMixinService#getClassProvider()
      */
     @Override
-    public ClassLoader getClassLoader() {
-        return Launch.classLoader;
+    public IClassProvider getClassProvider() {
+        return this;
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService
-     *      #getApplicationClassLoader()
+     * @see org.spongepowered.asm.service.IClassProvider#findClass(
+     *      java.lang.String, boolean)
      */
     @Override
-    public ClassLoader getApplicationClassLoader() {
-        return Launch.class.getClassLoader();
+    public Class<?> findClass(String name, boolean initialize) throws ClassNotFoundException {
+        return Class.forName(name, initialize, Launch.classLoader);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IClassProvider#findAgentClass(
+     *      java.lang.String, boolean)
+     */
+    @Override
+    public Class<?> findAgentClass(String name, boolean initialize) throws ClassNotFoundException {
+        return Class.forName(name, initialize, Launch.class.getClassLoader());
     }
     
     /* (non-Javadoc)
@@ -179,6 +190,17 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     @Override
     public void beginPhase() {
         Launch.classLoader.registerTransformer(MixinServiceLaunchWrapper.TRANSFORMER_PROXY_CLASS);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#checkEnv(
+     *      java.lang.Object)
+     */
+    @Override
+    public void checkEnv(Object bootSource) {
+        if (bootSource.getClass().getClassLoader() != Launch.class.getClassLoader()) {
+            throw new MixinException("Attempted to init the mixin environment in the wrong classloader");
+        }
     }
     
     /* (non-Javadoc)

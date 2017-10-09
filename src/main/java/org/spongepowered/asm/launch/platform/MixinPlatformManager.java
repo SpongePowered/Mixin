@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.mixin.Mixins;
 
 //import com.google.common.collect.ImmutableList;
@@ -52,7 +53,6 @@ import org.spongepowered.asm.mixin.Mixins;
  */
 public class MixinPlatformManager {
 
-    private static final String MFATT_TWEAKER = "TweakClass";
     private static final String DEFAULT_MAIN_CLASS = "net.minecraft.client.main.Main";
     private static final String MIXIN_TWEAKER_CLASS = "org.spongepowered.asm.launch.MixinTweaker";
     
@@ -224,7 +224,7 @@ public class MixinPlatformManager {
                     continue;
                 }
                 MainAttributes attributes = MainAttributes.of(uri);
-                String tweaker = attributes.get(MixinPlatformManager.MFATT_TWEAKER);
+                String tweaker = attributes.get(Constants.ManifestAttributes.TWEAKER);
                 if (MixinPlatformManager.MIXIN_TWEAKER_CLASS.equals(tweaker)) {
                     MixinPlatformManager.logger.debug("{} contains a mixin tweaker, adding agents", uri);
                     this.addContainer(uri);

@@ -74,6 +74,14 @@ public interface IMixinService {
     public abstract void beginPhase();
 
     /**
+     * Check whether the supplied object is a valid boot source for mixin
+     * environment
+     * 
+     * @param bootSource boot source
+     */
+    public abstract void checkEnv(Object bootSource);
+    
+    /**
      * Get the transformer re-entrance lock for this service, the transformer
      * uses this lock to track transformer re-entrance when co-operative load
      * and transform is performed by the service.
@@ -81,20 +89,14 @@ public interface IMixinService {
     public abstract ReEntranceLock getReEntranceLock();
     
     /**
+     * Return the class provider for this service
+     */
+    public abstract IClassProvider getClassProvider();
+    
+    /**
      * Get additional platform agents for this service 
      */
     public abstract Collection<String> getPlatformAgents();
-
-    /**
-     * Get the main classloader for this service
-     */
-    public abstract ClassLoader getClassLoader();
-
-    /**
-     * Get the application classloader for this service (usually the system
-     * classloader)
-     */
-    public abstract ClassLoader getApplicationClassLoader();
     
     /**
      * Get a resource as a stream from the appropriate classloader, this is
@@ -188,5 +190,5 @@ public interface IMixinService {
      * Get the detected side name for this environment
      */
     public abstract String getSideName();
-    
+
 }

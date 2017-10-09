@@ -282,7 +282,7 @@ public class MixinTransformer extends TreeTransformer {
         for (String target : unhandled) {
             try {
                 auditLogger.info("Force-loading class {}", target);
-                Class.forName(target, true, this.service.getClassLoader());
+                this.service.getClassProvider().findClass(target, true);
             } catch (ClassNotFoundException ex) {
                 auditLogger.error("Could not force-load " + target, ex);
             }
@@ -360,7 +360,7 @@ public class MixinTransformer extends TreeTransformer {
         printer.add();
         
         try {
-            Class<?> agent = Class.forName(MixinTransformer.METRONOME_AGENT_CLASS, false, this.service.getApplicationClassLoader());
+            Class<?> agent = this.service.getClassProvider().findAgentClass(MixinTransformer.METRONOME_AGENT_CLASS, false);
             Method mdGetTimes = agent.getDeclaredMethod("getTimes");
             
             @SuppressWarnings("unchecked")
@@ -786,7 +786,7 @@ public class MixinTransformer extends TreeTransformer {
         for (String handlerClassName : Mixins.getErrorHandlerClasses()) {
             try {
                 MixinTransformer.logger.info("Instancing error handler class {}", handlerClassName);
-                Class<?> handlerClass = Class.forName(handlerClassName, true, this.service.getClassLoader());
+                Class<?> handlerClass = this.service.getClassProvider().findClass(handlerClassName, true);
                 IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.newInstance();
                 if (handler != null) {
                     handlers.add(handler);

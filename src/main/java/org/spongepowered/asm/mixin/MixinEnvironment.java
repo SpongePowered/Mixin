@@ -881,10 +881,8 @@ public final class MixinEnvironment implements ITokenProvider {
             throw new MixinException("Environment conflict, mismatched versions or you didn't call MixinBootstrap.init()");
         }
         
-        // Also sanity check
-        if (this.getClass().getClassLoader() != this.service.getApplicationClassLoader()) {
-            throw new MixinException("Attempted to init the mixin environment in the wrong classloader");
-        }
+        // More sanity check
+        this.service.checkEnv(this);
         
         this.options = new boolean[Option.values().length];
         for (Option option : Option.values()) {
@@ -1002,7 +1000,7 @@ public final class MixinEnvironment implements ITokenProvider {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends IEnvironmentTokenProvider> providerClass =
-                        (Class<? extends IEnvironmentTokenProvider>)Class.forName(providerName, true, this.service.getClassLoader());
+                        (Class<? extends IEnvironmentTokenProvider>)this.service.getClassProvider().findClass(providerName, true);
                 IEnvironmentTokenProvider provider = providerClass.newInstance();
                 this.registerTokenProvider(provider);
             } catch (Throwable th) {

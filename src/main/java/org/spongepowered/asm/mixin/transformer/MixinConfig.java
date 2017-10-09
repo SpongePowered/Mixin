@@ -390,7 +390,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         for (String injectionPoint : this.injectorOptions.injectionPoints) {
             try {
-                Class<?> injectionPointClass = Class.forName(injectionPoint, true, this.service.getClassLoader());
+                Class<?> injectionPointClass = this.service.getClassProvider().findClass(injectionPoint, true);
                 if (InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
                     InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
                 } else {
@@ -438,7 +438,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     void onSelect() {
         if (this.pluginClassName != null) {
             try {
-                Class<?> pluginClass = Class.forName(this.pluginClassName, true, this.service.getClassLoader());
+                Class<?> pluginClass = this.service.getClassProvider().findClass(this.pluginClassName, true);
                 this.plugin = (IMixinConfigPlugin)pluginClass.newInstance();
                 
                 if (this.plugin != null) {
