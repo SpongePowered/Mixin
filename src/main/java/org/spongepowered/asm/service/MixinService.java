@@ -24,9 +24,14 @@
  */
 package org.spongepowered.asm.service;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.Set;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Provides access to the service layer which connects the mixin transformer to
@@ -35,11 +40,20 @@ import java.util.ServiceLoader;
  * core. This allows us to support LegacyLauncher 
  */
 public final class MixinService {
+    
+    /**
+     * Log all the things
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * Singleton
      */
     private static MixinService instance;
+    
+    private ServiceLoader<IMixinServiceBootstrap> bootstrapServiceLoader;
+    
+    private final Set<String> bootedServices = new HashSet<String>(); 
 
     /**
      * Service loader 
@@ -55,12 +69,25 @@ public final class MixinService {
      * Singleton pattern
      */
     private MixinService() {
+        this.runBootServices();
+    }
+
+    private void runBootServices() {
+        this.bootstrapServiceLoader = ServiceLoader.<IMixinServiceBootstrap>load(IMixinServiceBootstrap.class, this.getClass().getClassLoader());
+        for (IMixinServiceBootstrap bootService : this.bootstrapServiceLoader) {
+            try {
+                bootService.boostrap();
+                this.bootedServices.add(bootService.getServiceClassName());
+            } catch (Throwable th) {
+                MixinService.logger.catching(th);
+            }
+        }
     }
 
     /**
      * Singleton pattern, get or create the instance
      */
-    private static MixinService getCanonicalInstance() {
+    private static MixinService getInstance() {
         if (MixinService.instance == null) {
             MixinService.instance = new MixinService();
         }
@@ -68,8 +95,15 @@ public final class MixinService {
         return MixinService.instance;
     }
     
+    /**
+     * Boot
+     */
+    public static void boot() {
+        MixinService.getInstance();
+    }
+    
     public static IMixinService getService() {
-        return MixinService.getCanonicalInstance().getServiceInstance();
+        return MixinService.getInstance().getServiceInstance();
     }
 
     private synchronized IMixinService getServiceInstance() {
@@ -88,6 +122,9 @@ public final class MixinService {
         while (iter.hasNext()) {
             try {
                 IMixinService service = iter.next();
+                if (this.bootedServices.contains(service.getClass().getName())) {
+                    MixinService.logger.debug("MixinService [{}] was successfully booted in {}", service.getName(), this.getClass().getClassLoader());
+                }
                 if (service.isValid()) {
                     return service;
                 }

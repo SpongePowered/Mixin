@@ -24,51 +24,40 @@
  */
 package org.spongepowered.asm.service.mojang;
 
-import javax.annotation.Resource;
+import org.spongepowered.asm.service.IMixinServiceBootstrap;
 
-import org.spongepowered.asm.service.ILegacyClassTransformer;
-
-import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
 
 /**
- * A handle for a legacy {@link IClassTransformer} for processing as a legacy
- * transformer
+ * Bootstrap for LaunchWrapper service
  */
-class LegacyTransformerHandle implements ILegacyClassTransformer {
+public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstrap {
+
+    private static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
     
-    /**
-     * Wrapped transformer
-     */
-    private final IClassTransformer transformer;
-    
-    LegacyTransformerHandle(IClassTransformer transformer) {
-        this.transformer = transformer;
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer#getName()
-     */
+    private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
+    private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
+    private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
+
     @Override
     public String getName() {
-        return this.transformer.getClass().getName();
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer
-     *      #isDelegationExcluded()
-     */
-    @Override
-    public boolean isDelegationExcluded() {
-        return this.transformer.getClass().getAnnotation(Resource.class) != null;
+        return "LaunchWrapper";
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer
-     *      #transformClassBytes(java.lang.String, java.lang.String, byte[])
-     */
     @Override
-    public byte[] transformClassBytes(String name, String transformedName, byte[] basicClass) {
-        return this.transformer.transform(name, transformedName, basicClass);
+    public String getServiceClassName() {
+        return "org.spongepowered.asm.service.mojang.MixinServiceLaunchWrapper";
     }
-    
+
+    @Override
+    public void boostrap() {
+        // Essential ones
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.SERVICE_PACKAGE);
+        
+        // Important ones
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.ASM_PACKAGE);
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.MIXIN_PACKAGE);
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.MIXIN_UTIL_PACKAGE);
+    }
+
 }

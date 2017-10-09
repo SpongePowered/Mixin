@@ -40,7 +40,7 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
-import org.spongepowered.asm.launch.Blackboard;
+import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
@@ -873,7 +873,7 @@ public final class MixinEnvironment implements ITokenProvider {
     MixinEnvironment(Phase phase) {
         this.service = MixinService.getService();
         this.phase = phase;
-        this.configsKey = Blackboard.Keys.CONFIGS + "." + this.phase.name.toLowerCase();
+        this.configsKey = GlobalProperties.Keys.CONFIGS + "." + this.phase.name.toLowerCase();
         
         // Sanity check
         Object version = this.getVersion();
@@ -949,10 +949,10 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     @Deprecated
     public List<String> getMixinConfigs() {
-        List<String> mixinConfigs = Blackboard.<List<String>>get(this.configsKey);
+        List<String> mixinConfigs = GlobalProperties.<List<String>>get(this.configsKey);
         if (mixinConfigs == null) {
             mixinConfigs = new ArrayList<String>();
-            this.service.setGlobalProperty(this.configsKey, mixinConfigs);
+            GlobalProperties.put(this.configsKey, mixinConfigs);
         }
         return mixinConfigs;
     }
@@ -1069,7 +1069,7 @@ public final class MixinEnvironment implements ITokenProvider {
      * @return active mixin transformer instance
      */
     public Object getActiveTransformer() {
-        return Blackboard.get(Blackboard.Keys.TRANSFORMER);
+        return GlobalProperties.get(GlobalProperties.Keys.TRANSFORMER);
     }
 
     /**
@@ -1079,7 +1079,7 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     public void setActiveTransformer(ITransformer transformer) {
         if (transformer != null) {
-            Blackboard.put(Blackboard.Keys.TRANSFORMER, transformer);        
+            GlobalProperties.put(GlobalProperties.Keys.TRANSFORMER, transformer);        
         }
     }
     
@@ -1120,7 +1120,7 @@ public final class MixinEnvironment implements ITokenProvider {
      * @return current version
      */
     public String getVersion() {
-        return Blackboard.<String>get(Blackboard.Keys.INIT);
+        return GlobalProperties.<String>get(GlobalProperties.Keys.INIT);
     }
 
     /**

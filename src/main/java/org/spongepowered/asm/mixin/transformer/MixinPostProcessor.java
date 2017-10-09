@@ -138,8 +138,8 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
     }
 
     /* (non-Javadoc)
-     * @see net.minecraft.launchwrapper.IClassTransformer
-     *      #transform(java.lang.String, java.lang.String, byte[])
+     * @see org.spongepowered.asm.service.ILegacyClassTransformer
+     *      #transformClassBytes(java.lang.String, java.lang.String, byte[])
      */
     @Override
     public byte[] transformClassBytes(String name, String transformedName, byte[] bytes) {

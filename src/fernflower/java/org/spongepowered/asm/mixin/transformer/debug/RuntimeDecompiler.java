@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.jar.Manifest;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.java.decompiler.main.Fernflower;
@@ -47,6 +48,8 @@ import com.google.common.io.Files;
  * Wrapper for FernFlower to support runtime-decompilation of post-mixin classes
  */
 public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler, IResultSaver {
+    
+    private static final Level[] SEVERITY_LEVELS = { Level.TRACE, Level.INFO, Level.WARN, Level.ERROR };
     
     private final Map<String, Object> options = ImmutableMap.<String, Object>builder()
         .put("din", "0").put("rbr", "0").put("dgs", "1").put("asc", "1")
@@ -114,12 +117,17 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     @Override
     public void writeMessage(String message, Severity severity) {
-        this.logger.info(message);
+        this.logger.log(RuntimeDecompiler.SEVERITY_LEVELS[severity.ordinal()], message);
     }
 
     @Override
     public void writeMessage(String message, Throwable t) {
         this.logger.warn("{} {}: {}", message, t.getClass().getSimpleName(), t.getMessage());
+    }
+    
+    @Override
+    public void writeMessage(String message, Severity severity, Throwable t) {
+        this.logger.log(RuntimeDecompiler.SEVERITY_LEVELS[severity.ordinal()], message, t);
     }
 
     @Override
@@ -145,4 +153,5 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
     @Override
     public void closeArchive(String path, String archiveName) {
     }
+
 }

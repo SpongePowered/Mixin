@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.Collection;
 
 import org.spongepowered.asm.lib.tree.ClassNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.ReEntranceLock;
 
 /**
@@ -56,12 +57,17 @@ public interface IMixinService {
      * Called at subsystem boot
      */
     public abstract void prepare();
+
+    /**
+     * Get the initial subsystem phase
+     */
+    public abstract Phase getInitialPhase();
     
     /**
      * Called at the end of subsystem boot
      */
     public abstract void init();
-    
+
     /**
      * Called whenever a new phase is started 
      */
@@ -182,45 +188,5 @@ public interface IMixinService {
      * Get the detected side name for this environment
      */
     public abstract String getSideName();
-
-    /**
-     * Get a value from the global property store (blackboard) and duck-type it
-     * to the specified type
-     * 
-     * @param key blackboard key
-     * @param <T> duck type
-     * @return value
-     */
-    public abstract <T> T getGlobalProperty(String key);
     
-    /**
-     * Set the specified value in the global property store (blackboard)
-     * 
-     * @param key blackboard key
-     * @param value new value
-     */
-    public abstract void setGlobalProperty(String key, Object value);
-    
-    /**
-     * Get the value from the global property store (blackboard) but return
-     * <tt>defaultValue</tt> if the specified key is not set.
-     * 
-     * @param key blackboard key
-     * @param defaultValue value to return if the key is not set or is null
-     * @param <T> duck type
-     * @return value from blackboard or default value
-     */
-    public abstract <T> T getGlobalProperty(String key, T defaultValue);
-    
-    /**
-     * Get a string from the global property store (blackboard), returns default
-     * value if not set or null.
-     * 
-     * @param key blackboard key
-     * @param defaultValue default value to return if the specified key is not
-     *      set or is null
-     * @return value from blackboard or default
-     */
-    public abstract String getGlobalPropertyString(String key, String defaultValue);
-
 }

@@ -32,7 +32,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.launch.Blackboard;
+import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.service.MixinService;
 
 /**
@@ -43,7 +43,7 @@ public class MixinContainer {
     private static final List<String> agentClasses = new ArrayList<String>();
     
     static {
-        Blackboard.put(Blackboard.Keys.AGENTS, MixinContainer.agentClasses);
+        GlobalProperties.put(GlobalProperties.Keys.AGENTS, MixinContainer.agentClasses);
         for (String agent : MixinService.getService().getPlatformAgents()) {
             MixinContainer.agentClasses.add(agent);
         }

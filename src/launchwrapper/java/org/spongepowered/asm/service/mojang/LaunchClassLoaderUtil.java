@@ -26,8 +26,6 @@ package org.spongepowered.asm.service.mojang;
 
 import java.lang.reflect.Field;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,17 +37,12 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * them to perform some validation tasks, and insert entries for mixin "classes"
  * into the invalid classes set.
  */
-public final class LaunchClassLoaderUtil {
+final class LaunchClassLoaderUtil {
     
     private static final String CACHED_CLASSES_FIELD = "cachedClasses";
     private static final String INVALID_CLASSES_FIELD = "invalidClasses";
     private static final String CLASS_LOADER_EXCEPTIONS_FIELD = "classLoaderExceptions";
     private static final String TRANSFORMER_EXCEPTIONS_FIELD = "transformerExceptions";
-
-    /**
-     * ClassLoader -> util mapping
-     */
-    private static final Map<LaunchClassLoader, LaunchClassLoaderUtil> utils = new HashMap<LaunchClassLoader, LaunchClassLoaderUtil>();
     
     /**
      * ClassLoader for this util
@@ -57,7 +50,7 @@ public final class LaunchClassLoaderUtil {
     private final LaunchClassLoader classLoader;
     
     // Reflected fields
-    private Map<String, Class<?>> cachedClasses;
+    private final Map<String, Class<?>> cachedClasses;
     private final Set<String> invalidClasses;
     private final Set<String> classLoaderExceptions;
     private final Set<String> transformerExceptions;
@@ -67,7 +60,7 @@ public final class LaunchClassLoaderUtil {
      * 
      * @param classLoader class loader
      */
-    private LaunchClassLoaderUtil(LaunchClassLoader classLoader) {
+    LaunchClassLoaderUtil(LaunchClassLoader classLoader) {
         this.classLoader = classLoader;
         this.cachedClasses = LaunchClassLoaderUtil.<Map<String, Class<?>>>getField(classLoader, LaunchClassLoaderUtil.CACHED_CLASSES_FIELD);
         this.invalidClasses = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.INVALID_CLASSES_FIELD);
@@ -78,32 +71,8 @@ public final class LaunchClassLoaderUtil {
     /**
      * Get the classloader
      */
-    public LaunchClassLoader getClassLoader() {
+    LaunchClassLoader getClassLoader() {
         return this.classLoader;
-    }
-    
-    /**
-     * Get all loaded class names from the cache
-     */
-    public Set<String> getLoadedClasses() {
-        return this.getLoadedClasses(null);
-    }
-    
-    /**
-     * Get the names of loaded classes from the cache, filter using the supplied
-     * filter string
-     * 
-     * @param filter filter string or null
-     * @return set of class names
-     */
-    public Set<String> getLoadedClasses(String filter) {
-        Set<String> loadedClasses = new HashSet<String>();
-        for (String className : this.cachedClasses.keySet()) {
-            if (filter == null || className.startsWith(filter)) {
-                loadedClasses.add(className);
-            }
-        }
-        return loadedClasses;
     }
     
     /**
@@ -113,8 +82,8 @@ public final class LaunchClassLoaderUtil {
      * @param name class name
      * @return true if the class name exists in the cache
      */
-    public boolean isClassLoaded(String name) {
-        return this.cachedClasses != null && this.cachedClasses.containsKey(name);
+    boolean isClassLoaded(String name) {
+        return this.cachedClasses.containsKey(name);
     }
 
     /**
@@ -125,7 +94,7 @@ public final class LaunchClassLoaderUtil {
      * @param transformedName transformed class name
      * @return true if either exclusion list contains either of the names
      */
-    public boolean isClassExcluded(String name, String transformedName) {
+    boolean isClassExcluded(String name, String transformedName) {
         for (final String exception : this.getClassLoaderExceptions()) {
             if (transformedName.startsWith(exception) || name.startsWith(exception)) {
                 return true;
@@ -148,7 +117,7 @@ public final class LaunchClassLoaderUtil {
      * 
      * @param name class name
      */
-    public void registerInvalidClass(String name) {
+    void registerInvalidClass(String name) {
         if (this.invalidClasses != null) {
             this.invalidClasses.add(name);
         }
@@ -157,7 +126,7 @@ public final class LaunchClassLoaderUtil {
     /**
      * Get the classloader exclusions from the target classloader
      */
-    public Set<String> getClassLoaderExceptions() {
+    Set<String> getClassLoaderExceptions() {
         if (this.classLoaderExceptions != null) {
             return this.classLoaderExceptions;
         }
@@ -167,7 +136,7 @@ public final class LaunchClassLoaderUtil {
     /**
      * Get the transformer exclusions from the target classloader
      */
-    public Set<String> getTransformerExceptions() {
+    Set<String> getTransformerExceptions() {
         if (this.transformerExceptions != null) {
             return this.transformerExceptions;
         }
@@ -184,21 +153,6 @@ public final class LaunchClassLoaderUtil {
             ex.printStackTrace();
         }
         return null;
-    }
-
-    /**
-     * Get the utility class for the supplied classloader
-     * 
-     * @param classLoader classLoader to fetch utility wrapper for
-     * @return utility wrapper
-     */
-    public static LaunchClassLoaderUtil forClassLoader(LaunchClassLoader classLoader) {
-        LaunchClassLoaderUtil util = LaunchClassLoaderUtil.utils.get(classLoader);
-        if (util == null) {
-            util = new LaunchClassLoaderUtil(classLoader);
-            LaunchClassLoaderUtil.utils.put(classLoader, util);
-        }
-        return util;
     }
 
 }

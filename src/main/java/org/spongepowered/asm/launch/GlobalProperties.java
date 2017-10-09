@@ -24,16 +24,18 @@
  */
 package org.spongepowered.asm.launch;
 
-import org.spongepowered.asm.service.IMixinService;
-import org.spongepowered.asm.service.MixinService;
+import java.util.ServiceLoader;
+
+import org.spongepowered.asm.service.IGlobalPropertyService;
 
 /**
- * Abstractions for working with the blackboard
+ * Access to underlying global property service provided by the current
+ * environment
  */
-public final class Blackboard {
+public final class GlobalProperties {
 
     /**
-     * Blackboard keys
+     * Global property keys
      */
     public static final class Keys {
 
@@ -55,15 +57,17 @@ public final class Blackboard {
 
     }
     
-    private static IMixinService service;
+    private static IGlobalPropertyService service;
     
-    private Blackboard() {}
+    private GlobalProperties() {}
     
-    private static IMixinService getService() {
-        if (Blackboard.service == null) {
-            Blackboard.service = MixinService.getService();
+    private static IGlobalPropertyService getService() {
+        if (GlobalProperties.service == null) {
+            ServiceLoader<IGlobalPropertyService> serviceLoader =
+                ServiceLoader.<IGlobalPropertyService>load(IGlobalPropertyService.class, GlobalProperties.class.getClassLoader());
+            GlobalProperties.service = serviceLoader.iterator().next();
         }
-        return Blackboard.service;
+        return GlobalProperties.service;
     }
     
     /**
@@ -74,7 +78,7 @@ public final class Blackboard {
      * @return value
      */
     public static <T> T get(String key) {
-        return Blackboard.getService().<T>getGlobalProperty(key);
+        return GlobalProperties.getService().<T>getProperty(key);
     }
 
     /**
@@ -84,7 +88,7 @@ public final class Blackboard {
      * @param value new value
      */
     public static void put(String key, Object value) {
-        Blackboard.getService().setGlobalProperty(key, value);
+        GlobalProperties.getService().setProperty(key, value);
     }
     
     /**
@@ -97,7 +101,7 @@ public final class Blackboard {
      * @return value from blackboard or default value
      */
     public static <T> T get(String key, T defaultValue) {
-        return Blackboard.getService().getGlobalProperty(key, defaultValue);
+        return GlobalProperties.getService().getProperty(key, defaultValue);
     }
     
     /**
@@ -110,7 +114,7 @@ public final class Blackboard {
      * @return value from blackboard or default
      */
     public static String getString(String key, String defaultValue) {
-        return Blackboard.getService().getGlobalPropertyString(key, defaultValue);
+        return GlobalProperties.getService().getPropertyString(key, defaultValue);
     }
 
 }

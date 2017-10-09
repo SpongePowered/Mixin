@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.logging.log4j.Level;
-import org.spongepowered.asm.launch.Blackboard;
+import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 //import org.spongepowered.asm.mixin.environment.IPhaseProvider;
 //import org.spongepowered.asm.mixin.environment.PhaseDefinition;
@@ -187,8 +187,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     private void addReparseableJar() {
         try {
-            Method mdGetReparsedCoremods = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                    Blackboard.Keys.FML_GET_REPARSEABLE_COREMODS, MixinPlatformAgentFML.GET_REPARSEABLE_COREMODS_METHOD));
+            Method mdGetReparsedCoremods = this.clCoreModManager.getDeclaredMethod(GlobalProperties.getString(
+                    GlobalProperties.Keys.FML_GET_REPARSEABLE_COREMODS, MixinPlatformAgentFML.GET_REPARSEABLE_COREMODS_METHOD));
             @SuppressWarnings("unchecked")
             List<String> reparsedCoremods = (List<String>)mdGetReparsedCoremods.invoke(null);
             if (!reparsedCoremods.contains(this.fileName)) {
@@ -212,8 +212,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         }
         
         MixinPlatformAgentAbstract.logger.debug("{} has core plugin {}. Injecting it into FML for co-initialisation:", this.fileName, coreModName);
-        Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                Blackboard.Keys.FML_LOAD_CORE_MOD, MixinPlatformAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
+        Method mdLoadCoreMod = this.clCoreModManager.getDeclaredMethod(GlobalProperties.getString(GlobalProperties.Keys.FML_LOAD_CORE_MOD,
+                MixinPlatformAgentFML.LOAD_CORE_MOD_METHOD), LaunchClassLoader.class, String.class, File.class);
         mdLoadCoreMod.setAccessible(true);
         ITweaker wrapper = (ITweaker)mdLoadCoreMod.invoke(null, Launch.classLoader, coreModName, this.container);
         if (wrapper == null) {
@@ -237,7 +237,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         
         // Was it already loaded, check the tweakers list
         try {
-            List<ITweaker> tweakers = Blackboard.<List<ITweaker>>get(Blackboard.Keys.TWEAKS);
+            List<ITweaker> tweakers = GlobalProperties.<List<ITweaker>>get(GlobalProperties.Keys.TWEAKS);
             if (tweakers == null) {
                 return false;
             }
@@ -347,7 +347,7 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      * @return true if a tweaker with the specified name is queued
      */
     private static boolean isTweakerQueued(String tweakerName) {
-        for (String tweaker : Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES)) {
+        for (String tweaker : GlobalProperties.<List<String>>get(GlobalProperties.Keys.TWEAKCLASSES)) {
             if (tweaker.endsWith(tweakerName)) {
                 return true;
             }
@@ -361,8 +361,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
      */
     private static Class<?> getCoreModManagerClass() throws ClassNotFoundException {
         try {
-            return Class.forName(Blackboard.getString(
-                    Blackboard.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS));
+            return Class.forName(GlobalProperties.getString(
+                    GlobalProperties.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS));
         } catch (ClassNotFoundException ex) {
             return Class.forName(MixinPlatformAgentFML.CORE_MOD_MANAGER_CLASS_LEGACY);
         }
@@ -373,8 +373,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         Method mdGetIgnoredMods = null;
         
         try {
-            mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(Blackboard.getString(
-                    Blackboard.Keys.FML_GET_IGNORED_MODS, MixinPlatformAgentFML.GET_IGNORED_MODS_METHOD));
+            mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(GlobalProperties.getString(
+                    GlobalProperties.Keys.FML_GET_IGNORED_MODS, MixinPlatformAgentFML.GET_IGNORED_MODS_METHOD));
         } catch (NoSuchMethodException ex1) {
             try {
                 // Legacy name

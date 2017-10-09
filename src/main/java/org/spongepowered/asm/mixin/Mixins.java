@@ -30,9 +30,8 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.launch.Blackboard;
+import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.mixin.transformer.Config;
-import org.spongepowered.asm.service.MixinService;
 
 /**
  * Entry point for registering global mixin resources. Compatibility with
@@ -47,9 +46,9 @@ public final class Mixins {
     private static final Logger logger = LogManager.getLogger("mixin");
 
     /**
-     * Blackboard key storing mixin configs which are pending
+     * GlobalProperties key storing mixin configs which are pending
      */
-    private static final String CONFIGS_KEY = Blackboard.Keys.CONFIGS + ".queue";
+    private static final String CONFIGS_KEY = GlobalProperties.Keys.CONFIGS + ".queue";
     
     /**
      * Error handlers for environment
@@ -139,10 +138,10 @@ public final class Mixins {
      * consumed are present in this set
      */
     public static Set<Config> getConfigs() {
-        Set<Config> mixinConfigs = Blackboard.<Set<Config>>get(Mixins.CONFIGS_KEY);
+        Set<Config> mixinConfigs = GlobalProperties.<Set<Config>>get(Mixins.CONFIGS_KEY);
         if (mixinConfigs == null) {
             mixinConfigs = new LinkedHashSet<Config>();
-            MixinService.getService().setGlobalProperty(Mixins.CONFIGS_KEY, mixinConfigs);
+            GlobalProperties.put(Mixins.CONFIGS_KEY, mixinConfigs);
         }
         return mixinConfigs;
     }

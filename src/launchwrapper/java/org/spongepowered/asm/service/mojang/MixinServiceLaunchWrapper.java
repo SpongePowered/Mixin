@@ -36,10 +36,11 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.launch.Blackboard;
+import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.lib.ClassReader;
 import org.spongepowered.asm.lib.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.ITransformer;
@@ -62,8 +63,6 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     // Consts
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
-    private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
-    private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
     private static final String STATE_TWEAKER = MixinServiceLaunchWrapper.MIXIN_PACKAGE + "EnvironmentStateTweaker";
     private static final String TRANSFORMER_PROXY_CLASS = MixinServiceLaunchWrapper.MIXIN_PACKAGE + "transformer.Proxy";
 
@@ -72,7 +71,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
      */
     private static final Logger logger = LogManager.getLogger("mixin");
 
-    private final LaunchClassLoaderUtil classLoaderUtil = LaunchClassLoaderUtil.forClassLoader(Launch.classLoader);
+    private final LaunchClassLoaderUtil classLoaderUtil = new LaunchClassLoaderUtil(Launch.classLoader);
     
     private final ReEntranceLock lock = new ReEntranceLock(1);
     
@@ -105,13 +104,19 @@ public class MixinServiceLaunchWrapper implements IMixinService {
      */
     @Override
     public void prepare() {
-        // The important ones
-        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapper.ASM_PACKAGE);
-        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapper.MIXIN_PACKAGE);
-        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapper.MIXIN_UTIL_PACKAGE);
-        
         // Only needed in dev, in production this would be handled by the tweaker
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapper.LAUNCH_PACKAGE);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getInitialPhase()
+     */
+    @Override
+    public Phase getInitialPhase() {
+        if (MixinServiceLaunchWrapper.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") > 132) {
+            return Phase.DEFAULT;
+        }
+        return Phase.PREINIT;
     }
     
     /* (non-Javadoc)
@@ -119,7 +124,11 @@ public class MixinServiceLaunchWrapper implements IMixinService {
      */
     @Override
     public void init() {
-        List<String> tweakClasses = Blackboard.<List<String>>get(Blackboard.Keys.TWEAKCLASSES);
+        if (MixinServiceLaunchWrapper.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") < 4) {
+            MixinServiceLaunchWrapper.logger.error("MixinBootstrap.doInit() called during a tweak constructor!");
+        }
+
+        List<String> tweakClasses = GlobalProperties.<List<String>>get(GlobalProperties.Keys.TWEAKCLASSES);
         if (tweakClasses != null) {
             tweakClasses.add(MixinServiceLaunchWrapper.STATE_TWEAKER);
         }
@@ -395,7 +404,7 @@ public class MixinServiceLaunchWrapper implements IMixinService {
     public final String getSideName() {
         // Using this method first prevents us from accidentally loading FML classes
         // too early when using the tweaker in dev
-        for (ITweaker tweaker : this.<List<ITweaker>>getGlobalProperty(Blackboard.Keys.TWEAKS)) {
+        for (ITweaker tweaker : GlobalProperties.<List<ITweaker>>get(GlobalProperties.Keys.TWEAKS)) {
             if (tweaker.getClass().getName().endsWith(".common.launcher.FMLServerTweaker")) {
                 return "SERVER";
             } else if (tweaker.getClass().getName().endsWith(".common.launcher.FMLTweaker")) {
@@ -431,59 +440,21 @@ public class MixinServiceLaunchWrapper implements IMixinService {
         }
     }
 
-    /**
-     * Get a value from the blackboard and duck-type it to the specified type
-     * 
-     * @param key blackboard key
-     * @return value
-     * @param <T> duck type
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <T> T getGlobalProperty(String key) {
-        return (T)Launch.blackboard.get(key);
-    }
-
-    /**
-     * Put the specified value onto the blackboard
-     * 
-     * @param key blackboard key
-     * @param value new value
-     */
-    @Override
-    public final void setGlobalProperty(String key, Object value) {
-        Launch.blackboard.put(key, value);
-    }
-    
-    /**
-     * Get the value from the blackboard but return <tt>defaultValue</tt> if the
-     * specified key is not set.
-     * 
-     * @param key blackboard key
-     * @param defaultValue value to return if the key is not set or is null
-     * @return value from blackboard or default value
-     * @param <T> duck type
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <T> T getGlobalProperty(String key, T defaultValue) {
-        Object value = Launch.blackboard.get(key);
-        return value != null ? (T)value : defaultValue;
-    }
-    
-    /**
-     * Get a string from the blackboard, returns default value if not set or
-     * null.
-     * 
-     * @param key blackboard key
-     * @param defaultValue default value to return if the specified key is not
-     *      set or is null
-     * @return value from blackboard or default
-     */
-    @Override
-    public final String getGlobalPropertyString(String key, String defaultValue) {
-        Object value = Launch.blackboard.get(key);
-        return value != null ? value.toString() : defaultValue;
+    private static int findInStackTrace(String className, String methodName) {
+        Thread currentThread = Thread.currentThread();
+        
+        if (!"main".equals(currentThread.getName())) {
+            return 0;
+        }
+        
+        StackTraceElement[] stackTrace = currentThread.getStackTrace();
+        for (StackTraceElement s : stackTrace) {
+            if (className.equals(s.getClassName()) && methodName.equals(s.getMethodName())) {
+                return s.getLineNumber();
+            }
+        }
+        
+        return 0;
     }
 
 }

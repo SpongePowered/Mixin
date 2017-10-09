@@ -33,8 +33,6 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.MixinService;
 
-import net.minecraft.launchwrapper.Launch;
-
 /**
  * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
  * subsystem and the tweaker or coremod which is boostrapping it. Without this
@@ -73,10 +71,9 @@ public abstract class MixinBootstrap {
     private static boolean initialised = false;
     private static boolean initState = true;
     
-    // Static initialiser, add classloader exclusions as early as possible
+    // Static initialiser, run boot services as early as possible
     static {
-        // AMS - temp fix, see #210
-        Launch.classLoader.addClassLoaderExclusion("org.spongepowered.asm.service.");
+        MixinService.boot();
         MixinService.getService().prepare();
     }
     
@@ -100,12 +97,12 @@ public abstract class MixinBootstrap {
      */
     public static MixinPlatformManager getPlatform() {
         if (MixinBootstrap.platform == null) {
-            Object globalPlatformManager = Blackboard.<Object>get(Blackboard.Keys.PLATFORM_MANAGER);
+            Object globalPlatformManager = GlobalProperties.<Object>get(GlobalProperties.Keys.PLATFORM_MANAGER);
             if (globalPlatformManager instanceof MixinPlatformManager) {
                 MixinBootstrap.platform = (MixinPlatformManager)globalPlatformManager;
             } else {
                 MixinBootstrap.platform = new MixinPlatformManager();
-                Blackboard.put(Blackboard.Keys.PLATFORM_MANAGER, MixinBootstrap.platform);
+                GlobalProperties.put(GlobalProperties.Keys.PLATFORM_MANAGER, MixinBootstrap.platform);
                 MixinBootstrap.platform.init();
             }
         }
@@ -145,16 +142,17 @@ public abstract class MixinBootstrap {
                 System.setProperty("mixin.env.remapRefMap", "true");
             }
             
-            if (MixinBootstrap.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") > 132) {
+            Phase initialPhase = MixinService.getService().getInitialPhase();
+            if (initialPhase == Phase.DEFAULT) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
-                MixinEnvironment.init(Phase.DEFAULT);
+                MixinEnvironment.init(initialPhase);
                 MixinBootstrap.getPlatform().prepare(null);
                 MixinBootstrap.initState = false;
             } else {
-                MixinEnvironment.init(Phase.PREINIT);
+                MixinEnvironment.init(initialPhase);
             }
             
-            MixinBootstrap.addProxy();
+            MixinService.getService().beginPhase();
         }
         
         MixinBootstrap.getPlatform();
@@ -183,11 +181,6 @@ public abstract class MixinBootstrap {
 
         if (MixinBootstrap.initState) {
             MixinBootstrap.getPlatform().prepare(args);
-
-            if (MixinBootstrap.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") < 4) {
-                MixinBootstrap.logger.warn("MixinBootstrap.doInit() called during a tweak constructor. Expect CoModificationException in 5.. 4..");
-            }
-
             MixinService.getService().init();
         }
     }
@@ -197,7 +190,7 @@ public abstract class MixinBootstrap {
     }
 
     private static boolean isSubsystemRegistered() {
-        return Blackboard.<Object>get(Blackboard.Keys.INIT) != null;
+        return GlobalProperties.<Object>get(GlobalProperties.Keys.INIT) != null;
     }
 
     private static boolean checkSubsystemVersion() {
@@ -205,29 +198,12 @@ public abstract class MixinBootstrap {
     }
 
     private static Object getActiveSubsystemVersion() {
-        Object version = Blackboard.get(Blackboard.Keys.INIT);
+        Object version = GlobalProperties.get(GlobalProperties.Keys.INIT);
         return version != null ? version : "";
     }
 
     private static void registerSubsystem(String version) {
-        Blackboard.put(Blackboard.Keys.INIT, version);
-    }
-
-    private static int findInStackTrace(String className, String methodName) {
-        Thread currentThread = Thread.currentThread();
-        
-        if (!"main".equals(currentThread.getName())) {
-            return 0;
-        }
-        
-        StackTraceElement[] stackTrace = currentThread.getStackTrace();
-        for (StackTraceElement s : stackTrace) {
-            if (className.equals(s.getClassName()) && methodName.equals(s.getMethodName())) {
-                return s.getLineNumber();
-            }
-        }
-        
-        return 0;
+        GlobalProperties.put(GlobalProperties.Keys.INIT, version);
     }
 
 }
