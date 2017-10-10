@@ -179,7 +179,8 @@ public class MixinPlatformAgentFML extends MixinPlatformAgentAbstract {
         
         if (this.attributes.get(MixinPlatformAgentFML.MFATT_COREMODCONTAINSMOD) != null) {
             if (this.isIgnoredReparseable()) {
-                MixinPlatformAgentAbstract.logger.debug("Ignoring request to add {} to reparseable coremod collection - it is a deobfuscated dependency", this.fileName);
+                MixinPlatformAgentAbstract.logger.debug(
+                        "Ignoring request to add {} to reparseable coremod collection - it is a deobfuscated dependency", this.fileName);
                 return;
             }
             this.addReparseableJar();
