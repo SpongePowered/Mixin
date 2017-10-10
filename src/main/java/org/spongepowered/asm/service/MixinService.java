@@ -76,7 +76,7 @@ public final class MixinService {
         this.bootstrapServiceLoader = ServiceLoader.<IMixinServiceBootstrap>load(IMixinServiceBootstrap.class, this.getClass().getClassLoader());
         for (IMixinServiceBootstrap bootService : this.bootstrapServiceLoader) {
             try {
-                bootService.boostrap();
+                bootService.bootstrap();
                 this.bootedServices.add(bootService.getServiceClassName());
             } catch (Throwable th) {
                 MixinService.logger.catching(th);

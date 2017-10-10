@@ -44,6 +44,6 @@ public interface IMixinServiceBootstrap {
     /**
      * Run bootstrap-time preparation for the underlying service 
      */
-    public abstract void boostrap();
+    public abstract void bootstrap();
 
 }

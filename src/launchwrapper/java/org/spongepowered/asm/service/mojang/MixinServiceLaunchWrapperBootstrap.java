@@ -50,7 +50,7 @@ public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstra
     }
 
     @Override
-    public void boostrap() {
+    public void bootstrap() {
         // Essential ones
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.SERVICE_PACKAGE);
         
