@@ -592,5 +592,14 @@ plugin developed by [DemonWav](https://github.com/demonwav).
       </td>
       <td valign="top">September 2017</td>
     </tr>
+    <tr>
+      <td valign="top"><b>0.7.5</b></td>
+      <td valign="top">
+        <ul>
+          <li>Add support for <tt>&#064;Coerce</tt> on redirect injectors.</li>
+        </ul>
+      </td>
+      <td valign="top">October 2017</td>
+    </tr>
   </tbody>
 </table>
