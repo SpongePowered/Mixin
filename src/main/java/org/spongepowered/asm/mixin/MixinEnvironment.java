@@ -551,7 +551,8 @@ public final class MixinEnvironment implements ITokenProvider {
         }
 
         final String getStringValue() {
-            return (this.parent == null || this.parent.getBooleanValue()) ? System.getProperty(this.property, this.defaultValue) : this.defaultValue;
+            return (this.inheritance == Inherit.INDEPENDENT || this.parent == null || this.parent.getBooleanValue())
+                    ? System.getProperty(this.property, this.defaultValue) : this.defaultValue;
         }
 
         @SuppressWarnings("unchecked")
