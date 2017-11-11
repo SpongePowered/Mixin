@@ -743,11 +743,29 @@ public final class MixinEnvironment implements ITokenProvider {
     static class MixinLogger {
 
         static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
+        static Level oldLevel = null;
 
         public MixinLogger() {
+            /*
+             * In order to determine when to switch to the INIT phase, Mixin
+             * relies on being able to detect a specific message
+             * ("Validating minecraft") logged to FMLRelaunchLog.
+             * However, this message is logged at the DEBUG level, which may
+             * not be enabled depending on the launcher or game version.
+             *
+             * To ensure that Mixin is always able to detect this message,
+             * we temporarily set the log level of FMLRelaunchLog to 'ALL'.
+             * To minimize the overall impact, the log level is restored
+             * (unless it was changed in the meantime) once MixinAppender
+             * detects the message.
+             */
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
+            oldLevel = log.getLevel();
+
             appender.start();
             log.addAppender(appender);
+
+            log.setLevel(Level.ALL);
         }
 
         /**
@@ -764,6 +782,13 @@ public final class MixinEnvironment implements ITokenProvider {
                 if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormat())) {
                     // transition to INIT
                     MixinEnvironment.gotoPhase(Phase.INIT);
+
+                    // Only reset the log level if it's still ALL.
+                    // If something else changed the log level after we did, we don't want overwrite that change
+                    org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
+                    if (log.getLevel() == Level.ALL) {
+                        log.setLevel(oldLevel);
+                    }
                 }
             }
             
