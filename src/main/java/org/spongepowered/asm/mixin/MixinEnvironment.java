@@ -779,7 +779,7 @@ public final class MixinEnvironment implements ITokenProvider {
 
             @Override
             public void append(LogEvent event) {
-                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormat())) {
+                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormattedMessage())) {
                     // transition to INIT
                     MixinEnvironment.gotoPhase(Phase.INIT);
 
