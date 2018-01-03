@@ -24,18 +24,26 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
+import org.apache.logging.log4j.Level;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
+import org.spongepowered.asm.lib.tree.FieldInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.InsnNode;
 import org.spongepowered.asm.lib.tree.JumpInsnNode;
+import org.spongepowered.asm.lib.tree.LocalVariableNode;
 import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.invoke.util.InsnFinder;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Locals;
+import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
  * A bytecode injector which allows a specific
@@ -105,6 +113,11 @@ public class ModifyConstantInjector extends RedirectInjector {
 
     private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
         final Type constantType = Bytecode.getConstantType(constNode);
+        
+        if (constantType.getSort() <= Type.INT && this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+            this.checkNarrowing(target, constNode, constantType);
+        }
+        
         final InsnList before = new InsnList();
         final InsnList after = new InsnList();
         AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, before, after);
@@ -127,4 +140,46 @@ public class ModifyConstantInjector extends RedirectInjector {
         
         return this.invokeHandler(after);
     }
+
+    private void checkNarrowing(Target target, AbstractInsnNode constNode, Type constantType) {
+        AbstractInsnNode pop = new InsnFinder().findPopInsn(target, constNode);
+
+        if (pop == null) { // Not found, give up early
+            return;
+        } else if (pop instanceof FieldInsnNode) { // Integer return, check for narrowing conversion
+            FieldInsnNode fieldNode = (FieldInsnNode)pop;
+            Type fieldType = Type.getType(fieldNode.desc);
+            this.checkNarrowing(target, constNode, constantType, fieldType, target.indexOf(pop), String.format("%s %s %s.%s",
+                    Bytecode.getOpcodeName(pop), SignaturePrinter.getTypeName(fieldType, false), fieldNode.owner.replace('/', '.'), fieldNode.name));
+        } else if (pop.getOpcode() == Opcodes.IRETURN) { // Integer return, check for narrowing conversion
+            this.checkNarrowing(target, constNode, constantType, target.returnType, target.indexOf(pop), "RETURN "
+                    + SignaturePrinter.getTypeName(target.returnType, false));
+        } else if (pop.getOpcode() == Opcodes.ISTORE) { // Integer store, attempt to get the relevant local type
+            int var = ((VarInsnNode)pop).var;
+            LocalVariableNode localVar = Locals.getLocalVariableAt(target.classNode, target.method, pop, var);
+
+            // Frankly this will not work in 90% of cases, it basically only works if the variable being assigned is actually
+            // a method argument, and is pretty much never going to work for any other type of local variable
+            if (localVar != null && localVar.desc != null) {
+                String name = localVar.name != null ? localVar.name : "unnamed";
+                Type localType = Type.getType(localVar.desc);
+                this.checkNarrowing(target, constNode, constantType, localType, target.indexOf(pop), String.format("ISTORE[var=%d] %s %s", var, 
+                        SignaturePrinter.getTypeName(localType, false), name));
+            }
+        }
+    }
+
+    private void checkNarrowing(Target target, AbstractInsnNode constNode, Type constantType, Type type, int index, String description) {
+        int fromSort = constantType.getSort();
+        int toSort = type.getSort();
+        if (toSort < fromSort) {
+            String fromType = SignaturePrinter.getTypeName(constantType, false);
+            String toType = SignaturePrinter.getTypeName(type, false);
+            String message = toSort == Type.BOOLEAN ? ". Implicit conversion to <boolean> can cause nondeterministic (JVM-specific) behaviour!" : "";
+            Level level = toSort == Type.BOOLEAN ? Level.ERROR : Level.WARN;
+            Injector.logger.log(level, "Narrowing conversion of <{}> to <{}> in {} target {} at opcode {} ({}){}", fromType, toType, this.info,
+                    target, index, description, message);
+        }
+    }
+
 }
