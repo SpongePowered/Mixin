@@ -29,10 +29,13 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
@@ -291,6 +294,11 @@ public final class MethodSlice {
     }
     
     /**
+     * Make with the logging already
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
+
+    /**
      * Owner of this slice
      */
     private final ISliceContext owner;
@@ -353,8 +361,8 @@ public final class MethodSlice {
      */
     public ReadOnlyInsnList getSlice(MethodNode method) {
         int max = method.instructions.size() - 1;
-        int start = this.find(method, this.from, 0, this.name + "(from)");
-        int end = this.find(method, this.to, max, this.name + "(to)");
+        int start = this.find(method, this.from, 0, 0, this.name + "(from)");
+        int end = this.find(method, this.to, max, start, this.name + "(to)");
         
         if (start > end) {
             throw new InvalidSliceException(this.owner, String.format("%s is negative size. Range(%d -> %d)", this.describe(), start, end));
@@ -378,11 +386,13 @@ public final class MethodSlice {
      * 
      * @param method Method to query
      * @param injectionPoint Query to run
-     * @param defaultValue Value to return if query fails
+     * @param defaultValue Value to return if injection point is null (open
+     *      ended)
+     * @param failValue Value to use if query fails
      * @param description Description for error message
      * @return matching insn index
      */
-    private int find(MethodNode method, InjectionPoint injectionPoint, int defaultValue, String description) {
+    private int find(MethodNode method, InjectionPoint injectionPoint, int defaultValue, int failValue, String description) {
         if (injectionPoint == null) {
             return defaultValue;
         }
@@ -396,7 +406,10 @@ public final class MethodSlice {
         }
         
         if (!result) {
-            return defaultValue;
+            if (this.owner.getContext().getOption(Option.DEBUG_VERBOSE)) {
+                MethodSlice.logger.warn("{} did not match any instructions", this.describe(description));
+            }
+            return failValue;
         }
         
         return method.instructions.indexOf(select == Selector.FIRST ? nodes.getFirst() : nodes.getLast());
