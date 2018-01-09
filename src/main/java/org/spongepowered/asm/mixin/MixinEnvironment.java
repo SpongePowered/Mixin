@@ -760,10 +760,10 @@ public final class MixinEnvironment implements ITokenProvider {
              * detects the message.
              */
             org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            oldLevel = log.getLevel();
+            MixinLogger.oldLevel = log.getLevel();
 
-            appender.start();
-            log.addAppender(appender);
+            MixinLogger.appender.start();
+            log.addAppender(MixinLogger.appender);
 
             log.setLevel(Level.ALL);
         }
@@ -787,7 +787,7 @@ public final class MixinEnvironment implements ITokenProvider {
                     // If something else changed the log level after we did, we don't want overwrite that change
                     org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
                     if (log.getLevel() == Level.ALL) {
-                        log.setLevel(oldLevel);
+                        log.setLevel(MixinLogger.oldLevel);
                     }
                 }
             }
