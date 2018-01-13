@@ -272,6 +272,8 @@ jar {
     from zipTree(tasks.renamedASM.outputs.files[0]).matching {
         include 'org/spongepowered/asm/lib/*'
         include 'org/spongepowered/asm/lib/commons/ClassRemapper*'
+        include 'org/spongepowered/asm/lib/commons/Remapper*'
+        include 'org/spongepowered/asm/lib/commons/SignatureRemapper*'
         include 'org/spongepowered/asm/lib/signature/**'
         include 'org/spongepowered/asm/lib/tree/**'
         include 'org/spongepowered/asm/lib/util/**'
