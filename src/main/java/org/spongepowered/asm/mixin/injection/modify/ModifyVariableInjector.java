@@ -148,7 +148,13 @@ public class ModifyVariableInjector extends Injector {
         if (this.discriminator.printLVT()) {
             this.printLocals(context);
         }
-
+        
+        String handlerDesc = Bytecode.getDescriptor(new Type[] { this.returnType }, this.returnType);
+        if (!handlerDesc.equals(this.methodNode.desc)) {
+            throw new InvalidInjectionException(this.info, "Variable modifier " + this + " has an invalid signature, expected " + handlerDesc
+                    + " but found " + this.methodNode.desc);
+        }
+        
         try {
             int local = this.discriminator.findLocal(context);
             if (local > -1) {
