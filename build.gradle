@@ -2,10 +2,12 @@
 buildscript {
     repositories {
         jcenter()
+        maven { url 'https://jitpack.io' }
     }
     dependencies {
         classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+        classpath 'com.github.VRCube:MDDocs:e3ffb14b16'
     }
 }
 
@@ -17,6 +19,7 @@ apply plugin: 'maven'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'me.cubxity.mddocs'
 
 // Default tasks
 defaultTasks 'licenseFormat', 'check', 'build'
@@ -236,6 +239,21 @@ checkstyle {
     ]
     configFile = file("checkstyle.xml")
     toolVersion = '6.19'
+}
+
+mddocs {
+    output = new File('docs').absolutePath
+    packageBase = 'org.spongepowered'
+    def s = ""
+    Arrays.asList(
+            'src/main/java',
+            'src/launchwrapper/java',
+            'src/fernflower/java',
+            'src/bridge/java',
+            'src/ap/java',
+            'src/agent/java'
+    ).forEach{s += (s.isEmpty() ? "" : File.pathSeparator)+new File(it).absolutePath}
+    source = s
 }
 
 // Source compiler configuration
