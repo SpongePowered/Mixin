@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static ValidationFailedException ExtensionCheckClass.ValidationFailedException #
+# ExtensionCheckClass.ValidationFailedException #
 >#### Class Overview ####
 >Exception thrown when checkclass fails
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final MethodSlices MethodSlices #
+# MethodSlices #
 >#### Class Overview ####
 >Represents a collection of {@link MethodSlice}s, mapped by ID. Stored ids may
  be different to declared slice ids because they are mapped by the underlying

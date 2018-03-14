@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final MixinEnvironment MixinEnvironment #
+# MixinEnvironment #
 >#### Class Overview ####
 >The mixin environment manages global state information for the mixin
  subsystem.

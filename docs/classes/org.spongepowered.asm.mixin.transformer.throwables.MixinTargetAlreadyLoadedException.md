@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinTargetAlreadyLoadedException MixinTargetAlreadyLoadedException #
+# MixinTargetAlreadyLoadedException #
 >#### Class Overview ####
 >Exception thrown when a specified mixin target was already classloaded.
 ## Constructors ##

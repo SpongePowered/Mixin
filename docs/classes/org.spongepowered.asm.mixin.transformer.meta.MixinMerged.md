@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface MixinMerged MixinMerged #
+# MixinMerged #
 >#### Class Overview ####
 ><p><b>For internal use only!</b> Contains small parts. Keep out of reach of
  children.</p>

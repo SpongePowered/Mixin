@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IEnvironmentTokenProvider IEnvironmentTokenProvider #
+# IEnvironmentTokenProvider #
 >#### Class Overview ####
 >Provides a token value into the attached environment
 ## Fields ##

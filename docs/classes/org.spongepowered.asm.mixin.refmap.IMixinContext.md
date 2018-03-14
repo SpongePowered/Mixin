@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinContext IMixinContext #
+# IMixinContext #
 >#### Class Overview ####
 >Context for performing reference mapping
 ## Methods ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static interface IClassRemapper ObfuscationUtil.IClassRemapper #
+# ObfuscationUtil.IClassRemapper #
 >#### Class Overview ####
 >Interface for remapper proxies
 ## Methods ##

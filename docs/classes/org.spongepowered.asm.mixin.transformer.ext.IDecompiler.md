@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IDecompiler IDecompiler #
+# IDecompiler #
 >#### Class Overview ####
 >Interface to allow the actual decompiler to be loaded on-demand
 ## Methods ##

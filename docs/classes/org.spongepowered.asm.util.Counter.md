@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Counter Counter #
+# Counter #
 >#### Class Overview ####
 >Mutable integer for use in collections
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidConstraintException InvalidConstraintException #
+# InvalidConstraintException #
 >#### Class Overview ####
 >Exception thrown when a constraint declaration is invalid
 ## Constructors ##

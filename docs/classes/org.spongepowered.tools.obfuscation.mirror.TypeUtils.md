@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract TypeUtils TypeUtils #
+# TypeUtils #
 >#### Class Overview ####
 >Convenience functions for mirror types
 ## Methods ##

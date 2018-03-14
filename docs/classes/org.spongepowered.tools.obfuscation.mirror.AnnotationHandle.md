@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final AnnotationHandle AnnotationHandle #
+# AnnotationHandle #
 >#### Class Overview ####
 >A wrapper for {@link AnnotationMirror} which provides a more convenient way
  to access annotation values.

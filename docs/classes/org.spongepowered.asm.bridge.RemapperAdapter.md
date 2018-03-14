@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract RemapperAdapter RemapperAdapter #
+# RemapperAdapter #
 >#### Class Overview ####
 >Base impl of remapper
 ## Fields ##

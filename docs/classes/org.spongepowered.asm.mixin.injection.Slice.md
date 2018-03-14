@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Slice Slice #
+# Slice #
 >#### Class Overview ####
 >A <tt>Slice</tt> identifies a section of a method to search for injection
  points.

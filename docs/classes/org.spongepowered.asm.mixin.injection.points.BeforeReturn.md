@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeReturn BeforeReturn #
+# BeforeReturn #
 >#### Class Overview ####
 ><p>This injection point searches for RETURN opcodes in the target method and
  returns a list of insns immediately prior to matching instructions. Note that

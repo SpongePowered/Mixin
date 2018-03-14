@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public RuntimeDecompiler RuntimeDecompiler #
+# RuntimeDecompiler #
 >#### Class Overview ####
 >Wrapper for FernFlower to support runtime-decompilation of post-mixin classes
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public JumpInsnPoint JumpInsnPoint #
+# JumpInsnPoint #
 >#### Class Overview ####
 ><p>This injection point searches for JUMP opcodes (if, try/catch, continue,
  break, conditional assignment, etc.) with either a particular opcode or at a

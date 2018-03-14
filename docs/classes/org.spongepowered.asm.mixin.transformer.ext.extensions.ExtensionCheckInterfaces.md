@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ExtensionCheckInterfaces ExtensionCheckInterfaces #
+# ExtensionCheckInterfaces #
 >#### Class Overview ####
 >Checks whether interfaces declared on mixin target classes are actually fully
  implemented and generates reports to the console and to files on disk

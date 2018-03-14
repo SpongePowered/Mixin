@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public CallbackInjector CallbackInjector #
+# CallbackInjector #
 >#### Class Overview ####
 >This class is responsible for generating the bytecode for injected callbacks
 ## Constructors ##

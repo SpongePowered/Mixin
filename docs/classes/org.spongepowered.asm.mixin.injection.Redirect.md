@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Redirect Redirect #
+# Redirect #
 >#### Class Overview ####
 ><p>Specifies that this mixin method should redirect the specified
  method call, field access or object construction (via the <tt>new</tt>

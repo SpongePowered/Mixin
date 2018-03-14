@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MappingFieldSrg MappingFieldSrg #
+# MappingFieldSrg #
 >#### Class Overview ####
 >An SRG field mapping
 ## Constructors ##

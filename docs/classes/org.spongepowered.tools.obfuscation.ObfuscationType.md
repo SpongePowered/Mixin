@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ObfuscationType ObfuscationType #
+# ObfuscationType #
 >#### Class Overview ####
 >Obfuscation types supported by the annotation processor
 ## Methods ##

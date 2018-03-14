@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ConstraintViolationException ConstraintViolationException #
+# ConstraintViolationException #
 >#### Class Overview ####
 >Exception thrown when a constraint violation is encountered
 ## Constructors ##

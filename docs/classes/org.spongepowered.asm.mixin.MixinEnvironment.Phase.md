@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Phase MixinEnvironment.Phase #
+# MixinEnvironment.Phase #
 >#### Class Overview ####
 >Environment phase, deliberately not implemented as an enum
 ## Fields ##

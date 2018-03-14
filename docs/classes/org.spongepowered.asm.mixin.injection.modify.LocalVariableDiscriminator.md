@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public LocalVariableDiscriminator LocalVariableDiscriminator #
+# LocalVariableDiscriminator #
 >#### Class Overview ####
 >Encapsulates logic for identifying a local variable in a target method using
  3 criteria: <em>ordinal</em>, <em>index</em> and <em>name</em>. This is used

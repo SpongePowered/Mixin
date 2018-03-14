@@ -7,7 +7,7 @@ buildscript {
     dependencies {
         classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
-        classpath 'com.github.VRCube:MDDocs:e3ffb14b16'
+        classpath 'com.github.VRCube:MDDocs:6959e9ccc8'
     }
 }
 

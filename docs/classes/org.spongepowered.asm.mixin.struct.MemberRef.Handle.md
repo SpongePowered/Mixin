@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Handle MemberRef.Handle #
+# MemberRef.Handle #
 >#### Class Overview ####
 >A reference to a field or method backed by a method handle
 ## Constructors ##

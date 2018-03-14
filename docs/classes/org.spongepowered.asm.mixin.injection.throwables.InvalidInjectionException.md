@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidInjectionException InvalidInjectionException #
+# InvalidInjectionException #
 >#### Class Overview ####
 >Thrown when an injector fails a state check, for example if an injector
  handler signature is invalid, an invalid opcode is targetted, etc.

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationServiceMCP ObfuscationServiceMCP #
+# ObfuscationServiceMCP #
 >#### Class Overview ####
 >Default obfuscation service, provides MCP
 ## Fields ##

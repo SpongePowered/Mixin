@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final TargetMap TargetMap #
+# TargetMap #
 >#### Class Overview ####
 >Serialisable map of classes to their associated mixins, used so that we can
  pass target information for supermixins from one compiler session to another

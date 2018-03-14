@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidMemberDescriptorException InvalidMemberDescriptorException #
+# InvalidMemberDescriptorException #
 >#### Class Overview ####
 >Thrown when a {@link MemberInfo} fails basic syntax validation
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MemberRef MemberRef #
+# MemberRef #
 >#### Class Overview ####
 >Reference to a field or method that also includes invocation instructions.
 

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract JavaVersion JavaVersion #
+# JavaVersion #
 >#### Class Overview ####
 >Small helper to resolve the current java version
 ## Methods ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public RemapperChain RemapperChain #
+# RemapperChain #
 >#### Class Overview ####
 >Mixin environment remapper chain. Contains all remappers for the current
  environment to facilitate remapping via all registered remappers.

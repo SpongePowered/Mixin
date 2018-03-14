@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Debug Debug #
+# Debug #
 >#### Class Overview ####
 >Anotation used to decorate items you might wish to examine after mixin
  application.

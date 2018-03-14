@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyArgInjectionInfo ModifyArgInjectionInfo #
+# ModifyArgInjectionInfo #
 >#### Class Overview ####
 >Information about a {@link ModifyArg} injector
 ## Constructors ##

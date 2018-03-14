@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinAgent MixinAgent #
+# MixinAgent #
 >#### Class Overview ####
 >An agent that re-transforms a mixin's target classes if the mixin has been
  redefined. Basically this agent enables hot-swapping of mixins.

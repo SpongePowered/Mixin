@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Annotations Annotations #
+# Annotations #
 >#### Class Overview ####
 >Utility class for working with ASM annotations
 ## Methods ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final CompilerEnvironment IMixinAnnotationProcessor.CompilerEnvironment #
+# IMixinAnnotationProcessor.CompilerEnvironment #
 >#### Class Overview ####
 >Detected compiler argument, specifies the behaviour of some operations
  for compatibility purposes.

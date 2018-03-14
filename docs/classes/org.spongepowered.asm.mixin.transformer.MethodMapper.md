@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MethodMapper MethodMapper #
+# MethodMapper #
 >#### Class Overview ####
 >Maintains method remaps for a target class
 ## Constructors ##

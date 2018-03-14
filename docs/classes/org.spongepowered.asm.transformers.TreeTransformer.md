@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract TreeTransformer TreeTransformer #
+# TreeTransformer #
 >#### Class Overview ####
 >Base class for transformers which work with ASM tree model
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Constant Constant #
+# Constant #
 >#### Class Overview ####
 >Annotation for specifying the injection point for an {@link ModifyConstant}
  injector. Leaving all values unset causes the injection point to match all

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinObfuscationProcessorInjection MixinObfuscationProcessorInjection #
+# MixinObfuscationProcessorInjection #
 >#### Class Overview ####
 >Annotation processor which finds {@link Inject} and {@link At} annotations in
  mixin classes and generates obfuscation mappings

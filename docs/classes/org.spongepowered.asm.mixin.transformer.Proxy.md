@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Proxy Proxy #
+# Proxy #
 >#### Class Overview ####
 >Proxy transformer for the mixin transformer. These transformers are used
  to allow the mixin transformer to be re-registered in the transformer

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinPrepareError MixinPrepareError #
+# MixinPrepareError #
 >#### Class Overview ####
 >Error to throw for required configs when initialising of the config fails
 ## Constructors ##

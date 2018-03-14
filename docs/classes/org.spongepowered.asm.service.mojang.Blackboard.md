@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Blackboard Blackboard #
+# Blackboard #
 >#### Class Overview ####
 >Global property service backed by LaunchWrapper blackboard
 ## Constructors ##

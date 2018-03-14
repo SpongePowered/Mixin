@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Target Target #
+# Target #
 >#### Class Overview ####
 >Information about the current injection target, mainly just convenience
  rather than passing a bunch of values around.

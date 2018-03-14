@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Bytecode Bytecode #
+# Bytecode #
 >#### Class Overview ####
 >Utility methods for working with bytecode via ASM
 ## Fields ##

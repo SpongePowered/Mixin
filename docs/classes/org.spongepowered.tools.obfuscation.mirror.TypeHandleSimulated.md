@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public TypeHandleSimulated TypeHandleSimulated #
+# TypeHandleSimulated #
 >#### Class Overview ####
 >A simulated type handle, used with virtual (pseudo) mixins. For obfuscation
  purposes, we have to use some kind of context to resolve target members so

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Option MixinEnvironment.Option #
+# MixinEnvironment.Option #
 >#### Class Overview ####
 >Mixin options
 ## Fields ##

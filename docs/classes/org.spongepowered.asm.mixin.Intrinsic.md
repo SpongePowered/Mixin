@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Intrinsic Intrinsic #
+# Intrinsic #
 >#### Class Overview ####
 >This annotation allows fine-tuning of the overwrite policy for a
  soft-implemented interface member method.

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ArgumentCountException ArgumentCountException #
+# ArgumentCountException #
 >#### Class Overview ####
 >Exception thrown when varargs array passed into {@link Args#setAll}
  is of a different length than the args

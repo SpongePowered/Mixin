@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Extensions Extensions #
+# Extensions #
 >#### Class Overview ####
 >Mixin transformer extensions and common modules such as class generators
 ## Constructors ##

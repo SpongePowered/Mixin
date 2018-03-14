@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public TypeReference TypeReference #
+# TypeReference #
 >#### Class Overview ####
 >Soft wrapper for a {@link TypeHandle} so that we can serialise it
 ## Constructors ##

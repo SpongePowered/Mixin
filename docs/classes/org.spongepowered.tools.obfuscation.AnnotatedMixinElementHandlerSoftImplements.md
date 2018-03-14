@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AnnotatedMixinElementHandlerSoftImplements AnnotatedMixinElementHandlerSoftImplements #
+# AnnotatedMixinElementHandlerSoftImplements #
 >#### Class Overview ####
 >A module for {@link AnnotatedMixin} whic handles soft-implements clauses
 ## Methods ##

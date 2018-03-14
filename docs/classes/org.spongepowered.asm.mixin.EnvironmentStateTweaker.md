@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public EnvironmentStateTweaker EnvironmentStateTweaker #
+# EnvironmentStateTweaker #
 >#### Class Overview ####
 >Tweaker used to notify the environment when we transition from preinit to
  default

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Local LocalVariableDiscriminator.Context.Local #
+# LocalVariableDiscriminator.Context.Local #
 >#### Class Overview ####
 >Information about a local variable in the LVT, used during
  discrimination

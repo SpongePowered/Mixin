@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinErrorHandler IMixinErrorHandler #
+# IMixinErrorHandler #
 >#### Class Overview ####
 >Interface for objects which want to perform custom behaviour when fatal mixin
  errors occur. For example displaying a user-friendly error message

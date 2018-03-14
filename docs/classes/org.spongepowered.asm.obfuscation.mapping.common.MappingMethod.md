@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MappingMethod MappingMethod #
+# MappingMethod #
 >#### Class Overview ####
 >Stores information about a method mapping during AP runs
 ## Constructors ##

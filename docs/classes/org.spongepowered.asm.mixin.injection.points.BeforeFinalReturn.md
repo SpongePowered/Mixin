@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeFinalReturn BeforeFinalReturn #
+# BeforeFinalReturn #
 >#### Class Overview ####
 ><p>This injection point searches for the last RETURN opcode in the target
  method and returns it. Note that the last RETURN opcode may not correspond to

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract ObfuscationEnvironment ObfuscationEnvironment #
+# ObfuscationEnvironment #
 >#### Class Overview ####
 >Provides access to information relevant to a particular obfuscation
  environment.

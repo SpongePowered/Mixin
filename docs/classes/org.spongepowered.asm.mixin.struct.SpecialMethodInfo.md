@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract SpecialMethodInfo SpecialMethodInfo #
+# SpecialMethodInfo #
 >#### Class Overview ####
 >Information about a special mixin method such as an injector or accessor
 ## Fields ##

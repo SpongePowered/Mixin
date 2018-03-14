@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract Constants Constants #
+# Constants #
 >#### Class Overview ####
 >Miscellaneous shared constants
 ## Fields ##

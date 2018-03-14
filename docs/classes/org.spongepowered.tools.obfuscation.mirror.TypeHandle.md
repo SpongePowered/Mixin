@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public TypeHandle TypeHandle #
+# TypeHandle #
 >#### Class Overview ####
 >A wrapper for TypeElement which gives us a soft-failover mechanism when
  dealing with classes that are inaccessible via mirror (such as anonymous

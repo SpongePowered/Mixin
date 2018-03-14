@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final SupportedOptions SupportedOptions #
+# SupportedOptions #
 >#### Class Overview ####
 >Supported options for the annotation processor. Not an enum mainly so that
  the string tokens can be inlined.

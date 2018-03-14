@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final TargetNode Injector.TargetNode #
+# Injector.TargetNode #
 >#### Class Overview ####
 >A nominated target node
 ## Methods ##

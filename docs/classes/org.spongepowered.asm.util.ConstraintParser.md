@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ConstraintParser ConstraintParser #
+# ConstraintParser #
 >#### Class Overview ####
 >Parser for constraints
 ## Methods ##

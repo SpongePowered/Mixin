@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Invoker Invoker #
+# Invoker #
 >#### Class Overview ####
 >Defines an <em>invoker method</em> (also known as a <em>proxy method</em> in
  a mixin, the method. The annotated method must be <tt>abstract</tt> and the

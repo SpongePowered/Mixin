@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final GlobalProperties GlobalProperties #
+# GlobalProperties #
 >#### Class Overview ####
 >Access to underlying global property service provided by the current
  environment

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IReferenceMapper IReferenceMapper #
+# IReferenceMapper #
 >#### Class Overview ####
 >Interface for reference mapper objects
 ## Methods ##

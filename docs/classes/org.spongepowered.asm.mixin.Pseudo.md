@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Pseudo Pseudo #
+# Pseudo #
 >#### Class Overview ####
 >A Mixin marked as <b>Pseudo</b> is allowed to target classes which are not
  available at compile time and may not be available at runtime. This means

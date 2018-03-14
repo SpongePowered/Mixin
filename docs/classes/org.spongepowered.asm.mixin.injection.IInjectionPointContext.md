@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IInjectionPointContext IInjectionPointContext #
+# IInjectionPointContext #
 >#### Class Overview ####
 >Context for an injection point, used to access the mixin as well as the owner
  method and annotation for the injection point

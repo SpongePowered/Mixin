@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IObfuscationManager IObfuscationManager #
+# IObfuscationManager #
 >#### Class Overview ####
 >Manages obfuscation things
 ## Methods ##

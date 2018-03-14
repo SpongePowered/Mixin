@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MemberHandle MemberHandle #
+# MemberHandle #
 >#### Class Overview ####
 >Abstract base class for element handles
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeNew BeforeNew #
+# BeforeNew #
 >#### Class Overview ####
 ><p>This injection point searches for NEW opcodes matching its arguments and
  returns a list of insns immediately prior to matching instructions. It

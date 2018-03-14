@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ReEntranceLock ReEntranceLock #
+# ReEntranceLock #
 >#### Class Overview ####
 >Re-entrance semaphore used to share re-entrance data with the TreeInfo
 ## Constructors ##

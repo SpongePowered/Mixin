@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AccessorInfo AccessorInfo #
+# AccessorInfo #
 >#### Class Overview ####
 >Information about an accessor
 ## Fields ##

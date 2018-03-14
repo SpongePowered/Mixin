@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyArgsInjector ModifyArgsInjector #
+# ModifyArgsInjector #
 >#### Class Overview ####
 >A bytecode injector which allows a single argument of a chosen method call to
  be altered.

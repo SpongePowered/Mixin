@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Field MemberRef.Field #
+# MemberRef.Field #
 >#### Class Overview ####
 >A static reference to a field backed by field get/put instruction
 ## Fields ##

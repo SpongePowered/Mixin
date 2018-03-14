@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static Context LocalVariableDiscriminator.Context #
+# LocalVariableDiscriminator.Context #
 >#### Class Overview ####
 >Discriminator context information, wraps all relevant information about
  a target location for use when performing discrimination

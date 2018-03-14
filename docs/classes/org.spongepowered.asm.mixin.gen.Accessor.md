@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Accessor Accessor #
+# Accessor #
 >#### Class Overview ####
 >Defines an accessor method in a mixin, the method can be a getter (must
  return the field type and take no arguments) or a setter (must take an

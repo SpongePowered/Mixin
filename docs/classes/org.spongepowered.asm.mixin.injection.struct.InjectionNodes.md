@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectionNodes InjectionNodes #
+# InjectionNodes #
 >#### Class Overview ####
 >Used to keep track of instruction nodes in a {@link Target} method which are
  targetted by various types of injector. This collection is populated during

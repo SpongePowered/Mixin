@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMappingWriter IMappingWriter #
+# IMappingWriter #
 >#### Class Overview ####
 >Mapping writer
 ## Methods ##

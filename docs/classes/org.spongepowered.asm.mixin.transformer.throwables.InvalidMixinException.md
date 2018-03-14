@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidMixinException InvalidMixinException #
+# InvalidMixinException #
 >#### Class Overview ####
 >Thrown by the mixin validator when a mixin fails a pre-flight check
 ## Constructors ##

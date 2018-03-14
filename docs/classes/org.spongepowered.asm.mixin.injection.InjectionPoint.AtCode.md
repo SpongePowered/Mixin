@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static interface AtCode InjectionPoint.AtCode #
+# InjectionPoint.AtCode #
 >#### Class Overview ####
 >Injection point code for {@link At} annotations to use
 ## Methods ##

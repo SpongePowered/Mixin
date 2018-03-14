@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract InvokeInjector InvokeInjector #
+# InvokeInjector #
 >#### Class Overview ####
 >Base class for injectors which inject at method invokes
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinPlatformManager MixinPlatformManager #
+# MixinPlatformManager #
 >#### Class Overview ####
 >Handler for platform-specific behaviour required in different mixin
  environments.

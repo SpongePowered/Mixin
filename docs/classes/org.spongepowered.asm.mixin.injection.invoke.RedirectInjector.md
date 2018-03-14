@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public RedirectInjector RedirectInjector #
+# RedirectInjector #
 >#### Class Overview ####
 ><p>A bytecode injector which allows a method call, field access or
  <tt>new</tt> object creation to be redirected to the annotated handler

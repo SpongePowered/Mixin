@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ITransformer ITransformer #
+# ITransformer #
 >#### Class Overview ####
 >Base interface for transformer types
 

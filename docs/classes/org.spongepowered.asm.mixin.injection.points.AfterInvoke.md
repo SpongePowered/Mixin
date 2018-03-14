@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AfterInvoke AfterInvoke #
+# AfterInvoke #
 >#### Class Overview ####
 ><p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
  INVOKESPECIAL opcodes matching its arguments and returns a list of insns

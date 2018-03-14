@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeStringInvoke BeforeStringInvoke #
+# BeforeStringInvoke #
 >#### Class Overview ####
 ><p>Like {@link BeforeInvoke}, this injection point searches for
  INVOKEVIRTUAL, INVOKESTATIC and INVOKESPECIAL opcodes matching its arguments

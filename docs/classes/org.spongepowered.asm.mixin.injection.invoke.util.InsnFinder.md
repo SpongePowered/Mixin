@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InsnFinder InsnFinder #
+# InsnFinder #
 >#### Class Overview ####
 >Utility class for finding instructions using static analysis
 ## Constructors ##

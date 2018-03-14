@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinTweaker MixinTweaker #
+# MixinTweaker #
 >#### Class Overview ####
 >TweakClass for running mixins in production. Being a tweaker ensures that we
  get injected into the AppClassLoader but does mean that we will need to

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Final Final #
+# Final #
 >#### Class Overview ####
 >This annotation has two uses:
  

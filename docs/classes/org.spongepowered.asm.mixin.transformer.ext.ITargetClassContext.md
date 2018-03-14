@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ITargetClassContext ITargetClassContext #
+# ITargetClassContext #
 >#### Class Overview ####
 >Interface for target classes passed into transformer modules via
  {@link IExtension}

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinReloadException MixinReloadException #
+# MixinReloadException #
 >#### Class Overview ####
 >An exception that occurs when a mixin reloads and does something it is
  normally allowed to do but isn't due to reloading restrictions.

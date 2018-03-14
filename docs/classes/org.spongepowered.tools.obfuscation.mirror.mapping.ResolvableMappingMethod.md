@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ResolvableMappingMethod ResolvableMappingMethod #
+# ResolvableMappingMethod #
 >#### Class Overview ####
 >A mapping method obtained from a {@link TypeHandle}. The context for this
  mapping allows references in superclasses to be resolved when necessary since

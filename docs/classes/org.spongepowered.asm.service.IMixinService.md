@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinService IMixinService #
+# IMixinService #
 >#### Class Overview ####
 >Mixin Service interface. Mixin services connect the mixin subsytem to the
  underlying environment. It is something of a god interface at present because

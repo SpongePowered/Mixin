@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MethodVisitorEx MethodVisitorEx #
+# MethodVisitorEx #
 >#### Class Overview ####
 >MethodVisitor with some extra convenience functionality
 ## Constructors ##

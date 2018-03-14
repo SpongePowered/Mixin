@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Shadow Shadow #
+# Shadow #
 >#### Class Overview ####
 >Used to indicate a Mixin class member which is acting as a placeholder for a
  method or field in the target class

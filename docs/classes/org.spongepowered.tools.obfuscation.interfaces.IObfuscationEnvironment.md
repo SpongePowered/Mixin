@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IObfuscationEnvironment IObfuscationEnvironment #
+# IObfuscationEnvironment #
 >#### Class Overview ####
 >An obfuscation environment provides facilities to fetch obfuscation mappings
  of a particular type and also manage writing generated mappings of that type

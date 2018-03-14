@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IGlobalPropertyService IGlobalPropertyService #
+# IGlobalPropertyService #
 >#### Class Overview ####
 >Global property service
 ## Methods ##

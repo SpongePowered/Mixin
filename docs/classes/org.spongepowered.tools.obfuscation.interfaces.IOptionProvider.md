@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IOptionProvider IOptionProvider #
+# IOptionProvider #
 >#### Class Overview ####
 >An object which can provide option values to consumers
 ## Methods ##

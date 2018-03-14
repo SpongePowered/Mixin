@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinPlatformAgentDefault MixinPlatformAgentDefault #
+# MixinPlatformAgentDefault #
 >#### Class Overview ####
 >Default platform agent, handles the mixin manifest keys such as
  <tt>MixinConfigs</tt> and <tt>MixinTokenProviders</tt>.

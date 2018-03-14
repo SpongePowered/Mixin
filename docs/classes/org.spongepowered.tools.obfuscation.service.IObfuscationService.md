@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IObfuscationService IObfuscationService #
+# IObfuscationService #
 >#### Class Overview ####
 >Service interface for obfuscation services
 ## Methods ##

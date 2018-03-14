@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidSliceException InvalidSliceException #
+# InvalidSliceException #
 >#### Class Overview ####
 >Thrown when an injector slice fails a state check, for example if a slice
  selector fails or a slice is negative in size

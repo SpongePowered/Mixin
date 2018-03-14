@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public PrettyPrinter PrettyPrinter #
+# PrettyPrinter #
 >#### Class Overview ####
 >Prints information in a pretty box
 ## Fields ##

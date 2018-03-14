@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public CancellationException CancellationException #
+# CancellationException #
 >#### Class Overview ####
 >Exception thrown when a consumer attemtps to call <tt>cancel()</tt> on a
  callback not marked as <tt>cancellable</tt>.

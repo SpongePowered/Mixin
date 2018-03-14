@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ReferenceManager ReferenceManager #
+# ReferenceManager #
 >#### Class Overview ####
 >Implementation of the reference manager
 ## Constructors ##

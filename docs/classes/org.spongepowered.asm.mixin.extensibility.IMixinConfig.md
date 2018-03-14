@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinConfig IMixinConfig #
+# IMixinConfig #
 >#### Class Overview ####
 >Interface for loaded mixin configurations
 ## Fields ##

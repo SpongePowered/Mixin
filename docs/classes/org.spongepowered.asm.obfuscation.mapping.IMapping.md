@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMapping IMapping #
+# IMapping #
 >#### Class Overview ####
 >Base class for member mapping entries
 ## Methods ##

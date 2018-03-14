@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract static ManifestAttributes Constants.ManifestAttributes #
+# Constants.ManifestAttributes #
 >#### Class Overview ####
 >Shared Jar Manifest Attributes
 ## Fields ##

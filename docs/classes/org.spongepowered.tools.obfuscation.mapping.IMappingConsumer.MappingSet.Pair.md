@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static Pair IMappingConsumer.MappingSet.Pair #
+# IMappingConsumer.MappingSet.Pair #
 >#### Class Overview ####
 >A pair of mappings
 ## Fields ##

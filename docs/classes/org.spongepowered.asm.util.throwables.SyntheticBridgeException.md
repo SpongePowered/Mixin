@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public SyntheticBridgeException SyntheticBridgeException #
+# SyntheticBridgeException #
 >#### Class Overview ####
 >Exception thrown when comparing two synthetic bridge methods fails, thrown
  with the corresponding problem and functionality to support debugging when

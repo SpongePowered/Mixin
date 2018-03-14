@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IObfuscationDataProvider IObfuscationDataProvider #
+# IObfuscationDataProvider #
 >#### Class Overview ####
 >Provides obfuscation data to the annotation processor
 ## Methods ##

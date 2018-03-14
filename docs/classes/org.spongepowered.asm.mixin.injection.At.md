@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface At At #
+# At #
 >#### Class Overview ####
 >Annotation for specifying the type of {@link InjectionPoint} to use to
  perform an {@link Inject} process. This annotation allows the

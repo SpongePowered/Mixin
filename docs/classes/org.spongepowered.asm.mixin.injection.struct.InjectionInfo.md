@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract InjectionInfo InjectionInfo #
+# InjectionInfo #
 >#### Class Overview ####
 >Contructs information about an injection from an {@link Inject} annotation
  and allows the injection to be processed.

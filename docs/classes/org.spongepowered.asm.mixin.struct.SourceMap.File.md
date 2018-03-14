@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static File SourceMap.File #
+# SourceMap.File #
 >#### Class Overview ####
 >Defines a source code file within a source map stratum
 ## Fields ##

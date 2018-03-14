@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeLoadLocal BeforeLoadLocal #
+# BeforeLoadLocal #
 >#### Class Overview ####
 ><p>This injection point is a companion for the {@link ModifyVariable}
  injector which searches for LOAD operations which match the local variables

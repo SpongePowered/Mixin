@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final MethodSlice MethodSlice #
+# MethodSlice #
 >#### Class Overview ####
 >Stores information about a defined method slice for a particular injector.
 ## Methods ##

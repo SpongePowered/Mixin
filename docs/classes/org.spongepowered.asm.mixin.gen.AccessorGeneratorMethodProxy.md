@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AccessorGeneratorMethodProxy AccessorGeneratorMethodProxy #
+# AccessorGeneratorMethodProxy #
 >#### Class Overview ####
 >Generator for proxy methods
 ## Constructors ##

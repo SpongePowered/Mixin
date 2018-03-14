@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final RemappingReferenceMapper RemappingReferenceMapper #
+# RemappingReferenceMapper #
 >#### Class Overview ####
 >This adapter is designed to address a problem with mixins when "deobfCompile"
  dependencies are used in a project which is using newer MCP mappings than the

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static Constraint ConstraintParser.Constraint #
+# ConstraintParser.Constraint #
 >#### Class Overview ####
 >A constraint. Constraints are parsed from string expressions which are
  always of the form:

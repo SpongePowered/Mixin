@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final ValidationPass IMixinValidator.ValidationPass #
+# IMixinValidator.ValidationPass #
 >#### Class Overview ####
 >Validation pass
 ## Fields ##

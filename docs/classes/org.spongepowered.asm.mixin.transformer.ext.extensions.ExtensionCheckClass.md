@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ExtensionCheckClass ExtensionCheckClass #
+# ExtensionCheckClass #
 >#### Class Overview ####
 >Mixin transformer module which runs CheckClassAdapter on the post-mixin
  bytecode

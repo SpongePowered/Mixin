@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinVerifier MixinVerifier #
+# MixinVerifier #
 >#### Class Overview ####
 >Verifier which handles class info lookups via {@link ClassInfo}
 ## Constructors ##

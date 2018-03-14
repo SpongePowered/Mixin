@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MethodHead MethodHead #
+# MethodHead #
 >#### Class Overview ####
 ><p>This injection point simply returns the first instruction in the target
  method body, allowing the injection to be placed at the "head" of the target

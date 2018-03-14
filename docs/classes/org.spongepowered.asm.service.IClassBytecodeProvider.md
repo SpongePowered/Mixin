@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IClassBytecodeProvider IClassBytecodeProvider #
+# IClassBytecodeProvider #
 >#### Class Overview ####
 >Interface for object which can provide class bytecode
 ## Methods ##

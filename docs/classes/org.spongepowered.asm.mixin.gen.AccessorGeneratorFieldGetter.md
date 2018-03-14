@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AccessorGeneratorFieldGetter AccessorGeneratorFieldGetter #
+# AccessorGeneratorFieldGetter #
 >#### Class Overview ####
 >Generator for instance field getters
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinServiceLaunchWrapperBootstrap MixinServiceLaunchWrapperBootstrap #
+# MixinServiceLaunchWrapperBootstrap #
 >#### Class Overview ####
 >Bootstrap for LaunchWrapper service
 ## Constructors ##

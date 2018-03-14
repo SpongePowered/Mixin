@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Surrogate Surrogate #
+# Surrogate #
 >#### Class Overview ####
 >Annotation used to decorate surrogate injector methods. See
  {@link Inject#locals()} for information.

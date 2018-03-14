@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MappingProvider MappingProvider #
+# MappingProvider #
 >#### Class Overview ####
 >Base class for mapping providers
 ## Fields ##

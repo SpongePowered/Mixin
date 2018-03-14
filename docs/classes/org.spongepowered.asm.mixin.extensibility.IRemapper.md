@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IRemapper IRemapper #
+# IRemapper #
 >#### Class Overview ####
 >Interface for remap chain participants
 ## Methods ##

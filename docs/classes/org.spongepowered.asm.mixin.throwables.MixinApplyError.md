@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinApplyError MixinApplyError #
+# MixinApplyError #
 >#### Class Overview ####
 >Error to throw for required mixins when mixing of the mixin fails
 ## Constructors ##

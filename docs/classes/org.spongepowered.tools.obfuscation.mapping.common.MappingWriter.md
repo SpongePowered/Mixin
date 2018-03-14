@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MappingWriter MappingWriter #
+# MappingWriter #
 >#### Class Overview ####
 >Writer for mappings
 ## Constructors ##

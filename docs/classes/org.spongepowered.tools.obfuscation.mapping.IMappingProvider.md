@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMappingProvider IMappingProvider #
+# IMappingProvider #
 >#### Class Overview ####
 >A mapping provider stores raw mapping information for use by the AP, access
  is delegated via the environment which provides enhanced lookup functionality

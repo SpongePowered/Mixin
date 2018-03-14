@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ModifyConstant ModifyConstant #
+# ModifyConstant #
 >#### Class Overview ####
 >Specifies that this mixin method should inject a constant modifier callback
  to itself in the target method(s) identified by {@link #method} at the

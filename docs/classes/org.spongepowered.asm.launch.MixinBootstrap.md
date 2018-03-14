@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MixinBootstrap MixinBootstrap #
+# MixinBootstrap #
 >#### Class Overview ####
 >Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
  subsystem and the tweaker or coremod which is boostrapping it. Without this

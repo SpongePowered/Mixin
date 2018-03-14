@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Overwrite Overwrite #
+# Overwrite #
 >#### Class Overview ####
 ><p>Annotation used to indicate a mixin class member which must overwrite a
  method in the target class.</p>

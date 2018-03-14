@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Shift At.Shift #
+# At.Shift #
 >#### Class Overview ####
 ><b>Shift</b> is used to shift resulting opcodes
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationTypeDescriptor ObfuscationTypeDescriptor #
+# ObfuscationTypeDescriptor #
 >#### Class Overview ####
 >Describes the arguments for a particular obfuscation type, used as an args
  object for creating {@link ObfuscationType}s

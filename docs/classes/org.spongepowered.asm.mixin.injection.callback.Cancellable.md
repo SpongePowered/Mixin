@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Cancellable Cancellable #
+# Cancellable #
 >#### Class Overview ####
 >Interface for things which can be cancelled
 ## Methods ##

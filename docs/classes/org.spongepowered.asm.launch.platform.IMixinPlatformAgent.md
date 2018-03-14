@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinPlatformAgent IMixinPlatformAgent #
+# IMixinPlatformAgent #
 >#### Class Overview ####
 >Base interface for platform agents. Platform agents are environment-specific
  handlers which are used by the Mixin subsystem to perform platform-specific

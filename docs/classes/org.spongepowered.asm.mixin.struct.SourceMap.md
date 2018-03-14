@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public SourceMap SourceMap #
+# SourceMap #
 >#### Class Overview ####
 >Structure which contains information about a SourceDebugExtension SMAP
 ## Constructors ##

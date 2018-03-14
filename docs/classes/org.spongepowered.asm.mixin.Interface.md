@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Interface Interface #
+# Interface #
 >#### Class Overview ####
 >I'm probably going to the special hell for this
 ## Methods ##

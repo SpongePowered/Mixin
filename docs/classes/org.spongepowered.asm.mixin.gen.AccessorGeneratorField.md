@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract AccessorGeneratorField AccessorGeneratorField #
+# AccessorGeneratorField #
 >#### Class Overview ####
 >Accessor generator for field accessors
 ## Fields ##

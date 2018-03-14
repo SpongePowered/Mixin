@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidInjectionPointException InvalidInjectionPointException #
+# InvalidInjectionPointException #
 >#### Class Overview ####
 >Thrown when an injection point cannot be parsed due to invalid data
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyVariableInjector ModifyVariableInjector #
+# ModifyVariableInjector #
 >#### Class Overview ####
 >A bytecode injector which allows a single local variable in the target method
  to be captured and altered. See also {@link LocalVariableDiscriminator} and

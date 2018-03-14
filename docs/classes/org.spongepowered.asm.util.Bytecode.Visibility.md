@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Visibility Bytecode.Visibility #
+# Bytecode.Visibility #
 >#### Class Overview ####
 >Ordinal member visibility level. This is used to represent visibility of
  a member in a formal way from lowest to highest. The

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Config Config #
+# Config #
 >#### Class Overview ####
 >Handle for marshalling mixin configs outside of the transformer package
 ## Constructors ##

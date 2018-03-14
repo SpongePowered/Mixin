@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MappingField MappingField #
+# MappingField #
 >#### Class Overview ####
 >Stores information about a field mapping during AP runs
 ## Constructors ##

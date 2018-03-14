@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Coerce Coerce #
+# Coerce #
 >#### Class Overview ####
 ><h3>Usage with callback injectors (<tt>&#064;Inject</tt>)</h3>
  

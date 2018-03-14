@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ModifyArg ModifyArg #
+# ModifyArg #
 >#### Class Overview ####
 >Specifies that this mixin method should inject an argument modifier to itself
  in the target method(s) identified by {@link #method}. This type of injection

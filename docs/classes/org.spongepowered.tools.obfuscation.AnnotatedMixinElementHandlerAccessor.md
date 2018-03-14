@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AnnotatedMixinElementHandlerAccessor AnnotatedMixinElementHandlerAccessor #
+# AnnotatedMixinElementHandlerAccessor #
 >#### Class Overview ####
 >A module for {@link AnnotatedMixin} which handles accessors
 ## Constructors ##

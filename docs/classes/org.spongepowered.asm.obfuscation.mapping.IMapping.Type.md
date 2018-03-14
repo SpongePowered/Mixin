@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Type IMapping.Type #
+# IMapping.Type #
 >#### Class Overview ####
 >Type of mapping
 ## Fields ##

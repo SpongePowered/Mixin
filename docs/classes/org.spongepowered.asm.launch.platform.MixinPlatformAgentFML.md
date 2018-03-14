@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinPlatformAgentFML MixinPlatformAgentFML #
+# MixinPlatformAgentFML #
 >#### Class Overview ####
 >Platform agent for use under FML.
  

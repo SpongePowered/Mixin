@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinInitialisationError MixinInitialisationError #
+# MixinInitialisationError #
 >#### Class Overview ####
 >Error raised when mixin subsystem initialisation fails
 ## Constructors ##

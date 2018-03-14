@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public CallbackInfo CallbackInfo #
+# CallbackInfo #
 >#### Class Overview ####
 >CallbackInfo instances are passed to callbacks in order to provide
  information and handling opportunities to the callback to interact with the

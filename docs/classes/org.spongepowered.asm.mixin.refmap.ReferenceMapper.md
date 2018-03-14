@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ReferenceMapper ReferenceMapper #
+# ReferenceMapper #
 >#### Class Overview ####
 >Stores runtime information allowing field, method and type references which
  cannot be hard remapped by the reobfuscation process to be remapped in a

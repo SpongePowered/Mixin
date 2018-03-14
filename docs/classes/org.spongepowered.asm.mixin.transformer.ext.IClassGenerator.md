@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IClassGenerator IClassGenerator #
+# IClassGenerator #
 >#### Class Overview ####
 >Base interface for class generators
 ## Methods ##

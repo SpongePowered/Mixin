@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public CallbackInfoReturnable CallbackInfoReturnable #
+# CallbackInfoReturnable #
 >#### Class Overview ####
 >For callbacks with a non-void return type, a CallbackInfoReturnable is passed
  to the callback instead to allow the callback to interact with the method

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ArgumentIndexOutOfBoundsException ArgumentIndexOutOfBoundsException #
+# ArgumentIndexOutOfBoundsException #
 >#### Class Overview ####
 >Exception thrown when attempting to set an argument (via) {@link Args} which
  is out of bounds

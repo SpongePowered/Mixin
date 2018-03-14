@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Visibility Visibility #
+# Visibility #
 >#### Class Overview ####
 >Ordinal member visibility level. This is used to represent visibility of
  a member in a formal way from lowest to highest.

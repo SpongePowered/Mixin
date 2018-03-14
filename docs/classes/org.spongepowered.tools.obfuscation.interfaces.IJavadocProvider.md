@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IJavadocProvider IJavadocProvider #
+# IJavadocProvider #
 >#### Class Overview ####
 >Provides javadoc. What else did you expect?
 ## Methods ##

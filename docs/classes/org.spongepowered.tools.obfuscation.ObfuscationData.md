@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationData ObfuscationData #
+# ObfuscationData #
 >#### Class Overview ####
 >Return value struct for various obfuscation queries performed by the mixin
  annotation processor.

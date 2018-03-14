@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Dynamic Dynamic #
+# Dynamic #
 >#### Class Overview ####
 >Decorator annotation for mixin elements whose targets are not available in
  the original class and are either fabricated or transformed at runtime. This

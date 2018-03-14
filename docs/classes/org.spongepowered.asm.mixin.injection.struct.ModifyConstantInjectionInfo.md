@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyConstantInjectionInfo ModifyConstantInjectionInfo #
+# ModifyConstantInjectionInfo #
 >#### Class Overview ####
 >Information about a constant modifier injector
 ## Constructors ##

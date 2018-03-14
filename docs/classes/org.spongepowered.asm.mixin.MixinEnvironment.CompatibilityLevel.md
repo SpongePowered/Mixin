@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static CompatibilityLevel MixinEnvironment.CompatibilityLevel #
+# MixinEnvironment.CompatibilityLevel #
 >#### Class Overview ####
 >Operational compatibility level for the mixin subsystem
 ## Fields ##

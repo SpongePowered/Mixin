@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Mixin Mixin #
+# Mixin #
 >#### Class Overview ####
 >Decorator for mixin classes
 ## Methods ##

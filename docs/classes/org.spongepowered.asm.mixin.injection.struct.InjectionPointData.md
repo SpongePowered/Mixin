@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectionPointData InjectionPointData #
+# InjectionPointData #
 >#### Class Overview ####
 >Data read from an {@link org.spongepowered.asm.mixin.injection.At} annotation
  and passed into an InjectionPoint ctor

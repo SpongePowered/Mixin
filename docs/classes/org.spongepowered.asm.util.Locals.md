@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Locals Locals #
+# Locals #
 >#### Class Overview ####
 >Utility methods for working with local variables using ASM
 ## Methods ##

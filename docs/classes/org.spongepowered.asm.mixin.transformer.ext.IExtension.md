@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IExtension IExtension #
+# IExtension #
 >#### Class Overview ####
 >Mixin Transformer extension interface for pre- and post-processors
 ## Methods ##

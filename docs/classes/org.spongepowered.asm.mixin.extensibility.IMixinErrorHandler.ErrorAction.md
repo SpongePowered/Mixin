@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final ErrorAction IMixinErrorHandler.ErrorAction #
+# IMixinErrorHandler.ErrorAction #
 >#### Class Overview ####
 >Action to take when handling an error. By default, if a config is marked
  as "required" then the default action will be {@link #ERROR}, and will be

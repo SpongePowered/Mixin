@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public RuntimeDecompilerAsync RuntimeDecompilerAsync #
+# RuntimeDecompilerAsync #
 >#### Class Overview ####
 >Asynchronous decompiler, runs mixin export task in a separate thread to avoid
  slowing down loading time

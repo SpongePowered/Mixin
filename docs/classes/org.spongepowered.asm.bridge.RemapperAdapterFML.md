@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final RemapperAdapterFML RemapperAdapterFML #
+# RemapperAdapterFML #
 >#### Class Overview ####
 >Remapper adapter which remaps using FML's deobfuscating remapper
 ## Methods ##

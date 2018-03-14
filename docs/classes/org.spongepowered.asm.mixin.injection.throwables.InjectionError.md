@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectionError InjectionError #
+# InjectionError #
 >#### Class Overview ####
 >Error to throw for critical injection problems
 ## Constructors ##

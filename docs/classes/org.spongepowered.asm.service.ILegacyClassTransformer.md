@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ILegacyClassTransformer ILegacyClassTransformer #
+# ILegacyClassTransformer #
 >#### Class Overview ####
 >Adapter interface for legacy class transformers. Legacy class transformers
  operate on raw byte arrays.

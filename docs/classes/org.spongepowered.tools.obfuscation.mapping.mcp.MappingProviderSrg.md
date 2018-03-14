@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MappingProviderSrg MappingProviderSrg #
+# MappingProviderSrg #
 >#### Class Overview ####
 >Ported from <strong>Srg2Source</strong> (
  <a href=\"https://github.com/MinecraftForge/Srg2Source\">

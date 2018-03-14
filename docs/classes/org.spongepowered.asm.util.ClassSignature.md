@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ClassSignature ClassSignature #
+# ClassSignature #
 >#### Class Overview ####
 >Represents an object-oriented view of a generic class signature. We use ASM's
  {@link SignatureVisitor} to walk over an incoming signature in order to parse

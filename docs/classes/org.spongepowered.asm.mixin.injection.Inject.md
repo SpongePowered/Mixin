@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Inject Inject #
+# Inject #
 >#### Class Overview ####
 >Specifies that this mixin method should inject a callback (or
  callback<b>s</b>) to itself in the target method(s) identified by

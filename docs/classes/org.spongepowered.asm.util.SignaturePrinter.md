@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public SignaturePrinter SignaturePrinter #
+# SignaturePrinter #
 >#### Class Overview ####
 >Generates callback signature for callback pretty-print
 ## Constructors ##

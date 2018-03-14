@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Alignment PrettyPrinter.Alignment #
+# PrettyPrinter.Alignment #
 >#### Class Overview ####
 >Table column alignment
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static Side MixinEnvironment.Side #
+# MixinEnvironment.Side #
 >#### Class Overview ####
 >Represents a "side", client or dedicated server
 ## Fields ##

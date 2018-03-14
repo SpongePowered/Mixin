@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinTransformerError MixinTransformerError #
+# MixinTransformerError #
 >#### Class Overview ####
 >Error to throw for things which really shouldn't happen
 ## Constructors ##

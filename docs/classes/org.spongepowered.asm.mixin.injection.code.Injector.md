@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract Injector Injector #
+# Injector #
 >#### Class Overview ####
 >Base class for bytecode injectors
 ## Fields ##

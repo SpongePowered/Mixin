@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AccessorGeneratorFieldSetter AccessorGeneratorFieldSetter #
+# AccessorGeneratorFieldSetter #
 >#### Class Overview ####
 >Generator for field setters
 ## Constructors ##

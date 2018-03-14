@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationManager ObfuscationManager #
+# ObfuscationManager #
 >#### Class Overview ####
 >Obfuscation Manager for mixin Annotation Processor
 ## Constructors ##

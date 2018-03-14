@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinException MixinException #
+# MixinException #
 >#### Class Overview ####
 >Base class for all mixin processor exceptions
 ## Constructors ##

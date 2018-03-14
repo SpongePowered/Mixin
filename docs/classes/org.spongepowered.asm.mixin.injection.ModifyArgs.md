@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ModifyArgs ModifyArgs #
+# ModifyArgs #
 >#### Class Overview ####
 >Specifies that this mixin method should inject an multi-argument modifier
  callback to itself in the target method(s) identified by {@link #method}.

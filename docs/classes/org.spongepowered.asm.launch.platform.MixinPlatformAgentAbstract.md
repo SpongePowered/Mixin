@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MixinPlatformAgentAbstract MixinPlatformAgentAbstract #
+# MixinPlatformAgentAbstract #
 >#### Class Overview ####
 >Platform agent base class
 ## Fields ##

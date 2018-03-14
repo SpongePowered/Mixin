@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static ReferenceConflictException ReferenceManager.ReferenceConflictException #
+# ReferenceManager.ReferenceConflictException #
 >#### Class Overview ####
 >Exception thrown when a reference conflict occurs
 ## Constructors ##

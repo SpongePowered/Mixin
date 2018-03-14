@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinTransformer MixinTransformer #
+# MixinTransformer #
 >#### Class Overview ####
 >Transformer which manages the mixin configuration and application process
 ## Methods ##

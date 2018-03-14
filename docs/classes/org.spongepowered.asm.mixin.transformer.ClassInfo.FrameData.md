@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static FrameData ClassInfo.FrameData #
+# ClassInfo.FrameData #
 >#### Class Overview ####
 >Information about frames in a method
 ## Fields ##

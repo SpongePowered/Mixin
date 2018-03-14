@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Implements Implements #
+# Implements #
 >#### Class Overview ####
 >Pseudo-implements decorator for Mixins with conflicting methods in a
  superclass to soft-implement an interface

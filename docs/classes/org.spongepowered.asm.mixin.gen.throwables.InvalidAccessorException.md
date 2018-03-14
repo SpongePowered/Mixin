@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidAccessorException InvalidAccessorException #
+# InvalidAccessorException #
 >#### Class Overview ####
 >Thrown when an accessor fails a state check
 ## Constructors ##

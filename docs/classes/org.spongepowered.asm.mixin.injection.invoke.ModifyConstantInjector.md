@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyConstantInjector ModifyConstantInjector #
+# ModifyConstantInjector #
 >#### Class Overview ####
 >A bytecode injector which allows a specific
 ## Constructors ##

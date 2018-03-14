@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MappingWriterSrg MappingWriterSrg #
+# MappingWriterSrg #
 >#### Class Overview ####
 >Writer for SRG mappings
 ## Constructors ##

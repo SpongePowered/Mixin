@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Keys GlobalProperties.Keys #
+# GlobalProperties.Keys #
 >#### Class Overview ####
 >Global property keys
 ## Fields ##

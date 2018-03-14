@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public CallbackInjectionInfo CallbackInjectionInfo #
+# CallbackInjectionInfo #
 >#### Class Overview ####
 >Information about a callback to inject, usually specified by {@link Inject}
 ## Constructors ##

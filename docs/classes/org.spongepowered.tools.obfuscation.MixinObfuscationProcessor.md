@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MixinObfuscationProcessor MixinObfuscationProcessor #
+# MixinObfuscationProcessor #
 >#### Class Overview ####
 >Base class for mixin annotation processor modules
 ## Fields ##

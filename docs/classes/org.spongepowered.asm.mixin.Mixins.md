@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Mixins Mixins #
+# Mixins #
 >#### Class Overview ####
 >Entry point for registering global mixin resources. Compatibility with
  pre-0.6 versions is maintained via the methods on {@link MixinEnvironment}

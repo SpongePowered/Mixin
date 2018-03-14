@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinServiceBootstrap IMixinServiceBootstrap #
+# IMixinServiceBootstrap #
 >#### Class Overview ####
 >Bootstrap interface for Mixin services. Because of the nature of service
  environments, it may be necessary to provide bootstrap logic to prepare

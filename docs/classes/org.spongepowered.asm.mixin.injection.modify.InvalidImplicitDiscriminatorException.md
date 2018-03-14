@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidImplicitDiscriminatorException InvalidImplicitDiscriminatorException #
+# InvalidImplicitDiscriminatorException #
 >#### Class Overview ####
 >Thrown when an <em>implicit</em> discriminator (no args) fails to identify
  a unique candidate.

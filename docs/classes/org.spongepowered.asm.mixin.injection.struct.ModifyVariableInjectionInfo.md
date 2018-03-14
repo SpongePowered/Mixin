@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ModifyVariableInjectionInfo ModifyVariableInjectionInfo #
+# ModifyVariableInjectionInfo #
 >#### Class Overview ####
 >Information about a {@link ModifyVariable} injector
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public RedirectInjectionInfo RedirectInjectionInfo #
+# RedirectInjectionInfo #
 >#### Class Overview ####
 >Information about a redirector injector
 ## Constructors ##

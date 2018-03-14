@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MethodHandle MethodHandle #
+# MethodHandle #
 >#### Class Overview ####
 >Retrieved from a {@link TypeHandle} when searching for methods
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectionValidationException InjectionValidationException #
+# InjectionValidationException #
 >#### Class Overview ####
 >Thrown when an injector group fails an injection check
 ## Constructors ##

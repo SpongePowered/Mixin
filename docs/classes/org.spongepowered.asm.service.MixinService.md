@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final MixinService MixinService #
+# MixinService #
 >#### Class Overview ####
 >Provides access to the service layer which connects the mixin transformer to
  a particular host environment. Host environments are implemented as services

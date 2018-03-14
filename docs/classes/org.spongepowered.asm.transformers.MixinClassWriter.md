@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinClassWriter MixinClassWriter #
+# MixinClassWriter #
 >#### Class Overview ####
 >ClassWriter which resolves common superclasses using Mixin's metadata instead
  of calling Class.forName

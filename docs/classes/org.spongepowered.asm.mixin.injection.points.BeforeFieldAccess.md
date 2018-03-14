@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeFieldAccess BeforeFieldAccess #
+# BeforeFieldAccess #
 >#### Class Overview ####
 ><p>This injection point searches for GETFIELD and PUTFIELD (and static
  equivalent) opcodes matching its arguments and returns a list of insns

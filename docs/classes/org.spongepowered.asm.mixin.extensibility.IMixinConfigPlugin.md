@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinConfigPlugin IMixinConfigPlugin #
+# IMixinConfigPlugin #
 >#### Class Overview ####
 ><p>A companion plugin for a mixin configuration object. Objects implementing
  this interface get some limited power of veto over the mixin load process as

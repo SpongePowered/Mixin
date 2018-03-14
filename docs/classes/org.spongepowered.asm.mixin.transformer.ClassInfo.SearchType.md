@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final SearchType ClassInfo.SearchType #
+# ClassInfo.SearchType #
 >#### Class Overview ####
 >Search type for the findInHierarchy methods, replaces a boolean flag
  which made calling code difficult to read

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Method ClassInfo.Method #
+# ClassInfo.Method #
 >#### Class Overview ####
 >A method
 ## Constructors ##

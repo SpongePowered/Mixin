@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract MixinValidator MixinValidator #
+# MixinValidator #
 >#### Class Overview ####
 >Base class for mixin validators
 ## Fields ##

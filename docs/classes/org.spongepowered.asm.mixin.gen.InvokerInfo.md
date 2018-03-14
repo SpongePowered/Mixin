@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvokerInfo InvokerInfo #
+# InvokerInfo #
 >#### Class Overview ####
 >Information about an invoker
 ## Constructors ##

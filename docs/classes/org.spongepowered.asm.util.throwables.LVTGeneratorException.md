@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public LVTGeneratorException LVTGeneratorException #
+# LVTGeneratorException #
 >#### Class Overview ####
 >Exception thrown when something goes horribly wrong whilst <del>summoning the
  antichrist</del> generating the LVT for a target method.

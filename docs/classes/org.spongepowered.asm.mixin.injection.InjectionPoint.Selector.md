@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Selector InjectionPoint.Selector #
+# InjectionPoint.Selector #
 >#### Class Overview ####
 >Selector type for slice delmiters, ignored for normal injection points.
  <tt>Selectors</tt> can be supplied in {@link At} annotations by including

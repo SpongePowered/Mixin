@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static interface IPrettyPrintable PrettyPrinter.IPrettyPrintable #
+# PrettyPrinter.IPrettyPrintable #
 >#### Class Overview ####
 >Interface for object which supports printing to pretty printer
 ## Methods ##

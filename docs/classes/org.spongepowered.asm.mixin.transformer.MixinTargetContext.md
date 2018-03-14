@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinTargetContext MixinTargetContext #
+# MixinTargetContext #
 >#### Class Overview ####
 >This object keeps track of data for applying a mixin to a specific target
  class <em>during</em> a mixin application. This is a single-use object which

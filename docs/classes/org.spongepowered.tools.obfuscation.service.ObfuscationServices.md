@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ObfuscationServices ObfuscationServices #
+# ObfuscationServices #
 >#### Class Overview ####
 >Obfuscation service manager
 ## Methods ##

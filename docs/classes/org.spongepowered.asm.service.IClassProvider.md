@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IClassProvider IClassProvider #
+# IClassProvider #
 >#### Class Overview ####
 >Interface for marshal object which can retrieve classes from the environment
 ## Methods ##

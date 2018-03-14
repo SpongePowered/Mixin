@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectorTarget InjectorTarget #
+# InjectorTarget #
 >#### Class Overview ####
 >Couples {@link MethodSlice method slices} to a {@link Target} for injection
  purposes.

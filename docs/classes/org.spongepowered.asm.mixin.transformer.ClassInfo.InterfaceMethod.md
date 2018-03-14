@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InterfaceMethod ClassInfo.InterfaceMethod #
+# ClassInfo.InterfaceMethod #
 >#### Class Overview ####
 >A method resolved in an interface <em>via</em> a class, return the member
  wrapped so that the implementing class can be retrieved.

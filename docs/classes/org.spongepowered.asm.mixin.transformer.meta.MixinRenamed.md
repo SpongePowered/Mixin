@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface MixinRenamed MixinRenamed #
+# MixinRenamed #
 >#### Class Overview ####
 ><p>Internal use only.</p>
  

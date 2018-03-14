@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Remap Interface.Remap #
+# Interface.Remap #
 >#### Class Overview ####
 >Describes the remapping strategy applied to methods matching this
  interface.

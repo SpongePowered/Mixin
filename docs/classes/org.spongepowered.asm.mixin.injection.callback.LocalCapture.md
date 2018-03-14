@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final LocalCapture LocalCapture #
+# LocalCapture #
 >#### Class Overview ####
 >Specifies the behaviour for capturing local variables at an injection point.
  

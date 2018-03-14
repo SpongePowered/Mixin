@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinServiceLaunchWrapper MixinServiceLaunchWrapper #
+# MixinServiceLaunchWrapper #
 >#### Class Overview ####
 >Mixin service for launchwrapper
 ## Fields ##

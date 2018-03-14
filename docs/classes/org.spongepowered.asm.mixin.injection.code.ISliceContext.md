@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ISliceContext ISliceContext #
+# ISliceContext #
 >#### Class Overview ####
 >Context for a slice declaration
 ## Methods ##

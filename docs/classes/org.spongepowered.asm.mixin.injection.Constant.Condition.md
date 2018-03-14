@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Condition Constant.Condition #
+# Constant.Condition #
 >#### Class Overview ####
 >Available options for the {@link Constant#expandZeroConditions} setting.
  Each option matches the inverse instructions as well because in the

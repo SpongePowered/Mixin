@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final Profiler Profiler #
+# Profiler #
 >#### Class Overview ####
 >Performance profiler for Mixin.
 ## Fields ##

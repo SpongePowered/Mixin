@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ArgsClassGenerator ArgsClassGenerator #
+# ArgsClassGenerator #
 >#### Class Overview ####
 >Class generator which creates subclasses of {@link Args} to be used by the
  {@link ModifyArgs} injector. The subclasses contain getter and setter logic

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Message Message #
+# Message #
 >#### Class Overview ####
 >Wrapper for Annotation Processor messages, used to enable messages to be
  easily queued and manipulated

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Group Group #
+# Group #
 >#### Class Overview ####
 >This annotation can be used on any injector callback to define a value for
  total required injections across multiple callbacks. Much like

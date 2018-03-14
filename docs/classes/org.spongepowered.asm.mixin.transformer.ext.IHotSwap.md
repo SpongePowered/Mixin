@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IHotSwap IHotSwap #
+# IHotSwap #
 >#### Class Overview ####
 >Interface to allow the hot-swap agent to be loaded on-demand
 ## Methods ##

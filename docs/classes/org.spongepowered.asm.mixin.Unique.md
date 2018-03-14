@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface Unique Unique #
+# Unique #
 >#### Class Overview ####
 >This annotation, when applied to a member method or field in a mixin,
  indicates that the member <b>should never</b> overwrite a matching member in

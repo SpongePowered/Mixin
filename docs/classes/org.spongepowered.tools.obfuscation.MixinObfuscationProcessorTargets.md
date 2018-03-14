@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinObfuscationProcessorTargets MixinObfuscationProcessorTargets #
+# MixinObfuscationProcessorTargets #
 >#### Class Overview ####
 >Annotation processor which finds {@link Shadow} and {@link Overwrite}
  annotations in mixin classes and generates new obfuscation mappings

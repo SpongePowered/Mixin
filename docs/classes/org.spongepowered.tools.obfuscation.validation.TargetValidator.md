@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public TargetValidator TargetValidator #
+# TargetValidator #
 >#### Class Overview ####
 >Validator which checks that the mixin targets are sane
 ## Constructors ##

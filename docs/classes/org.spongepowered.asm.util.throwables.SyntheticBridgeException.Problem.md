@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Problem SyntheticBridgeException.Problem #
+# SyntheticBridgeException.Problem #
 >#### Class Overview ####
 >Problem types for synthetic bridge comparisons
 ## Fields ##

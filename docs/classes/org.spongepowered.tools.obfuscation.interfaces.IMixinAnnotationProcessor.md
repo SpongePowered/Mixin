@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinAnnotationProcessor IMixinAnnotationProcessor #
+# IMixinAnnotationProcessor #
 >#### Class Overview ####
 >Interface for annotation processor core
 ## Methods ##

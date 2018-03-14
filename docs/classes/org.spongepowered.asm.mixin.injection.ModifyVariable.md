@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ModifyVariable ModifyVariable #
+# ModifyVariable #
 >#### Class Overview ####
 >Specifies that this mixin method should inject a variable modifier callback
  to itself in the target method(s) identified by {@link #method}.

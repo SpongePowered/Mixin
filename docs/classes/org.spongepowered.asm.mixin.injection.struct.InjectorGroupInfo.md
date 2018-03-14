@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectorGroupInfo InjectorGroupInfo #
+# InjectorGroupInfo #
 >#### Class Overview ####
 >Information store for injector groups
 ## Constructors ##

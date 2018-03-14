@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ServiceNotAvailableError ServiceNotAvailableError #
+# ServiceNotAvailableError #
 >#### Class Overview ####
 >Error to throw when no service is available in the current environment
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public BeforeConstant BeforeConstant #
+# BeforeConstant #
 >#### Class Overview ####
 >Special injection point which can be defined by an {@link Constant}
  annotation or using the <em>at</em> code <tt>CONSTANT</tt>.

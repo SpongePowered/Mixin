@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final ClassInfo ClassInfo #
+# ClassInfo #
 >#### Class Overview ####
 >Information about a class, used as a way of keeping track of class hierarchy
  information needed to support more complex mixin behaviour such as detached

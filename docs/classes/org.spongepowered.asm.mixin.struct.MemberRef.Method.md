@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Method MemberRef.Method #
+# MemberRef.Method #
 >#### Class Overview ####
 >A static reference to a method backed by an invoke instruction
 ## Fields ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public Section Profiler.Section #
+# Profiler.Section #
 >#### Class Overview ####
 >Profiler section. Normal sections do nothing so that the profiler itself
  consumes minimal resources when disabled.

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public FieldHandle FieldHandle #
+# FieldHandle #
 >#### Class Overview ####
 >Retrieved from a {@link TypeHandle} when searching for fields
 ## Constructors ##

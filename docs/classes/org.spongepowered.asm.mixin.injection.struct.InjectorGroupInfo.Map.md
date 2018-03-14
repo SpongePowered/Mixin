@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Map InjectorGroupInfo.Map #
+# InjectorGroupInfo.Map #
 >#### Class Overview ####
 >Storage for injector groups
 ## Constructors ##

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public AfterStoreLocal AfterStoreLocal #
+# AfterStoreLocal #
 >#### Class Overview ####
 ><p>This injection point is a companion for the {@link ModifyVariable}
  injector which searches for STORE operations which match the local variables

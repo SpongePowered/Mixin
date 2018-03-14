@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final VersionNumber VersionNumber #
+# VersionNumber #
 >#### Class Overview ####
 >Represents a software version number in <code>major.minor.revision.build
  </code> format as a sequence of four shorts packed into a long. This is to

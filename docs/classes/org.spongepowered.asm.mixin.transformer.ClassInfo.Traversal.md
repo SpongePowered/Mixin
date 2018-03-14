@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static final Traversal ClassInfo.Traversal #
+# ClassInfo.Traversal #
 >#### Class Overview ####
 ><p>To all intents and purposes, the "real" class hierarchy and the mixin
  class hierarchy exist in parallel, this means that for some hierarchy

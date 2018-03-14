@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationDataProvider ObfuscationDataProvider #
+# ObfuscationDataProvider #
 >#### Class Overview ####
 >Implementation of obfuscation provider which queries all obfuscation
  environments to return mappings for each source member

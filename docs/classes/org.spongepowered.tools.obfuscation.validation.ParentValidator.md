@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ParentValidator ParentValidator #
+# ParentValidator #
 >#### Class Overview ####
 >Validator which checks that the mixin parent is sane
 ## Constructors ##

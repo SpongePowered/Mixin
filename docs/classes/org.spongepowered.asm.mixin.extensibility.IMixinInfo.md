@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinInfo IMixinInfo #
+# IMixinInfo #
 >#### Class Overview ####
 >Interface for MixinInfo, used in extensibility API
 ## Methods ##

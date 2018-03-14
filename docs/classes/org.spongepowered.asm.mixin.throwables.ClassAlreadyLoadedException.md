@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ClassAlreadyLoadedException ClassAlreadyLoadedException #
+# ClassAlreadyLoadedException #
 >#### Class Overview ####
 >Exception raised when a class was loaded before mixins were able to be
  applied.

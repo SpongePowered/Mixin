@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ExtensionClassExporter ExtensionClassExporter #
+# ExtensionClassExporter #
 >#### Class Overview ####
 >Debug exporter
 ## Constructors ##

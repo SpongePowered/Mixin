@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract ObfuscationUtil ObfuscationUtil #
+# ObfuscationUtil #
 >#### Class Overview ####
 >Utility methods for obfuscation tasks
 ## Methods ##

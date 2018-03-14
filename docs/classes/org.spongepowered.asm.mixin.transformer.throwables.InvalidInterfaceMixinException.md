@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InvalidInterfaceMixinException InvalidInterfaceMixinException #
+# InvalidInterfaceMixinException #
 >#### Class Overview ####
 >Exception thrown for bad states when parsing/loading interface mixins
 ## Constructors ##

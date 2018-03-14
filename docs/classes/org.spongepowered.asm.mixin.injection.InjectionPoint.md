@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract InjectionPoint InjectionPoint #
+# InjectionPoint #
 >#### Class Overview ####
 ><p>Base class for injection point discovery classes. Each subclass describes
  a strategy for locating code injection points within a method, with the

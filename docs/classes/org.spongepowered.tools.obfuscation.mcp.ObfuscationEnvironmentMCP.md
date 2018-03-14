@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public ObfuscationEnvironmentMCP ObfuscationEnvironmentMCP #
+# ObfuscationEnvironmentMCP #
 >#### Class Overview ####
 >An MCP obfuscation environment (eg. SEARGE or NOTCH)
 ## Constructors ##

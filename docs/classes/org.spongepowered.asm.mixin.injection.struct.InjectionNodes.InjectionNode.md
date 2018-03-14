@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static InjectionNode InjectionNodes.InjectionNode #
+# InjectionNodes.InjectionNode #
 >#### Class Overview ####
 >A node targetted by one or more injectors. Using this wrapper allows
  injectors to be aware of when their target node is removed or replace by

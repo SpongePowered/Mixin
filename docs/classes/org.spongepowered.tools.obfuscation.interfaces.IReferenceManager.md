@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IReferenceManager IReferenceManager #
+# IReferenceManager #
 >#### Class Overview ####
 >Consumer for generated references, builds the refmap during an AP pass and
  supports writing the generated refmap to file once the AP run is complete

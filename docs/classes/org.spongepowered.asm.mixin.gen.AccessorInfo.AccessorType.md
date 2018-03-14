@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public static AccessorType AccessorInfo.AccessorType #
+# AccessorInfo.AccessorType #
 >#### Class Overview ####
 >Accessor types
 ## Fields ##

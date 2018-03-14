@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface ITypeHandleProvider ITypeHandleProvider #
+# ITypeHandleProvider #
 >#### Class Overview ####
 >Manager object which cann supply {@link TypeHandle} instances
 ## Methods ##

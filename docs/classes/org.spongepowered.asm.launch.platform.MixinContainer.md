@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public MixinContainer MixinContainer #
+# MixinContainer #
 >#### Class Overview ####
 >A collection of {@link IMixinPlatformAgent} platform agents)
 ## Constructors ##

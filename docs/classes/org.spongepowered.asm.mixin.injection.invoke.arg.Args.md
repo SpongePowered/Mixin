@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public abstract Args Args #
+# Args #
 >#### Class Overview ####
 >Argument bundle class used in {@link ModifyArgs} callbacks. See the
  documentation for {@link ModifyArgs} for details. Synthetic subclasses are

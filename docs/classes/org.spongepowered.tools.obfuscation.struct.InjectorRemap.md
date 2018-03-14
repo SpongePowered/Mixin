@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public InjectorRemap InjectorRemap #
+# InjectorRemap #
 >#### Class Overview ####
 >Remap tracking object for injectors. When remapping an injector we will
  generally want to raise an error if <tt>remap=true</tt> but we don't find

@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public interface IMixinValidator IMixinValidator #
+# IMixinValidator #
 >#### Class Overview ####
 >A mixin validator module, basically just a way of making the various sanity
  checks modular

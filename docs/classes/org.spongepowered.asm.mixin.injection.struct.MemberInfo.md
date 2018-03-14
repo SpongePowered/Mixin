@@ -1,5 +1,5 @@
 [< Back](../README.md)
-# public final MemberInfo MemberInfo #
+# MemberInfo #
 >#### Class Overview ####
 ><p>Information bundle about a member (method or field) parsed from a String
  token in another annotation, this is used where target members need to be
