@@ -443,13 +443,6 @@ public final class MemberInfo {
             if (!this.owner.matches("(?i)^[\\w\\p{Sc}/]+$")) {
                 throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
             }
-            try {
-                if (!this.owner.equals(Type.getType(this.owner).getDescriptor())) {
-                    throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
-                }
-            } catch (Exception ex) {
-                throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
-            }
         }
         
         // Also naive validation, we're looking for stupid errors here
