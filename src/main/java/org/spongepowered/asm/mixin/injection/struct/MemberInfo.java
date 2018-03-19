@@ -444,7 +444,8 @@ public final class MemberInfo {
                 throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
             }
             try {
-                if (!this.owner.equals(Type.getType(this.owner).getDescriptor())) {
+                String ownerType = "L" + this.owner + ";";
+                if (!ownerType.equals(Type.getType(ownerType).getDescriptor())) {
                     throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
                 }
             } catch (Exception ex) {
