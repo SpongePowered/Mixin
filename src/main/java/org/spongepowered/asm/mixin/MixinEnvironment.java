@@ -744,6 +744,7 @@ public final class MixinEnvironment implements ITokenProvider {
     static class MixinLogger {
 
         static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
+        static org.apache.logging.log4j.core.Logger log;
         static Level oldLevel = null;
 
         public MixinLogger() {
@@ -760,13 +761,18 @@ public final class MixinEnvironment implements ITokenProvider {
              * (unless it was changed in the meantime) once MixinAppender
              * detects the message.
              */
-            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            MixinLogger.oldLevel = log.getLevel();
-
+            Logger fmlLog = LogManager.getLogger("FML");
+            if (!(fmlLog instanceof org.apache.logging.log4j.core.Logger)) {
+                return;
+            }
+            
+            MixinLogger.log = (org.apache.logging.log4j.core.Logger)fmlLog;
+            MixinLogger.oldLevel = MixinLogger.log.getLevel();
+            
             MixinLogger.appender.start();
-            log.addAppender(MixinLogger.appender);
-
-            log.setLevel(Level.ALL);
+            MixinLogger.log.addAppender(MixinLogger.appender);
+            
+            MixinLogger.log.setLevel(Level.ALL);
         }
 
         /**
@@ -784,11 +790,13 @@ public final class MixinEnvironment implements ITokenProvider {
                     // transition to INIT
                     MixinEnvironment.gotoPhase(Phase.INIT);
 
-                    // Only reset the log level if it's still ALL.
-                    // If something else changed the log level after we did, we don't want overwrite that change
-                    org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-                    if (log.getLevel() == Level.ALL) {
-                        log.setLevel(MixinLogger.oldLevel);
+                    // Only reset the log level if it's still ALL. If something
+                    // else changed the log level after we did, we don't want
+                    // overwrite that change. No null check is needed here
+                    // because the appender will not be injected if the log is
+                    // null
+                    if (MixinLogger.log.getLevel() == Level.ALL) {
+                        MixinLogger.log.setLevel(MixinLogger.oldLevel);
                     }
                 }
             }
