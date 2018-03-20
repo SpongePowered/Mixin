@@ -443,12 +443,12 @@ public final class MemberInfo {
             if (!this.owner.matches("(?i)^[\\w\\p{Sc}/]+$")) {
                 throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
             }
-            try {
-                if (!this.owner.equals(Type.getType(this.owner).getDescriptor())) {
-                    throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
-                }
-            } catch (Exception ex) {
-                throw new InvalidMemberDescriptorException("Invalid owner type specified: " + this.owner);
+            // We can't detect this situation 100% reliably, but we can take a
+            // decent stab at it in order to detect really obvious cases where
+            // the user types a dot instead of a semicolon
+            if (this.unparsed != null && this.unparsed.lastIndexOf('.') > 0 && this.owner.startsWith("L")) {
+                throw new InvalidMemberDescriptorException("Malformed owner: " + this.owner + " If you are seeing this message unexpectedly and the"
+                        + " owner appears to be correct, replace the owner descriptor with formal type L" + this.owner + "; to suppress this error");
             }
         }
         
