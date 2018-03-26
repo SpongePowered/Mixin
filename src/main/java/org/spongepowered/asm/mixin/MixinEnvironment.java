@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,8 +35,6 @@ import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.Filter;
-import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.spongepowered.asm.launch.GlobalProperties;
@@ -741,13 +738,13 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Temporary
      */
-    static class MixinLogger {
+    static class MixinLogWatcher {
 
-        static MixinAppender appender = new MixinAppender("MixinLogger", null, null);
+        static MixinAppender appender = new MixinAppender();
         static org.apache.logging.log4j.core.Logger log;
         static Level oldLevel = null;
 
-        public MixinLogger() {
+        static void begin() {
             /*
              * In order to determine when to switch to the INIT phase, Mixin
              * relies on being able to detect a specific message
@@ -766,13 +763,20 @@ public final class MixinEnvironment implements ITokenProvider {
                 return;
             }
             
-            MixinLogger.log = (org.apache.logging.log4j.core.Logger)fmlLog;
-            MixinLogger.oldLevel = MixinLogger.log.getLevel();
+            MixinLogWatcher.log = (org.apache.logging.log4j.core.Logger)fmlLog;
+            MixinLogWatcher.oldLevel = MixinLogWatcher.log.getLevel();
             
-            MixinLogger.appender.start();
-            MixinLogger.log.addAppender(MixinLogger.appender);
+            MixinLogWatcher.appender.start();
+            MixinLogWatcher.log.addAppender(MixinLogWatcher.appender);
             
-            MixinLogger.log.setLevel(Level.ALL);
+            MixinLogWatcher.log.setLevel(Level.ALL);
+        }
+        
+        static void end() {
+            if (MixinLogWatcher.log != null) {
+                // remove appender, we're done watching for messages
+                MixinLogWatcher.log.removeAppender(MixinLogWatcher.appender);
+            }
         }
 
         /**
@@ -780,24 +784,26 @@ public final class MixinEnvironment implements ITokenProvider {
          */
         static class MixinAppender extends AbstractAppender {
 
-            protected MixinAppender(String name, Filter filter, Layout<? extends Serializable> layout) {
-                super(name, filter, layout);
+            MixinAppender() {
+                super("MixinLogWatcherAppender", null, null);
             }
 
             @Override
             public void append(LogEvent event) {
-                if (event.getLevel() == Level.DEBUG && "Validating minecraft".equals(event.getMessage().getFormattedMessage())) {
-                    // transition to INIT
-                    MixinEnvironment.gotoPhase(Phase.INIT);
+                if (event.getLevel() != Level.DEBUG || !"Validating minecraft".equals(event.getMessage().getFormattedMessage())) {
+                    return;
+                }
+                
+                // transition to INIT
+                MixinEnvironment.gotoPhase(Phase.INIT);
 
-                    // Only reset the log level if it's still ALL. If something
-                    // else changed the log level after we did, we don't want
-                    // overwrite that change. No null check is needed here
-                    // because the appender will not be injected if the log is
-                    // null
-                    if (MixinLogger.log.getLevel() == Level.ALL) {
-                        MixinLogger.log.setLevel(MixinLogger.oldLevel);
-                    }
+                // Only reset the log level if it's still ALL. If something
+                // else changed the log level after we did, we don't want
+                // overwrite that change. No null check is needed here
+                // because the appender will not be injected if the log is
+                // null
+                if (MixinLogWatcher.log.getLevel() == Level.ALL) {
+                    MixinLogWatcher.log.setLevel(MixinLogWatcher.oldLevel);
                 }
             }
             
@@ -1332,8 +1338,7 @@ public final class MixinEnvironment implements ITokenProvider {
             MixinEnvironment env = MixinEnvironment.getEnvironment(phase);
             MixinEnvironment.getProfiler().setActive(env.getOption(Option.DEBUG_PROFILER));
             
-            @SuppressWarnings("unused")
-            MixinLogger logSpy = new MixinLogger();
+            MixinLogWatcher.begin();
         }
     }
     
@@ -1427,9 +1432,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
         
         if (phase == Phase.DEFAULT) {
-            // remove appender
-            org.apache.logging.log4j.core.Logger log = (org.apache.logging.log4j.core.Logger)LogManager.getLogger("FML");
-            log.removeAppender(MixinLogger.appender);
+            MixinLogWatcher.end();
         }
         
         MixinEnvironment.currentPhase = phase;
