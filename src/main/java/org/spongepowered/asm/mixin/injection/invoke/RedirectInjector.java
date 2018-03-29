@@ -88,7 +88,6 @@ import com.google.common.primitives.Ints;
 public class RedirectInjector extends InvokeInjector {
     
     private static final String KEY_NOMINATORS = "nominators";
-    private static final String KEY_WILD = "wildcard";
     private static final String KEY_FUZZ = "fuzz";
     private static final String KEY_OPCODE = "opcode";
 
@@ -126,6 +125,8 @@ public class RedirectInjector extends InvokeInjector {
     static class ConstructorRedirectData {
         
         public static final String KEY = "ctor";
+        
+        public boolean wildcard = false;
         
         public int injected = 0;
         
@@ -206,8 +207,9 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         for (InjectionPoint ip : nominators) {
-            if (ip instanceof BeforeNew && !((BeforeNew)ip).hasDescriptor()) {
+            if (ip instanceof BeforeNew) {
                 ctorData = this.getCtorRedirect((BeforeNew)ip);
+                ctorData.wildcard = !((BeforeNew)ip).hasDescriptor();
             } else if (ip instanceof BeforeFieldAccess) {
                 BeforeFieldAccess bfa = (BeforeFieldAccess)ip;
                 fuzz = bfa.getFuzzFactor();
@@ -219,7 +221,6 @@ public class RedirectInjector extends InvokeInjector {
         targetNode.decorate(Meta.KEY, this.meta);
         targetNode.decorate(RedirectInjector.KEY_NOMINATORS, nominators);
         if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
-            targetNode.decorate(RedirectInjector.KEY_WILD, Boolean.valueOf(ctorData != null));
             targetNode.decorate(ConstructorRedirectData.KEY, ctorData);
         } else {
             targetNode.decorate(RedirectInjector.KEY_FUZZ, Integer.valueOf(fuzz));
@@ -287,8 +288,7 @@ public class RedirectInjector extends InvokeInjector {
         super.postInject(target, node);
         if (node.getOriginalTarget() instanceof TypeInsnNode && node.getOriginalTarget().getOpcode() == Opcodes.NEW) {
             ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
-            boolean wildcard = node.<Boolean>getDecoration(RedirectInjector.KEY_WILD).booleanValue();
-            if (wildcard && meta.injected == 0) {
+            if (meta.wildcard && meta.injected == 0) {
                 throw new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s", this.annotationType, target));
             }
         }
@@ -587,14 +587,19 @@ public class RedirectInjector extends InvokeInjector {
 
     protected void injectAtConstructor(Target target, InjectionNode node) {
         ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
-        boolean wildcard = node.<Boolean>getDecoration(RedirectInjector.KEY_WILD).booleanValue();
+        
+        if (meta == null) {
+            // This should never happen, but let's display a less obscure error if it does
+            throw new InvalidInjectionException(this.info, String.format(
+                    "%s ctor redirector has no metadata, the injector failed a preprocessing phase", this.annotationType));
+        }
         
         final TypeInsnNode newNode = (TypeInsnNode)node.getCurrentTarget();
         final AbstractInsnNode dupNode = target.get(target.indexOf(newNode) + 1);
         final MethodInsnNode initNode = target.findInitNodeFor(newNode);
         
         if (initNode == null) {
-            if (!wildcard) {
+            if (!meta.wildcard) {
                 throw new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s", this.annotationType, target));
             }
             return;
@@ -607,7 +612,7 @@ public class RedirectInjector extends InvokeInjector {
         try {
             withArgs = this.checkDescriptor(desc, target, "constructor");
         } catch (InvalidInjectionException ex) {
-            if (!wildcard) {
+            if (!meta.wildcard) {
                 throw ex;
             }
             return;
