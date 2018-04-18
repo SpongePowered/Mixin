@@ -107,19 +107,16 @@ public final class ArgsClassGenerator implements IClassGenerator {
      * will not be generated until it is used. Calling this method simply
      * allocates a name for the specified descriptor.
      * 
-     * @param desc Descriptor of the <em>target</em> method, with the return
-     *      type changed to void (V)
+     * @param desc Descriptor of the <em>target</em> method, the return type is
+     *      ignored for the purposes of generating Args subclasses
      * @return name of the Args subclass to use
      */
     public String getClassName(String desc) {
-        if (!desc.endsWith(")V")) {
-            throw new IllegalArgumentException("Invalid @ModifyArgs method descriptor");
-        }
-        
-        String name = this.classNames.get(desc);
+        String voidDesc = Bytecode.changeDescriptorReturnType(desc, "V");
+        String name = this.classNames.get(voidDesc);
         if (name == null) {
             name = String.format("%s%d", ArgsClassGenerator.CLASS_NAME_BASE, this.nextIndex++);
-            this.classNames.put(desc, name);
+            this.classNames.put(voidDesc, name);
         }
         return name;
     }
@@ -263,9 +260,10 @@ public final class ArgsClassGenerator implements IClassGenerator {
         for (Type arg : args) {
             of.visitInsn(Opcodes.DUP);
             of.visitConstant(argIndex);
-            of.visitVarInsn(arg.getOpcode(Opcodes.ILOAD), argIndex++);
+            of.visitVarInsn(arg.getOpcode(Opcodes.ILOAD), argIndex);
             ArgsClassGenerator.box(of, arg);
             of.visitInsn(Opcodes.AASTORE);
+            argIndex += arg.getSize();
         }
 
         // Call the constructor passing in the generated array
