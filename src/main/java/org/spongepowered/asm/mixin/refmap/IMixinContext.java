@@ -44,6 +44,13 @@ public interface IMixinContext {
      * Get the mixin transformer extension manager
      */
     public abstract Extensions getExtensions();
+    
+    /**
+     * Get the mixin class name
+     * 
+     * @return the mixin class name
+     */
+    public abstract String getClassName();
 
     /**
      * Get the internal mixin class name

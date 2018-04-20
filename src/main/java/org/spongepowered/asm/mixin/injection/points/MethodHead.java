@@ -49,6 +49,11 @@ public class MethodHead extends InjectionPoint {
     public MethodHead(InjectionPointData data) {
         super(data);
     }
+    
+    @Override
+    public boolean checkPriority(int targetPriority, int ownerPriority) {
+        return true;
+    }
 
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {

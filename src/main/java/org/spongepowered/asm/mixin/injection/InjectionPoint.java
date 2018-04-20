@@ -215,6 +215,22 @@ public abstract class InjectionPoint {
     public String getId() {
         return this.id;
     }
+    
+    /**
+     * Runs a priority check in the context of this injection point. A priority
+     * check should return <tt>true</tt> if the injection point is allowed to
+     * inject given the relative priorities of the <em>target</em> (a method
+     * merged by another mixin with <tt>targetPriority</tt>) and the incoming
+     * mixin with priority <tt>mixinPriority</tt>.
+     * 
+     * @param targetPriority Priority of the mixin which originally merged the
+     *      target method in question
+     * @param mixinPriority Priority of the mixin which owns the owning injector
+     * @return true if the priority check succeeds
+     */
+    public boolean checkPriority(int targetPriority, int mixinPriority) {
+        return targetPriority < mixinPriority;
+    }
 
     /**
      * Find injection points in the supplied insn list

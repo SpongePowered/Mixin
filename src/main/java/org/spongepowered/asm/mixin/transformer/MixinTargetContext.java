@@ -288,6 +288,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return the mixin class name
      */
+    @Override
     public String getClassName() {
         return this.mixin.getClassName();
     }

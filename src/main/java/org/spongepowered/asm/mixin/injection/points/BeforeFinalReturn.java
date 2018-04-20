@@ -65,6 +65,11 @@ public class BeforeFinalReturn extends InjectionPoint {
         
         this.context = data.getContext();
     }
+    
+    @Override
+    public boolean checkPriority(int targetPriority, int ownerPriority) {
+        return true;
+    }
 
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {

@@ -156,6 +156,11 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     public ReferenceMapper getReferenceMapper() {
         return null;
     }
+    
+    @Override
+    public String getClassName() {
+        return this.mixin.getClassRef().replace('/', '.');
+    }
 
     @Override
     public String getClassRef() {

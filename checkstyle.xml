@@ -12,7 +12,6 @@
   <property name="severity" value="warning"/>
   <property name="charset" value="UTF-8"/>
   <module name="TreeWalker">
-    <module name="FileContentsHolder"/>
     <module name="OuterTypeFilename"/>
     <module name="IllegalTokenText">
       <property name="tokens" value="STRING_LITERAL, CHAR_LITERAL"/>
@@ -31,9 +30,7 @@
       <property name="tokens" value="LITERAL_TRY, LITERAL_CATCH, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, LITERAL_SWITCH"/>
     </module>
     <module name="NeedBraces"/>
-    <module name="LeftCurly">
-      <property name="maxLineLength" value="150"/>
-    </module>
+    <module name="LeftCurly"/>
     <module name="RightCurly"/>
     <module name="RightCurly">
       <property name="option" value="alone"/>
@@ -146,9 +143,9 @@
     </module>
     <module name="MethodName"/>
     <module name="UncommentedMain"/>
+    <module name="SuppressionCommentFilter"/>
   </module>
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
   </module>
-  <module name="SuppressionCommentFilter"/>
 </module>

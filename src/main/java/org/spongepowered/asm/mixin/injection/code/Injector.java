@@ -51,6 +51,7 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
 
@@ -214,12 +215,21 @@ public abstract class Injector {
      * @return Target insn nodes in the target method
      */
     private Collection<TargetNode> findTargetNodes(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
+        IMixinContext mixin = this.info.getContext();
         MethodNode method = injectorTarget.getMethod();
         Map<Integer, TargetNode> targetNodes = new TreeMap<Integer, TargetNode>();
         Collection<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
-
+        
         for (InjectionPoint injectionPoint : injectionPoints) {
             nodes.clear();
+            
+            if (injectorTarget.isMerged()
+                    && !mixin.getClassName().equals(injectorTarget.getMergedBy())
+                    && !injectionPoint.checkPriority(injectorTarget.getMergedPriority(), mixin.getPriority())) {
+                throw new InvalidInjectionException(this.info, String.format(
+                        "%s on %s with priority %d cannot inject into %s merged by %s with priority %d", injectionPoint, this, mixin.getPriority(),
+                        injectorTarget, injectorTarget.getMergedBy(), injectorTarget.getMergedPriority()));
+            }
 
             if (this.findTargetNodes(method, injectionPoint, injectorTarget.getSlice(injectionPoint), nodes)) {
                 for (AbstractInsnNode insn : nodes) {

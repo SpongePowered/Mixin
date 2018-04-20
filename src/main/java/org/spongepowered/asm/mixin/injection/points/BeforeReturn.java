@@ -78,6 +78,11 @@ public class BeforeReturn extends InjectionPoint {
 
         this.ordinal = data.getOrdinal();
     }
+    
+    @Override
+    public boolean checkPriority(int targetPriority, int ownerPriority) {
+        return true;
+    }
 
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {

@@ -430,17 +430,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return;
         }
         
-        String owner = Annotations.<String>getValue(merged, "mixin");
-        int priority = Annotations.<Integer>getValue(merged, "priority");
-        
-        if (priority >= this.mixin.getPriority() && !owner.equals(this.mixin.getClassName())) {
-            throw new InvalidInjectionException(this, String.format("%s cannot inject into %s::%s%s merged by %s with priority %d", this,
-                    this.classNode.name, target.name, target.desc, owner, priority));
-        }
-        
         if (Annotations.getVisible(target, Final.class) != null) {
             throw new InvalidInjectionException(this, String.format("%s cannot inject into @Final method %s::%s%s merged by %s", this,
-                    this.classNode.name, target.name, target.desc, owner));
+                    this.classNode.name, target.name, target.desc, Annotations.<String>getValue(merged, "mixin")));
         }
     }
     

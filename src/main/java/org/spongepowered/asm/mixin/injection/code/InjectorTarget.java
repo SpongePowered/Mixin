@@ -27,10 +27,14 @@ package org.spongepowered.asm.mixin.injection.code;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.spongepowered.asm.lib.tree.AnnotationNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodNode;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+import org.spongepowered.asm.util.Annotations;
 
 /**
  * Couples {@link MethodSlice method slices} to a {@link Target} for injection
@@ -52,6 +56,10 @@ public class InjectorTarget {
      * Target method data
      */
     private final Target target;
+    
+    private final String mergedBy;
+    
+    private final int mergedPriority;
 
     /**
      * ctor
@@ -62,6 +70,15 @@ public class InjectorTarget {
     public InjectorTarget(ISliceContext context, Target target) {
         this.context = context;
         this.target = target;
+        
+        AnnotationNode merged = Annotations.getVisible(target.method, MixinMerged.class);
+        this.mergedBy = Annotations.<String>getValue(merged, "mixin");
+        this.mergedPriority = Annotations.<Integer>getValue(merged, "priority", IMixinConfig.DEFAULT_PRIORITY);
+    }
+    
+    @Override
+    public String toString() {
+        return this.target.toString();
     }
     
     /**
@@ -76,6 +93,29 @@ public class InjectorTarget {
      */
     public MethodNode getMethod() {
         return this.target.method;
+    }
+    
+    /**
+     * Get whether this target method was merged by another mixin
+     */
+    public boolean isMerged() {
+        return this.mergedBy != null;
+    }
+    
+    /**
+     * Get the name of the mixin which merged this method, returns null for non-
+     * mixin methods
+     */
+    public String getMergedBy() {
+        return this.mergedBy;
+    }
+    
+    /**
+     * Get the priority of the mixin which merged this method, or default
+     * priority for non-mixin methods
+     */
+    public int getMergedPriority() {
+        return this.mergedPriority;
     }
     
     /**
