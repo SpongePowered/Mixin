@@ -49,6 +49,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * overwrite a member in the target class, and should be added to the
  * obfuscation table if {@link #remap} is true.</p>
  */
+@Deprecated
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Overwrite {
