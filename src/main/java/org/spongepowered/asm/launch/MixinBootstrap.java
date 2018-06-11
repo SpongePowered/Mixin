@@ -60,7 +60,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.7.9";
+    public static final String VERSION = "0.7.10";
     
     /**
      * Log all the things

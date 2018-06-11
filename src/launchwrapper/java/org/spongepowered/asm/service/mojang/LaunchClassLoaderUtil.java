@@ -95,14 +95,40 @@ final class LaunchClassLoaderUtil {
      * @return true if either exclusion list contains either of the names
      */
     boolean isClassExcluded(String name, String transformedName) {
+        return this.isClassClassLoaderExcluded(name, transformedName) || this.isClassTransformerExcluded(name, transformedName);
+    }
+
+    /**
+     * Get whether the specified name or transformedName exist in the
+     * classloader exclusion list
+     * 
+     * @param name class name
+     * @param transformedName transformed class name
+     * @return true if the classloader exclusion list contains either of the
+     *      names
+     */
+    boolean isClassClassLoaderExcluded(String name, String transformedName) {
         for (final String exception : this.getClassLoaderExceptions()) {
-            if (transformedName.startsWith(exception) || name.startsWith(exception)) {
+            if ((transformedName != null && transformedName.startsWith(exception)) || name.startsWith(exception)) {
                 return true;
             }
         }
         
+        return false;
+    }
+
+    /**
+     * Get whether the specified name or transformedName exist in the
+     * transformer exclusion list
+     * 
+     * @param name class name
+     * @param transformedName transformed class name
+     * @return true if the transformer exclusion list contains either of the
+     *      names
+     */
+    boolean isClassTransformerExcluded(String name, String transformedName) {
         for (final String exception : this.getTransformerExceptions()) {
-            if (transformedName.startsWith(exception) || name.startsWith(exception)) {
+            if ((transformedName != null && transformedName.startsWith(exception)) || name.startsWith(exception)) {
                 return true;
             }
         }

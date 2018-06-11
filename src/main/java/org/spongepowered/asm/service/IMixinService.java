@@ -127,6 +127,16 @@ public interface IMixinService {
     public abstract boolean isClassLoaded(String className);
 
     /**
+     * Check whether the specified class name is subject to any restrictions in
+     * the context of this service
+     * 
+     * @param className class name to check
+     * @return comma-separated list of restrictions, empty string if no
+     *      restrictions apply
+     */
+    public abstract String getClassRestrictions(String className);
+
+    /**
      * Get currently available transformers in the environment
      */
     public abstract Collection<ITransformer> getTransformers();

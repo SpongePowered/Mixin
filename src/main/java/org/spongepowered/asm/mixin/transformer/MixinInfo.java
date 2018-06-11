@@ -1158,11 +1158,18 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         byte[] mixinBytes = null;
 
         try {
+            if (runTransformers) {
+                String restrictions = this.service.getClassRestrictions(mixinClassName);
+                if (restrictions.length() > 0) {
+                    this.logger.error("Classloader restrictions [{}] encountered loading {}, name: {}", restrictions, this, mixinClassName);
+                }
+            }
             mixinBytes = this.service.getBytecodeProvider().getClassBytes(mixinClassName, runTransformers);
+            
         } catch (ClassNotFoundException ex) {
             throw new ClassNotFoundException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {
-            this.logger.warn("Failed to load mixin %s, the specified mixin will not be applied", mixinClassName);
+            this.logger.warn("Failed to load mixin {}, the specified mixin will not be applied", mixinClassName);
             throw new InvalidMixinException(this, "An error was encountered whilst loading the mixin class", ex);
         }
         

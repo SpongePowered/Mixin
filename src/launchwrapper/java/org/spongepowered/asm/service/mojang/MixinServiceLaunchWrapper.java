@@ -256,6 +256,22 @@ public class MixinServiceLaunchWrapper implements IMixinService, IClassProvider,
     }
     
     /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getClassRestrictions(
+     *      java.lang.String)
+     */
+    @Override
+    public String getClassRestrictions(String className) {
+        String restrictions = "";
+        if (this.classLoaderUtil.isClassClassLoaderExcluded(className, null)) {
+            restrictions = "PACKAGE_CLASSLOADER_EXCLUSION";
+        }
+        if (this.classLoaderUtil.isClassTransformerExcluded(className, null)) {
+            restrictions = (restrictions.length() > 0 ? restrictions + "," : "") + "PACKAGE_TRANSFORMER_EXCLUSION";
+        }
+        return restrictions;
+    }
+    
+    /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IClassProvider#getClassPath()
      */
     @Override
