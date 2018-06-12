@@ -4,10 +4,14 @@
 
 **Mixin** is a trait/mixin framework for Java using [ASM](http://asm.ow2.org/)
 and hooking into the runtime class-loading process via Mojang's
-[LegacyLauncher](https://github.com/Mojang/LegacyLauncher) system. The main
-documentation for **Mixin** can be found in the [Wiki](../../wiki). Additional
-documentation for individual features and annotations can be found in the
-extensive [Javadoc](http://jenkins.liteloader.com/job/Mixin/javadoc/). For
+[LegacyLauncher](https://github.com/Mojang/LegacyLauncher) system.
+
+### Documentation
+
+The main documentation for **Mixin** can be found in the [Wiki](../../wiki).
+
+Additional documentation for individual features and annotations can be found in
+the extensive [Javadoc](http://jenkins.liteloader.com/job/Mixin/javadoc/). For
 additional help use the channel `#spongedev` on the Espernet IRC network.
 
 ### Building Mixin
@@ -21,8 +25,7 @@ your system you can instead run the supplied Gradle wrapper `gradlew`)*
 
 ### Integration with Eclipse IDE
 
-The **Mixin** project can be integrated easily with Eclipse using the [Gradle
-Plugin](http://marketplace.eclipse.org/content/gradle-integration-eclipse-44).
+The **Mixin** project can be integrated easily with Eclipse using Buildship.
 Simply choose `Import` -> `Gradle Project` and follow the prompts.
 
 When developing using **Mixin**, you can use the **Mixin Annotation Processor**
@@ -56,483 +59,113 @@ plugin developed by [DemonWav](https://github.com/demonwav).
   <thead>
     <tr>
       <th width="15%">Version</th>
-      <th width="65%">Features / Changes</th>
       <th width="20%">Date</th>
+      <th width="65%">Features / Changes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td valign="top"><b>0.1</b></td>
+      <td valign="top"><b>0.7.10</b></td>
+      <td valign="top">June 2018</td>
       <td valign="top">
         <ul>
-          <li>Basic Mixin Support</li>
-          <li>Basic Injector Support</li>
-          <li>Annotation Processor</li>
+          <li>Log an error when a mixin class is subject to classloader restrictions</li>
         </ul>
       </td>
-      <td valign="top">January 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.2</b></td>
+      <td valign="top"><b>0.7.9</b></td>
+      <td valign="top">April 2018</td>
       <td valign="top">
         <ul>
-          <li>Added supermixin support (mixins inheriting from other mixins)</li>
+          <li>Allow certain injectors to target mixin methods.</li>
         </ul>
       </td>
-      <td valign="top">March 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.3</b></td>
+      <td valign="top"><b>0.7.8</b></td>
+      <td valign="top">April 2018</td>
       <td valign="top">
         <ul>
-          <li>Implemented Environments</li>
-          <li>Intrinsic method support</li>
-          <li>Enabled local variable capture</li>
-          <li>Alias support</li>
+          <li>Bug fixes for member declaration validation, non-wild ctor redirects,
+            and internal errors in <tt>Args</tt> subclass generator</li>
         </ul>
       </td>
-      <td valign="top">March 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.3.1</b></td>
+      <td valign="top"><b>0.7.7</b></td>
+      <td valign="top">March 2018</td>
       <td valign="top">
         <ul>
-          <li>Annotation Merging</li>
-          <li>Allow Overwrite methods to be aliased</li>
+          <li>Fixes for handling of log message triggers for INIT phase and error
+            when running with unexpected logger configurations</li>
+          <li>Add warnings for invalid slice points and narrowing conversion in
+            ModifyConstant handlers</li>
         </ul>
       </td>
-      <td valign="top">April 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.3.2</b></td>
+      <td valign="top"><b>0.7.6</b></td>
+      <td valign="top">November 2017</td>
       <td valign="top">
         <ul>
-          <li>Error handler support</li>
+          <li>Fix inheritance for string system properties</li>
         </ul>
       </td>
-      <td valign="top">April 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.4</b></td>
+      <td valign="top"><b>0.7.5</b></td>
+      <td valign="top">October 2017</td>
       <td valign="top">
         <ul>
-          <li>Shade relocated ASM package and use throughout</li>
+          <li>Add support for <tt>&#064;Coerce</tt> on redirect injectors.</li>
         </ul>
       </td>
-      <td valign="top">May 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.4.3</b></td>
+      <td valign="top"><b>0.7.4</b></td>
+      <td valign="top">September 2017</td>
       <td valign="top">
         <ul>
-          <li>Add <tt>INVOKE_ASSIGN</tt> injection point</li>
-          <li>Support injector callbacks without args</li>
-          <li>Support coercion of covariant parameter types in callbacks</li>
-          <li>Support truncating local-capturing injector handlers</li>
-          <li>Runtime decompilation of exported classes using fernflower</li>
-          <li>Add export filter</li>
+          <li>Added <tt>&#064;Dynamic</tt> annotation for decorating mixin
+          elements with dynamically-injected targets.</li>
         </ul>
       </td>
-      <td valign="top">May 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.4.4</b></td>
+      <td valign="top"><b>0.7.3</b></td>
+      <td valign="top">August 2017</td>
       <td valign="top">
         <ul>
-          <li>Add constraints for overwrites</li>
+          <li>Internal changes to provide for support modlauncher and java 9</li>
         </ul>
       </td>
-      <td valign="top">July 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.4.6</b></td>
+      <td valign="top"><b>0.7.2</b></td>
+      <td valign="top">August 2017</td>
       <td valign="top">
         <ul>
-          <li>Add INIT phase for handling early FML startup</li>
-          <li>Add support for lambdas in mixins</li>
-          <li>Add support for hot code replacement in mixins</li>
-          <li>Improve Java 8 feature support</li>
+          <li>Add profiler for inspecting mixin performance.</li>
         </ul>
       </td>
-      <td valign="top">September 2015</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.4.8</b></td>
+      <td valign="top"><b>0.7.1</b></td>
+      <td valign="top">August 2017</td>
       <td valign="top">
         <ul>
-          <li>Annotation Processor improved to support
-            <a href="https://github.com/SpongePowered/MixinGradle">
-            MixinGradle</a>
-          </li>
-          <li>Support multiple target obfuscation environments in refmaps</li>
+          <li>Fixes and improvements to the Mixin AP, fixing handling of multi-
+          dimensional arrays and resolving methods in superclasses of derived
+          types of obfuscated classes</li>
+          <li>Add runtime refmap remapping to support using deobfCompile
+          dependencies with different mapping versions.</li>
         </ul>
       </td>
-      <td valign="top">December 2015</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.10</b></td>
-      <td valign="top">
-        <ul>
-          <li>Runtime remapping support using RemapperChain</li>
-          <li>Ignore class transformers decorated with &#064;Resource</li>
-          <li>Support &#064;reason and &#064;author validation on overwrites</li>
-        </ul>
-      </td>
-      <td valign="top">December 2015</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.11</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for injector grouping and config-wide require value</li>
-        </ul>
-      </td>
-      <td valign="top">January 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.13</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add &#064;Final annotation</li>
-        </ul>
-      </td>
-      <td valign="top">January 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.14</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for interface mixins</li>
-        </ul>
-      </td>
-      <td valign="top">January 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.15</b></td>
-      <td valign="top">
-        <ul>
-          <li>Include soft targets in refmap</li>
-        </ul>
-      </td>
-      <td valign="top">January 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.17</b></td>
-      <td valign="top">
-        <ul>
-          <li>Support ExtraSRGs in Annotation Processor</li>
-          <li>Include constructors in reference map</li>
-          <li>Add &#064;Mutable annotation to suppress &#064;Final warnings</li>
-        </ul>
-      </td>
-      <td valign="top">January 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.18</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add &#064;ModifyLocal injector</li>
-        </ul>
-      </td>
-      <td valign="top">February 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.4.19</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for &#064;Redirect on fields as well as methods</li>
-        </ul>
-      </td>
-      <td valign="top">February 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.1</b></td>
-      <td valign="top">
-        <ul>
-          <li>Overhaul injectors, injectors from all mixins now scan before any
-          injectors are actually processed. Makes injectors more deterministic.
-          </li>
-        </ul>
-      </td>
-      <td valign="top">February 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.2</b></td>
-      <td valign="top">
-        <ul>
-          <li>Support ID on injectors</li>
-          <li>Support priority for injectors</li>
-        </ul>
-      </td>
-      <td valign="top">February 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.3</b></td>
-      <td valign="top">
-        <ul>
-          <li>Conform injectors</li>
-          <li>Enable hotswapper automatically if agent is active</li>
-          <li>Fix multiple issues with generics in Annotation Processors</li>
-        </ul>
-      </td>
-      <td valign="top">February 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.4</b></td>
-      <td valign="top">
-        <ul>
-          <li>Error handlers also receive mixin prepare errors</li>
-        </ul>
-      </td>
-      <td valign="top">April 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.5</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add &#064;ModifyConstant injector</li>
-          <li>Add &#064;Debug annotation</li>
-          <li>Allow static &#064;ModifyArg handlers in instance methods</li>
-        </ul>
-      </td>
-      <td valign="top">April 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.6</b></td>
-      <td valign="top">
-        <ul>
-          <li>Environment changes, support environment via agents</li>
-        </ul>
-      </td>
-      <td valign="top">May 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.7</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add &#064;Unique annotation</li>
-        </ul>
-      </td>
-      <td valign="top">June 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.8</b></td>
-      <td valign="top">
-        <ul>
-          <li>Support constraints on injectors</li>
-        </ul>
-      </td>
-      <td valign="top">June 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.9</b></td>
-      <td valign="top">
-        <ul>
-          <li>Hard fail if a required mixin target was already transformed</li>
-        </ul>
-      </td>
-      <td valign="top">June 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.10</b></td>
-      <td valign="top">
-        <ul>
-          <li>Support &#064;Unique on fields</li>
-        </ul>
-      </td>
-      <td valign="top">June 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.13</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add alternative strategy for injecting field initialisers</li>
-        </ul>
-      </td>
-      <td valign="top">September 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.14</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add async decompilation support</li>
-        </ul>
-      </td>
-      <td valign="top">September 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.16</b></td>
-      <td valign="top">
-        <ul>
-          <li>Annotation Processor improvements. Support shadows and overrides
-          in multi-target mixins</li>
-          <li>Support pluggable obfuscation environments in AP</li>
-        </ul>
-      </td>
-      <td valign="top">October 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.5.17</b></td>
-      <td valign="top">
-        <ul>
-          <li>Allow &#064;Redirect injectors to target <tt>NEW</tt> opcodes for
-          constructor redirection</li>
-        </ul>
-      </td>
-      <td valign="top">October 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6</b></td>
-      <td valign="top">
-        <ul>
-          <li><em>Accessor Mixin</em> support</li>
-        </ul>
-      </td>
-      <td valign="top">October 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.1</b></td>
-      <td valign="top">
-        <ul>
-          <li>Process soft-implements annotations in the AP</li>
-        </ul>
-      </td>
-      <td valign="top">November 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.2</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for &#064;Pseudo (virtual target) mixins</li>
-        </ul>
-      </td>
-      <td valign="top">December 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.3</b></td>
-      <td valign="top">
-        <ul>
-          <li>SourceDebugExtension support</li>
-        </ul>
-      </td>
-      <td valign="top">December 2016</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.4</b></td>
-      <td valign="top">
-        <ul>
-          <li>Allow descriptors on NEW injection points</li>
-        </ul>
-      </td>
-      <td valign="top">January 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.5</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for injector slices</li>
-        </ul>
-      </td>
-      <td valign="top">January 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.6</b></td>
-      <td valign="top">
-        <ul>
-          <li>Allow static methods in accessor mixins in Java 8 and above</li>
-        </ul>
-      </td>
-      <td valign="top">January 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.7</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for &#064;Redirect on array access</li>
-        </ul>
-      </td>
-      <td valign="top">January 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.8</b></td>
-      <td valign="top">
-        <ul>
-          <li>Allow &#064;ModifyConstant to hook implicit zero in comparisons</li>
-        </ul>
-      </td>
-      <td valign="top">February 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.10</b></td>
-      <td valign="top">
-        <ul>
-          <li>(0.6.9) Minor fix to remove dependence on deprecated helper</li>
-          <li>Respect <tt>remap</tt> on Mixin for contained <tt>&#064;At</tt></li>
-          <li>Require redirectors which occur before call to superctor to be static</li>
-        </ul>
-      </td>
-      <td valign="top">May 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.11</b></td>
-      <td valign="top">
-        <ul>
-          <li>Fix handling of <tt>&#064;Unique</tt> when the same unique method
-          exists in more than one mixin targetting the same class</li>
-          <li>Fix handling of merged lambdas so that lambdas from mixins are
-          applied correctly when lambdas already exist in the target class (both
-          in the original class and when applied by earlier mixins)</li>
-        </ul>
-      </td>
-      <td valign="top">June 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.12</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add <tt>slice</tt> argument to <tt>&#064;ModifyConstant</tt></li>
-          <li>Add <tt>&#064;ModifyArgs</tt> injector which can change multiple
-          method call arguments with a single handler.</li>
-        </ul>
-      </td>
-      <td valign="top">June 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.13</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for conforming visibility of overwrite methods to
-          match target class. Fixes issues where a target class method has been
-          modified by an <em>Access Transformer</em> to have higher visibility
-          </li>
-        </ul>
-      </td>
-      <td valign="top">July 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.14</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for using <tt>&#064;Coerce</tt> on reference types in
-          Callback Injectors to support derived types.</li>
-        </ul>
-      </td>
-      <td valign="top">July 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.6.15</b></td>
-      <td valign="top">
-        <ul>
-          <li>Add support for multiple constants in <tt>ModifyConstant</tt></li>
-          <li>Add <tt>CONSTANT</tt> as general-purpose injection point</li>
-          <li>Add support for redirecting array length access in field
-          redirectors</li>
-        </ul>
-      </td>
-      <td valign="top">July 2017</td>
     </tr>
     <tr>
       <td valign="top"><b>0.7</b></td>
+      <td valign="top">July 2017</td>
       <td valign="top">
         <ul>
           <li>All official binaries are now signed</li>
@@ -549,57 +182,476 @@ plugin developed by [DemonWav](https://github.com/demonwav).
           <li>Add <tt>allow</tt> to injectors to detect over-injection</li>
         </ul>
       </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.15</b></td>
       <td valign="top">July 2017</td>
-    </tr>
-    <tr>
-      <td valign="top"><b>0.7.1</b></td>
       <td valign="top">
         <ul>
-          <li>Fixes and improvements to the Mixin AP, fixing handling of multi-
-          dimensional arrays and resolving methods in superclasses of derived
-          types of obfuscated classes</li>
-          <li>Add runtime refmap remapping to support using deobfCompile
-          dependencies with different mapping versions.</li>
+          <li>Add support for multiple constants in <tt>ModifyConstant</tt></li>
+          <li>Add <tt>CONSTANT</tt> as general-purpose injection point</li>
+          <li>Add support for redirecting array length access in field
+          redirectors</li>
         </ul>
       </td>
-      <td valign="top">August 2017</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.7.2</b></td>
+      <td valign="top"><b>0.6.14</b></td>
+      <td valign="top">July 2017</td>
       <td valign="top">
         <ul>
-          <li>Add profiler for inspecting mixin performance.</li>
+          <li>Add support for using <tt>&#064;Coerce</tt> on reference types in
+          Callback Injectors to support derived types.</li>
         </ul>
       </td>
-      <td valign="top">August 2017</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.7.3</b></td>
+      <td valign="top"><b>0.6.13</b></td>
+      <td valign="top">July 2017</td>
       <td valign="top">
         <ul>
-          <li>Internal changes to provide for support modlauncher and java 9</li>
+          <li>Add support for conforming visibility of overwrite methods to
+          match target class. Fixes issues where a target class method has been
+          modified by an <em>Access Transformer</em> to have higher visibility
+          </li>
         </ul>
       </td>
-      <td valign="top">August 2017</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.7.4</b></td>
+      <td valign="top"><b>0.6.12</b></td>
+      <td valign="top">June 2017</td>
       <td valign="top">
         <ul>
-          <li>Added <tt>&#064;Dynamic</tt> annotation for decorating mixin
-          elements with dynamically-injected targets.</li>
+          <li>Add <tt>slice</tt> argument to <tt>&#064;ModifyConstant</tt></li>
+          <li>Add <tt>&#064;ModifyArgs</tt> injector which can change multiple
+          method call arguments with a single handler.</li>
         </ul>
       </td>
-      <td valign="top">September 2017</td>
     </tr>
     <tr>
-      <td valign="top"><b>0.7.5</b></td>
+      <td valign="top"><b>0.6.11</b></td>
+      <td valign="top">June 2017</td>
       <td valign="top">
         <ul>
-          <li>Add support for <tt>&#064;Coerce</tt> on redirect injectors.</li>
+          <li>Fix handling of <tt>&#064;Unique</tt> when the same unique method
+          exists in more than one mixin targetting the same class</li>
+          <li>Fix handling of merged lambdas so that lambdas from mixins are
+          applied correctly when lambdas already exist in the target class (both
+          in the original class and when applied by earlier mixins)</li>
         </ul>
       </td>
-      <td valign="top">October 2017</td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.10</b></td>
+      <td valign="top">May 2017</td>
+      <td valign="top">
+        <ul>
+          <li>(0.6.9) Minor fix to remove dependence on deprecated helper</li>
+          <li>Respect <tt>remap</tt> on Mixin for contained <tt>&#064;At</tt></li>
+          <li>Require redirectors which occur before call to superctor to be static</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.8</b></td>
+      <td valign="top">February 2017</td>
+      <td valign="top">
+        <ul>
+          <li>Allow &#064;ModifyConstant to hook implicit zero in comparisons</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.7</b></td>
+      <td valign="top">January 2017</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for &#064;Redirect on array access</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.6</b></td>
+      <td valign="top">January 2017</td>
+      <td valign="top">
+        <ul>
+          <li>Allow static methods in accessor mixins in Java 8 and above</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.5</b></td>
+      <td valign="top">January 2017</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for injector slices</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.4</b></td>
+      <td valign="top">January 2017</td>
+      <td valign="top">
+        <ul>
+          <li>Allow descriptors on NEW injection points</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.3</b></td>
+      <td valign="top">December 2016</td>
+      <td valign="top">
+        <ul>
+          <li>SourceDebugExtension support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.2</b></td>
+      <td valign="top">December 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for &#064;Pseudo (virtual target) mixins</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6.1</b></td>
+      <td valign="top">November 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Process soft-implements annotations in the AP</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.6</b></td>
+      <td valign="top">October 2016</td>
+      <td valign="top">
+        <ul>
+          <li><em>Accessor Mixin</em> support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.17</b></td>
+      <td valign="top">October 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Allow &#064;Redirect injectors to target <tt>NEW</tt> opcodes for
+          constructor redirection</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.16</b></td>
+      <td valign="top">October 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Annotation Processor improvements. Support shadows and overrides
+          in multi-target mixins</li>
+          <li>Support pluggable obfuscation environments in AP</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.14</b></td>
+      <td valign="top">September 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add async decompilation support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.13</b></td>
+      <td valign="top">September 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add alternative strategy for injecting field initialisers</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.10</b></td>
+      <td valign="top">June 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Support &#064;Unique on fields</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.9</b></td>
+      <td valign="top">June 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Hard fail if a required mixin target was already transformed</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.8</b></td>
+      <td valign="top">June 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Support constraints on injectors</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.7</b></td>
+      <td valign="top">June 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add &#064;Unique annotation</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.6</b></td>
+      <td valign="top">May 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Environment changes, support environment via agents</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.5</b></td>
+      <td valign="top">April 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add &#064;ModifyConstant injector</li>
+          <li>Add &#064;Debug annotation</li>
+          <li>Allow static &#064;ModifyArg handlers in instance methods</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.4</b></td>
+      <td valign="top">April 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Error handlers also receive mixin prepare errors</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.3</b></td>
+      <td valign="top">February 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Conform injectors</li>
+          <li>Enable hotswapper automatically if agent is active</li>
+          <li>Fix multiple issues with generics in Annotation Processors</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.2</b></td>
+      <td valign="top">February 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Support ID on injectors</li>
+          <li>Support priority for injectors</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.5.1</b></td>
+      <td valign="top">February 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Overhaul injectors, injectors from all mixins now scan before any
+          injectors are actually processed. Makes injectors more deterministic.
+          </li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.19</b></td>
+      <td valign="top">February 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for &#064;Redirect on fields as well as methods</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.18</b></td>
+      <td valign="top">February 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add &#064;ModifyLocal injector</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.17</b></td>
+      <td valign="top">January 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Support ExtraSRGs in Annotation Processor</li>
+          <li>Include constructors in reference map</li>
+          <li>Add &#064;Mutable annotation to suppress &#064;Final warnings</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.15</b></td>
+      <td valign="top">January 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Include soft targets in refmap</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.14</b></td>
+      <td valign="top">January 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for interface mixins</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.13</b></td>
+      <td valign="top">January 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add &#064;Final annotation</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.11</b></td>
+      <td valign="top">January 2016</td>
+      <td valign="top">
+        <ul>
+          <li>Add support for injector grouping and config-wide require value</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.10</b></td>
+      <td valign="top">December 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Runtime remapping support using RemapperChain</li>
+          <li>Ignore class transformers decorated with &#064;Resource</li>
+          <li>Support &#064;reason and &#064;author validation on overwrites</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.8</b></td>
+      <td valign="top">December 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Annotation Processor improved to support
+            <a href="https://github.com/SpongePowered/MixinGradle">
+            MixinGradle</a>
+          </li>
+          <li>Support multiple target obfuscation environments in refmaps</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.6</b></td>
+      <td valign="top">September 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Add INIT phase for handling early FML startup</li>
+          <li>Add support for lambdas in mixins</li>
+          <li>Add support for hot code replacement in mixins</li>
+          <li>Improve Java 8 feature support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.4</b></td>
+      <td valign="top">July 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Add constraints for overwrites</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4.3</b></td>
+      <td valign="top">May 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Add <tt>INVOKE_ASSIGN</tt> injection point</li>
+          <li>Support injector callbacks without args</li>
+          <li>Support coercion of covariant parameter types in callbacks</li>
+          <li>Support truncating local-capturing injector handlers</li>
+          <li>Runtime decompilation of exported classes using fernflower</li>
+          <li>Add export filter</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.4</b></td>
+      <td valign="top">May 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Shade relocated ASM package and use throughout</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.3.2</b></td>
+      <td valign="top">April 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Error handler support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.3.1</b></td>
+      <td valign="top">April 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Annotation Merging</li>
+          <li>Allow Overwrite methods to be aliased</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.3</b></td>
+      <td valign="top">March 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Implemented Environments</li>
+          <li>Intrinsic method support</li>
+          <li>Enabled local variable capture</li>
+          <li>Alias support</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.2</b></td>
+      <td valign="top">March 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Added supermixin support (mixins inheriting from other mixins)</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.1</b></td>
+      <td valign="top">January 2015</td>
+      <td valign="top">
+        <ul>
+          <li>Basic Mixin Support</li>
+          <li>Basic Injector Support</li>
+          <li>Annotation Processor</li>
+        </ul>
+      </td>
     </tr>
   </tbody>
 </table>
