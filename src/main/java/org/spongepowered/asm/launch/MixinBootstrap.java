@@ -34,11 +34,11 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.MixinService;
 
 /**
- * Bootstaps the mixin subsystem. This class acts as a bridge between the mixin
+ * Bootstraps the mixin subsystem. This class acts as a bridge between the mixin
  * subsystem and the tweaker or coremod which is boostrapping it. Without this
  * class, a coremod may cause classload of MixinEnvironment in the
  * LaunchClassLoader before we have a chance to exclude it. By placing the main
- * bootstap logic here we avoid the need for consumers to add the classloader
+ * bootstrap logic here we avoid the need for consumers to add the classloader
  * exclusion themselves.
  * 
  * <p>In development, where (because of the classloader environment at dev time)
@@ -51,7 +51,7 @@ import org.spongepowered.asm.service.MixinService;
  * its constructor and that would be the end of the story. However we also need
  * to register the additional tweaker for environment to detect the transition
  * from pre-init to default and we cannot do this within the tweaker constructor
- * witout triggering a ConcurrentModificationException in the tweaker list. To
+ * without triggering a ConcurrentModificationException in the tweaker list. To
  * work around this we register the secondary tweaker from within the mixin 
  * tweaker's acceptOptions method instead.</p>
  */
@@ -60,7 +60,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.7.10";
+    public static final String VERSION = "0.7.11";
     
     /**
      * Log all the things

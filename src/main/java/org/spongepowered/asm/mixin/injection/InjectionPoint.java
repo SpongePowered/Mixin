@@ -160,10 +160,9 @@ public abstract class InjectionPoint {
     public static final int DEFAULT_ALLOWED_SHIFT_BY = 0;
     
     /**
-     * Hard limit on the value of {@link At#by} which triggers warning/error
-     * (based on environment)
+     * Hard limit on the value of {@link At#by} which triggers error
      */
-    public static final int MAX_ALLOWED_SHIFT_BY = 0;
+    public static final int MAX_ALLOWED_SHIFT_BY = 5;
 
     /**
      * Available injection point types
@@ -665,6 +664,8 @@ public abstract class InjectionPoint {
             return;
         }
         
+        String limitBreached = "the maximum allowed value: ";
+        String advice = "Increase the value of maxShiftBy to suppress this warning.";
         int allowed = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
         if (context instanceof MixinTargetContext) {
             allowed = ((MixinTargetContext)context).getMaxShiftByValue();
@@ -674,11 +675,17 @@ public abstract class InjectionPoint {
             return;
         }
         
-        String message = String.format("@%s(%s) Shift.BY=%d on %s::%s exceeds the maximum allowed value %d.", Bytecode.getSimpleName(parent), point,
-                by, context, method.name, allowed);
+        if (by > InjectionPoint.MAX_ALLOWED_SHIFT_BY) {
+            limitBreached = "MAX_ALLOWED_SHIFT_BY=";
+            advice = "You must use an alternate query or a custom injection point.";
+            allowed = InjectionPoint.MAX_ALLOWED_SHIFT_BY; 
+        }
         
-        if (err == ShiftByViolationBehaviour.WARN) {
-            LogManager.getLogger("mixin").warn("{} Increase the value of maxShiftBy to suppress this warning.", message);
+        String message = String.format("@%s(%s) Shift.BY=%d on %s::%s exceeds %s%d. %s", Bytecode.getSimpleName(parent), point,
+                by, context, method.name, limitBreached, allowed, advice);
+        
+        if (err == ShiftByViolationBehaviour.WARN && allowed < InjectionPoint.MAX_ALLOWED_SHIFT_BY) {
+            LogManager.getLogger("mixin").warn(message);
             return;
         }
 
