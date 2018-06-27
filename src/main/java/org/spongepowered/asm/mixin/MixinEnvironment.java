@@ -358,6 +358,15 @@ public final class MixinEnvironment implements ITokenProvider {
         REFMAP_REMAP_SOURCE_ENV(Option.ENVIRONMENT, Inherit.INDEPENDENT, "refMapRemappingEnv", "searge"),
         
         /**
+         * When <tt>mixin.env.remapRefMap</tt> is enabled and a refmap is
+         * available for a mixin config, certain injection points are allowed to
+         * fail over to a "permissive" match which ignores the member descriptor
+         * in the refmap. To disable this behaviour, set this property to
+         * <tt>false</tt>.
+         */
+        REFMAP_REMAP_ALLOW_PERMISSIVE(Option.ENVIRONMENT, Inherit.INDEPENDENT, "allowPermissiveMatch", true, "true"),
+        
+        /**
          * Globally ignore the "required" attribute of all configurations
          */
         IGNORE_REQUIRED(Option.ENVIRONMENT, Inherit.INDEPENDENT, "ignoreRequired"),

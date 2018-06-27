@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
 /**
  * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
@@ -67,8 +68,26 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  */
 @AtCode("INVOKE")
 public class BeforeInvoke extends InjectionPoint {
+    
+    /**
+     * Member search type, the <tt>PERMISSIVE</tt> search is only used when
+     * refmap remapping is enabled.
+     */
+    public enum SearchType {
+        
+        STRICT,
+        PERMISSIVE
+        
+    }
 
-    protected final MemberInfo target, permissiveTarget;
+    protected final MemberInfo target;
+    
+    /**
+     * This option enables a fallback "permissive" search to occur if initial
+     * search fails <b>if and only if the {@link Option#REFMAP_REMAP} option is
+     * enabled and the context mixin's parent config has a valid refmap</b>.
+     */
+    protected final boolean allowPermissive;
 
     /**
      * This strategy can be used to identify a particular invocation if the same
@@ -81,13 +100,21 @@ public class BeforeInvoke extends InjectionPoint {
      * Class name (description) for debug logging
      */
     protected final String className;
+    
+    /**
+     * 
+     */
+    protected final IMixinContext context;
+
+    /**
+     * Logger reference 
+     */
+    protected final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * True to turn on strategy debugging to the console
      */
     private boolean log = false;
-
-    private final Logger logger = LogManager.getLogger("mixin");
 
     public BeforeInvoke(InjectionPointData data) {
         super(data);
@@ -96,7 +123,9 @@ public class BeforeInvoke extends InjectionPoint {
         this.ordinal = data.getOrdinal();
         this.log = data.get("log", false);
         this.className = this.getClassName();
-        this.permissiveTarget = data.getContext().getOption(Option.REFMAP_REMAP) ? this.target.transform(null) : null;
+        this.context = data.getContext();
+        this.allowPermissive = this.context.getOption(Option.REFMAP_REMAP) && this.context.getOption(Option.REFMAP_REMAP_ALLOW_PERMISSIVE)
+                && !this.context.getReferenceMapper().isDefault();
     }
 
     private String getClassName() {
@@ -124,19 +153,23 @@ public class BeforeInvoke extends InjectionPoint {
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
         this.log("{} is searching for an injection point in method with descriptor {}", this.className, desc);
         
-        if (!this.find(desc, insns, nodes, this.target)) {
-            return this.find(desc, insns, nodes, this.permissiveTarget);
+        if (!this.find(desc, insns, nodes, this.target, SearchType.STRICT) && this.target.desc != null && this.allowPermissive) {
+            this.logger.warn("STRICT match for {} using \"{}\" in {} returned 0 results, attempting permissive search. "
+                    + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, this.target, this.context);
+            return this.find(desc, insns, nodes, this.target, SearchType.PERMISSIVE);
         }
         return true;
     }
 
-    protected boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes, MemberInfo target) {
-        if (target == null) {
+    protected boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes, MemberInfo member, SearchType searchType) {
+        if (member == null) {
             return false;
         }
         
+        MemberInfo target = searchType == SearchType.PERMISSIVE ? member.transform(null) : member;
+        
         int ordinal = 0;
-        boolean found = false;
+        int found = 0;
         
         ListIterator<AbstractInsnNode> iter = insns.iterator();
         while (iter.hasNext()) {
@@ -152,7 +185,9 @@ public class BeforeInvoke extends InjectionPoint {
                     if (this.matchesInsn(nodeInfo, ordinal)) {
                         this.log("{} > > > found a matching insn at ordinal {}", this.className, ordinal);
                         
-                        found |= this.addInsn(insns, nodes, insn);
+                        if (this.addInsn(insns, nodes, insn)) {
+                            found++;
+                        }
 
                         if (this.ordinal == ordinal) {
                             break;
@@ -165,8 +200,13 @@ public class BeforeInvoke extends InjectionPoint {
 
             this.inspectInsn(desc, insns, insn);
         }
+        
+        if (searchType == SearchType.PERMISSIVE && found > 1) {
+            this.logger.warn("A permissive match for {} using \"{}\" in {} matched {} instructions, this may cause unexpected behaviour. "
+                    + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, member, this.context, found);
+        }
 
-        return found;
+        return found > 0;
     }
 
     protected boolean addInsn(InsnList insns, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
@@ -189,7 +229,7 @@ public class BeforeInvoke extends InjectionPoint {
     
     protected void log(String message, Object... params) {
         if (this.log) {
-            this.logger.info(message, params);
+            this.logger.info(message, params); 
         }
     }
     
