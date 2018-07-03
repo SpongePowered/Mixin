@@ -239,6 +239,15 @@ public final class MixinEnvironment implements ITokenProvider {
         DEBUG_EXPORT_DECOMPILE_THREADED(Option.DEBUG_EXPORT_DECOMPILE, Inherit.ALLOW_OVERRIDE, "async"),
         
         /**
+         * By default, if the runtime export decompiler is active, mixin generic
+         * signatures are merged into target classes. However this can cause
+         * problems with some runtime subsystems which attempt to reify generics
+         * using the signature data. Set this option to <tt>false</tt> to
+         * disable generic signature merging. 
+         */
+        DEBUG_EXPORT_DECOMPILE_MERGESIGNATURES(Option.DEBUG_EXPORT_DECOMPILE, Inherit.ALLOW_OVERRIDE, "mergeGenericSignatures"),
+        
+        /**
          * Run the CheckClassAdapter on all classes after mixins are applied,
          * also enables stricter checks on mixins for use at dev-time, promotes
          * some warning-level messages to exceptions 

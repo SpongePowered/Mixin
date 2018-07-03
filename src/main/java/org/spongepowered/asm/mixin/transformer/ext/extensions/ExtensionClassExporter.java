@@ -75,6 +75,10 @@ public class ExtensionClassExporter implements IExtension {
         }
     }
     
+    public boolean isDecompilerActive() {
+        return this.decompiler != null;
+    }
+    
     private IDecompiler initDecompiler(MixinEnvironment env, File outputPath) {
         if (!env.getOption(Option.DEBUG_EXPORT_DECOMPILE)) {
             return null;

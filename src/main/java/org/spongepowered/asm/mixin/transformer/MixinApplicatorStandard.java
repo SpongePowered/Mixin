@@ -56,6 +56,7 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
+import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionClassExporter;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
@@ -237,10 +238,22 @@ class MixinApplicatorStandard {
      */
     protected final Profiler profiler = MixinEnvironment.getProfiler();
     
+    /**
+     * Flag to track whether signatures from applied mixins should be merged
+     * into target classes. This is only true when the runtime decompiler is
+     * active. If this is disabled, signatures on merged mixin methods are
+     * stripped instead of remapped.
+     */
+    protected final boolean mergeSignatures;
+    
     MixinApplicatorStandard(TargetClassContext context) {
         this.context = context;
         this.targetName = context.getClassName();
         this.targetClass = context.getClassNode();
+        
+        ExtensionClassExporter exporter = context.getExtensions().<ExtensionClassExporter>getExtension(ExtensionClassExporter.class);
+        this.mergeSignatures = exporter.isDecompilerActive()
+                && MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT_DECOMPILE_MERGESIGNATURES);
     }
     
     /**
@@ -316,7 +329,9 @@ class MixinApplicatorStandard {
     }
 
     protected void applySignature(MixinTargetContext mixin) {
-        this.context.mergeSignature(mixin.getSignature());
+        if (this.mergeSignatures) {
+            this.context.mergeSignature(mixin.getSignature());
+        }
     }
 
     /**
@@ -389,6 +404,16 @@ class MixinApplicatorStandard {
             if (target == null) {
                 // This is just a local field, so add it
                 this.targetClass.fields.add(field);
+                
+                if (field.signature != null) {
+                    if (this.mergeSignatures) {
+                        SignatureVisitor sv = mixin.getSignature().getRemapper();
+                        new SignatureReader(field.signature).accept(sv);
+                        field.signature = sv.toString();
+                    } else {
+                        field.signature = null;
+                    }
+                }
             }
         }
     }
@@ -468,9 +493,13 @@ class MixinApplicatorStandard {
         mixin.methodMerged(method);
         
         if (method.signature != null) {
-            SignatureVisitor sv = mixin.getSignature().getRemapper();
-            new SignatureReader(method.signature).accept(sv);
-            method.signature = sv.toString();
+            if (this.mergeSignatures) {
+                SignatureVisitor sv = mixin.getSignature().getRemapper();
+                new SignatureReader(method.signature).accept(sv);
+                method.signature = sv.toString();
+            } else {
+                method.signature = null;
+            }
         }
     }
 
