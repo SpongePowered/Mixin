@@ -490,18 +490,20 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     }
     
     /**
-     * Find the call to <tt>super()</tt> in a constructor. This attempts to
-     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
-     * to another object ctor being passed into the super invocation.
+     * Find the call to <tt>super()</tt> or <tt>this()</tt> in a constructor.
+     * This attempts to locate the first call to <tt>&lt;init&gt;</tt> which
+     * isn't an inline call to another object ctor being passed into the
+     * super invocation.
      * 
-     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     * @return Call to <tt>super()</tt> or <tt>this()</tt>, or <tt>null</tt>
+     * if not found.
      */
-    public MethodInsnNode findSuperInitNode() {
+    public MethodInsnNode findSuperOrThisInitNode() {
         if (!this.isCtor) {
             return null;
         }
 
-        return Bytecode.findSuperInit(this.method, ClassInfo.forName(this.classNode.name).getSuperName());
+        return Bytecode.findSuperOrThisInit(this.method, this.classNode.name, ClassInfo.forName(this.classNode.name).getSuperName());
     }
     
     /**

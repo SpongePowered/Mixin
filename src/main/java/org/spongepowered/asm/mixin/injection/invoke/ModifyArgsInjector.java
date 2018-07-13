@@ -62,12 +62,6 @@ public class ModifyArgsInjector extends InvokeInjector {
     protected void checkTarget(Target target) {
         this.checkTargetModifiers(target, false);
     }
-    
-    @Override
-    protected void inject(Target target, InjectionNode node) {
-        this.checkTargetForNode(target, node);
-        super.inject(target, node);
-    }
 
     /**
      * Do the injection

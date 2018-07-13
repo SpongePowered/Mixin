@@ -391,8 +391,8 @@ class MixinPreProcessorStandard {
             mixinMethod.name = method.renameTo(target.name);
         }
         
-        if (Constants.CTOR.equals(target.name)) {
-            throw new InvalidMixinException(this.mixin, String.format("Nice try! %s in %s cannot alias a constructor", mixinMethod.name, this.mixin));
+        if (Constants.CTOR.equals(target.name) && !Constants.CTOR.equals(mixinMethod.name)) {
+            throw new InvalidMixinException(this.mixin, String.format("%s in %s cannot alias a constructor", mixinMethod.name, this.mixin));
         }
         
         if (!Bytecode.compareFlags(mixinMethod, target, Opcodes.ACC_STATIC)) {

@@ -50,6 +50,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
+import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
@@ -539,7 +540,14 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             methodRef.setDesc(this.transformMethodDescriptor(methodRef.getDesc()));
         } else if (this.detachedSuper || this.inheritsFromMixin) {
             if (methodRef.getOpcode() == Opcodes.INVOKESPECIAL) {
-                this.updateStaticBinding(method, methodRef);
+                if (Constants.CTOR.equals(methodRef.getName())) {
+                    if (methodRef.getOwner().equals(mixin.getClassInfo().getSuperName()) &&
+                        this.mixin.getClassInfo().getSuperClass().isMixin()) {
+                        this.updateStaticBinding(method, methodRef);
+                    }
+                } else {
+                    this.updateStaticBinding(method, methodRef);
+                }
             } else if (methodRef.getOpcode() == Opcodes.INVOKEVIRTUAL && ClassInfo.forName(methodRef.getOwner()).isMixin()) {
                 this.updateDynamicBinding(method, methodRef);
             }

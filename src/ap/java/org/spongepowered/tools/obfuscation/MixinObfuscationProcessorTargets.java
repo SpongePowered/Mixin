@@ -107,10 +107,10 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
             
             if (elem.getKind() == ElementKind.FIELD) {
                 this.mixins.registerShadow((TypeElement)parent, (VariableElement)elem, shadow);
-            } else if (elem.getKind() == ElementKind.METHOD) {
+            } else if (elem.getKind() == ElementKind.METHOD || elem.getKind() == ElementKind.CONSTRUCTOR) {
                 this.mixins.registerShadow((TypeElement)parent, (ExecutableElement)elem, shadow);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method or field",  elem);
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method, constructor or field",  elem);
             }
         }
     }
@@ -127,10 +127,10 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
                 continue;
             }
             
-            if (elem.getKind() == ElementKind.METHOD) {
+            if (elem.getKind() == ElementKind.METHOD || elem.getKind() == ElementKind.CONSTRUCTOR) {
                 this.mixins.registerOverwrite((TypeElement)parent, (ExecutableElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+                this.mixins.printMessage(Kind.ERROR, "Element is not a method or constructor",  elem);
             }
         }
     }
