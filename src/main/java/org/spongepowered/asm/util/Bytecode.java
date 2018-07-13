@@ -253,15 +253,15 @@ public final class Bytecode {
     }
 
     /**
-     * Find the call to <tt>super()</tt> in a constructor. This attempts to
-     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
-     * to another object ctor being passed into the super invocation.
+     * Find the call to <tt>super()</tt> or <tt>this()</tt> in a constructor. This
+     * attempts to locate the first call to <tt>&lt;init&gt;</tt> which isn't an
+     * inline call to another object ctor being passed into the super invocation.
      * 
      * @param method ctor to scan
      * @param superName name of superclass
-     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     * @return Call to <tt>super()</tt> or <tt>this()</tt>, or <tt>null</tt> if not found
      */
-    public static MethodInsnNode findSuperInit(MethodNode method, String superName) {
+    public static MethodInsnNode findSuperOrThisInit(MethodNode method, String className, String superName) {
         if (!Constants.CTOR.equals(method.name)) {
             return null;
         }
@@ -276,7 +276,7 @@ public final class Bytecode {
                 if (Constants.CTOR.equals(methodNode.name)) {
                     if (news > 0) {
                         news--;
-                    } else if (methodNode.owner.equals(superName)) {
+                    } else if (methodNode.owner.equals(className) || methodNode.owner.equals(superName)) {
                         return methodNode;
                     }
                 }

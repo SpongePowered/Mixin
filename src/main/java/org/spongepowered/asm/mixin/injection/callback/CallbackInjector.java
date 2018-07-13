@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
@@ -369,12 +368,20 @@ public class CallbackInjector extends Injector {
         if (target.isStatic != this.isStatic) {
             throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
         }
+    }
 
-        if (Constants.CTOR.equals(target.method.name)) {
-            for (InjectionPoint injectionPoint : injectionPoints) {
-                if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
-                    throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
-                            + " targetting a ctor in " + this + ". Only RETURN allowed for a ctor target");
+    protected void checkTargetForNode(Target target, InjectionNode node) {
+        if (target.isCtor) {
+            MethodInsnNode superCall = target.findSuperOrThisInitNode();
+            int superCallIndex = target.indexOf(superCall);
+            int targetIndex = target.indexOf(node.getCurrentTarget());
+            if (targetIndex <= superCallIndex) {
+                if (!this.isStatic) {
+                    throw new InvalidInjectionException(this.info, "Pre-super " + this.info + " injection must be static in " + this);
+                }
+
+                if (this.cancellable) {
+                    throw new InvalidInjectionException(this.info, "Pre-super " + this.info + " injection must not be cancellable in " + this);
                 }
             }
         }
@@ -422,6 +429,7 @@ public class CallbackInjector extends Injector {
             locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
         }
 
+        this.checkTargetForNode(target, node);
         this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
     }
 

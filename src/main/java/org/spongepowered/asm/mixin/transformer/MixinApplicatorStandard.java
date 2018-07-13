@@ -44,6 +44,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.signature.SignatureReader;
 import org.spongepowered.asm.lib.signature.SignatureVisitor;
 import org.spongepowered.asm.lib.tree.*;
+import org.spongepowered.asm.mixin.Copy;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -441,10 +442,23 @@ class MixinApplicatorStandard {
     }
 
     protected void applyNormalMethod(MixinTargetContext mixin, MethodNode mixinMethod) {
+        boolean isMeargableConstructor = Constants.CTOR.equals(mixinMethod.name)
+                                         && (Annotations.getVisible(mixinMethod, Overwrite.class) != null
+                                             || Annotations.getVisible(mixinMethod, Copy.class) != null);
+
+        if (isMeargableConstructor) {
+            this.checkConstructorCall(mixin, mixinMethod);
+        }
+
         // Reparent all mixin methods into the target class
         mixin.transformMethod(mixinMethod);
 
         if (!mixinMethod.name.startsWith("<")) {
+            this.checkMethodVisibility(mixin, mixinMethod);
+            this.checkMethodConstraints(mixin, mixinMethod);
+            this.mergeMethod(mixin, mixinMethod);
+        } else if (isMeargableConstructor) {
+            mixin.transformMethod(mixinMethod);
             this.checkMethodVisibility(mixin, mixinMethod);
             this.checkMethodConstraints(mixin, mixinMethod);
             this.mergeMethod(mixin, mixinMethod);
@@ -677,11 +691,14 @@ class MixinApplicatorStandard {
             return;
         }
         
-        // Patch the initialiser into the target class ctors
+        // Patch the initialiser into the target class ctors and ctors from other mixins
         for (MethodNode method : this.targetClass.methods) {
             if (Constants.CTOR.equals(method.name)) {
-                method.maxStack = Math.max(method.maxStack, ctor.maxStack);
-                this.injectInitialiser(mixin, method, initialiser);
+                AnnotationNode merged = Annotations.getVisible(method, MixinMerged.class);
+                if (merged == null || !mixin.getClassName().equals(Annotations.<String>getValue(merged, "mixin"))) {
+                    method.maxStack = Math.max(method.maxStack, ctor.maxStack);
+                    this.injectInitialiser(mixin, method, initialiser);
+                }
             }
         }
     }
@@ -843,7 +860,6 @@ class MixinApplicatorStandard {
         
         AbstractInsnNode insn = this.findInitialiserInjectionPoint(mixin, ctor, initialiser);
         if (insn == null) {
-            this.logger.warn("Failed to locate initialiser injection point in <init>{}, initialiser was not mixed in.", ctor.desc);
             return;
         }
 
@@ -886,7 +902,12 @@ class MixinApplicatorStandard {
             AbstractInsnNode insn = iter.next();
             if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name)) {
                 String owner = ((MethodInsnNode)insn).owner;
-                if (owner.equals(targetName) || owner.equals(targetSuperName)) {
+                
+                if (owner.equals(targetName)) {
+                    return null;
+                }
+                
+                if (owner.equals(targetSuperName)) {
                     targetInsn = insn;
                     if (mode == InitialiserInjectionMode.SAFE) {
                         break;
@@ -898,6 +919,10 @@ class MixinApplicatorStandard {
                     targetInsn = insn;
                 }
             }            
+        }
+        
+        if (targetInsn == null) {
+            this.logger.warn("Failed to locate initialiser injection point in <init>{}, initialiser was not mixed in.", ctor.desc);
         }
         
         return targetInsn;
@@ -1009,6 +1034,35 @@ class MixinApplicatorStandard {
             }
         } catch (InvalidConstraintException ex) {
             throw new InvalidMixinException(mixin, ex.getMessage());
+        }
+    }
+
+    /**
+     * Check that a method calls a either another constructor in the mixin or a constructor in the
+     * superclass of the target or a mixin targetting that superclass.
+     *
+     * @param mixin Mixin being applied
+     * @param method annotated method
+     */
+    protected void checkConstructorCall(MixinTargetContext mixin, MethodNode method) {
+        String targetName = mixin.getTarget().getClassName();
+        String superName = mixin.getTarget().getClassInfo().getSuperName();
+
+        MethodInsnNode constructor = Bytecode.findSuperOrThisInit(method, targetName, superName);
+        if (constructor == null) {
+            String message = String.format("Constructor %s%s in %s does call a this or super constructor copied to the target class", method.name, method.desc, mixin);
+            throw new InvalidMixinException(mixin, message);
+        } else if (constructor.name.equals(superName)) {
+            ClassInfo targetSuperClass = mixin.getTarget().getClassInfo().getSuperClass();
+            ClassInfo mixinSuperClass = mixin.getClassInfo().getSuperClass();
+
+            if (!mixinSuperClass.equals(targetSuperClass)) {
+                // Necessary because updateBinding may have updated a call to super in a class other than the target's super or mixin targetting it
+                String message = String.format("Constructor %s%s in %s contains call to super constructor, but mixin does " +
+                                               "not extend target's superclass or mixin targetting it",
+                        method.name, method.desc, mixin);
+                throw new InvalidMixinException(mixin, message);
+            }
         }
     }
 

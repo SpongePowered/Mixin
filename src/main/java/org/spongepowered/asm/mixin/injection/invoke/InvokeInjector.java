@@ -104,7 +104,7 @@ public abstract class InvokeInjector extends Injector {
      */
     protected void checkTargetForNode(Target target, InjectionNode node) {
         if (target.isCtor) {
-            MethodInsnNode superCall = target.findSuperInitNode();
+            MethodInsnNode superCall = target.findSuperOrThisInitNode();
             int superCallIndex = target.indexOf(superCall);
             int targetIndex = target.indexOf(node.getCurrentTarget());
             if (targetIndex <= superCallIndex) {
@@ -129,6 +129,7 @@ public abstract class InvokeInjector extends Injector {
                     + " in " + this);
         }
         
+        this.checkTargetForNode(target, node);
         this.injectAtInvoke(target, node);
     }
     

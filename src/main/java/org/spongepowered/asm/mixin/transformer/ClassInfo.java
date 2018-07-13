@@ -772,9 +772,7 @@ public final class ClassInfo {
     }
 
     private void addMethod(MethodNode method, boolean injected) {
-        if (!method.name.startsWith("<")) {
-            this.methods.add(new Method(method, injected));
-        }
+        this.methods.add(new Method(method, injected));
     }
 
     /**

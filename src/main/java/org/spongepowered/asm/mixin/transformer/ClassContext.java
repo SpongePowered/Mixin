@@ -35,6 +35,7 @@ import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.mixin.struct.MemberRef;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.util.Constants;
 
 /**
  * Base for class context objects
@@ -107,7 +108,7 @@ abstract class ClassContext {
     }
 
     protected void upgradeMethodRef(MethodNode containingMethod, MemberRef methodRef, Method method) {
-        if (methodRef.getOpcode() != Opcodes.INVOKESPECIAL) {
+        if (methodRef.getOpcode() != Opcodes.INVOKESPECIAL || Constants.CTOR.equals(methodRef.getName())) {
             return;
         }
         
