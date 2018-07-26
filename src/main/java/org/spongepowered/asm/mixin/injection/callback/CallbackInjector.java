@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
-import org.spongepowered.asm.mixin.injection.points.BeforeReturn;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
@@ -351,7 +350,7 @@ public class CallbackInjector extends Injector {
      * @param localCapture Local variable capture behaviour
      */
     public CallbackInjector(InjectionInfo info, boolean cancellable, LocalCapture localCapture, String identifier) {
-        super(info);
+        super(info, "@Inject");
         this.cancellable = cancellable;
         this.localCapture = localCapture;
         this.identifier = identifier;
@@ -365,19 +364,7 @@ public class CallbackInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
-        
-        if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of callback method does not match target in " + this);
-        }
-
-        if (Constants.CTOR.equals(target.method.name)) {
-            for (InjectionPoint injectionPoint : injectionPoints) {
-                if (!injectionPoint.getClass().equals(BeforeReturn.class)) {
-                    throw new InvalidInjectionException(this.info, "Found injection point type " + injectionPoint.getClass().getSimpleName()
-                            + " targetting a ctor in " + this + ". Only RETURN allowed for a ctor target");
-                }
-            }
-        }
+        this.checkTargetModifiers(target, true);
     }
     
     /* (non-Javadoc)
@@ -390,6 +377,13 @@ public class CallbackInjector extends Injector {
         InjectionNode injectionNode = target.addInjectionNode(node);
         
         for (InjectionPoint ip : nominators) {
+            
+            try {
+                this.checkTargetForNode(target, injectionNode, ip.getTargetRestriction(this.info));
+            } catch (InvalidInjectionException ex) {
+                throw new InvalidInjectionException(this.info, String.format("%s selector %s", ip, ex.getMessage()));
+            }
+            
             String id = ip.getId();
             if (Strings.isNullOrEmpty(id)) {
                 continue;

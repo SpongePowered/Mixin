@@ -43,16 +43,13 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionExceptio
  * Base class for injectors which inject at method invokes
  */
 public abstract class InvokeInjector extends Injector {
-    
-    protected final String annotationType;
 
     /**
      * @param info Information about this injection
      * @param annotationType Annotation type, used for error messages
      */
     public InvokeInjector(InjectionInfo info, String annotationType) {
-        super(info);
-        this.annotationType = annotationType;
+        super(info, annotationType);
     }
 
     /* (non-Javadoc)
@@ -75,48 +72,6 @@ public abstract class InvokeInjector extends Injector {
         this.checkTargetModifiers(target, true);
     }
 
-    /**
-     * Check that the <tt>static</tt> modifier of the target method matches the
-     * handler
-     * 
-     * @param target Target to check
-     * @param exactMatch True if static must match, false to only check if an
-     *      instance handler is targetting a static method
-     */
-    protected final void checkTargetModifiers(Target target, boolean exactMatch) {
-        if (exactMatch && target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' modifier of handler method does not match target in " + this);
-        } else if (!exactMatch && !this.isStatic && target.isStatic) {
-            throw new InvalidInjectionException(this.info, "non-static callback method " + this + " targets a static method which is not supported");
-        }
-    }
-
-    /**
-     * The normal staticness check is not location-aware, in that it merely
-     * enforces static modifiers of handlers to match their targets. For
-     * injecting into constructors however (which are ostensibly instance
-     * methods) calls which are injected <em>before</em> the call to <tt>
-     * super()</tt> cannot access <tt>this</tt> and must therefore be declared
-     * as static.
-     * 
-     * @param target Target method
-     * @param node Injection location
-     */
-    protected void checkTargetForNode(Target target, InjectionNode node) {
-        if (target.isCtor) {
-            MethodInsnNode superCall = target.findSuperInitNode();
-            int superCallIndex = target.indexOf(superCall);
-            int targetIndex = target.indexOf(node.getCurrentTarget());
-            if (targetIndex <= superCallIndex) {
-                if (!this.isStatic) {
-                    throw new InvalidInjectionException(this.info, "Pre-super " + this.annotationType + " invocation must be static in " + this);
-                }
-                return;
-            }
-        }
-        this.checkTargetModifiers(target, true);
-    }
-
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
      *      #inject(org.spongepowered.asm.mixin.injection.callback.Target,
@@ -125,8 +80,8 @@ public abstract class InvokeInjector extends Injector {
     @Override
     protected void inject(Target target, InjectionNode node) {
         if (!(node.getCurrentTarget() instanceof MethodInsnNode)) {
-            throw new InvalidInjectionException(this.info, this.annotationType + " annotation on is targetting a non-method insn in " + target
-                    + " in " + this);
+            throw new InvalidInjectionException(this.info, String.format("%s annotation on is targetting a non-method insn in %s in %s",
+                    this.annotationType, target, this));
         }
         
         this.injectAtInvoke(target, node);

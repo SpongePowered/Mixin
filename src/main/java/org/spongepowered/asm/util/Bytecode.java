@@ -99,6 +99,45 @@ public final class Bytecode {
         }
         
     }
+    
+    /**
+     * Information bundle returned from {@link Bytecode#findDelegateInit}
+     */
+    public static class DelegateInitialiser {
+        
+        /**
+         * No delegate initialiser found
+         */
+        public static final DelegateInitialiser NONE = new DelegateInitialiser(null, false);
+        
+        /**
+         * Constructor invocation
+         */
+        public final MethodInsnNode insn;
+        
+        /**
+         * True if the invocation is a super call, false if it's a call to
+         * another ctor in the same class
+         */
+        public final boolean isSuper;
+
+        /**
+         * True if the invocation is found, false if no delegate constructor
+         * was found (false for DelegateInitialiser.NONE)
+         */
+        public final boolean isPresent;
+
+        DelegateInitialiser(MethodInsnNode insn, boolean isSuper) {
+            this.insn = insn;
+            this.isSuper = isSuper;
+            this.isPresent = insn != null;
+        }
+
+        @Override
+        public String toString() {
+            return this.isSuper ? "super" : "this";
+        }
+    }
 
     /**
      * Integer constant opcodes
@@ -253,21 +292,24 @@ public final class Bytecode {
     }
 
     /**
-     * Find the call to <tt>super()</tt> in a constructor. This attempts to
-     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
-     * to another object ctor being passed into the super invocation.
+     * Find the call to <tt>super()</tt> or <tt>this()</tt> in a constructor.
+     * This attempts to locate the first call to <tt>&lt;init&gt;</tt> which
+     * isn't an inline call to another object ctor being passed into the super
+     * invocation.
      * 
-     * @param method ctor to scan
+     * @param ctor ctor to scan
      * @param superName name of superclass
-     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     * @param ownerName name of owning class
+     * @return Call to <tt>super()</tt>, <tt>this()</tt> or
+     *      <tt>DelegateInitialiser.NONE</tt> if not found
      */
-    public static MethodInsnNode findSuperInit(MethodNode method, String superName) {
-        if (!Constants.CTOR.equals(method.name)) {
-            return null;
+    public static DelegateInitialiser findDelegateInit(MethodNode ctor, String superName, String ownerName) {
+        if (!Constants.CTOR.equals(ctor.name)) {
+            return DelegateInitialiser.NONE;
         }
         
         int news = 0;
-        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
                 news++;
@@ -276,13 +318,16 @@ public final class Bytecode {
                 if (Constants.CTOR.equals(methodNode.name)) {
                     if (news > 0) {
                         news--;
-                    } else if (methodNode.owner.equals(superName)) {
-                        return methodNode;
+                    } else {
+                        boolean isSuper = methodNode.owner.equals(superName);
+                        if (isSuper || methodNode.owner.equals(ownerName)) {
+                            return new DelegateInitialiser(methodNode, isSuper);
+                        }
                     }
                 }
             }
         }
-        return null;
+        return DelegateInitialiser.NONE;
     }
 
     /**

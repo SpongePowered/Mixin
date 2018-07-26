@@ -37,6 +37,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
@@ -46,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ObjectArrays;
@@ -191,6 +193,11 @@ public class RedirectInjector extends InvokeInjector {
         int fuzz = BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT;
         int opcode = 0;
         
+        if (insn instanceof MethodInsnNode && Constants.CTOR.equals(((MethodInsnNode)insn).name)) {
+            throw new InvalidInjectionException(this.info, String.format("Illegal %s of constructor specified on %s",
+                    this.annotationType, this));
+        }
+        
         if (node != null ) {
             Meta other = node.getDecoration(Meta.KEY);
             
@@ -249,13 +256,13 @@ public class RedirectInjector extends InvokeInjector {
         }
         
         if (node.getCurrentTarget() instanceof MethodInsnNode) {
-            this.checkTargetForNode(target, node);
+            this.checkTargetForNode(target, node, RestrictTargetLevel.ALLOW_ALL);
             this.injectAtInvoke(target, node);
             return;
         }
         
         if (node.getCurrentTarget() instanceof FieldInsnNode) {
-            this.checkTargetForNode(target, node);
+            this.checkTargetForNode(target, node, RestrictTargetLevel.ALLOW_ALL);
             this.injectAtFieldAccess(target, node);
             return;
         }

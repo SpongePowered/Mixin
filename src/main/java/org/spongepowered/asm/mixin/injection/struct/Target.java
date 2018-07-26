@@ -43,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 
 /**
@@ -125,6 +126,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * Labels for LVT ranges, generated as needed 
      */
     private LabelNode start, end;
+    
+    /**
+     * Cached delegate initialiser call
+     */
+    private DelegateInitialiser delegateInitialiser;
 
     /**
      * Make a new Target for the supplied method
@@ -490,18 +496,25 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     }
     
     /**
-     * Find the call to <tt>super()</tt> in a constructor. This attempts to
-     * locate the first call to <tt>&lt;init&gt;</tt> which isn't an inline call
-     * to another object ctor being passed into the super invocation.
+     * Find the call to <tt>super()</tt> or <tt>this()</tt> in a constructor.
+     * This attempts to locate the first call to <tt>&lt;init&gt;</tt> which
+     * isn't an inline call to another object ctor being passed into the super
+     * invocation.
      * 
-     * @return Call to <tt>super()</tt> or <tt>null</tt> if not found
+     * @return Call to <tt>super()</tt>, <tt>this()</tt> or
+     *      <tt>DelegateInitialiser.NONE</tt> if not found
      */
-    public MethodInsnNode findSuperInitNode() {
+    public DelegateInitialiser findDelegateInitNode() {
         if (!this.isCtor) {
             return null;
         }
-
-        return Bytecode.findSuperInit(this.method, ClassInfo.forName(this.classNode.name).getSuperName());
+        
+        if (this.delegateInitialiser == null) {
+            String superName = ClassInfo.forName(this.classNode.name).getSuperName();
+            this.delegateInitialiser = Bytecode.findDelegateInit(this.method, superName, this.classNode.name);
+        }
+        
+        return this.delegateInitialiser;
     }
     
     /**

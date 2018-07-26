@@ -31,6 +31,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
@@ -96,7 +97,7 @@ public class ModifyArgInjector extends InvokeInjector {
     
     @Override
     protected void inject(Target target, InjectionNode node) {
-        this.checkTargetForNode(target, node);
+        this.checkTargetForNode(target, node, RestrictTargetLevel.ALLOW_ALL);
         super.inject(target, node);
     }
     

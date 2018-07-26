@@ -47,13 +47,16 @@ import org.spongepowered.asm.lib.tree.MethodNode;
 import org.spongepowered.asm.lib.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 
 /**
  * Base class for bytecode injectors
@@ -108,6 +111,11 @@ public abstract class Injector {
     protected InjectionInfo info;
 
     /**
+     * Annotation type, for use in informational errors 
+     */
+    protected final String annotationType;
+    
+    /**
      * Class node
      */
     protected final ClassNode classNode;
@@ -137,20 +145,13 @@ public abstract class Injector {
      * 
      * @param info Information about this injection
      */
-    public Injector(InjectionInfo info) {
-        this(info.getClassNode(), info.getMethod());
+    public Injector(InjectionInfo info, String annotationType) {
         this.info = info;
-    }
+        this.annotationType = annotationType;
 
-    /**
-     * Make a new CallbackInjector with the supplied args
-     * 
-     * @param classNode Class containing callback and target methods
-     * @param methodNode Callback method
-     */
-    private Injector(ClassNode classNode, MethodNode methodNode) {
-        this.classNode = classNode;
-        this.methodNode = methodNode;
+        this.classNode = info.getClassNode();
+        this.methodNode = info.getMethod();
+        
         this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
         this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = Bytecode.methodIsStatic(this.methodNode);
@@ -255,6 +256,65 @@ public abstract class Injector {
         if (target.classNode != this.classNode) {
             throw new InvalidInjectionException(this.info, "Target class does not match injector class in " + this);
         }
+    }
+
+    /**
+     * Check that the <tt>static</tt> modifier of the target method matches the
+     * handler
+     * 
+     * @param target Target to check
+     * @param exactMatch True if static must match, false to only check if an
+     *      instance handler is targetting a static method
+     */
+    protected final void checkTargetModifiers(Target target, boolean exactMatch) {
+        if (exactMatch && target.isStatic != this.isStatic) {
+            throw new InvalidInjectionException(this.info, String.format("'static' modifier of handler method does not match target in %s", this));
+        } else if (!exactMatch && !this.isStatic && target.isStatic) {
+            throw new InvalidInjectionException(this.info,
+                    String.format("non-static callback method %s targets a static method which is not supported", this));
+        }
+    }
+
+    /**
+     * The normal staticness check is not location-aware, in that it merely
+     * enforces static modifiers of handlers to match their targets. For
+     * injecting into constructors however (which are ostensibly instance
+     * methods) calls which are injected <em>before</em> the call to <tt>
+     * super()</tt> cannot access <tt>this</tt> and must therefore be declared
+     * as static.
+     * 
+     * @param target Target method
+     * @param node Injection location
+     */
+    protected void checkTargetForNode(Target target, InjectionNode node, RestrictTargetLevel targetLevel) {
+        if (target.isCtor) {
+            if (targetLevel == RestrictTargetLevel.METHODS_ONLY) {
+                throw new InvalidInjectionException(this.info, String.format("Found %s targetting a constructor in injector %s",
+                        this.annotationType, this));
+            }
+            
+            DelegateInitialiser superCall = target.findDelegateInitNode();
+            if (!superCall.isPresent) {
+                throw new InjectionError(String.format("Delegate constructor lookup failed for %s target on %s", this.annotationType, this.info));
+            }
+            
+            int superCallIndex = target.indexOf(superCall.insn);
+            int targetIndex = target.indexOf(node.getCurrentTarget());
+            if (targetIndex <= superCallIndex) {
+                if (targetLevel == RestrictTargetLevel.CONSTRUCTORS_AFTER_DELEGATE) {
+                    throw new InvalidInjectionException(this.info, String.format("Found %s targetting a constructor before %s() in injector %s",
+                            this.annotationType, superCall, this));
+                }
+                
+                if (!this.isStatic) {
+                    throw new InvalidInjectionException(this.info, String.format("%s handler before %s() invocation must be static in injector %s",
+                            this.annotationType, superCall, this));
+                }
+                return;
+            }
+        }
+        
+        this.checkTargetModifiers(target, true);
     }
 
     protected abstract void inject(Target target, InjectionNode node);

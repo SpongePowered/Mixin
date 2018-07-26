@@ -32,6 +32,7 @@ import org.spongepowered.asm.lib.Type;
 import org.spongepowered.asm.lib.tree.AbstractInsnNode;
 import org.spongepowered.asm.lib.tree.InsnList;
 import org.spongepowered.asm.lib.tree.InsnNode;
+import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
@@ -82,6 +83,11 @@ public class BeforeReturn extends InjectionPoint {
     @Override
     public boolean checkPriority(int targetPriority, int ownerPriority) {
         return true;
+    }
+    
+    @Override
+    public RestrictTargetLevel getTargetRestriction(IInjectionPointContext context) {
+        return RestrictTargetLevel.ALLOW_ALL;
     }
 
     @Override

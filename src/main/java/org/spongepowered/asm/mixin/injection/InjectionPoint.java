@@ -130,6 +130,31 @@ public abstract class InjectionPoint {
         public static final Selector DEFAULT = Selector.FIRST;
         
     }
+
+    /**
+     * Target restriction level for different injection point types when used
+     * by restricted injectors (eg. {@link Inject}).
+     */
+    public enum RestrictTargetLevel {
+        
+        /**
+         * Injection point is valid for instructions in methods only
+         */
+        METHODS_ONLY,
+
+        /**
+         * Injection point is valid for instructions in methods and in
+         * constructors but only <em>after</em> the delegate constructor call.
+         */
+        CONSTRUCTORS_AFTER_DELEGATE,
+
+        /**
+         * Injection point is valid for instructions in both methods and
+         * constructors, both before and after the delegate call 
+         */
+        ALLOW_ALL
+        
+    }
     
     /**
      * Behaviour for when the defined allowed value of {@link At#by} is exceeded
@@ -229,6 +254,18 @@ public abstract class InjectionPoint {
      */
     public boolean checkPriority(int targetPriority, int mixinPriority) {
         return targetPriority < mixinPriority;
+    }
+    
+    /**
+     * Returns the target restriction level for this injection point. This level
+     * defines whether an injection point is valid in its current state when
+     * being used by a restricted injector (currently {@link CallbackInjector}).
+     *  
+     * @param context injection-specific context
+     * @return restriction level
+     */
+    public RestrictTargetLevel getTargetRestriction(IInjectionPointContext context) {
+        return RestrictTargetLevel.METHODS_ONLY;
     }
 
     /**

@@ -98,7 +98,7 @@ public class ModifyVariableInjector extends Injector {
      * @param discriminator discriminator
      */
     public ModifyVariableInjector(InjectionInfo info, LocalVariableDiscriminator discriminator) {
-        super(info);
+        super(info, "@ModifyVariable");
         this.discriminator = discriminator;
     }
     

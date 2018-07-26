@@ -62,6 +62,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
@@ -677,11 +678,16 @@ class MixinApplicatorStandard {
             return;
         }
         
+        String superName = this.context.getClassInfo().getSuperName();
+        
         // Patch the initialiser into the target class ctors
         for (MethodNode method : this.targetClass.methods) {
             if (Constants.CTOR.equals(method.name)) {
-                method.maxStack = Math.max(method.maxStack, ctor.maxStack);
-                this.injectInitialiser(mixin, method, initialiser);
+                DelegateInitialiser superCall = Bytecode.findDelegateInit(method, superName, this.targetClass.name);
+                if (!superCall.isPresent || superCall.isSuper) {
+                    method.maxStack = Math.max(method.maxStack, ctor.maxStack);
+                    this.injectInitialiser(mixin, method, initialiser);
+                }
             }
         }
     }
