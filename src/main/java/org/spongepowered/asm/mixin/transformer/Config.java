@@ -24,14 +24,32 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
+
+import com.google.common.base.Strings;
 
 /**
  * Handle for marshalling mixin configs outside of the transformer package
  */
 public class Config {
     
+    /**
+     * Logger 
+     */
+    private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * All loaded configs, stored by name so that parents can be assigned
+     */
+    private static final Map<String, Config> allConfigs = new HashMap<String, Config>(); 
+
     /**
      * Config name, used as identity for the purposes of {@link #equals}
      */
@@ -50,7 +68,7 @@ public class Config {
     public String getName() {
         return this.name;
     }
-
+    
     /**
      * Access inner config
      */
@@ -77,6 +95,14 @@ public class Config {
      */
     public MixinEnvironment getEnvironment() {
         return this.config.getEnvironment();
+    }
+    
+    /**
+     * Get the the config's parent
+     */
+    public Config getParent() {
+        MixinConfig parent = this.config.getParent();
+        return parent != null ? parent.getHandle() : null;
     }
 
     /* (non-Javadoc)
@@ -113,7 +139,43 @@ public class Config {
      */
     @Deprecated
     public static Config create(String configFile, MixinEnvironment outer) {
-        return MixinConfig.create(configFile, outer);
+        Config config = Config.allConfigs.get(configFile);
+        if (config != null) {
+            return config;
+        }
+        
+        try {
+            config = MixinConfig.create(configFile, outer);
+            if (config != null) {
+                Config.allConfigs.put(config.getName(), config);
+            }
+        } catch (Exception ex) {
+            throw new MixinInitialisationError("Error initialising mixin config " + configFile, ex);
+        }
+        
+        if (config == null) {
+            return null;
+        }
+
+        String parent = config.get().getParentName();
+        if (!Strings.isNullOrEmpty(parent)) {
+            Config parentConfig;
+            try {
+                parentConfig = Config.create(parent, outer);
+                if (parentConfig != null) {
+                    if (!config.get().assignParent(parentConfig)) {
+                        config = null;
+                    }
+                }
+            } catch (Throwable th) {
+                throw new MixinInitialisationError("Error initialising parent mixin config " + parent + " of " + configFile, th);
+            }
+            if (parentConfig == null) {
+                Config.logger.error("Error encountered initialising mixin config {0}: The parent {1} could not be read.", configFile, parent);
+            }
+        }
+        
+        return config;
     }
 
     /**

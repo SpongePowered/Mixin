@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -54,6 +55,11 @@ public final class Mixins {
      * Error handlers for environment
      */
     private static final Set<String> errorHandlers = new LinkedHashSet<String>();
+    
+    /**
+     * Names of configs which have already been registered
+     */
+    private static final Set<String> registeredConfigs = new HashSet<String>();
     
     private Mixins() {}
     
@@ -97,7 +103,7 @@ public final class Mixins {
     }
 
     private static void registerConfiguration(Config config) {
-        if (config == null) {
+        if (config == null || Mixins.registeredConfigs.contains(config.getName())) {
             return;
         }
         
@@ -106,6 +112,12 @@ public final class Mixins {
             env.registerConfig(config.getName());
         }
         Mixins.getConfigs().add(config);
+        Mixins.registeredConfigs.add(config.getName());
+        
+        Config parent = config.getParent();
+        if (parent != null) {
+            Mixins.registerConfiguration(parent);
+        }
     }
     
     /**

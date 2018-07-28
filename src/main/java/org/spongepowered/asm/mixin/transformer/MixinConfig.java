@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +61,7 @@ import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.VersionNumber;
 
+import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
@@ -84,6 +86,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         @SerializedName("maxShiftBy")
         int maxShiftBy = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
+
+        void mergeFrom(InjectorOptions parent) {
+            if (this.defaultRequireValue == 0) {
+                this.defaultRequireValue = parent.defaultRequireValue;
+            }
+            if ("default".equals(this.defaultGroup)) {
+                this.defaultGroup = parent.defaultGroup;
+            }
+            if (this.maxShiftBy == InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY) {
+                this.maxShiftBy = parent.maxShiftBy;
+            }
+        }
         
     }
     
@@ -97,6 +111,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         @SerializedName("requireAnnotations")
         boolean requireOverwriteAnnotations;
+        
+        void mergeFrom(OverwriteOptions parent) {
+            this.conformAccessModifiers |= parent.conformAccessModifiers;
+            this.requireOverwriteAnnotations |= parent.requireOverwriteAnnotations;
+        }
         
     }
     
@@ -158,6 +177,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private transient Config handle;
 
     /**
+     * Parent config
+     */
+    private transient MixinConfig parent;
+
+    /**
+     * Name of the parent configuration, used to allow inheritance of config
+     * options without duplication
+     */
+    @SerializedName("parent")
+    private String parentName;
+    
+    /**
      * Target selector, eg. &#064;env(DEFAULT)
      */
     @SerializedName("target")
@@ -180,15 +211,23 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Determines whether failures in this mixin config are considered terminal
      * errors. Use this setting to indicate that failing to apply a mixin in
      * this config is a critical error and should cause the game to shutdown.
+     * Uses boxed boolean so that absent entries can be detected and assigned
+     * via parent config where specified.
      */
     @SerializedName("required")
-    private boolean required;
+    private Boolean requiredValue;
+    
+    /**
+     * Actual value of required, parsed from the value in the JSON, the
+     * environment options, and the parent config where specified.
+     */
+    private transient boolean required;
     
     /**
      * Configuration priority
      */
     @SerializedName("priority")
-    private int priority = IMixinConfig.DEFAULT_PRIORITY;
+    private int priority = -1;
     
     /**
      * Default mixin priority. By default, mixins get a priority of 
@@ -197,7 +236,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * priority for all mixins in this config to be set to an alternate value.
      */
     @SerializedName("mixinPriority")
-    private int mixinPriority = IMixinConfig.DEFAULT_PRIORITY;
+    private int mixinPriority = -1;
 
     /**
      * Package containing all mixins. This package will be monitored by the
@@ -278,13 +317,13 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Injector options 
      */
     @SerializedName("injectors")
-    private InjectorOptions injectorOptions = new InjectorOptions();
+    private InjectorOptions injectorOptions;
     
     /**
      * Overwrite options 
      */
     @SerializedName("overwrites")
-    private OverwriteOptions overwriteOptions = new OverwriteOptions();
+    private OverwriteOptions overwriteOptions;
     
     /**
      * Config plugin, if supplied
@@ -295,6 +334,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Reference mapper for injectors
      */
     private transient IReferenceMapper refMapper;
+
+    /**
+     * Keep track of initialisation state 
+     */
+    private transient boolean initialised = false;
 
     /**
      * Keep track of initialisation state 
@@ -324,13 +368,101 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private boolean onLoad(IMixinService service, String name, MixinEnvironment fallbackEnvironment) {
         this.service = service;
         this.name = name;
+        
+        // If parent is specified, don't perform postinit until parent is assigned
+        if (!Strings.isNullOrEmpty(this.parentName)) {
+            return true;
+        }
+        
+        // If no parent, initialise config options
         this.env = this.parseSelector(this.selector, fallbackEnvironment);
-        this.required &= !this.env.getOption(Option.IGNORE_REQUIRED);
+        this.required = this.requiredValue != null && this.requiredValue.booleanValue() && !this.env.getOption(Option.IGNORE_REQUIRED);
+        this.initPriority(IMixinConfig.DEFAULT_PRIORITY, IMixinConfig.DEFAULT_PRIORITY);
+        
+        if (this.injectorOptions == null) {
+            this.injectorOptions = new InjectorOptions();
+        }
+        
+        if (this.overwriteOptions == null) {
+            this.overwriteOptions = new OverwriteOptions();
+        }
+        
+        return this.postInit();
+    }
+
+    String getParentName() {
+        return this.parentName;
+    }
+    
+    /**
+     * Called by outer initialising agent to assign the parent to this config.
+     * Copies relevant settings from the parent into the local config object
+     * taking into account local overrides.
+     * 
+     * @param parentConfig parent config handle
+     * @return true if version check succeeded
+     */
+    boolean assignParent(Config parentConfig) {
+        if (this.parent != null) {
+            throw new MixinInitialisationError("Mixin config " + this.name + " was already initialised");
+        }
+        
+        if (parentConfig.get() == this) {
+            throw new MixinInitialisationError("Mixin config " + this.name + " cannot be its own parent");
+        }
+        
+        this.parent = parentConfig.get();
+        
+        if (!this.parent.initialised) {
+            throw new MixinInitialisationError("Mixin config " + this.name + " attempted to assign uninitialised parent config."
+                    + " This probably means that there is an indirect loop in the mixin configs: child -> parent -> child");
+        }
+        
+        this.env = this.parseSelector(this.selector, this.parent.env);
+        this.required = this.requiredValue == null ? this.parent.required
+                : this.requiredValue.booleanValue() && !this.env.getOption(Option.IGNORE_REQUIRED);
+
+        this.initPriority(this.parent.priority, this.parent.mixinPriority);
+        
+        if (this.injectorOptions == null) {
+            this.injectorOptions = this.parent.injectorOptions;
+        } else {
+            this.injectorOptions.mergeFrom(this.parent.injectorOptions);
+        }
+        
+        if (this.overwriteOptions == null) {
+            this.overwriteOptions = this.parent.overwriteOptions;
+        } else {
+            this.overwriteOptions.mergeFrom(this.parent.overwriteOptions);
+        }
+        
+        this.setSourceFile |= this.parent.setSourceFile;
+        this.verboseLogging |= this.parent.verboseLogging;
+        
+        return this.postInit();
+    }
+
+    private void initPriority(int defaultPriority, int defaultMixinPriority) {
+        if (this.priority < 0) {
+            this.priority = defaultPriority;
+        }
+        
+        if (this.mixinPriority < 0) {
+            this.priority = defaultMixinPriority;
+        }
+    }
+
+    private boolean postInit() throws MixinInitialisationError {
+        if (this.initialised) {
+            throw new MixinInitialisationError("Mixin config " + this.name + " was already initialised.");
+        }
+        
+        this.initialised = true;
         this.initCompatibilityLevel();
         this.initInjectionPoints();
         return this.checkVersion();
     }
-
+    
     @SuppressWarnings("deprecation")
     private void initCompatibilityLevel() {
         if (this.compatibility == null) {
@@ -404,6 +536,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
 
     private boolean checkVersion() throws MixinInitialisationError {
         if (this.version == null) {
+            // If the parent is non-null, then the version check has already been
+            // performed/warned at that level
+            if (this.parent != null && this.parent.version != null) {
+                return true;
+            }
             this.logger.error("Mixin config {} does not specify \"minVersion\" property", this.name);
         }
         
@@ -622,6 +759,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     @Override
     public MixinEnvironment getEnvironment() {
         return this.env;
+    }
+    
+    MixinConfig getParent() {
+        return this.parent;
     }
     
     /* (non-Javadoc)
@@ -878,7 +1019,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
         return (this.priority - other.priority);
     }
-
+    
     /**
      * Factory method, creates a new mixin configuration bundle from the
      * specified configFile, which must be accessible on the classpath
@@ -890,13 +1031,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     static Config create(String configFile, MixinEnvironment outer) {
         try {
             IMixinService service = MixinService.getService();
-            MixinConfig config = new Gson().fromJson(new InputStreamReader(service.getResourceAsStream(configFile)), MixinConfig.class);
+            InputStream resource = service.getResourceAsStream(configFile);
+            if (resource == null) {
+                throw new IllegalArgumentException(String.format("The specified resource '%s' was invalid or could not be read", configFile));
+            }
+            MixinConfig config = new Gson().fromJson(new InputStreamReader(resource), MixinConfig.class);
             if (config.onLoad(service, configFile, outer)) {
                 return config.getHandle();
             }
             return null;
+        } catch (IllegalArgumentException ex) {
+            throw ex;
         } catch (Exception ex) {
-            ex.printStackTrace();
             throw new IllegalArgumentException(String.format("The specified resource '%s' was invalid or could not be read", configFile), ex);
         }
     }
