@@ -31,6 +31,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -275,7 +276,7 @@ class MixinApplicatorStandard {
             }
             
             for (ApplicatorPass pass : ApplicatorPass.values()) {
-                Section timer = this.profiler.begin("pass", pass.name().toLowerCase());
+                Section timer = this.profiler.begin("pass", pass.name().toLowerCase(Locale.ROOT));
                 for (MixinTargetContext context : mixinContexts) {
                     this.applyMixin(current = context, pass);
                 }
@@ -288,7 +289,7 @@ class MixinApplicatorStandard {
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new InvalidMixinException(current, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst applying the mixin class: "
+            throw new InvalidMixinException(current, "Unexpected " + ex.getClass().getSimpleName() + " whilst applying the mixin class: "
                     + ex.getMessage(), ex);
         }
 
@@ -762,7 +763,7 @@ class MixinApplicatorStandard {
      * @return initialiser bytecode extracted from the supplied constructor, or
      *      null if the constructor range could not be parsed
      */
-    protected final Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) {
+    protected final Deque<AbstractInsnNode> getInitialiser(MixinTargetContext mixin, MethodNode ctor) throws InvalidMixinException {
         //
         // TODO Potentially rewrite this to be less horrible.
         //
@@ -810,7 +811,7 @@ class MixinApplicatorStandard {
                             // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
                             // code which will likely break things and fix it if a real test case ever appears
                             throw new InvalidMixinException(mixin, "Cannot handle " + Bytecode.getOpcodeName(opcode) + " opcode (0x"
-                                    + Integer.toHexString(opcode).toUpperCase() + ") in class initialiser");
+                                    + Integer.toHexString(opcode).toUpperCase(Locale.ROOT) + ") in class initialiser");
                         }
                     }
                     
@@ -909,7 +910,7 @@ class MixinApplicatorStandard {
             return InitialiserInjectionMode.DEFAULT;
         }
         try {
-            return InitialiserInjectionMode.valueOf(strMode.toUpperCase());
+            return InitialiserInjectionMode.valueOf(strMode.toUpperCase(Locale.ROOT));
         } catch (Exception ex) {
             this.logger.warn("Could not parse unexpected value \"{}\" for mixin.initialiserInjectionMode, reverting to DEFAULT", strMode);
             return InitialiserInjectionMode.DEFAULT;

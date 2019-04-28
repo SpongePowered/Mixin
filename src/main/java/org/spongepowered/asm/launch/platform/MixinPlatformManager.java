@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -259,7 +260,7 @@ public class MixinPlatformManager {
     @SuppressWarnings("deprecation")
     final void setCompatibilityLevel(String level) {
         try {
-            CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase());
+            CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase(Locale.ROOT));
             MixinPlatformManager.logger.debug("Setting mixin compatibility level: {}", value);
             MixinEnvironment.setCompatibilityLevel(value);
         } catch (IllegalArgumentException ex) {
