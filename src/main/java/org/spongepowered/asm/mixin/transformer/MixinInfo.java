@@ -880,7 +880,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         for (String targetRef : inTargets) {
             String targetName = targetRef.replace('/', '.');
             if (MixinInfo.classLoaderUtil.isClassLoaded(targetName) && !this.isReloading()) {
-                String message = String.format("Critical problem: %s target %s was already transformed.", this, targetName);
+                String message = String.format("Critical problem: %s target %s was loaded too early.", this, targetName);
                 if (this.parent.isRequired()) {
                     throw new MixinTargetAlreadyLoadedException(this, message, targetName);
                 }
