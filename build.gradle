@@ -378,19 +378,21 @@ task timestamp(type: Jar, dependsOn: build) {
 }
 
 task sourceJar(type: Jar) {
-	from sourceSets.main.java
-	from sourceSets.main.resources
-	from sourceSets.ap.java
-	from sourceSets.ap.resources
-	from sourceSets.fernflower.java
-	from sourceSets.fernflower.resources
+    from sourceSets.main.java
+    from sourceSets.main.resources
+    from sourceSets.ap.java
+    from sourceSets.ap.resources
+    from sourceSets.fernflower.java
+    from sourceSets.fernflower.resources
     from sourceSets.agent.java
     from sourceSets.agent.resources
     from sourceSets.bridge.java
     from sourceSets.bridge.resources
     from sourceSets.example.java
     from sourceSets.example.resources
-	classifier = "sources"
+    from sourceSets.launchwrapper.java
+    from sourceSets.launchwrapper.resources
+    classifier = "sources"
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
