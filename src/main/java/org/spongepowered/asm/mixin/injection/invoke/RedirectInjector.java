@@ -157,6 +157,16 @@ public class RedirectInjector extends InvokeInjector {
                     : ObjectArrays.concat(Type.getType("L" + node.owner + ";"), this.args);
         }
     }
+
+    static class RedirectedInstanceOf {
+        final Target target;
+        final TypeInsnNode node;
+
+        public RedirectedInstanceOf(Target target, TypeInsnNode node) {
+            this.target = target;
+            this.node = node;
+        }
+    }
     
     protected Meta meta;
 
@@ -266,6 +276,12 @@ public class RedirectInjector extends InvokeInjector {
             this.injectAtFieldAccess(target, node);
             return;
         }
+
+        if (node.getCurrentTarget() instanceof TypeInsnNode && node.getCurrentTarget().getOpcode() == Opcodes.INSTANCEOF) {
+            this.checkTargetForNode(target, node);
+            this.injectAtInstanceOf(target, node);
+            return;
+        }
         
         if (node.getCurrentTarget() instanceof TypeInsnNode && node.getCurrentTarget().getOpcode() == Opcodes.NEW) {
             if (!this.isStatic && target.isStatic) {
@@ -324,6 +340,20 @@ public class RedirectInjector extends InvokeInjector {
         target.replaceNode(invoke.node, insn, insns);
         target.addToLocals(extraLocals);
         target.addToStack(extraStack);
+    }
+
+    private void injectAtInstanceOf(Target target, InjectionNode node) {
+        RedirectedInstanceOf instanceOf = new RedirectedInstanceOf(target, (TypeInsnNode)node.getCurrentTarget());
+
+        this.validateParams(instanceOf);
+
+        InsnList insns = new InsnList();
+
+        int[] argMap = this.storeArgs(target, invoke.locals, insns, 0);
+
+        AbstractInsnNode insn = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
+
+        target.replaceNode(instanceOf.node, insn, insns);
     }
 
     /**

@@ -101,8 +101,9 @@ public @interface At {
      * {@link BeforeFieldAccess FIELD},
      * {@link BeforeNew NEW},
      * {@link BeforeStringInvoke INVOKE_STRING},
-     * {@link JumpInsnPoint JUMP} and
-     * {@link BeforeConstant CONSTANT}.
+     * {@link JumpInsnPoint JUMP},
+     * {@link BeforeConstant CONSTANT}, and
+     * {@link InstanceofInsnPoint INSTANCEOF}.
      * See the javadoc for each type for more details on the scheme used by each
      * injection point.</p>
      * 
