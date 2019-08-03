@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection.points;
 
 import java.util.Collection;
 import java.util.ListIterator;
+import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -130,7 +131,7 @@ public class BeforeInvoke extends InjectionPoint {
 
     private String getClassName() {
         AtCode atCode = this.getClass().<AtCode>getAnnotation(AtCode.class);
-        return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase());
+        return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase(Locale.ROOT));
     }
 
     /**

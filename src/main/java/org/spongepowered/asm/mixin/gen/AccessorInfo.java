@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.gen;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -410,11 +411,11 @@ public class AccessorInfo extends SpecialMethodInfo {
     }
 
     private static String toLowerCase(String string, boolean condition) {
-        return condition ? string.toLowerCase() : string;
+        return condition ? string.toLowerCase(Locale.ROOT) : string;
     }
     
     private static boolean isUpperCase(String string) {
-        return string.toUpperCase().equals(string);
+        return string.toUpperCase(Locale.ROOT).equals(string);
     }
 
 }

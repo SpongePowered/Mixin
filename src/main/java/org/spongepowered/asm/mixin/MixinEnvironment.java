@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -574,7 +575,7 @@ public final class MixinEnvironment implements ITokenProvider {
         <E extends Enum<E>> E getEnumValue(E defaultValue) {
             String value = System.getProperty(this.property, defaultValue.name());
             try {
-                return (E)Enum.valueOf(defaultValue.getClass(), value.toUpperCase());
+                return (E)Enum.valueOf(defaultValue.getClass(), value.toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException ex) {
                 return defaultValue;
             }
@@ -931,7 +932,7 @@ public final class MixinEnvironment implements ITokenProvider {
     MixinEnvironment(Phase phase) {
         this.service = MixinService.getService();
         this.phase = phase;
-        this.configsKey = GlobalProperties.Keys.CONFIGS + "." + this.phase.name.toLowerCase();
+        this.configsKey = GlobalProperties.Keys.CONFIGS + "." + this.phase.name.toLowerCase(Locale.ROOT);
         
         // Sanity check
         Object version = this.getVersion();
@@ -1096,7 +1097,7 @@ public final class MixinEnvironment implements ITokenProvider {
      */
     @Override
     public Integer getToken(String token) {
-        token = token.toUpperCase();
+        token = token.toUpperCase(Locale.ROOT);
         
         for (TokenProviderWrapper provider : this.tokenProviders) {
             Integer value = provider.getToken(token);

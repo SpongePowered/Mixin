@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.util;
 
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -286,7 +287,7 @@ public final class ConstraintParser {
             return Constraint.NONE;
         }
         
-        String[] exprs = expr.replaceAll("\\s", "").toUpperCase().split(";");
+        String[] exprs = expr.replaceAll("\\s", "").toUpperCase(Locale.ROOT).split(";");
         Constraint head = null;
         for (String subExpr : exprs) {
             Constraint next = new Constraint(subExpr);

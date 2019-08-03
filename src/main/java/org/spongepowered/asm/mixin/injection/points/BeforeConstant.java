@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -187,9 +188,9 @@ public class BeforeConstant extends InjectionPoint {
         }
         
         List<Condition> conditions = new ArrayList<Condition>();
-        String strConditions = data.get("expandZeroConditions", "").toLowerCase();
+        String strConditions = data.get("expandZeroConditions", "").toLowerCase(Locale.ROOT);
         for (Condition condition : Condition.values()) {
-            if (strConditions.contains(condition.name().toLowerCase())) {
+            if (strConditions.contains(condition.name().toLowerCase(Locale.ROOT))) {
                 conditions.add(condition);
             }
         }

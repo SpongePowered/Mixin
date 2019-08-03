@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -337,7 +338,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             return;
         }
         
-        CompatibilityLevel level = CompatibilityLevel.valueOf(this.compatibility.trim().toUpperCase());
+        CompatibilityLevel level = CompatibilityLevel.valueOf(this.compatibility.trim().toUpperCase(Locale.ROOT));
         CompatibilityLevel current = MixinEnvironment.getCompatibilityLevel();
         
         if (level == current) {

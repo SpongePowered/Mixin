@@ -123,7 +123,7 @@ public class MixinTransformer extends TreeTransformer {
         private final String text;
         
         private ErrorPhase() {
-            this.text = this.name().toLowerCase();
+            this.text = this.name().toLowerCase(Locale.ROOT);
         }
         
         abstract ErrorAction onError(IMixinErrorHandler handler, String context, InvalidMixinException ex, IMixinInfo mixin, ErrorAction action);
@@ -431,7 +431,7 @@ public class MixinTransformer extends TreeTransformer {
 
         if (basicClass == null) {
             for (IClassGenerator generator : this.extensions.getGenerators()) {
-                Section genTimer = this.profiler.begin("generator", generator.getClass().getSimpleName().toLowerCase());
+                Section genTimer = this.profiler.begin("generator", generator.getClass().getSimpleName().toLowerCase(Locale.ROOT));
                 basicClass = generator.generate(transformedName);
                 genTimer.end();
                 if (basicClass != null) {
