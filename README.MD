@@ -65,6 +65,15 @@ plugin developed by [DemonWav](https://github.com/demonwav).
   </thead>
   <tbody>
     <tr>
+      <td valign="top"><b>0.7.11</b></td>
+      <td valign="top">June 2018</td>
+      <td valign="top">
+        <ul>
+          <li>Disable signature merging unless decompiler is active</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td valign="top"><b>0.7.10</b></td>
       <td valign="top">June 2018</td>
       <td valign="top">
