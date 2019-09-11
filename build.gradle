@@ -150,7 +150,7 @@ eclipseClasspath.dependsOn(renamedASM)
 // Project dependencies
 dependencies {
     def guava = 'com.google.guava:guava:17.0'
-    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
+    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.12.1'
     
     compile guava
     compile log4j2
