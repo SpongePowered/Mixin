@@ -72,7 +72,7 @@ plugin developed by [DemonWav](https://github.com/demonwav).
         <ul>
           <li><b>Updated to ASM 6.2</b></li>
           <li><b>Support for <a href="https://github.com/cpw/modlauncher/">
-            ModLauncher</a></li>
+            ModLauncher</a></b></li>
           <li>Added recognition for Java 9 and 10</li>
           <li>Support for <em>ForgeGradle 3+</em> tsrg obfuscation tables
           <li>Configs can now inherit from other configs</li>
