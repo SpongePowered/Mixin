@@ -198,9 +198,9 @@ class PluginHandle {
         
         try {
             Class<?> pluginClass = this.plugin.getClass();
-            this.mdPreApply = pluginClass.getMethod("preApply", String.class, org.spongepowered.asm.lib.tree.ClassNode.class, String.class,
+            this.mdPreApply = pluginClass.getMethod("preApply", String.class, ClassNode.class, String.class,
                     IMixinInfo.class);
-            this.mdPostApply = pluginClass.getMethod("postApply", String.class, org.spongepowered.asm.lib.tree.ClassNode.class, String.class,
+            this.mdPostApply = pluginClass.getMethod("postApply", String.class, ClassNode.class, String.class,
                     IMixinInfo.class);
         } catch (Throwable th) {
             PluginHandle.logger.catching(th);
@@ -209,7 +209,7 @@ class PluginHandle {
 
     private void applyLegacy(Method method, String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
         try {
-            method.invoke(this.plugin, targetClassName, new org.spongepowered.asm.lib.tree.ClassNode(targetClass), mixinClassName, mixinInfo);
+            method.invoke(this.plugin, targetClassName, new ClassNode(targetClass), mixinClassName, mixinInfo);
         } catch (LinkageError err) {
             throw new CompanionPluginError(this.apiError("Accessing [" + err.getMessage() + "]"), err);
         } catch (IllegalAccessException ex) {
