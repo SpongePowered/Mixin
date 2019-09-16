@@ -24,9 +24,9 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.FieldNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FieldNode;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Accessor generator for field accessors
@@ -43,16 +43,11 @@ public abstract class AccessorGeneratorField extends AccessorGenerator {
      */
     protected final Type targetType;
 
-    /**
-     * True for instance field, false for static field 
-     */
-    protected final boolean isInstanceField;
-
     public AccessorGeneratorField(AccessorInfo info) {
-        super(info);
+        super(info, Bytecode.isStatic(info.getTargetField()));
         this.targetField = info.getTargetField();
         this.targetType = info.getTargetFieldType();
-        this.isInstanceField = (this.targetField.access & Opcodes.ACC_STATIC) == 0;
+        this.checkModifiers();
     }
 
 }

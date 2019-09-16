@@ -30,26 +30,26 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FrameNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.LabelNode;
-import org.spongepowered.asm.lib.tree.LineNumberNode;
-import org.spongepowered.asm.lib.tree.LocalVariableNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
-import org.spongepowered.asm.lib.tree.analysis.Analyzer;
-import org.spongepowered.asm.lib.tree.analysis.AnalyzerException;
-import org.spongepowered.asm.lib.tree.analysis.BasicValue;
-import org.spongepowered.asm.lib.tree.analysis.Frame;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.LineNumberNode;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.BasicValue;
+import org.objectweb.asm.tree.analysis.Frame;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.FrameData;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.util.asm.MixinVerifier;
-import org.spongepowered.asm.util.throwables.LVTGeneratorException;
+import org.spongepowered.asm.util.throwables.LVTGeneratorError;
 
 /**
  * Utility methods for working with local variables using ASM
@@ -134,11 +134,11 @@ public final class Locals {
             
         ClassInfo classInfo = ClassInfo.forName(classNode.name);
         if (classInfo == null) {
-            throw new LVTGeneratorException("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
+            throw new LVTGeneratorError("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
         }
         Method methodInfo = classInfo.findMethod(method);
         if (methodInfo == null) {
-            throw new LVTGeneratorException("Could not locate method metadata for " + method.name + " generating LVT in " + classNode.name);
+            throw new LVTGeneratorError("Could not locate method metadata for " + method.name + " generating LVT in " + classNode.name);
         }
         List<FrameData> frames = methodInfo.getFrames();
 
@@ -147,7 +147,7 @@ public final class Locals {
 
         // Initialise implicit "this" reference in non-static methods
         if ((method.access & Opcodes.ACC_STATIC) == 0) {
-            frame[local++] = new LocalVariableNode("this", classNode.name, null, null, null, 0);
+            frame[local++] = new LocalVariableNode("this", Type.getObjectType(classNode.name).toString(), null, null, null, 0);
         }
         
         // Initialise method arguments
@@ -191,7 +191,7 @@ public final class Locals {
                                 frame[framePos] = null; // TOP
                             }
                         } else {
-                            throw new LVTGeneratorException("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
+                            throw new LVTGeneratorError("Unrecognised locals opcode " + localType + " in locals array at position " + localPos
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
@@ -199,7 +199,7 @@ public final class Locals {
                             frame[framePos] = null;
                         }
                     } else {
-                        throw new LVTGeneratorException("Invalid value " + localType + " in locals array at position " + localPos
+                        throw new LVTGeneratorError("Invalid value " + localType + " in locals array at position " + localPos
                                 + " in " + classNode.name + "." + method.name + method.desc);
                     }
                 }
@@ -341,7 +341,7 @@ public final class Locals {
 
         // Use Analyzer to generate the bytecode frames
         Analyzer<BasicValue> analyzer = new Analyzer<BasicValue>(
-                new MixinVerifier(Type.getObjectType(classNode.name), objectType, interfaces, false));
+                new MixinVerifier(Bytecode.ASM_API_VERSION, Type.getObjectType(classNode.name), objectType, interfaces, false));
         try {
             analyzer.analyze(classNode.name, method);
         } catch (AnalyzerException ex) {

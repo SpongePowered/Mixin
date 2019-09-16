@@ -31,13 +31,13 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
@@ -216,7 +216,11 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
      * @return replaced value, per the contract of {@link Map#put}
      */
     public String addMapping(String context, String className, String reference, String newReference) {
-        if (this.readOnly || reference == null || newReference == null || reference.equals(newReference)) {
+        if (this.readOnly || reference == null || newReference == null) {
+            return null;
+        }
+        String conformedReference = reference.replaceAll("\\s", "");
+        if (conformedReference.equals(newReference)) {
             return null;
         }
         Map<String, Map<String, String>> mappings = this.mappings;
@@ -232,7 +236,7 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
             classMappings = new HashMap<String, String>();
             mappings.put(className, classMappings);
         }
-        return classMappings.put(reference, newReference);
+        return classMappings.put(conformedReference, newReference);
     }
     
     /**
@@ -267,7 +271,7 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
         } catch (Exception ex) {
             logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
         } finally {
-            IOUtils.closeQuietly(reader);
+            Closeables.closeQuietly(reader);
         }
         
         return ReferenceMapper.DEFAULT_MAPPER;

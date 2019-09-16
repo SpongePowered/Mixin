@@ -36,6 +36,12 @@ import org.spongepowered.asm.mixin.Shadow;
  * a mixin, the method. The annotated method must be <tt>abstract</tt> and the
  * signature of the method must match the target method precisely.
  *
+ * <p>The target method for an accessor can be specified as part of the
+ * decorated method name (eg. <tt>callFoo</tt> to invoke a target method named
+ * <tt>foo()</tt>) or specified in the annotation value. Invokers for
+ * constructors can be created by specifying <tt>&lt;init&gt;</tt> in the
+ * annotation or the fully-qualified class name.</p>
+ *
  * <p>Invokers provide a simple way of gaining access to internal class members
  * in a target class without needing to resort to access transformers, and
  * without the usual need to {@link Shadow} a target method. This can both
@@ -66,7 +72,8 @@ public @interface Invoker {
      *
      * <p>However sometimes it maye be desirable to name an accessor method
      * differently to the target method. In this case you may specify the method
-     * using its name.</p>
+     * using its name. Use <tt>&lt;init&gt;</tt> or the fully qualified name of
+     * the target class to invoke a constructor.</p>
      *
      * @return name for the target method, or empty string to inflect using the
      *      annotated method name

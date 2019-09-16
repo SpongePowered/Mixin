@@ -33,22 +33,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.MethodVisitor;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.*;
-import org.spongepowered.asm.lib.util.CheckClassAdapter;
-import org.spongepowered.asm.lib.util.TraceClassVisitor;
-import org.spongepowered.asm.mixin.Debug;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Intrinsic;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException.Problem;
 
@@ -98,6 +92,17 @@ public final class Bytecode {
             this.access = access;
         }
         
+        /**
+         * Get whether this visibility level represents a level which is the
+         * same or greater than the supplied level
+         * 
+         * @param other level to compare to
+         * @return true if greater or equal
+         */
+        public boolean isAtLeast(Visibility other) {
+            return other == null || other.ordinal() <= this.ordinal();
+        }
+        
     }
     
     /**
@@ -138,6 +143,8 @@ public final class Bytecode {
             return this.isSuper ? "super" : "this";
         }
     }
+    
+    public static final int ASM_API_VERSION = Opcodes.ASM6;
 
     /**
      * Integer constant opcodes
@@ -237,20 +244,6 @@ public final class Bytecode {
         null,
         null
     };
-    
-    /**
-     * Annotations which are eligible for merge via {@link #mergeAnnotations}
-     */
-    private static final Class<?>[] MERGEABLE_MIXIN_ANNOTATIONS = new Class<?>[] {
-        Overwrite.class,
-        Intrinsic.class,
-        Final.class,
-        Debug.class
-    };
-    
-    private static Pattern mergeableAnnotationPattern = Bytecode.getMergeableAnnotationPattern();
-
-    private static final Logger logger = LogManager.getLogger("mixin");
     
     private Bytecode() {
         // utility class
@@ -359,7 +352,7 @@ public final class Bytecode {
     /**
      * Dumps the output of CheckClassAdapter.verify to System.out
      *
-     * @param classNode the classNode to verify
+     * @param classNode the ClassNode to verify
      */
     public static void dumpClass(ClassNode classNode) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
@@ -520,7 +513,7 @@ public final class Bytecode {
      * @param method method node
      * @return true if the method has the {@link Opcodes#ACC_STATIC} flag
      */
-    public static boolean methodIsStatic(MethodNode method) {
+    public static boolean isStatic(MethodNode method) {
         return (method.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
     
@@ -530,7 +523,7 @@ public final class Bytecode {
      * @param field field node
      * @return true if the field has the {@link Opcodes#ACC_STATIC} flag
      */
-    public static boolean fieldIsStatic(FieldNode field) {
+    public static boolean isStatic(FieldNode field) {
         return (field.access & Opcodes.ACC_STATIC) == Opcodes.ACC_STATIC;
     }
     
@@ -719,7 +712,7 @@ public final class Bytecode {
      * @return modified descriptor;
      */
     public static String changeDescriptorReturnType(String desc, String returnType) {
-        if (desc == null) {
+        if (desc == null || !desc.startsWith("(") || desc.lastIndexOf(')') < 1) {
             return null;
         } else if (returnType == null) {
             return desc;
@@ -736,6 +729,16 @@ public final class Bytecode {
      */
     public static String getSimpleName(Class<? extends Annotation> annotationType) {
         return annotationType.getSimpleName();
+    }
+
+    /**
+     * Returns the simple name of a type representing a class
+     * 
+     * @param type type
+     * @return annotation's simple name
+     */
+    public static String getSimpleName(Type type) {
+        return type.getSort() < Type.ARRAY ? type.getDescriptor() : Bytecode.getSimpleName(type.getClassName());
     }
     
     /**
@@ -820,9 +823,9 @@ public final class Bytecode {
             } else if (cst instanceof Double) {
                 return Type.getType("D");
             } else if (cst instanceof String) {
-                return Type.getType(Constants.STRING);
+                return Type.getType(Constants.STRING_DESC);
             } else if (cst instanceof Type) {
-                return Type.getType(Constants.CLASS);
+                return Type.getType(Constants.CLASS_DESC);
             }
             throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
         }
@@ -888,6 +891,18 @@ public final class Bytecode {
      */
     public static boolean compareFlags(FieldNode f1, FieldNode f2, int flag) {
         return Bytecode.hasFlag(f1, flag) == Bytecode.hasFlag(f2, flag);
+    }
+    
+    /**
+     * Checks whether the supplied method is virtual. Specifically this method
+     * returns true if the method is non-static and has an access level greater
+     * than <tt>private</tt>.
+     * 
+     * @param method Method to test
+     * @return true if virtual
+     */
+    public static boolean isVirtual(MethodNode method) {
+        return method != null && !Bytecode.isStatic(method) && Bytecode.getVisibility(method).isAtLeast(Visibility.PROTECTED);
     }
     
     /**
@@ -1045,113 +1060,6 @@ public final class Bytecode {
     }
 
     /**
-     * Merge annotations from the specified source ClassNode to the destination
-     * ClassNode, replaces annotations of the equivalent type on the target with
-     * annotations from the source. If the source node has no annotations then
-     * no action will take place, if the target node has no annotations then a
-     * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
-     * @param from ClassNode to merge annotations from
-     * @param to ClassNode to merge annotations to
-     */
-    public static void mergeAnnotations(ClassNode from, ClassNode to) {
-        to.visibleAnnotations = Bytecode.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, "class", from.name);
-        to.invisibleAnnotations = Bytecode.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, "class", from.name);
-    }
-        
-    /**
-     * Merge annotations from the specified source MethodNode to the destination
-     * MethodNode, replaces annotations of the equivalent type on the target
-     * with annotations from the source. If the source node has no annotations
-     * then no action will take place, if the target node has no annotations
-     * then a new annotation list will be created. Annotations from the mixin
-     * package are not merged. 
-     * 
-     * @param from MethodNode to merge annotations from
-     * @param to MethodNode to merge annotations to
-     */
-    public static void mergeAnnotations(MethodNode from, MethodNode to) {
-        to.visibleAnnotations = Bytecode.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, "method", from.name);
-        to.invisibleAnnotations = Bytecode.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, "method", from.name);
-    }
-    
-    /**
-     * Merge annotations from the specified source FieldNode to the destination
-     * FieldNode, replaces annotations of the equivalent type on the target with
-     * annotations from the source. If the source node has no annotations then
-     * no action will take place, if the target node has no annotations then a
-     * new annotation list will be created. Annotations from the mixin package
-     * are not merged. 
-     * 
-     * @param from FieldNode to merge annotations from
-     * @param to FieldNode to merge annotations to
-     */
-    public static void mergeAnnotations(FieldNode from, FieldNode to) {
-        to.visibleAnnotations = Bytecode.mergeAnnotations(from.visibleAnnotations, to.visibleAnnotations, "field", from.name);
-        to.invisibleAnnotations = Bytecode.mergeAnnotations(from.invisibleAnnotations, to.invisibleAnnotations, "field", from.name);
-    }
-    
-    /**
-     * Merge annotations from the source list to the target list. Returns the
-     * target list or a new list if the target list was null.
-     * 
-     * @param from Annotations to merge
-     * @param to Annotation list to merge into
-     * @param type Type of element being merged
-     * @param name Name of the item being merged, for debugging purposes
-     * @return The merged list (or a new list if the target list was null)
-     */
-    private static List<AnnotationNode> mergeAnnotations(List<AnnotationNode> from, List<AnnotationNode> to, String type, String name) {
-        try {
-            if (from == null) {
-                return to;
-            }
-            
-            if (to == null) {
-                to = new ArrayList<AnnotationNode>();
-            }
-            
-            for (AnnotationNode annotation : from) {
-                if (!Bytecode.isMergeableAnnotation(annotation)) {
-                    continue;
-                }
-                
-                for (Iterator<AnnotationNode> iter = to.iterator(); iter.hasNext();) {
-                    if (iter.next().desc.equals(annotation.desc)) {
-                        iter.remove();
-                        break;
-                    }
-                }
-                
-                to.add(annotation);
-            }
-        } catch (Exception ex) {
-            Bytecode.logger.warn("Exception encountered whilst merging annotations for {} {}", type, name);
-        }
-        
-        return to;
-    }
-
-    private static boolean isMergeableAnnotation(AnnotationNode annotation) {
-        if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
-            return Bytecode.mergeableAnnotationPattern.matcher(annotation.desc).matches();
-        }
-        return true;
-    }
-
-    private static Pattern getMergeableAnnotationPattern() {
-        StringBuilder sb = new StringBuilder("^L(");
-        for (int i = 0; i < Bytecode.MERGEABLE_MIXIN_ANNOTATIONS.length; i++) {
-            if (i > 0) {
-                sb.append('|');
-            }
-            sb.append(Bytecode.MERGEABLE_MIXIN_ANNOTATIONS[i].getName().replace('.', '/'));
-        }
-        return Pattern.compile(sb.append(");$").toString());
-    }
-    
-    /**
      * Compares two synthetic bridge methods and throws an exception if they are
      * not compatible.
      * 
@@ -1199,5 +1107,113 @@ public final class Bytecode {
             throw new SyntheticBridgeException(Problem.BAD_LENGTH, a.name, a.desc, index, null, null);
         }
     }
+
+    /**
+     * Perform a naïve merge of ClassNode members onto a target ClassNode 
+     * 
+     * @param source Source ClassNode to merge from
+     * @param dest Destination ClassNode to merge to
+     */
+    public static void merge(ClassNode source, ClassNode dest) {
+        if (source == null) {
+            return;
+        }
+        
+        if (dest == null) {
+            throw new NullPointerException("Target ClassNode for merge must not be null");
+        }
+        
+        dest.version = Math.max(source.version, dest.version);
+        
+        dest.interfaces = Bytecode.<String>merge(source.interfaces, dest.interfaces);
+        dest.invisibleAnnotations = Bytecode.<AnnotationNode>merge(source.invisibleAnnotations, dest.invisibleAnnotations);
+        dest.visibleAnnotations = Bytecode.<AnnotationNode>merge(source.visibleAnnotations, dest.visibleAnnotations);
+        dest.visibleTypeAnnotations = Bytecode.<TypeAnnotationNode>merge(source.visibleTypeAnnotations, dest.visibleTypeAnnotations);
+        dest.invisibleTypeAnnotations = Bytecode.<TypeAnnotationNode>merge(source.invisibleTypeAnnotations, dest.invisibleTypeAnnotations);
+        dest.attrs = Bytecode.<Attribute>merge(source.attrs, dest.attrs);
+        dest.innerClasses = Bytecode.<InnerClassNode>merge(source.innerClasses, dest.innerClasses);
+        dest.fields = Bytecode.<FieldNode>merge(source.fields, dest.fields);
+        dest.methods = Bytecode.<MethodNode>merge(source.methods, dest.methods);
+        
+    }
     
+    /**
+     * Replace all values in a target ClassNode with values from the Source 
+     * 
+     * @param source Source ClassNode to merge from
+     * @param dest Destination ClassNode to merge to
+     */
+    public static void replace(ClassNode source, ClassNode dest) {
+        if (source == null) {
+            return;
+        }
+        
+        if (dest == null) {
+            throw new NullPointerException("Target ClassNode for replace must not be null");
+        }
+        
+        dest.name = source.name;
+        dest.signature = source.signature;
+        dest.superName = source.superName;
+
+        dest.version = source.version;
+        dest.access = source.access;
+        dest.sourceDebug = source.sourceDebug;
+
+        dest.sourceFile = source.sourceFile;
+        dest.module = source.module;
+        dest.outerClass = source.outerClass;
+        dest.outerMethod = source.outerMethod;
+        dest.outerMethodDesc = source.outerMethodDesc;
+        
+        Bytecode.<String>clear(dest.interfaces);
+        Bytecode.<AnnotationNode>clear(dest.visibleAnnotations);
+        Bytecode.<AnnotationNode>clear(dest.invisibleAnnotations);
+        Bytecode.<TypeAnnotationNode>clear(dest.visibleTypeAnnotations);
+        Bytecode.<TypeAnnotationNode>clear(dest.invisibleTypeAnnotations);
+        Bytecode.<Attribute>clear(dest.attrs);
+        Bytecode.<InnerClassNode>clear(dest.innerClasses);
+        Bytecode.<FieldNode>clear(dest.fields);
+        Bytecode.<MethodNode>clear(dest.methods);
+        
+        
+        // TODO Java 10
+//        dest.nestHostClassExperimental = source.nestHostClassExperimental;
+//        Bytecode.<String>clear(dest.nestMembersExperimental);
+//        dest.nestMembersExperimental = Bytecode.<String>merge(source.nestMembersExperimental, dest.nestMembersExperimental);
+        
+        Bytecode.merge(source, dest);
+        
+    }
+    
+    /**
+     * Helper function to clear a list if it is not null
+     */
+    private static <T> void clear(List<T> list) {
+        if (list != null) {
+            list.clear();
+        }
+    }
+    
+    /**
+     * Helper function to merge all values of a source list into a destination
+     * taking into account that the source or destination are allowed to be null
+     * 
+     * @param source source list
+     * @param destination destination list
+     * @return destination list populated with source values, new list if the
+     *      destination was null, or null if both are null or empty
+     */
+    private static <T> List<T> merge(List<T> source, List<T> destination) {
+        if (source == null || source.isEmpty()) {
+            return destination;
+        }
+        
+        if (destination == null) {
+            return new ArrayList<T>(source);
+        }
+        
+        destination.addAll(source);
+        return destination;
+    }
 }

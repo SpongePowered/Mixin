@@ -29,16 +29,22 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
 import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.transformers.MixinClassWriter;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler.Section;
+
+import com.google.common.io.Files;
+import com.google.common.io.MoreFiles;
+import com.google.common.io.RecursiveDeleteOption;
 
 /**
  * Debug exporter
@@ -69,7 +75,7 @@ public class ExtensionClassExporter implements IExtension {
         this.decompiler = this.initDecompiler(env, new File(Constants.DEBUG_OUTPUT_DIR, ExtensionClassExporter.EXPORT_JAVA_DIR));
 
         try {
-            FileUtils.deleteDirectory(this.classExportDir);
+            MoreFiles.deleteRecursively(this.classExportDir.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
         } catch (IOException ex) {
             ExtensionClassExporter.logger.warn("Error cleaning class output directory: {}", ex.getMessage());
         }
@@ -125,13 +131,14 @@ public class ExtensionClassExporter implements IExtension {
     }
 
     @Override
-    public void export(MixinEnvironment env, String name, boolean force, byte[] bytes) {
+    public void export(MixinEnvironment env, String name, boolean force, ClassNode classNode) {
         // Export transformed class for debugging purposes
         if (force || env.getOption(Option.DEBUG_EXPORT)) {
             String filter = env.getOptionValue(Option.DEBUG_EXPORT_FILTER);
             if (force || filter == null || this.applyFilter(filter, name)) {
                 Section exportTimer = MixinEnvironment.getProfiler().begin("debug.export");
-                File outputFile = this.dumpClass(name.replace('.', '/'), bytes);
+                
+                File outputFile = this.dumpClass(name.replace('.', '/'), classNode);
                 if (this.decompiler != null) {
                     this.decompiler.decompile(outputFile);
                 }
@@ -144,17 +151,34 @@ public class ExtensionClassExporter implements IExtension {
      * Write class bytecode to disk for debug purposes
      * 
      * @param fileName filename to write (.class will be automatically appended)
-     * @param bytes class bytes
+     * @param classNode class to dump
      * @return written file
      */
-    public File dumpClass(String fileName, byte[] bytes) {
+    public File dumpClass(String fileName, ClassNode classNode) {
         File outputFile = new File(this.classExportDir, fileName + ".class");
+        outputFile.getParentFile().mkdirs();
         try {
-            FileUtils.writeByteArrayToFile(outputFile, bytes);
+            byte[] bytecode = ExtensionClassExporter.getClassBytes(classNode);
+            if (bytecode != null) {
+                Files.write(bytecode, outputFile);
+            }
         } catch (IOException ex) {
             // don't care
         }
         return outputFile;
+    }
+
+    private static byte[] getClassBytes(ClassNode classNode) {
+        byte[] bytes = null;
+        try {
+            MixinClassWriter cw = new MixinClassWriter(ClassWriter.COMPUTE_FRAMES);
+            classNode.accept(cw);
+            bytes = cw.toByteArray();
+        } catch (Exception ex) {
+            // well, damn
+            ex.printStackTrace();
+        }
+        return bytes;
     }
 
 }

@@ -25,6 +25,7 @@
 package org.spongepowered.asm.service.mojang;
 
 import org.spongepowered.asm.service.IMixinServiceBootstrap;
+import org.spongepowered.asm.service.ServiceInitialisationException;
 
 import net.minecraft.launchwrapper.Launch;
 
@@ -36,7 +37,8 @@ public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstra
     private static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
     
     private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
-    private static final String ASM_PACKAGE = "org.spongepowered.asm.lib.";
+    private static final String LEGACY_ASM_PACKAGE = "org.spongepowered.asm.lib.";
+    private static final String ASM_PACKAGE = "org.objectweb.asm.";
     private static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
 
     @Override
@@ -51,11 +53,18 @@ public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstra
 
     @Override
     public void bootstrap() {
+        try {
+            Launch.classLoader.hashCode();
+        } catch (Throwable th) {
+            throw new ServiceInitialisationException(this.getName() + " is not available");
+        }
+        
         // Essential ones
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.SERVICE_PACKAGE);
         
         // Important ones
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.ASM_PACKAGE);
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.LEGACY_ASM_PACKAGE);
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.MIXIN_PACKAGE);
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.MIXIN_UTIL_PACKAGE);
     }

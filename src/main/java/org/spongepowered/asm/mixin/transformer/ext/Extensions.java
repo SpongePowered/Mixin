@@ -30,8 +30,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.spongepowered.asm.service.ISyntheticClassRegistry;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -39,12 +40,7 @@ import com.google.common.collect.ImmutableList.Builder;
 /**
  * Mixin transformer extensions and common modules such as class generators
  */
-public final class Extensions {
-    
-    /**
-     * Mixin transformer
-     */
-    private final MixinTransformer transformer;
+public final class Extensions implements IExtensionRegistry {
     
     /**
      * All transformer extensions
@@ -75,19 +71,17 @@ public final class Extensions {
     private final Map<Class<? extends IClassGenerator>, IClassGenerator> generatorMap
             = new HashMap<Class<? extends IClassGenerator>, IClassGenerator>();
     
+    private final ISyntheticClassRegistry syntheticClassRegistry;
+    
     /**
      * Active transformer extensions
      */
     private List<IExtension> activeExtensions = Collections.<IExtension>emptyList();
+    
+    public Extensions(ISyntheticClassRegistry syntheticClassRegistry) {
+        this.syntheticClassRegistry = syntheticClassRegistry;
+    }
 
-    public Extensions(MixinTransformer transformer) {
-        this.transformer = transformer;
-    }
-    
-    public MixinTransformer getTransformer() {
-        return this.transformer;
-    }
-    
     /**
      * Add a new transformer extension
      * 
@@ -98,31 +92,42 @@ public final class Extensions {
         this.extensionMap.put(extension.getClass(), extension);
     }
     
-    /**
-     * Get all extensions
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry
+     *      #getExtensions()
      */
+    @Override
     public List<IExtension> getExtensions() {
         return Collections.<IExtension>unmodifiableList(this.extensions);
     }
     
-    /**
-     * Get all active extensions
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry
+     *      #getActiveExtensions()
      */
+    @Override
     public List<IExtension> getActiveExtensions() {
         return this.activeExtensions;
     }
     
-    /**
-     * Get a specific extension
-     * 
-     * @param extensionClass extension class to look up
-     * @param <T> extension type
-     * @return extension instance or null
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry
+     *      #getExtension(java.lang.Class)
      */
     @SuppressWarnings("unchecked")
+    @Override
     public <T extends IExtension> T getExtension(Class<? extends IExtension> extensionClass) {
         return (T)Extensions.<IExtension>lookup(extensionClass, this.extensionMap, this.extensions);
-    } 
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry
+     *      #getSyntheticClassRegistry()
+     */
+    @Override
+    public ISyntheticClassRegistry getSyntheticClassRegistry() {
+        return this.syntheticClassRegistry;
+    }
 
     /**
      * Selectively activate extensions based on the current environment
@@ -170,11 +175,11 @@ public final class Extensions {
      * @param name Class name
      * @param force True to export even if the current environment settings
      *      would normally disable it
-     * @param bytes Bytes to export
+     * @param classNode Class to export
      */
-    public void export(MixinEnvironment env, String name, boolean force, byte[] bytes) {
+    public void export(MixinEnvironment env, String name, boolean force, ClassNode classNode) {
         for (IExtension extension : this.activeExtensions) {
-            extension.export(env, name, force, bytes);
+            extension.export(env, name, force, classNode);
         }
     }
 

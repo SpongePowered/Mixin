@@ -24,9 +24,9 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
@@ -51,7 +51,7 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.MixinPreProcessor
-     *      #prepareMethod(org.spongepowered.asm.lib.tree.MethodNode,
+     *      #prepareMethod(org.objectweb.asm.tree.MethodNode,
      *      org.spongepowered.asm.mixin.transformer.ClassInfo.Method)
      */
     @Override
@@ -69,12 +69,12 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
      * @see org.spongepowered.asm.mixin.transformer.MixinPreProcessor
      *      #validateField(
      *      org.spongepowered.asm.mixin.transformer.MixinTargetContext,
-     *      org.spongepowered.asm.lib.tree.FieldNode,
-     *      org.spongepowered.asm.lib.tree.AnnotationNode)
+     *      org.objectweb.asm.tree.FieldNode,
+     *      org.objectweb.asm.tree.AnnotationNode)
      */
     @Override
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
-        if (!Bytecode.hasFlag(field, Opcodes.ACC_STATIC)) {
+        if (!Bytecode.isStatic(field)) {
             throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
                     + this.mixin);
         }

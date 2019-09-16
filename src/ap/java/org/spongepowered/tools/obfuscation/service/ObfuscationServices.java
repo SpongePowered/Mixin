@@ -85,7 +85,7 @@ public final class ObfuscationServices {
                     
                     String serviceName = service.getClass().getSimpleName();
 //                    ap.printMessage(Kind.NOTE, "Preparing service " + serviceName);
-                    Collection<ObfuscationTypeDescriptor> obfTypes = service.getObfuscationTypes();
+                    Collection<ObfuscationTypeDescriptor> obfTypes = service.getObfuscationTypes(ap);
                     if (obfTypes != null) {
                         for (ObfuscationTypeDescriptor obfType : obfTypes) {
                             try {
@@ -109,7 +109,7 @@ public final class ObfuscationServices {
      */
     public Set<String> getSupportedOptions() {
         Set<String> supportedOptions = new HashSet<String>();
-        for (IObfuscationService provider : this.serviceLoader) {
+        for (IObfuscationService provider : this.services) {
             Set<String> options = provider.getSupportedOptions();
             if (options != null) {
                 supportedOptions.addAll(options);
@@ -125,7 +125,7 @@ public final class ObfuscationServices {
      * @return service instance or null if no matching services were loaded
      */
     public IObfuscationService getService(Class<? extends IObfuscationService> serviceClass) {
-        for (IObfuscationService service : this.serviceLoader) {
+        for (IObfuscationService service : this.services) {
             if (serviceClass.getName().equals(service.getClass().getName())) {
                 return service;
             }

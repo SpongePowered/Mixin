@@ -24,9 +24,9 @@
  */
 package org.spongepowered.asm.mixin.struct;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.Bytecode;
 
@@ -185,7 +185,7 @@ public abstract class MemberRef {
      */
     public static final class Handle extends MemberRef {
 
-        private org.spongepowered.asm.lib.Handle handle;
+        private org.objectweb.asm.Handle handle;
 
         /**
          * Creates a member reference initially referring to the member referred
@@ -194,7 +194,7 @@ public abstract class MemberRef {
          *
          * @param handle Initial method handle.
          */
-        public Handle(org.spongepowered.asm.lib.Handle handle) {
+        public Handle(org.objectweb.asm.Handle handle) {
             this.handle = handle;
         }
 
@@ -203,7 +203,7 @@ public abstract class MemberRef {
          *
          * @return Method handle representing this object
          */
-        public org.spongepowered.asm.lib.Handle getMethodHandle() {
+        public org.objectweb.asm.Handle getMethodHandle() {
             return this.handle;
         }
 
@@ -242,7 +242,7 @@ public abstract class MemberRef {
                 throw new MixinTransformerError("Invalid opcode " + Bytecode.getOpcodeName(opcode) + " for method handle " + this.handle + ".");
             }
             boolean itf = tag == Opcodes.H_INVOKEINTERFACE;
-            this.handle = new org.spongepowered.asm.lib.Handle(tag, this.handle.getOwner(), this.handle.getName(), this.handle.getDesc(), itf);
+            this.handle = new org.objectweb.asm.Handle(tag, this.handle.getOwner(), this.handle.getName(), this.handle.getDesc(), itf);
         }
 
         @Override
@@ -253,7 +253,7 @@ public abstract class MemberRef {
         @Override
         public void setOwner(String owner) {
             boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc(), itf);
+            this.handle = new org.objectweb.asm.Handle(this.handle.getTag(), owner, this.handle.getName(), this.handle.getDesc(), itf);
         }
 
         @Override
@@ -264,7 +264,7 @@ public abstract class MemberRef {
         @Override
         public void setName(String name) {
             boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), name, this.handle.getDesc(), itf);
+            this.handle = new org.objectweb.asm.Handle(this.handle.getTag(), this.handle.getOwner(), name, this.handle.getDesc(), itf);
         }
 
         @Override
@@ -275,7 +275,7 @@ public abstract class MemberRef {
         @Override
         public void setDesc(String desc) {
             boolean itf = this.handle.getTag() == Opcodes.H_INVOKEINTERFACE;
-            this.handle = new org.spongepowered.asm.lib.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc, itf);
+            this.handle = new org.objectweb.asm.Handle(this.handle.getTag(), this.handle.getOwner(), this.handle.getName(), desc, itf);
         }
     }
     

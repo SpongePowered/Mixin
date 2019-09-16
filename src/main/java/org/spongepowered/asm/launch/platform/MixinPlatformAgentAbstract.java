@@ -24,11 +24,13 @@
  */
 package org.spongepowered.asm.launch.platform;
 
-import java.io.File;
-import java.net.URI;
+import java.lang.reflect.Method;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.util.IConsumer;
 
 /**
  * Platform agent base class
@@ -40,44 +42,78 @@ public abstract class MixinPlatformAgentAbstract implements IMixinPlatformAgent 
      */
     protected static final Logger logger = LogManager.getLogger("mixin");
     
-    protected final MixinPlatformManager manager;
+    protected MixinPlatformManager manager;
     
     /**
      * URI to the container
      */
-    protected final URI uri;
-
-    /**
-     * File containing this tweaker
-     */
-    protected final File container;
+    protected IContainerHandle handle;
     
     /**
-     * "Main" manifest attributes from the container
+     * Ctor
      */
-    protected final MainAttributes attributes;
-    
-    /**
-     * Create a new platform agent for the specified URI
-     * 
-     * @param manager platform manager
-     * @param uri URI of the resource for this agent
-     */
-    public MixinPlatformAgentAbstract(MixinPlatformManager manager, URI uri) {
-        this.manager = manager;
-        this.uri = uri;
-        this.container = this.uri != null ? new File(this.uri) : null;
-        this.attributes = MainAttributes.of(uri);
+    protected MixinPlatformAgentAbstract() {
     }
     
     @Override
-    public String toString() {
-        return String.format("PlatformAgent[%s:%s]", this.getClass().getSimpleName(), this.uri);
+    public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
+        this.manager = manager;
+        this.handle = handle;
+        return true;
     }
 
     @Override
     public String getPhaseProvider() {
         return null;
+    }
+    
+    @Override
+    public void prepare() {
+    }
+    
+    @Override
+    public void initPrimaryContainer() {
+    }
+
+    @Override
+    public void inject() {
+    }
+
+    @Override
+    public String toString() {
+        return String.format("PlatformAgent[%s:%s]", this.getClass().getSimpleName(), this.handle);
+    }
+
+    protected static String invokeStringMethod(ClassLoader classLoader, String className, String methodName) {
+        try {
+            Class<?> clazz = Class.forName(className, false, classLoader);
+            Method method = clazz.getDeclaredMethod(methodName);
+            return ((Enum<?>)method.invoke(null)).name();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    // AMS - Temp
+    
+    /**
+     * Temp wiring. Called when the initial phase is spun up in the environment.
+     * 
+     * @param phase Initial phase
+     * @param phaseConsumer Delegate for the service (or agents) to trigger
+     *      later phases
+     * @deprecated temporary
+     */
+    @Deprecated
+    public void wire(Phase phase, IConsumer<Phase> phaseConsumer) {
+    }
+    
+    /**
+     * Called when the DEFAULT phase is started
+     * @deprecated temporary 
+     */
+    @Deprecated
+    public void unwire() {
     }
     
 }

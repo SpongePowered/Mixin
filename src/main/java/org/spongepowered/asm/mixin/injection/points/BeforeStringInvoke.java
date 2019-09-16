@@ -26,12 +26,13 @@ package org.spongepowered.asm.mixin.injection.points;
 
 import java.util.Collection;
 
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.LdcInsnNode;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LdcInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 
 /**
  * <p>Like {@link BeforeInvoke}, this injection point searches for
@@ -54,7 +55,7 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
  * <dl>
  *   <dt>target</dt>
  *   <dd>A
- *   {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo MemberInfo}
+ *   {@link ITargetSelector Target Selector}
  *   which identifies the target method, the method <b>must</b> be specified
  *   with a signature which accepts a single string and returns void,
  *   eg. <code>(Ljava/lang/String;)V</code></dd>
@@ -104,7 +105,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
             throw new IllegalArgumentException(this.getClass().getSimpleName() + " requires named argument \"ldc\" to specify the desired target");
         }
         
-        if (!STRING_VOID_SIG.equals(this.target.desc)) {
+        if (!(this.target instanceof ITargetSelectorByName) || !STRING_VOID_SIG.equals(((ITargetSelectorByName)this.target).getDesc())) {
             throw new IllegalArgumentException(this.getClass().getSimpleName() + " requires target method with with signature " + STRING_VOID_SIG);
         }
     }
@@ -131,8 +132,8 @@ public class BeforeStringInvoke extends BeforeInvoke {
     }
 
     @Override
-    protected boolean matchesInsn(MemberInfo nodeInfo, int ordinal) {
+    protected boolean matchesOrdinal(int ordinal) {
         this.log("{} > > found LDC \"{}\" = {}", this.className, this.ldcValue, this.foundLdc);
-        return this.foundLdc && super.matchesInsn(nodeInfo, ordinal);
+        return this.foundLdc && super.matchesOrdinal(ordinal);
     }
 }

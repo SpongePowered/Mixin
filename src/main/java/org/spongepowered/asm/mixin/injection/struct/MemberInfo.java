@@ -24,27 +24,36 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorConstructor;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
+import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
+import org.spongepowered.asm.mixin.injection.selectors.MatchResult;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
+import org.spongepowered.asm.util.asm.ElementNode;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 /**
- * <p>Information bundle about a member (method or field) parsed from a String
- * token in another annotation, this is used where target members need to be
- * specified as Strings in order to parse the String representation to something
- * useful.</p>
+ * <p>Target selector, also used as a general-purpose information bundle about a
+ * member (method or field) parsed from a String token in another annotation,
+ * this is used where target members need to be specified as Strings in order to
+ * parse the String representation to something useful. See
+ * {@link ITargetSelector} for other supported selector types.</p>
  * 
  * <p>Some examples:</p>
  * <blockquote><pre>
@@ -80,27 +89,27 @@ import com.google.common.base.Strings;
  *   foo.bar.Baz.func_1234_a(DDD)V</pre>
  * </blockquote>
  */
-public final class MemberInfo {
+public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelectorConstructor {
     
     /**
      * Member owner in internal form but without L;, can be null
      */
-    public final String owner;
+    private final String owner;
     
     /**
      * Member name, can be null to match any member
      */
-    public final String name;
+    private final String name;
     
     /**
      * Member descriptor, can be null
      */
-    public final String desc;
+    private final String desc;
     
     /**
      * True to match all matching members, not just the first
      */
-    public final boolean matchAll;
+    private final boolean matchAll;
     
     /**
      * Force this member to report as a field
@@ -252,6 +261,26 @@ public final class MemberInfo {
         this.unparsed = null;
     }
     
+    @Override
+    public String getOwner() {
+        return this.owner;
+    }
+    
+    @Override
+    public String getName() {
+        return this.name;
+    }
+    
+    @Override
+    public String getDesc() {
+        return this.desc;
+    }
+    
+    @Override
+    public int getMatchCount() {
+        return this.matchAll ? Integer.MAX_VALUE : 1;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
@@ -287,6 +316,7 @@ public final class MemberInfo {
     /**
      * Returns this MemberInfo as a java-style descriptor 
      */
+    @Override
     public String toDescriptor() {
         if (this.desc == null) {
             return "";
@@ -298,6 +328,7 @@ public final class MemberInfo {
     /**
      * Returns the <em>constructor type</em> represented by this MemberInfo
      */
+    @Override
     public String toCtorType() {
         if (this.unparsed == null) {
             return null;
@@ -318,17 +349,14 @@ public final class MemberInfo {
 
         return this.desc != null ? this.desc : this.unparsed;
     }
-
+    
     /**
      * Returns the <em>constructor descriptor</em> represented by this
      * MemberInfo, returns null if no descriptor is present.
      */
+    @Override
     public String toCtorDesc() {
-        if (this.desc != null && this.desc.startsWith("(") && this.desc.indexOf(')') > -1) {
-            return this.desc.substring(0, this.desc.indexOf(')') + 1) + "V";
-        }
-
-        return null;
+        return Bytecode.changeDescriptorReturnType(this.desc, "V");
     }
     
     /**
@@ -336,7 +364,7 @@ public final class MemberInfo {
      * returns null if the descriptor is absent or if this MemberInfo represents
      * a field
      */
-    public String getReturnType() {
+    private String getReturnType() {
         if (this.desc == null || this.desc.indexOf(')') == -1 || this.desc.indexOf('(') != 0 ) {
             return null;
         }
@@ -352,6 +380,7 @@ public final class MemberInfo {
      * Returns this MemberInfo as a {@link MappingField} or
      * {@link MappingMethod}
      */
+    @Override
     public IMapping<?> asMapping() {
         return this.isField() ? this.asFieldMapping() : this.asMethodMapping();
     }
@@ -359,6 +388,7 @@ public final class MemberInfo {
     /**
      * Returns this MemberInfo as a mapping method
      */
+    @Override
     public MappingMethod asMethodMapping() {
         if (!this.isFullyQualified()) {
             throw new MixinException("Cannot convert unqualified reference " + this + " to MethodMapping");
@@ -374,6 +404,7 @@ public final class MemberInfo {
     /**
      * Returns this MemberInfo as a mapping field
      */
+    @Override
     public MappingField asFieldMapping() {
         if (!this.isField()) {
             throw new MixinException("Cannot convert non-field reference " + this + " to FieldMapping");
@@ -382,11 +413,7 @@ public final class MemberInfo {
         return new MappingField(this.owner, this.name, this.desc);
     }
     
-    /**
-     * Get whether this reference is fully qualified
-     * 
-     * @return true if all components of this reference are non-null 
-     */
+    @Override
     public boolean isFullyQualified() {
         return this.owner != null && this.name != null && this.desc != null;
     }
@@ -397,6 +424,7 @@ public final class MemberInfo {
      * 
      * @return true if this is definitely a field
      */
+    @Override
     public boolean isField() {
         return this.forceField || (this.desc != null && !this.desc.startsWith("("));
     }
@@ -406,6 +434,7 @@ public final class MemberInfo {
      * 
      * @return true if member name is <tt>&lt;init&gt;</tt>
      */
+    @Override
     public boolean isConstructor() {
         return Constants.CTOR.equals(this.name);
     }
@@ -415,6 +444,7 @@ public final class MemberInfo {
      * 
      * @return true if member name is <tt>&lt;clinit&gt;</tt>
      */
+    @Override
     public boolean isClassInitialiser() {
         return Constants.CLINIT.equals(this.name);
     }
@@ -425,6 +455,7 @@ public final class MemberInfo {
      * @return true if member name is <tt>&lt;init&gt;</tt> or
      *      <tt>&lt;clinit&gt;</tt>
      */
+    @Override
     public boolean isInitialiser() {
         return this.isConstructor() || this.isClassInitialiser();
     }
@@ -437,6 +468,7 @@ public final class MemberInfo {
      * 
      * @throws InvalidMemberDescriptorException if any validation check fails
      */
+    @Override
     public MemberInfo validate() throws InvalidMemberDescriptorException {
         // Extremely naive class name validation, just to spot really egregious errors
         if (this.owner != null) {
@@ -486,90 +518,73 @@ public final class MemberInfo {
         
         return this;
     }
-
-    /**
-     * Test whether this MemberInfo matches the supplied values. Null values are
-     * ignored.
-
-     * @param owner Owner to compare with, null to skip
-     * @param name Name to compare with, null to skip
-     * @param desc Signature to compare with, null to skip
-     * @return true if all non-null values in this reference match non-null
-     *      arguments supplied to this method
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #match(org.spongepowered.asm.util.asm.ElementNode)
      */
-    public boolean matches(String owner, String name, String desc) {
-        return this.matches(owner, name, desc, 0);
+    @Override
+    public <TNode> MatchResult match(ElementNode<TNode> node) {
+        return node == null ? MatchResult.NONE : this.matches(node.getOwnerName(), node.getName(), node.getDesc());
     }
     
-    /**
-     * Test whether this MemberInfo matches the supplied values at the specified
-     * ordinal. Null values are ignored.
-     * 
-     * @param owner Owner to compare with, null to skip
-     * @param name Name to compare with, null to skip
-     * @param desc Signature to compare with, null to skip
-     * @param ordinal ordinal position within the class, used to honour the
-     *      matchAll semantics
-     * @return true if all non-null values in this reference match non-null
-     *      arguments supplied to this method
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #matches(org.objectweb.asm.tree.AbstractInsnNode)
      */
-    public boolean matches(String owner, String name, String desc, int ordinal) {
-        if (this.desc != null && desc != null && !this.desc.equals(desc)) {
-            return false;
+    @Override
+    public MatchResult match(AbstractInsnNode insn) {
+        if (insn instanceof MethodInsnNode) {
+            MethodInsnNode method = (MethodInsnNode)insn;
+            return this.matches(method.owner, method.name, method.desc);
+        } else if (insn instanceof FieldInsnNode) {
+            FieldInsnNode field = (FieldInsnNode)insn;
+            return this.matches(field.owner, field.name, field.desc);
         }
-        if (this.name != null && name != null && !this.name.equals(name)) {
-            return false;
+        return MatchResult.NONE;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #matches(java.lang.String, java.lang.String, java.lang.String)
+     */
+    @Override
+    public MatchResult matches(String owner, String name, String desc) {
+        if (this.desc != null && desc != null && !this.desc.equals(desc)) {
+            return MatchResult.NONE;
         }
         if (this.owner != null && owner != null && !this.owner.equals(owner)) {
-            return false;
+            return MatchResult.NONE;
         }
-        return ordinal == 0 || this.matchAll;
+        if (this.name != null && name != null) {
+            if (this.name.equals(name)) {
+                return MatchResult.EXACT_MATCH;
+            }
+            if (this.name.equalsIgnoreCase(name)) {
+                return MatchResult.MATCH;
+            }
+            return MatchResult.NONE;
+        }
+        return MatchResult.EXACT_MATCH;
     }
 
-    /**
-     * Test whether this MemberInfo matches the supplied values. Null values are
-     * ignored.
-
-     * @param name Name to compare with, null to skip
-     * @param desc Signature to compare with, null to skip
-     * @return true if all non-null values in this reference match non-null
-     *      arguments supplied to this method
-     */
-    public boolean matches(String name, String desc) {
-        return this.matches(name, desc, 0);
-    }
-    
-    /**
-     * Test whether this MemberInfo matches the supplied values at the specified
-     * ordinal. Null values are ignored.
-     * 
-     * @param name Name to compare with, null to skip
-     * @param desc Signature to compare with, null to skip
-     * @param ordinal ordinal position within the class, used to honour the
-     *      matchAll semantics
-     * @return true if all non-null values in this reference match non-null
-     *      arguments supplied to this method
-     */
-    public boolean matches(String name, String desc, int ordinal) {
-        return (this.name == null || this.name.equals(name)) 
-            && (this.desc == null || (desc != null && desc.equals(this.desc)))
-            && (ordinal == 0 || this.matchAll);
-    }
-    
     /* (non-Javadoc)
      * @see java.lang.Object#equals(java.lang.Object)
      */
     @Override
     public boolean equals(Object obj) {
-        if (obj == null || obj.getClass() != MemberInfo.class) {
+        if (obj == null || !(obj instanceof ITargetSelectorByName)) {
             return false;
         }
         
-        MemberInfo other = (MemberInfo)obj;
-        return this.matchAll == other.matchAll && this.forceField == other.forceField
-                && Objects.equal(this.owner, other.owner)
-                && Objects.equal(this.name, other.name)
-                && Objects.equal(this.desc, other.desc);
+        ITargetSelectorByName other = (ITargetSelectorByName)obj;
+        boolean otherForceField = other instanceof MemberInfo ? ((MemberInfo)other).forceField : other.isField();
+        boolean otherMatchAll = other.getMatchCount() == Integer.MAX_VALUE;
+        
+        return this.matchAll == otherMatchAll && this.forceField == otherForceField
+                && Objects.equal(this.owner, other.getOwner())
+                && Objects.equal(this.name, other.getName())
+                && Objects.equal(this.desc, other.getDesc());
     }
     
     /* (non-Javadoc)
@@ -580,12 +595,50 @@ public final class MemberInfo {
         return Objects.hashCode(this.matchAll, this.owner, this.name, this.desc);
     }
     
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #configure(java.lang.String[])
+     */
+    @Override
+    public ITargetSelector configure(String... args) {
+        ITargetSelectorRemappable configured = this;
+        for (String arg : args) {
+            if (arg == null) {
+                continue;
+            }
+            
+            if (arg.startsWith("move:")) {
+                configured = configured.move(Strings.emptyToNull(arg.substring(5)));
+            } else if (arg.startsWith("transform:")) {
+                configured = configured.transform(Strings.emptyToNull(arg.substring(10)));
+            } else if ("permissive".equals(arg)) {
+                configured = configured.transform(null);
+            } else if ("orphan".equals(arg)) {
+                configured = configured.move(null);
+            }
+        }
+        return configured;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #attach(org.spongepowered.asm.mixin.refmap.IMixinContext)
+     */
+    @Override
+    public ITargetSelector attach(IMixinContext context) throws InvalidSelectorException {
+        if (this.owner != null && !this.owner.equals(context.getTargetClassRef())) {
+            throw new TargetNotSupportedException(this.owner);
+        }
+        return this;
+    }
+    
     /**
      * Create a new version of this member with a different owner
      * 
      * @param newOwner New owner for this member
      */
-    public MemberInfo move(String newOwner) {
+    @Override
+    public ITargetSelectorRemappable move(String newOwner) {
         if ((newOwner == null && this.owner == null) || (newOwner != null && newOwner.equals(this.owner))) {
             return this;
         }
@@ -597,7 +650,8 @@ public final class MemberInfo {
      * 
      * @param newDesc New descriptor for this member
      */
-    public MemberInfo transform(String newDesc) {
+    @Override
+    public ITargetSelectorRemappable transform(String newDesc) {
         if ((newDesc == null && this.desc == null) || (newDesc != null && newDesc.equals(this.desc))) {
             return this;
         }
@@ -611,50 +665,9 @@ public final class MemberInfo {
      * @param setOwner True to set the owner as well as the name
      * @return New MethodInfo with remapped values
      */
-    public MemberInfo remapUsing(MappingMethod srgMethod, boolean setOwner) {
+    @Override
+    public ITargetSelectorRemappable remapUsing(MappingMethod srgMethod, boolean setOwner) {
         return new MemberInfo(this, srgMethod, setOwner);
-    }
-    
-    /**
-     * Parse a MemberInfo from a string and perform validation
-     * 
-     * @param string String to parse MemberInfo from
-     * @return parsed MemberInfo
-     */
-    public static MemberInfo parseAndValidate(String string) throws InvalidMemberDescriptorException {
-        return MemberInfo.parse(string, null, null).validate();
-    }
-    
-    /**
-     * Parse a MemberInfo from a string and perform validation
-     * 
-     * @param string String to parse MemberInfo from
-     * @param context Context to use for reference mapping
-     * @return parsed MemberInfo
-     */
-    public static MemberInfo parseAndValidate(String string, IMixinContext context) throws InvalidMemberDescriptorException {
-        return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef()).validate();
-    }
-    
-    /**
-     * Parse a MemberInfo from a string
-     * 
-     * @param string String to parse MemberInfo from
-     * @return parsed MemberInfo
-     */
-    public static MemberInfo parse(String string) {
-        return MemberInfo.parse(string, null, null);
-    }
-    
-    /**
-     * Parse a MemberInfo from a string
-     * 
-     * @param string String to parse MemberInfo from
-     * @param context Context to use for reference mapping
-     * @return parsed MemberInfo
-     */
-    public static MemberInfo parse(String string, IMixinContext context) {
-        return MemberInfo.parse(string, context.getReferenceMapper(), context.getClassRef());
     }
     
     /**
@@ -662,16 +675,16 @@ public final class MemberInfo {
      * 
      * @param input String to parse MemberInfo from
      * @param refMapper Reference mapper to use
-     * @param mixinClass Mixin class to use for remapping
+     * @param className Class context to use for remapping
      * @return parsed MemberInfo
      */
-    private static MemberInfo parse(String input, IReferenceMapper refMapper, String mixinClass) {
+    public static MemberInfo parse(String input, IReferenceMapper refMapper, String className) {
         String desc = null;
         String owner = null;
         String name = Strings.nullToEmpty(input).replaceAll("\\s", "");
 
         if (refMapper != null) {
-            name = refMapper.remap(mixinClass, name);
+            name = refMapper.remap(className, name);
         }
         
         int lastDotPos = name.lastIndexOf('.');

@@ -40,14 +40,23 @@ public abstract class Constants {
     public static final String MIXIN_PACKAGE = Mixin.class.getPackage().getName();
     public static final String MIXIN_PACKAGE_REF = Constants.MIXIN_PACKAGE.replace('.', '/');
 
-    public static final String STRING = "Ljava/lang/String;";
-    public static final String OBJECT = "Ljava/lang/Object;";
-    public static final String CLASS = "Ljava/lang/Class;";
+    public static final String STRING = "java/lang/String";
+    public static final String OBJECT = "java/lang/Object";
+    public static final String CLASS = "java/lang/Class";
+    
+    public static final String STRING_DESC = "L" + Constants.STRING + ";";
+    public static final String OBJECT_DESC = "L" + Constants.OBJECT + ";";
+    public static final String CLASS_DESC = "L" + Constants.CLASS + ";";
     
     public static final String SYNTHETIC_PACKAGE = "org.spongepowered.asm.synthetic";
     public static final char UNICODE_SNOWMAN = '\u2603';
     
     public static final File DEBUG_OUTPUT_DIR = new File(Constants.DEBUG_OUTPUT_PATH);
+    
+    public static final String SIDE_DEDICATEDSERVER = "DEDICATEDSERVER";
+    public static final String SIDE_SERVER = "SERVER";
+    public static final String SIDE_CLIENT = "CLIENT";
+    public static final String SIDE_UNKNOWN = "UNKNOWN";
     
     private Constants() {}
     

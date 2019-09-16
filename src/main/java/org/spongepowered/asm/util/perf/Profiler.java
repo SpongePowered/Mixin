@@ -24,9 +24,12 @@
  */
 package org.spongepowered.asm.util.perf;
 
+import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.Map.Entry;
 
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.PrettyPrinter.Alignment;
 
@@ -37,6 +40,8 @@ import com.google.common.base.Joiner;
  */
 public final class Profiler {
     
+    private static final String METRONOME_AGENT_CLASS = "org.spongepowered.metronome.Agent";
+
     /**
      * Flag to indicate a root section. Root sections are always recorded at the
      * root wherever they occur, but may appear under other sections in order to
@@ -778,6 +783,109 @@ public final class Profiler {
         }
         
         printer.tr(values);
+    }
+
+    /**
+     * Print summary of mixin performance to the console
+     */
+    public void printSummary() {
+        
+        DecimalFormat threedp = new DecimalFormat("(###0.000");
+        DecimalFormat onedp = new DecimalFormat("(###0.0");
+        PrettyPrinter printer = this.printer(false, false);
+        
+        long prepareTime = this.get("mixin.prepare").getTotalTime();
+        long readTime = this.get("mixin.read").getTotalTime();
+        long applyTime = this.get("mixin.apply").getTotalTime();
+        long writeTime = this.get("mixin.write").getTotalTime();
+        long totalMixinTime = this.get("mixin").getTotalTime();
+        
+        long loadTime = this.get("class.load").getTotalTime();
+        long transformTime = this.get("class.transform").getTotalTime();
+        long exportTime = this.get("mixin.debug.export").getTotalTime();
+        long actualTime = totalMixinTime - loadTime - transformTime - exportTime;
+        double timeSliceMixin = ((double)actualTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceLoad = ((double)loadTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceTransform = ((double)transformTime / (double)totalMixinTime) * 100.0D;
+        double timeSliceExport = ((double)exportTime / (double)totalMixinTime) * 100.0D;
+        
+        long worstTransformerTime = 0L;
+        Section worstTransformer = null;
+        
+        for (Section section : this.getSections()) {
+            long transformerTime = section.getName().startsWith("class.transform.") ? section.getTotalTime() : 0L;
+            if (transformerTime > worstTransformerTime) {
+                worstTransformerTime = transformerTime;
+                worstTransformer = section;
+            }
+        }
+        
+        printer.hr().add("Summary").hr().add();
+        
+        String format = "%9d ms %12s seconds)";
+        printer.kv("Total mixin time", format, totalMixinTime, threedp.format(totalMixinTime * 0.001)).add();
+        printer.kv("Preparing mixins", format, prepareTime, threedp.format(prepareTime * 0.001));
+        printer.kv("Reading input", format, readTime, threedp.format(readTime * 0.001));
+        printer.kv("Applying mixins", format, applyTime, threedp.format(applyTime * 0.001));
+        printer.kv("Writing output", format, writeTime, threedp.format(writeTime * 0.001)).add();
+        
+        printer.kv("of which","");
+        printer.kv("Time spent loading from disk", format, loadTime, threedp.format(loadTime * 0.001));
+        printer.kv("Time spent transforming classes", format, transformTime, threedp.format(transformTime * 0.001)).add();
+        
+        if (worstTransformer != null) {
+            printer.kv("Worst transformer", worstTransformer.getName());
+            printer.kv("Class", worstTransformer.getInfo());
+            printer.kv("Time spent", "%s seconds", worstTransformer.getTotalSeconds());
+            printer.kv("called", "%d times", worstTransformer.getTotalCount()).add();
+        }
+        
+        printer.kv("   Time allocation:     Processing mixins", "%9d ms %10s%% of total)", actualTime, onedp.format(timeSliceMixin));
+        printer.kv("Loading classes", "%9d ms %10s%% of total)", loadTime, onedp.format(timeSliceLoad));
+        printer.kv("Running transformers", "%9d ms %10s%% of total)", transformTime, onedp.format(timeSliceTransform));
+        if (exportTime > 0L) {
+            printer.kv("Exporting classes (debug)", "%9d ms %10s%% of total)", exportTime, onedp.format(timeSliceExport));
+        }
+        printer.add();
+        
+        try {
+            Class<?> agent = MixinService.getService().getClassProvider().findAgentClass(Profiler.METRONOME_AGENT_CLASS, false);
+            Method mdGetTimes = agent.getDeclaredMethod("getTimes");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Long> times = (Map<String, Long>)mdGetTimes.invoke(null);
+            
+            printer.hr().add("Transformer Times").hr().add();
+
+            int longest = 10;
+            for (Entry<String, Long> entry : times.entrySet()) {
+                longest = Math.max(longest, entry.getKey().length());
+            }
+            
+            for (Entry<String, Long> entry : times.entrySet()) {
+                String name = entry.getKey();
+                long mixinTime = 0L;
+                for (Section section : this.getSections()) {
+                    if (name.equals(section.getInfo())) {
+                        mixinTime = section.getTotalTime();
+                        break;
+                    }
+                }
+                
+                if (mixinTime > 0L) {
+                    printer.add("%-" + longest + "s %8s ms %8s ms in mixin)", name, entry.getValue() + mixinTime, "(" + mixinTime);
+                } else {
+                    printer.add("%-" + longest + "s %8s ms", name, entry.getValue());
+                }
+            }
+            
+            printer.add();
+            
+        } catch (Throwable th) {
+            // Metronome agent not loaded
+        }
+
+        printer.print();
     }
     
 }

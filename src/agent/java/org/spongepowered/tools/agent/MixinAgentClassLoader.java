@@ -29,10 +29,10 @@ import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.MethodVisitor;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.util.Constants;
 

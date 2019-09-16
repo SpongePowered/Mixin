@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer.ext;
 
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 
 /**
@@ -60,8 +61,8 @@ public interface IExtension {
      * @param name Class name
      * @param force True to export even if the current environment settings
      *      would normally disable it
-     * @param bytes Bytes to export
+     * @param classNode Class to export
      */
-    public abstract void export(MixinEnvironment env, String name, boolean force, byte[] bytes);
+    public abstract void export(MixinEnvironment env, String name, boolean force, ClassNode classNode);
 
 }

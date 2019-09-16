@@ -29,15 +29,18 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ListIterator;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.TypeInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorConstructor;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.util.Constants;
 
 import com.google.common.base.Strings;
@@ -108,9 +111,14 @@ public class BeforeNew extends InjectionPoint {
         
         this.ordinal = data.getOrdinal();
         String target = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
-        MemberInfo member = MemberInfo.parseAndValidate(target, data.getContext());
-        this.target = member.toCtorType();
-        this.desc = member.toCtorDesc();
+        ITargetSelector member = TargetSelector.parseAndValidate(target, data.getContext());
+        if (!(member instanceof ITargetSelectorConstructor)) {
+            throw new InvalidInjectionPointException(data.getContext(), "Failed parsing @At(\"NEW\") target descriptor \"%s\" on %s",
+                    target, data.getDescription());
+        }
+        ITargetSelectorConstructor targetSelector = (ITargetSelectorConstructor)member;
+        this.target = targetSelector.toCtorType();
+        this.desc = targetSelector.toCtorDesc();
     }
     
     /**

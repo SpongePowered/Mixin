@@ -176,7 +176,7 @@ final class LaunchClassLoaderUtil {
             field.setAccessible(true);
             return (T)field.get(classLoader);
         } catch (Exception ex) {
-            ex.printStackTrace();
+//            ex.printStackTrace();
         }
         return null;
     }

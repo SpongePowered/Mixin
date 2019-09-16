@@ -27,10 +27,10 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Interface;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;

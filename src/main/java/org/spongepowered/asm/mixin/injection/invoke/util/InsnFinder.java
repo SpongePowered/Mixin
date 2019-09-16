@@ -26,13 +26,13 @@ package org.spongepowered.asm.mixin.injection.invoke.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.analysis.Analyzer;
-import org.spongepowered.asm.lib.tree.analysis.AnalyzerException;
-import org.spongepowered.asm.lib.tree.analysis.BasicInterpreter;
-import org.spongepowered.asm.lib.tree.analysis.BasicValue;
-import org.spongepowered.asm.lib.tree.analysis.Frame;
-import org.spongepowered.asm.lib.tree.analysis.Interpreter;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.BasicInterpreter;
+import org.objectweb.asm.tree.analysis.BasicValue;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.Interpreter;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 
 /**

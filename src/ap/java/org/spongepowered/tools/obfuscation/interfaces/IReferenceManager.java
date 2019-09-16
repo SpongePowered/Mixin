@@ -24,7 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation.interfaces;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -75,7 +75,7 @@ public interface IReferenceManager {
 
     /**
      * Adds a method mapping to the internal refmap, generates refmap entries
-     * using the supplied parsed memberinfo as context
+     * using the supplied parsed target selector as context
      * 
      * @param className Mixin class name which owns the refmap entry
      * @param reference Original reference, as it appears in the annotation
@@ -83,11 +83,12 @@ public interface IReferenceManager {
      *      supplied obfuscation data
      * @param obfMethodData Method data to add for this mapping
      */
-    public abstract void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MappingMethod> obfMethodData);
+    public abstract void addMethodMapping(String className, String reference, ITargetSelectorRemappable context,
+            ObfuscationData<MappingMethod> obfMethodData);
 
     /**
      * Adds a field mapping to the internal refmap, generates refmap entries
-     * using the supplied parsed memberinfo as context
+     * using the supplied parsed target selector as context
      * 
      * @param className Mixin class name which owns the refmap entry
      * @param reference Original reference, as it appears in the annotation
@@ -95,7 +96,8 @@ public interface IReferenceManager {
      *      supplied obfuscation data
      * @param obfFieldData Field data to add for this mapping
      */
-    public abstract void addFieldMapping(String className, String reference, MemberInfo context, ObfuscationData<MappingField> obfFieldData);
+    public abstract void addFieldMapping(String className, String reference, ITargetSelectorRemappable context,
+            ObfuscationData<MappingField> obfFieldData);
 
     /**
      * Adds a class mapping to the internal refmap

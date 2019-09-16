@@ -55,7 +55,8 @@ public class MappingWriterSrg extends MappingWriter {
         PrintWriter writer = null;
         
         try {
-            writer = this.openFileWriter(output, type + " output SRGs");
+            writer = this.openFileWriter(output, type);
+            this.writeHeader(writer);
             this.writeFieldMappings(writer, fields);
             this.writeMethodMappings(writer, methods);
         } catch (IOException ex) {
@@ -69,6 +70,14 @@ public class MappingWriterSrg extends MappingWriter {
                 }
             }
         }
+    }
+
+    protected PrintWriter openFileWriter(String output, ObfuscationType type) throws IOException {
+        return this.openFileWriter(output, type + " output SRGs");
+    }
+
+    protected void writeHeader(PrintWriter writer) {
+        // stub
     }
 
     protected void writeFieldMappings(PrintWriter writer, MappingSet<MappingField> fields) {

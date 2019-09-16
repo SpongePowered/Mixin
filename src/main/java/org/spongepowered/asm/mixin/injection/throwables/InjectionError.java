@@ -24,10 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.throwables;
 
+import org.spongepowered.asm.mixin.throwables.MixinError;
+
 /**
  * Error to throw for critical injection problems
  */
-public class InjectionError extends Error {
+public class InjectionError extends MixinError {
 
     private static final long serialVersionUID = 1L;
 

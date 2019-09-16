@@ -45,6 +45,7 @@ public final class SupportedOptions {
     public static final String OVERWRITE_ERROR_LEVEL     = "overwriteErrorLevel";
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
     public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
+    public static final String MAPPING_TYPES             = "mappingTypes";
     
     private SupportedOptions() {}
 
@@ -61,7 +62,8 @@ public final class SupportedOptions {
             SupportedOptions.DISABLE_OVERWRITE_CHECKER,
             SupportedOptions.OVERWRITE_ERROR_LEVEL,
             SupportedOptions.DEFAULT_OBFUSCATION_ENV,
-            SupportedOptions.DEPENDENCY_TARGETS_FILE
+            SupportedOptions.DEPENDENCY_TARGETS_FILE,
+            SupportedOptions.MAPPING_TYPES
         );
         options.addAll(
             ObfuscationServices.getInstance().getSupportedOptions()

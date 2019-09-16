@@ -22,23 +22,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util.throwables;
+package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Exception thrown when something goes horribly wrong whilst <del>summoning the
- * antichrist</del> generating the LVT for a target method.
+ * Exception to be thrown from {@link ITargetSelector#validate} when a target
+ * selector fails verification
  */
-public class LVTGeneratorException extends MixinException {
+public class InvalidSelectorException extends MixinException {
 
     private static final long serialVersionUID = 1L;
 
-    public LVTGeneratorException(String message) {
+    public InvalidSelectorException(String message) {
         super(message);
     }
 
-    public LVTGeneratorException(String message, Throwable cause) {
+    public InvalidSelectorException(Throwable cause) {
+        super(cause);
+    }
+
+    public InvalidSelectorException(String message, Throwable cause) {
         super(message, cause);
     }
 

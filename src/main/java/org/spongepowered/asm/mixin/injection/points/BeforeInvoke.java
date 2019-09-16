@@ -26,16 +26,19 @@ package org.spongepowered.asm.mixin.injection.points;
 
 import java.util.Collection;
 import java.util.ListIterator;
+import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
@@ -48,7 +51,8 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
  * 
  * <dl>
  *   <dt>target</dt>
- *   <dd>A {@link MemberInfo MemberInfo} which identifies the target method</dd>
+ *   <dd>A {@link ITargetSelector Target Selector} which identifies the target
+ *   method</dd>
  *   <dt>ordinal</dt>
  *   <dd>The ordinal position of the method invocation to match. For example if
  *   the method is invoked 3 times and you want to match the 3rd then you can
@@ -80,7 +84,7 @@ public class BeforeInvoke extends InjectionPoint {
         
     }
 
-    protected final MemberInfo target;
+    protected final ITargetSelector target;
     
     /**
      * This option enables a fallback "permissive" search to occur if initial
@@ -130,7 +134,7 @@ public class BeforeInvoke extends InjectionPoint {
 
     private String getClassName() {
         AtCode atCode = this.getClass().<AtCode>getAnnotation(AtCode.class);
-        return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase());
+        return String.format("@At(%s)", atCode != null ? atCode.value() : this.getClass().getSimpleName().toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -146,14 +150,16 @@ public class BeforeInvoke extends InjectionPoint {
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.InjectionPoint
-     *      #find(java.lang.String, org.spongepowered.asm.lib.tree.InsnList,
+     *      #find(java.lang.String, org.objectweb.asm.tree.InsnList,
      *      java.util.Collection)
      */
     @Override
     public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
         this.log("{} is searching for an injection point in method with descriptor {}", this.className, desc);
         
-        if (!this.find(desc, insns, nodes, this.target, SearchType.STRICT) && this.target.desc != null && this.allowPermissive) {
+        boolean hasDescriptor = this.target instanceof ITargetSelectorByName && ((ITargetSelectorByName)this.target).getDesc() == null;
+        
+        if (!this.find(desc, insns, nodes, this.target, SearchType.STRICT) && hasDescriptor && this.allowPermissive) {
             this.logger.warn("STRICT match for {} using \"{}\" in {} returned 0 results, attempting permissive search. "
                     + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, this.target, this.context);
             return this.find(desc, insns, nodes, this.target, SearchType.PERMISSIVE);
@@ -161,12 +167,12 @@ public class BeforeInvoke extends InjectionPoint {
         return true;
     }
 
-    protected boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes, MemberInfo member, SearchType searchType) {
-        if (member == null) {
+    protected boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes, ITargetSelector selector, SearchType searchType) {
+        if (selector == null) {
             return false;
         }
         
-        MemberInfo target = searchType == SearchType.PERMISSIVE ? member.transform(null) : member;
+        ITargetSelector target = searchType == SearchType.PERMISSIVE ? selector.configure("permissive") : selector;
         
         int ordinal = 0;
         int found = 0;
@@ -179,10 +185,10 @@ public class BeforeInvoke extends InjectionPoint {
                 MemberInfo nodeInfo = new MemberInfo(insn);
                 this.log("{} is considering insn {}", this.className, nodeInfo);
 
-                if (target.matches(nodeInfo.owner, nodeInfo.name, nodeInfo.desc)) {
+                if (target.match(insn).isExactMatch()) {
                     this.log("{} > found a matching insn, checking preconditions...", this.className);
                     
-                    if (this.matchesInsn(nodeInfo, ordinal)) {
+                    if (this.matchesOrdinal(ordinal)) {
                         this.log("{} > > > found a matching insn at ordinal {}", this.className, ordinal);
                         
                         if (this.addInsn(insns, nodes, insn)) {
@@ -203,7 +209,7 @@ public class BeforeInvoke extends InjectionPoint {
         
         if (searchType == SearchType.PERMISSIVE && found > 1) {
             this.logger.warn("A permissive match for {} using \"{}\" in {} matched {} instructions, this may cause unexpected behaviour. "
-                    + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, member, this.context, found);
+                    + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, selector, this.context, found);
         }
 
         return found > 0;
@@ -222,7 +228,7 @@ public class BeforeInvoke extends InjectionPoint {
         // stub for subclasses
     }
 
-    protected boolean matchesInsn(MemberInfo nodeInfo, int ordinal) {
+    protected boolean matchesOrdinal(int ordinal) {
         this.log("{} > > comparing target ordinal {} with current ordinal {}", this.className, this.ordinal, ordinal);
         return this.ordinal == -1 || this.ordinal == ordinal;
     }

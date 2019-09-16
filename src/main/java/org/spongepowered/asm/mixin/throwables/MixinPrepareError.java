@@ -27,7 +27,7 @@ package org.spongepowered.asm.mixin.throwables;
 /**
  * Error to throw for required configs when initialising of the config fails
  */
-public class MixinPrepareError extends Error {
+public class MixinPrepareError extends MixinError {
 
     private static final long serialVersionUID = 1L;
 

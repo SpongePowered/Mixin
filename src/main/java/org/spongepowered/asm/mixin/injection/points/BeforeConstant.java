@@ -29,17 +29,18 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.FrameNode;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.LabelNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Constant.Condition;
@@ -187,9 +188,9 @@ public class BeforeConstant extends InjectionPoint {
         }
         
         List<Condition> conditions = new ArrayList<Condition>();
-        String strConditions = data.get("expandZeroConditions", "").toLowerCase();
+        String strConditions = data.get("expandZeroConditions", "").toLowerCase(Locale.ROOT);
         for (Condition condition : Condition.values()) {
-            if (strConditions.contains(condition.name().toLowerCase())) {
+            if (strConditions.contains(condition.name().toLowerCase(Locale.ROOT))) {
                 conditions.add(condition);
             }
         }
@@ -281,7 +282,7 @@ public class BeforeConstant extends InjectionPoint {
         Object value = Bytecode.getConstant(insn);
         if (value == null) {
             this.log("  BeforeConstant found NULL constant: nullValue = {}", this.nullValue);
-            return this.nullValue || Constants.OBJECT.equals(this.matchByType);
+            return this.nullValue || Constants.OBJECT_DESC.equals(this.matchByType);
         } else if (value instanceof Integer) {
             this.log("  BeforeConstant found INTEGER constant: value = {}, intValue = {}", value, this.intValue);
             return value.equals(this.intValue) || "I".equals(this.matchByType);
@@ -296,10 +297,10 @@ public class BeforeConstant extends InjectionPoint {
             return value.equals(this.doubleValue) || "D".equals(this.matchByType);
         } else if (value instanceof String) {
             this.log("  BeforeConstant found STRING constant: value = {}, stringValue = {}", value, this.stringValue);
-            return value.equals(this.stringValue) || Constants.STRING.equals(this.matchByType);
+            return value.equals(this.stringValue) || Constants.STRING_DESC.equals(this.matchByType);
         } else if (value instanceof Type) {
             this.log("  BeforeConstant found CLASS constant: value = {}, typeValue = {}", value, this.typeValue);
-            return value.equals(this.typeValue) || Constants.CLASS.equals(this.matchByType);
+            return value.equals(this.typeValue) || Constants.CLASS_DESC.equals(this.matchByType);
         }
         
         return false;

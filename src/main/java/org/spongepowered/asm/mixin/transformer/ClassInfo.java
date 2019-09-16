@@ -36,19 +36,21 @@ import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.FrameNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel.LanguageFeature;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
@@ -88,6 +90,27 @@ public final class ClassInfo {
          * Only walk the superclasses when searching the hierarchy 
          */
         SUPER_CLASSES_ONLY
+        
+    }
+    
+    /**
+     * When using {@link ClassInfo#forType}, determines whether an array type
+     * should be returned as declared (eg. as <tt>Object</tt>) or whether the
+     * element type should be returned instead.
+     */
+    public static enum TypeLookup {
+        
+        /**
+         * Return the type as declared in the descriptor. This means that array
+         * types will be treated <tt>Object</tt> for the purposes of type
+         * hierarchy lookups returning the correct member methods.
+         */
+        DECLARED_TYPE,
+        
+        /**
+         * Legacy behaviour. A lookup by type will return the element type. 
+         */
+        ELEMENT_TYPE
         
     }
 
@@ -431,6 +454,8 @@ public final class ClassInfo {
         
         private boolean isAccessor;
         
+        private boolean conformed;
+
         public Method(Member member) {
             super(member);
             this.frames = member instanceof Method ? ((Method)member).frames : null;
@@ -488,6 +513,33 @@ public final class ClassInfo {
 
         public boolean isAccessor() {
             return this.isAccessor;
+        }
+        
+        public boolean isConformed() {
+            return this.conformed;
+        }
+        
+        @Override
+        public String renameTo(String name) {
+            this.conformed = false;
+            return super.renameTo(name);
+        }
+
+        /**
+         * @param name new name
+         * @return the passed-in argument, for fluency
+         */
+        public String conform(String name) {
+            boolean nameChanged = !name.equals(this.getName());
+            if (this.conformed && nameChanged) {
+                throw new IllegalStateException("Method " + this + " was already conformed. Original= " + this.getOriginalName()
+                        + " Current=" + this.getName() + " New=" + name);
+            }
+            if (nameChanged) {
+                this.renameTo(name);
+                this.conformed = true;
+            }
+            return name;
         }
 
         @Override
@@ -636,7 +688,7 @@ public final class ClassInfo {
     /**
      * Mixins which target this class
      */
-    private final Set<MixinInfo> mixins = new HashSet<MixinInfo>();
+    private final Set<MixinInfo> mixins;
 
     /**
      * Map of mixin types to corresponding supertypes, to avoid repeated
@@ -682,6 +734,11 @@ public final class ClassInfo {
     private ClassSignature signature;
 
     /**
+     * Mixins which have been applied this class
+     */
+    private Set<MixinInfo> appliedMixins;
+
+    /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
      */
     private ClassInfo() {
@@ -708,6 +765,7 @@ public final class ClassInfo {
         this.access = Opcodes.ACC_PUBLIC;
         this.isMixin = false;
         this.mixin = null;
+        this.mixins = Collections.<MixinInfo>emptySet();
         this.methodMapper = null;
     }
 
@@ -728,6 +786,7 @@ public final class ClassInfo {
             this.access = classNode.access;
             this.isMixin = classNode instanceof MixinClassNode;
             this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
+            this.mixins = this.isMixin ? Collections.<MixinInfo>emptySet() : new HashSet<MixinInfo>();
 
             this.interfaces.addAll(classNode.interfaces);
 
@@ -786,19 +845,43 @@ public final class ClassInfo {
         }
         this.mixins.add(mixin);
     }
+    
+    /**
+     * Add a mixin which has been applied to this class
+     */
+    void addAppliedMixin(MixinInfo mixin) {
+        if (this.appliedMixins == null) {
+            this.appliedMixins = new HashSet<MixinInfo>(); 
+        }
+        this.appliedMixins.add(mixin);
+    }
 
     /**
      * Get all mixins which target this class
      */
-    public Set<MixinInfo> getMixins() {
-        return Collections.<MixinInfo>unmodifiableSet(this.mixins);
+    Set<MixinInfo> getMixins() {
+        return this.isMixin ? Collections.<MixinInfo>emptySet() : Collections.<MixinInfo>unmodifiableSet(this.mixins);
     }
 
+    /**
+     * Get all mixins which have been successfully applied to this class
+     */
+    public Set<IMixinInfo> getAppliedMixins() {
+        return this.appliedMixins != null ? Collections.<IMixinInfo>unmodifiableSet(this.appliedMixins) : Collections.<IMixinInfo>emptySet();
+    }
+    
     /**
      * Get whether this class is a mixin
      */
     public boolean isMixin() {
         return this.isMixin;
+    }
+    
+    /**
+     * Get whether this class is loadable mixin
+     */
+    public boolean isLoadable() {
+        return this.mixin != null && this.mixin.isLoadable();
     }
 
     /**
@@ -875,6 +958,21 @@ public final class ClassInfo {
      */
     public String getClassName() {
         return this.name.replace('/', '.');
+    }
+
+    /**
+     * Get the class name (simple name, java format)
+     */
+    public String getSimpleName() {
+        int pos = this.name.lastIndexOf('/');
+        return pos < 0 ? this.name : this.name.substring(pos + 1);
+    }
+    
+    /**
+     * Get the object type (ASM type)
+     */
+    public org.objectweb.asm.Type getType() {
+        return org.objectweb.asm.Type.getObjectType(this.name);
     }
 
     /**
@@ -1281,11 +1379,36 @@ public final class ClassInfo {
      *
      * @param method Method to search for
      * @param searchType Search strategy to use
+     * @param traversal Traversal type to allow during this lookup
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethodInHierarchy(MethodNode method, SearchType searchType, Traversal traversal) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, traversal, 0);
+    }
+
+    /**
+     * Finds the specified private or protected method in this class's hierarchy
+     *
+     * @param method Method to search for
+     * @param searchType Search strategy to use
      * @param flags search flags
      * @return the method object or null if the method could not be resolved
      */
     public Method findMethodInHierarchy(MethodNode method, SearchType searchType, int flags) {
         return this.findMethodInHierarchy(method.name, method.desc, searchType, Traversal.NONE, flags);
+    }
+
+    /**
+     * Finds the specified private or protected method in this class's hierarchy
+     *
+     * @param method Method to search for
+     * @param searchType Search strategy to use
+     * @param traversal Traversal type to allow during this lookup
+     * @param flags search flags
+     * @return the method object or null if the method could not be resolved
+     */
+    public Method findMethodInHierarchy(MethodNode method, SearchType searchType, Traversal traversal, int flags) {
+        return this.findMethodInHierarchy(method.name, method.desc, searchType, traversal, flags);
     }
 
     /**
@@ -1476,7 +1599,7 @@ public final class ClassInfo {
             }
         }
         
-        if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().supportsMethodsInInterfaces())) {
+        if (type == Type.METHOD && (this.isInterface || MixinEnvironment.getCompatibilityLevel().supports(LanguageFeature.METHODS_IN_INTERFACES))) {
             for (String implemented : this.interfaces) {
                 ClassInfo iface = ClassInfo.forName(implemented);
                 if (iface == null) {
@@ -1661,7 +1784,7 @@ public final class ClassInfo {
 
     /**
      * Return a ClassInfo for the specified class name, fetches the ClassInfo
-     * from the cache where possible
+     * from the cache where possible.
      *
      * @param className Binary name of the class to look up
      * @return ClassInfo for the specified class name or null if the specified
@@ -1688,22 +1811,85 @@ public final class ClassInfo {
 
         return info;
     }
-
+    
+    /**
+     * Return a ClassInfo for the specified type descriptor, fetches the
+     * ClassInfo from the cache where possible.
+     *
+     * @param descriptor Internal descriptor of the type to inspect
+     * @param lookup Lookup type to use (literal/element)
+     * @return ClassInfo for the specified class name or null if the specified
+     *      name cannot be resolved for some reason
+     */
+    public static ClassInfo forDescriptor(String descriptor, TypeLookup lookup) {
+        org.objectweb.asm.Type type; 
+        try {
+            type = org.objectweb.asm.Type.getObjectType(descriptor);
+        } catch (IllegalArgumentException ex) {
+            ClassInfo.logger.warn("Error resolving type from descriptor: {}", descriptor);
+            return null;
+        }
+        return ClassInfo.forType(type, lookup);
+    }
+    
     /**
      * Return a ClassInfo for the specified class type, fetches the ClassInfo
      * from the cache where possible and generates the class meta if not.
      *
      * @param type Type to look up
+     * @param lookup Lookup type to use (literal/element)
      * @return ClassInfo for the supplied type or null if the supplied type
      *      cannot be found or is a primitive type
      */
-    public static ClassInfo forType(org.spongepowered.asm.lib.Type type) {
-        if (type.getSort() == org.spongepowered.asm.lib.Type.ARRAY) {
-            return ClassInfo.forType(type.getElementType());
-        } else if (type.getSort() < org.spongepowered.asm.lib.Type.ARRAY) {
+    public static ClassInfo forType(org.objectweb.asm.Type type, TypeLookup lookup) {
+        if (type.getSort() == org.objectweb.asm.Type.ARRAY) {
+            if (lookup == TypeLookup.ELEMENT_TYPE) {
+                return ClassInfo.forType(type.getElementType(), TypeLookup.ELEMENT_TYPE);
+            }
+            return ClassInfo.OBJECT;
+        } else if (type.getSort() < org.objectweb.asm.Type.ARRAY) {
             return null;
         }
         return ClassInfo.forName(type.getClassName().replace('.', '/'));
+    }
+
+    /**
+     * Return a ClassInfo for the specified class name, but only if the class
+     * information already exists in the cache. This prevents class loads in the
+     * instance that a ClassInfo is only being retrieved for a class which
+     * should definitely have already been processed but will be missing in case
+     * of an error condition.
+     *
+     * @param className Binary name of the class to look up
+     * @return ClassInfo for the specified class name or null if the specified
+     *      class does not have an entry in the cache
+     */
+    public static ClassInfo fromCache(String className) {
+        return ClassInfo.cache.get(className.replace('.', '/'));
+    }
+
+    /**
+     * Return a ClassInfo for the specified class type, but only if the class
+     * information already exists in the cache. This prevents class loads in the
+     * instance that a ClassInfo is only being retrieved for a class which
+     * should definitely have already been processed but will be missing in case
+     * of an error condition.
+     *
+     * @param type Type to look up
+     * @param lookup Lookup type to use (literal/element)
+     * @return ClassInfo for the supplied type or null if the supplied type
+     *      does not have an entry in the cache
+     */
+    public static ClassInfo fromCache(org.objectweb.asm.Type type, TypeLookup lookup) {
+        if (type.getSort() == org.objectweb.asm.Type.ARRAY) {
+            if (lookup == TypeLookup.ELEMENT_TYPE) {
+                return ClassInfo.fromCache(type.getElementType(), TypeLookup.ELEMENT_TYPE);
+            }
+            return ClassInfo.OBJECT;
+        } else if (type.getSort() < org.objectweb.asm.Type.ARRAY) {
+            return null;
+        }
+        return ClassInfo.fromCache(type.getClassName());
     }
 
     /**
@@ -1729,12 +1915,12 @@ public final class ClassInfo {
      * @param type2 Second type
      * @return common superclass info
      */
-    public static ClassInfo getCommonSuperClass(org.spongepowered.asm.lib.Type type1, org.spongepowered.asm.lib.Type type2) {
+    public static ClassInfo getCommonSuperClass(org.objectweb.asm.Type type1, org.objectweb.asm.Type type2) {
         if (type1 == null || type2 == null
-                || type1.getSort() != org.spongepowered.asm.lib.Type.OBJECT || type2.getSort() != org.spongepowered.asm.lib.Type.OBJECT) {
+                || type1.getSort() != org.objectweb.asm.Type.OBJECT || type2.getSort() != org.objectweb.asm.Type.OBJECT) {
             return ClassInfo.OBJECT;
         }
-        return ClassInfo.getCommonSuperClass(ClassInfo.forType(type1), ClassInfo.forType(type2));
+        return ClassInfo.getCommonSuperClass(ClassInfo.forType(type1, TypeLookup.DECLARED_TYPE), ClassInfo.forType(type2, TypeLookup.DECLARED_TYPE));
     }
 
     /**
@@ -1772,12 +1958,13 @@ public final class ClassInfo {
      * @param type2 Second type
      * @return common superclass info
      */
-    public static ClassInfo getCommonSuperClassOrInterface(org.spongepowered.asm.lib.Type type1, org.spongepowered.asm.lib.Type type2) {
+    public static ClassInfo getCommonSuperClassOrInterface(org.objectweb.asm.Type type1, org.objectweb.asm.Type type2) {
         if (type1 == null || type2 == null
-                || type1.getSort() != org.spongepowered.asm.lib.Type.OBJECT || type2.getSort() != org.spongepowered.asm.lib.Type.OBJECT) {
+                || type1.getSort() != org.objectweb.asm.Type.OBJECT || type2.getSort() != org.objectweb.asm.Type.OBJECT) {
             return ClassInfo.OBJECT;
         }
-        return ClassInfo.getCommonSuperClassOrInterface(ClassInfo.forType(type1), ClassInfo.forType(type2));
+        return ClassInfo.getCommonSuperClassOrInterface(ClassInfo.forType(type1, TypeLookup.DECLARED_TYPE),
+                ClassInfo.forType(type2, TypeLookup.DECLARED_TYPE));
     }
 
     /**

@@ -39,9 +39,10 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.obfuscation.mirror.mapping.ResolvableMappingMethod;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.tools.obfuscation.mirror.mapping.MappingMethodResolvable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -120,6 +121,13 @@ public class TypeHandle {
      */
     public final String getName() {
         return this.name;
+    }
+    
+    /**
+     * Returns the simple class name
+     */
+    public final String getSimpleName() {
+        return Bytecode.getSimpleName(this.name);
     }
     
     /**
@@ -255,20 +263,20 @@ public class TypeHandle {
      * @return this handle as a mapping method
      */
     public MappingMethod getMappingMethod(String name, String desc) {
-        return new ResolvableMappingMethod(this, name, desc);
+        return new MappingMethodResolvable(this, name, desc);
     }
 
     /**
-     * Find a descriptor for the supplied MemberInfo
+     * Find a descriptor for the supplied target selector
      * 
-     * @param memberInfo MemberInfo to use as search term
+     * @param selector Target selector to use as search term
      * @return descriptor or null if no matching member could be located
      */
-    public String findDescriptor(MemberInfo memberInfo) {
-        String desc = memberInfo.desc;
+    public String findDescriptor(ITargetSelectorByName selector) {
+        String desc = selector.getDesc();
         if (desc == null) {
             for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
-                if (method.getSimpleName().toString().equals(memberInfo.name)) {
+                if (method.getSimpleName().toString().equals(selector.getName())) {
                     desc = TypeUtils.getDescriptor(method);
                     break;
                 }

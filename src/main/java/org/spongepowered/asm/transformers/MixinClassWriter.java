@@ -24,8 +24,8 @@
  */
 package org.spongepowered.asm.transformers;
 
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassWriter;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**

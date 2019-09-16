@@ -24,7 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation.interfaces;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -48,7 +48,7 @@ public interface IObfuscationDataProvider {
      *      original owner class
      *      or String for fields)     
      */
-    public abstract <T> ObfuscationData<T> getObfEntryRecursive(MemberInfo targetMember);
+    public abstract <T> ObfuscationData<T> getObfEntryRecursive(ITargetSelectorRemappable targetMember);
 
     /**
      * Resolves a field or method reference to an ObfuscationData set
@@ -58,7 +58,7 @@ public interface IObfuscationDataProvider {
      * @return obfuscation data (by type) for the supplied member
      *      or String for fields)     
      */
-    public abstract <T> ObfuscationData<T> getObfEntry(MemberInfo targetMember);
+    public abstract <T> ObfuscationData<T> getObfEntry(ITargetSelectorRemappable targetMember);
     
     /**
      * Resolves a field or method reference to an ObfuscationData set
@@ -80,14 +80,14 @@ public interface IObfuscationDataProvider {
      * @return ObfuscationData with remapped owner class corresponding to the
      *      original owner class
      */
-    public abstract ObfuscationData<MappingMethod> getObfMethodRecursive(MemberInfo method);
+    public abstract ObfuscationData<MappingMethod> getObfMethodRecursive(ITargetSelectorRemappable method);
 
     /**
      * Get an obfuscation mapping for a method
      * 
      * @param method method to fetch obfuscation mapping for
      */
-    public abstract ObfuscationData<MappingMethod> getObfMethod(MemberInfo method);
+    public abstract ObfuscationData<MappingMethod> getObfMethod(ITargetSelectorRemappable method);
 
     /**
      * Get an obfuscation mapping for a method if an explicit mapping exists.
@@ -95,7 +95,7 @@ public interface IObfuscationDataProvider {
      * 
      * @param method method to fetch obfuscation mapping for
      */
-    public abstract ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method);
+    public abstract ObfuscationData<MappingMethod> getRemappedMethod(ITargetSelectorRemappable method);
 
     /**
      * Get an obfuscation mapping for a method
@@ -122,14 +122,14 @@ public interface IObfuscationDataProvider {
      * @return ObfuscationData with remapped owner class corresponding to the
      *      original owner class
      */
-    public abstract ObfuscationData<MappingField> getObfFieldRecursive(MemberInfo field);
+    public abstract ObfuscationData<MappingField> getObfFieldRecursive(ITargetSelectorRemappable field);
 
     /**
      * Get an obfuscation mapping for a field
      * 
      * @param field field to fetch obfuscation mapping for
      */
-    public abstract ObfuscationData<MappingField> getObfField(MemberInfo field);
+    public abstract ObfuscationData<MappingField> getObfField(ITargetSelectorRemappable field);
 
     /**
      * Get an obfuscation mapping for a field

@@ -24,10 +24,12 @@
  */
 package org.spongepowered.asm.mixin.transformer.throwables;
 
+import org.spongepowered.asm.mixin.throwables.MixinError;
+
 /**
  * Error to throw for things which really shouldn't happen
  */
-public class MixinTransformerError extends Error {
+public class MixinTransformerError extends MixinError {
 
     private static final long serialVersionUID = 1L;
 

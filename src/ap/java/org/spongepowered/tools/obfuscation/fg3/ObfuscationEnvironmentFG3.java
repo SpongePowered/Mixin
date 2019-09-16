@@ -1,0 +1,59 @@
+/*
+ * This file is part of Mixin, licensed under the MIT License (MIT).
+ *
+ * Copyright (c) SpongePowered <https://www.spongepowered.org>
+ * Copyright (c) contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.spongepowered.tools.obfuscation.fg3;
+
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.Messager;
+
+import org.spongepowered.tools.obfuscation.ObfuscationEnvironment;
+import org.spongepowered.tools.obfuscation.ObfuscationType;
+import org.spongepowered.tools.obfuscation.mapping.IMappingProvider;
+import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
+import org.spongepowered.tools.obfuscation.mapping.fg3.MappingProviderTSrg;
+import org.spongepowered.tools.obfuscation.mapping.fg3.MappingWriterTSrg;
+
+/**
+ * A ForgeGradle 3.+ obfuscation environment
+ */
+public class ObfuscationEnvironmentFG3 extends ObfuscationEnvironment {
+
+    private MappingProviderTSrg provider;
+
+    protected ObfuscationEnvironmentFG3(ObfuscationType type) {
+        super(type);
+    }
+    
+    @Override
+    protected IMappingProvider getMappingProvider(Messager messager, Filer filer) {
+        return this.provider = new MappingProviderTSrg(messager, filer);
+    }
+    
+    @Override
+    protected IMappingWriter getMappingWriter(Messager messager, Filer filer) {
+        String outputBehaviour = this.ap.getOption(ObfuscationServiceFG3.TSRG_OUTPUT_BEHAVIOUR);
+        return new MappingWriterTSrg(messager, filer, this.provider, outputBehaviour != null && outputBehaviour.equalsIgnoreCase("merge"));
+    }
+
+}

@@ -24,11 +24,11 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 /**
  * Generator for field setters
@@ -44,15 +44,15 @@ public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
      */
     @Override
     public MethodNode generate() {
-        int stackSpace = this.isInstanceField ? 1 : 0;
+        int stackSpace = this.targetIsStatic ? 0 : 1; // Stack space for "this"
         int maxLocals = stackSpace + this.targetType.getSize();
         int maxStack = stackSpace + this.targetType.getSize();
         MethodNode method = this.createMethod(maxLocals, maxStack);
-        if (this.isInstanceField) {
+        if (!this.targetIsStatic) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
         method.instructions.add(new VarInsnNode(this.targetType.getOpcode(Opcodes.ILOAD), stackSpace));
-        int opcode = this.isInstanceField ? Opcodes.PUTFIELD : Opcodes.PUTSTATIC;
+        int opcode = this.targetIsStatic ? Opcodes.PUTSTATIC : Opcodes.PUTFIELD;
         method.instructions.add(new FieldInsnNode(opcode, this.info.getClassNode().name, this.targetField.name, this.targetField.desc));
         method.instructions.add(new InsnNode(Opcodes.RETURN));
         return method;

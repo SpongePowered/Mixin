@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation.interfaces;
 
+import java.util.List;
+
 /**
  * An object which can provide option values to consumers
  */
@@ -36,5 +38,23 @@ public interface IOptionProvider {
      * @return Option value or null if absent
      */
     public abstract String getOption(String option);
+
+    /**
+     * Fetch the value of the specified option, if available. If the option is
+     * not available, return the specified default value
+     * 
+     * @param option Name of the option to fetch
+     * @param defaultValue Default value to return if the option is not present
+     * @return Option value or default if absent
+     */
+    public abstract boolean getOption(String option, boolean defaultValue);
+    
+    /**
+     * Fetch the values of the specified comma-separated option, if available
+     * 
+     * @param option Name of the option to fetch
+     * @return Option value or null if absent
+     */
+    public abstract List<String> getOptions(String option);
 
 }

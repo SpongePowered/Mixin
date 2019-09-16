@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.util.Locale;
+
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
@@ -79,7 +81,7 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
 
         @Override
         public String toString() {
-            return this.getElementType().name().toLowerCase();
+            return this.getElementType().name().toLowerCase(Locale.ROOT);
         }
         
         public ShadowElementName setObfuscatedName(IMapping<?> name) {

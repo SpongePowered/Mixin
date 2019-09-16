@@ -27,16 +27,16 @@ package org.spongepowered.asm.mixin.injection.points;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.InsnList;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnList;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -48,7 +48,8 @@ import org.spongepowered.asm.util.Bytecode;
  * 
  * <dl>
  *   <dt>target</dt>
- *   <dd>A {@link MemberInfo MemberInfo} which identifies the target field.</dd>
+ *   <dd>A {@link ITargetSelector Target Selector} which identifies the target
+ *   field.</dd>
  *   <dt>opcode</dt>
  *   <dd>The {@link Opcodes opcode} of the field access, must be one of
  *   GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.</dd>

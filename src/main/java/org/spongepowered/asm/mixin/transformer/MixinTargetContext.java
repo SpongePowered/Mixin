@@ -39,10 +39,10 @@ import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.Handle;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.*;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -60,6 +60,7 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.struct.MemberRef;
 import org.spongepowered.asm.mixin.struct.SourceMap.File;
+import org.spongepowered.asm.mixin.transformer.ActivityStack.Activity;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
@@ -71,6 +72,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
 
@@ -91,6 +93,11 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * Logger
      */
     private static final Logger logger = LogManager.getLogger("mixin");
+    
+    /**
+     * Activity tracker
+     */
+    protected final ActivityStack activities = new ActivityStack(null);
 
     /**
      * Mixin info
@@ -184,7 +191,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.mixin = mixin;
         this.classNode = classNode;
         this.targetClass = context;
-        this.targetClassInfo = ClassInfo.forName(this.getTarget().getClassRef());
+        this.targetClassInfo = context.getClassInfo();
         this.stratum = context.getSourceMap().addFile(this.classNode);
         this.inheritsFromMixin = mixin.getClassInfo().hasMixinInHierarchy() || this.targetClassInfo.hasMixinTargetInHierarchy();
         this.detachedSuper = !this.classNode.superName.equals(this.getTarget().getClassNode().superName);
@@ -346,7 +353,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return the local class info
      */
     @Override
-    protected ClassInfo getClassInfo() {
+    ClassInfo getClassInfo() {
         return this.mixin.getClassInfo();
     }
     
@@ -420,27 +427,6 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     public boolean requireOverwriteAnnotations() {
         return this.mixin.getParent().requireOverwriteAnnotations();
     }
-
-    /**
-     * Find the corresponding class type for the supplied mixin class in this
-     * mixin target's hierarchy
-     * 
-     * @param mixin Mixin class to discover
-     * @return Transformed
-     */
-    public ClassInfo findRealType(ClassInfo mixin) {
-        if (mixin == this.getClassInfo()) {
-            return this.targetClassInfo;
-        }
-        
-        ClassInfo type = this.targetClassInfo.findCorrespondingType(mixin);
-        if (type == null) {
-            throw new InvalidMixinException(this, "Resolution error: unable to find corresponding type for "
-                    + mixin + " in hierarchy of " + this.targetClassInfo);
-        }
-        
-        return type;
-    }
     
     /**
      * Handles "re-parenting" the method supplied, changes all references to the
@@ -450,32 +436,58 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @param method Method to transform
      */
-    public void transformMethod(MethodNode method) {
-        this.validateMethod(method);
-        this.transformDescriptor(method);
-        this.transformLVT(method);
-
-        // Offset line numbers per the stratum
-        this.stratum.applyOffset(method);
+    void transformMethod(MethodNode method) {
+        this.activities.clear();
         
-        AbstractInsnNode lastInsn = null;
-        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-
-            if (insn instanceof MethodInsnNode) {
-                this.transformMethodRef(method, iter, new MemberRef.Method((MethodInsnNode)insn));
-            } else if (insn instanceof FieldInsnNode) {
-                this.transformFieldRef(method, iter, new MemberRef.Field((FieldInsnNode)insn));
-                this.checkFinal(method, iter, (FieldInsnNode)insn);
-            } else if (insn instanceof TypeInsnNode) {
-                this.transformTypeNode(method, iter, (TypeInsnNode)insn, lastInsn);
-            } else if (insn instanceof LdcInsnNode) {
-                this.transformConstantNode(method, iter, (LdcInsnNode)insn);
-            } else if (insn instanceof InvokeDynamicInsnNode) {
-                this.transformInvokeDynamicNode(method, iter, (InvokeDynamicInsnNode)insn);
-            }
+        try {
+            Activity activity = this.activities.begin("Validate");
+            this.validateMethod(method);
+            activity.next("Transform Descriptor");
+            this.transformDescriptor(method);
+            activity.next("Transform LVTs");
+            this.transformLVT(method);
+    
+            // Offset line numbers per the stratum
+            activity.next("Transform Line Numbers");
+            this.stratum.applyOffset(method);
             
-            lastInsn = insn;
+            activity.next("Transform Instructions");
+            AbstractInsnNode lastInsn = null;
+            for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+                AbstractInsnNode insn = iter.next();
+                Activity insnActivity = this.activities.begin(Bytecode.getOpcodeName(insn) + " ");
+    
+                if (insn instanceof MethodInsnNode) {
+                    MethodInsnNode methodNode = (MethodInsnNode)insn;
+                    insnActivity.append("%s::%s%s", methodNode.owner, methodNode.name, methodNode.desc);
+                    this.transformMethodRef(method, iter, new MemberRef.Method(methodNode));
+                } else if (insn instanceof FieldInsnNode) {
+                    FieldInsnNode fieldNode = (FieldInsnNode)insn;
+                    insnActivity.append("%s::%s:%s", fieldNode.owner, fieldNode.name, fieldNode.desc);
+                    this.transformFieldRef(method, iter, new MemberRef.Field(fieldNode));
+                    this.checkFinal(method, iter, fieldNode);
+                } else if (insn instanceof TypeInsnNode) {
+                    TypeInsnNode typeNode = (TypeInsnNode)insn;
+                    insnActivity.append(typeNode.desc);
+                    this.transformTypeNode(method, iter, typeNode, lastInsn);
+                } else if (insn instanceof LdcInsnNode) {
+                    this.transformConstantNode(method, iter, (LdcInsnNode)insn);
+                } else if (insn instanceof InvokeDynamicInsnNode) {
+                    InvokeDynamicInsnNode invokeNode = (InvokeDynamicInsnNode)insn;
+                    insnActivity.append("%s %s", invokeNode.name, invokeNode.desc);
+                    this.transformInvokeDynamicNode(method, iter, invokeNode);
+                }
+                
+                lastInsn = insn;
+                insnActivity.end();
+            }
+            activity.end();
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
         }
     }
 
@@ -488,11 +500,24 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     private void validateMethod(MethodNode method) {
         // Any method tagged with @SoftOverride must have an implementation visible from 
         if (Annotations.getInvisible(method, SoftOverride.class) != null) {
+            if (Bytecode.getVisibility(method) == Visibility.PRIVATE) {
+                throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc
+                        + " is tagged with @SoftOverride but the method is PRIVATE");
+            }
+            
             ClassInfo.Method superMethod = this.targetClassInfo.findMethodInHierarchy(method.name, method.desc, SearchType.SUPER_CLASSES_ONLY,
                     Traversal.SUPER);
             if (superMethod == null || !superMethod.isInjected()) {
                 throw new InvalidMixinException(this, "Mixin method " + method.name + method.desc + " is tagged with @SoftOverride but no "
                         + "valid method was found in superclasses of " + this.getTarget().getClassName());
+            }
+        }
+        
+        if (Bytecode.isVirtual(method)) {
+            Method superMethod = this.targetClassInfo.findMethodInHierarchy(method, SearchType.SUPER_CLASSES_ONLY, Traversal.ALL, 0);
+            if (superMethod != null && superMethod.isFinal()) {
+                throw new InvalidMixinException(this.mixin, String.format("%s%s in %s overrides a final method from %s",
+                        method.name, method.desc, this.mixin, superMethod.getOwner().getClassName()));
             }
         }
     }
@@ -817,7 +842,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @param field Field node to transform
      */
-    public void transformDescriptor(FieldNode field) {
+    void transformDescriptor(FieldNode field) {
         if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
@@ -829,7 +854,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @param method Method node to transform
      */
-    public void transformDescriptor(MethodNode method) {
+    void transformDescriptor(MethodNode method) {
         if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
@@ -842,7 +867,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @param member Reference to the method or field
      */
-    public void transformDescriptor(MemberRef member) {
+    void transformDescriptor(MemberRef member) {
         if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
@@ -858,7 +883,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @param typeInsn Type instruction node to transform
      */
-    public void transformDescriptor(TypeInsnNode typeInsn) {
+    void transformDescriptor(TypeInsnNode typeInsn) {
         if (!this.inheritsFromMixin && this.innerClasses.size() == 0) {
             return;
         }
@@ -906,7 +931,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         
         ClassInfo typeInfo = ClassInfo.forName(type);
         
-        if (!typeInfo.isMixin()) {
+        if (!typeInfo.isMixin() || typeInfo.isLoadable()) {
             return desc;
         }
         
@@ -1039,7 +1064,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return mixin interfaces
      */
-    public Set<String> getInterfaces() {
+    Set<String> getInterfaces() {
         return this.mixin.getInterfaces();
     }
     
@@ -1048,7 +1073,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return shadow methods in the mixin
      */
-    public Collection<MethodNode> getShadowMethods() {
+    Collection<MethodNode> getShadowMethods() {
         return this.shadowMethods;
     }
 
@@ -1057,7 +1082,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return non-shadow methods in the mixin
      */
-    public List<MethodNode> getMethods() {
+    List<MethodNode> getMethods() {
         return this.classNode.methods;
     }
     
@@ -1066,7 +1091,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return shadow fields in the mixin
      */
-    public Set<Entry<FieldNode, Field>> getShadowFields() {
+    Set<Entry<FieldNode, Field>> getShadowFields() {
         return this.shadowFields.entrySet();
     }
     
@@ -1075,7 +1100,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return non-shadow fields in the mixin
      */
-    public List<FieldNode> getFields() {
+    List<FieldNode> getFields() {
         return this.classNode.fields;
     }
 
@@ -1084,7 +1109,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return the logging level
      */
-    public Level getLoggingLevel() {
+    Level getLoggingLevel() {
         return this.mixin.getLoggingLevel();
     }
 
@@ -1094,7 +1119,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return true if the sourcefile property should be set on the target class
      */
-    public boolean shouldSetSourceFile() {
+    boolean shouldSetSourceFile() {
         return this.mixin.getParent().shouldSetSourceFile();
     }
 
@@ -1103,7 +1128,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * 
      * @return mixin source file
      */
-    public String getSourceFile() {
+    String getSourceFile() {
         return this.classNode.sourceFile;
     }
 
@@ -1122,7 +1147,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param transformedName Target class's transformed name
      * @param targetClass Target class
      */
-    public void preApply(String transformedName, ClassNode targetClass) {
+    void preApply(String transformedName, ClassNode targetClass) {
         this.mixin.preApply(transformedName, targetClass);
     }
 
@@ -1132,7 +1157,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param transformedName Target class's transformed name
      * @param targetClass Target class
      */
-    public void postApply(String transformedName, ClassNode targetClass) {
+    void postApply(String transformedName, ClassNode targetClass) {
         try {
             this.injectorGroups.validateAll();
         } catch (InjectionValidationException ex) {
@@ -1154,8 +1179,8 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      *      postfix) otherwise decorates as infix
      * @return unique method name
      */
-    public String getUniqueName(MethodNode method, boolean preservePrefix) {
-        return this.getTarget().getUniqueName(method, preservePrefix);
+    String getUniqueName(MethodNode method, boolean preservePrefix) {
+        return this.targetClassInfo.getMethodMapper().getUniqueName(method, this.sessionId, preservePrefix);
     }
 
     /**
@@ -1165,15 +1190,15 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param field field to obtain a name for
      * @return unique field name
      */
-    public String getUniqueName(FieldNode field) {
-        return this.getTarget().getUniqueName(field);
+    String getUniqueName(FieldNode field) {
+        return this.targetClassInfo.getMethodMapper().getUniqueName(field, this.sessionId);
     }
     
     /**
      * Scans the target class for injector methods and prepares discovered
      * injectors
      */
-    public void prepareInjections() {
+    void prepareInjections() {
         this.injectors.clear();
         
         for (MethodNode method : this.mergedMethods) {
@@ -1194,7 +1219,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     /**
      * Apply injectors discovered in the {@link #prepareInjections()} pass
      */
-    public void applyInjections() {
+    void applyInjections() {
         for (InjectionInfo injectInfo : this.injectors) {
             injectInfo.inject();
         }
@@ -1210,7 +1235,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * Expand accessor methods mixed into the target class by populating the
      * method bodies
      */
-    public List<MethodNode> generateAccessors() {
+    List<MethodNode> generateAccessors() {
         for (AccessorInfo accessor : this.accessors) {
             accessor.locate();
         }
@@ -1225,4 +1250,27 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         
         return methods;
     }
+
+
+    /**
+     * Find the corresponding class type for the supplied mixin class in this
+     * mixin target's hierarchy
+     * 
+     * @param mixin Mixin class to discover
+     * @return Transformed
+     */
+    private ClassInfo findRealType(ClassInfo mixin) {
+        if (mixin == this.getClassInfo()) {
+            return this.targetClassInfo;
+        }
+        
+        ClassInfo type = this.targetClassInfo.findCorrespondingType(mixin);
+        if (type == null) {
+            throw new InvalidMixinException(this, "Resolution error: unable to find corresponding type for "
+                    + mixin + " in hierarchy of " + this.targetClassInfo);
+        }
+        
+        return type;
+    }
+
 }

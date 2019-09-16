@@ -26,24 +26,31 @@ package org.spongepowered.asm.mixin.gen;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector.Result;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.ElementNode;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
@@ -86,6 +93,16 @@ public class AccessorInfo extends SpecialMethodInfo {
             AccessorGenerator getGenerator(AccessorInfo info) {
                 return new AccessorGeneratorMethodProxy(info);
             }
+        },
+        
+        /**
+         * An invoker (proxy) method
+         */
+        OBJECT_FACTORY(ImmutableSet.<String>of("new", "create")) {
+            @Override
+            AccessorGenerator getGenerator(AccessorInfo info) {
+                return new AccessorGeneratorObjectFactory(info);
+            }
         };
         
         private final Set<String> expectedPrefixes;
@@ -112,17 +129,111 @@ public class AccessorInfo extends SpecialMethodInfo {
          * @return string representation of expected prefixes for this accessor
          *      type
          */
-        public String getExpectedPrefixes() {
-            return this.expectedPrefixes.toString();
+        public Set<String> getExpectedPrefixes() {
+            return Collections.<String>unmodifiableSet(this.expectedPrefixes);
         }
         
         abstract AccessorGenerator getGenerator(AccessorInfo info);
+    
     }
     
     /**
-     * Pattern for matching accessor names (for inflector)
+     * Accessor Name struct
      */
-    protected static final Pattern PATTERN_ACCESSOR = Pattern.compile("^(get|set|is|invoke|call)(([A-Z])(.*?))(_\\$md.*)?$");
+    public static final class AccessorName {
+        
+        /**
+         * Pattern for matching accessor names (for inflector)
+         */
+        private static final Pattern PATTERN = Pattern.compile("^(" + AccessorName.getPrefixList() + ")(([A-Z])(.*?))(_\\$md.*)?$");
+        
+        /**
+         * Name of the accessor method 
+         */
+        public final String methodName;
+        
+        /**
+         * Accessor prefix
+         */
+        public final String prefix;
+        
+        /**
+         * Accessor name part 
+         */
+        public final String name;
+        
+        private AccessorName(String methodName, String prefix, String name) {
+            this.methodName = methodName;
+            this.prefix = prefix;
+            this.name = name;
+        }
+        
+        @Override
+        public String toString() {
+            return super.toString();
+        }
+        
+        /**
+         * Get an accessor name from the supplied string. If the string matches
+         * the accessor name regex, split the string into the relevant parts
+         * 
+         * @param methodName Name of the accessor method
+         * @return Parsed AccessorName struct or null if the name is not a valid
+         *      accessor name
+         */
+        public static AccessorName of(String methodName) {
+            return AccessorName.of(methodName, true);
+        }
+        
+        /**
+         * Get an accessor name from the supplied string. If the string matches
+         * the accessor name regex, split the string into the relevant parts
+         * 
+         * @param methodName Name of the accessor method
+         * @param toMemberCase True if the first character of the name should be
+         *      conditionally converted to lowercase. If the name is all
+         *      uppercase (eg. if the NAME_IS_A_CONSTANT) the first character
+         *      will not be lowercased, regardless of the state of this argument
+         * @return Parsed AccessorName struct or null if the name is not a valid
+         *      accessor name
+         */
+        public static AccessorName of(String methodName, boolean toMemberCase) { 
+            Matcher nameMatcher = AccessorName.PATTERN.matcher(methodName);
+            if (nameMatcher.matches()) {
+                String prefix = nameMatcher.group(1);
+                String namePart = nameMatcher.group(2);
+                String firstChar = nameMatcher.group(3);
+                String remainder = nameMatcher.group(4);
+                boolean nameIsUpperCase = AccessorName.isUpperCase(Locale.ROOT, namePart);
+                // If the entire name is upper case, do not lowercase the first char
+                String name = String.format("%s%s", AccessorName.toLowerCaseIf(Locale.ROOT, firstChar, toMemberCase && !nameIsUpperCase), remainder);
+                return new AccessorName(methodName, prefix, name);
+            }
+            return null;
+        }
+        
+        private static boolean isUpperCase(Locale locale, String string) {
+            return string.toUpperCase(locale).equals(string);
+        }
+        
+        private static String toLowerCaseIf(Locale locale, String string, boolean condition) {
+            return condition ? string.toLowerCase(locale) : string;
+        }
+
+        private static String getPrefixList() {
+            List<String> prefixes = new ArrayList<String>();
+            for (AccessorType type : AccessorType.values()) {
+                prefixes.addAll(type.getExpectedPrefixes());
+            }
+            return Joiner.on('|').join(prefixes);
+        }
+
+    }
+    
+    /**
+     * Annotation class
+     */
+    protected final Class<? extends Annotation> annotationClass;
     
     /**
      * Accessor method argument types (raw, from method)
@@ -133,6 +244,16 @@ public class AccessorInfo extends SpecialMethodInfo {
      * Accessor method return type (raw, from method)
      */
     protected final Type returnType;
+    
+    /**
+     * Accessor method staticness
+     */
+    protected final boolean isStatic;
+    
+    /**
+     * Name specified in the attached annotation, can be null 
+     */
+    protected final String specifiedName;
     
     /**
      * Type of accessor to generate, computed based on the signature of the
@@ -149,7 +270,7 @@ public class AccessorInfo extends SpecialMethodInfo {
      * Computed information about the target field or method, name and
      * descriptor
      */
-    protected final MemberInfo target;
+    protected final ITargetSelector target;
     
     /**
      * For accessors, stores the discovered target field
@@ -167,8 +288,11 @@ public class AccessorInfo extends SpecialMethodInfo {
     
     protected AccessorInfo(MixinTargetContext mixin, MethodNode method, Class<? extends Annotation> annotationClass) {
         super(mixin, method, Annotations.getVisible(method, annotationClass));
+        this.annotationClass = annotationClass;
         this.argTypes = Type.getArgumentTypes(method.desc);
         this.returnType = Type.getReturnType(method.desc);
+        this.isStatic = Bytecode.isStatic(method);
+        this.specifiedName = Annotations.<String>getValue(this.annotation);
         this.type = this.initType();
         this.targetFieldType = this.initTargetFieldType();
         this.target = this.initTarget();
@@ -200,22 +324,22 @@ public class AccessorInfo extends SpecialMethodInfo {
         }
     }
 
-    protected MemberInfo initTarget() {
-        MemberInfo target = new MemberInfo(this.getTargetName(), null, this.targetFieldType.getDescriptor());
+    protected ITargetSelector initTarget() {
+        MemberInfo target = new MemberInfo(this.getTargetName(this.specifiedName), null, this.targetFieldType.getDescriptor());
         this.annotation.visit("target", target.toString());
         return target;
     }
 
-    protected String getTargetName() {
-        String name = Annotations.<String>getValue(this.annotation);
+    protected String getTargetName(String name) {
         if (Strings.isNullOrEmpty(name)) {
             String inflectedTarget = this.inflectTarget();
             if (inflectedTarget == null) {
-                throw new InvalidAccessorException(this.mixin, "Failed to inflect target name for " + this + ", supported prefixes: [get, set, is]");
+                throw new InvalidAccessorException(this.mixin, String.format("Failed to inflect target name for %s, supported prefixes: %s",
+                        this, this.type.getExpectedPrefixes()));
             }
             return inflectedTarget;
         }
-        return MemberInfo.parse(name, this.mixin).name;
+        return TargetSelector.parseName(name, this.mixin);
     }
 
     /**
@@ -235,31 +359,45 @@ public class AccessorInfo extends SpecialMethodInfo {
      * named <tt>getFoo</tt> to be inflected to a target named <tt>foo</tt> for
      * example.  
      * 
-     * @param accessorName Name of the accessor method
-     * @param accessorType Type of accessor being processed, this is calculated
+     * @param name Name of the accessor method
+     * @param type Type of accessor being processed, this is calculated
      *      from the method signature (<tt>void</tt> methods being setters,
      *      methods with return types being getters)
-     * @param accessorDescription description of the accessor to include in
+     * @param description description of the accessor to include in
      *      error messages
      * @param context Mixin context
      * @param verbose Emit warnings when accessor prefix doesn't match type
      * @return inflected target member name or <tt>null</tt> if name cannot be
      *      inflected 
      */
-    public static String inflectTarget(String accessorName, AccessorType accessorType, String accessorDescription,
-            IMixinContext context, boolean verbose) {
-        Matcher nameMatcher = AccessorInfo.PATTERN_ACCESSOR.matcher(accessorName);
-        if (nameMatcher.matches()) {
-            String prefix = nameMatcher.group(1);
-            String firstChar = nameMatcher.group(3);
-            String remainder = nameMatcher.group(4);
-            // If the entire name is upper case, do not lowercase the first char
-            String name = String.format("%s%s", AccessorInfo.toLowerCase(firstChar, !AccessorInfo.isUpperCase(remainder)), remainder);
-            if (!accessorType.isExpectedPrefix(prefix) && verbose) {
-                LogManager.getLogger("mixin").warn("Unexpected prefix for {}, found [{}] expecting {}", accessorDescription, prefix,
-                        accessorType.getExpectedPrefixes());
+    public static String inflectTarget(String name, AccessorType type, String description, IMixinContext context, boolean verbose) {
+        return AccessorInfo.inflectTarget(AccessorName.of(name), type, description, context, verbose);
+    }
+    
+    /**
+     * Uses the name of an accessor method and the accessor type to try and
+     * inflect the name of the target field or method. This allows a method
+     * named <tt>getFoo</tt> to be inflected to a target named <tt>foo</tt> for
+     * example.  
+     * 
+     * @param name Name of the accessor method
+     * @param type Type of accessor being processed, this is calculated
+     *      from the method signature (<tt>void</tt> methods being setters,
+     *      methods with return types being getters)
+     * @param description description of the accessor to include in
+     *      error messages
+     * @param context Mixin context
+     * @param verbose Emit warnings when accessor prefix doesn't match type
+     * @return inflected target member name or <tt>null</tt> if name cannot be
+     *      inflected 
+     */
+    public static String inflectTarget(AccessorName name, AccessorType type, String description, IMixinContext context, boolean verbose) {
+        if (name != null) {
+            if (!type.isExpectedPrefix(name.prefix) && verbose) {
+                LogManager.getLogger("mixin").warn("Unexpected prefix for {}, found [{}] expecting {}", description, name.prefix,
+                        type.getExpectedPrefixes());
             }
-            return MemberInfo.parse(name, context).name;
+            return TargetSelector.parseName(name.name, context);
         }
         return null;
     }
@@ -267,7 +405,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     /**
      * Get the inflected/specified target member for this accessor
      */
-    public final MemberInfo getTarget() {
+    public final ITargetSelector getTarget() {
         return this.target;
     }
     
@@ -305,10 +443,18 @@ public class AccessorInfo extends SpecialMethodInfo {
     public final Type[] getArgTypes() {
         return this.argTypes;
     }
+    
+    /**
+     * Get whether the accessor itself is static
+     */
+    public boolean isStatic() {
+        return this.isStatic;
+    }
 
     @Override
     public String toString() {
-        return String.format("%s->@%s[%s]::%s%s", this.mixin.toString(), Bytecode.getSimpleName(this.annotation), this.type.toString(),
+        String typeString = this.type != null ? this.type.toString() : "UNPARSED_ACCESSOR";
+        return String.format("%s->@%s[%s]::%s%s", this.mixin, Bytecode.getSimpleName(this.annotation), typeString,
                 this.method.name, this.method.desc);
     }
 
@@ -330,12 +476,12 @@ public class AccessorInfo extends SpecialMethodInfo {
      */
     public MethodNode generate() {
         MethodNode generatedAccessor = this.type.getGenerator(this).generate();
-        Bytecode.mergeAnnotations(this.method, generatedAccessor);
+        Annotations.merge(this.method, generatedAccessor);
         return generatedAccessor;
     }
 
     private FieldNode findTargetField() {
-        return this.<FieldNode>findTarget(this.classNode.fields);
+        return this.<FieldNode>findTarget(ElementNode.fieldList(this.classNode));
     }
         
     /**
@@ -346,49 +492,14 @@ public class AccessorInfo extends SpecialMethodInfo {
      * @param <TNode> node type
      * @return best match
      */
-    protected <TNode> TNode findTarget(List<TNode> nodes) {
-        TNode exactMatch = null;
-        List<TNode> candidates = new ArrayList<TNode>();
-        
-        for (TNode node : nodes) {
-            String desc = AccessorInfo.<TNode>getNodeDesc(node);
-            if (desc == null || !desc.equals(this.target.desc)) {
-                continue;
-            }
-            
-            String name = AccessorInfo.<TNode>getNodeName(node);
-            if (name != null) {
-                if (name.equals(this.target.name)) {
-                    exactMatch = node;
-                }
-                if (name.equalsIgnoreCase(this.target.name)) {
-                    candidates.add(node);
-                }
-            }
-        }
-        
-        if (exactMatch != null) {
-            if (candidates.size() > 1) {
-                LogManager.getLogger("mixin").debug("{} found an exact match for {} but other candidates were found!", this, this.target);
-            }
-            return exactMatch;
-        }
-        
-        if (candidates.size() == 1) {
-            return candidates.get(0);
-        }
-        
-        String number = candidates.size() == 0 ? "No" : "Multiple";
-        throw new InvalidAccessorException(this, number + " candidates were found matching " + this.target + " in " + this.classNode.name
-                + " for " + this);
-    }
-    
-    private static <TNode> String getNodeDesc(TNode node) {
-        return (node instanceof MethodNode) ? ((MethodNode)node).desc : ((node instanceof FieldNode) ? ((FieldNode)node).desc : null);
-    }
+    protected <TNode> TNode findTarget(List<ElementNode<TNode>> nodes) {
+        Result<TNode> result = TargetSelector.<TNode>run(this.target.configure("orphan"), nodes);
 
-    private static <TNode> String getNodeName(TNode node) {
-        return (node instanceof MethodNode) ? ((MethodNode)node).name : ((node instanceof FieldNode) ? ((FieldNode)node).name : null);
+        try {
+            return result.getSingleResult(true);
+        } catch (IllegalStateException ex) {
+            throw new InvalidAccessorException(this, ex.getMessage() + " matching " + this.target + " in " + this.classNode.name + " for " + this);
+        }
     }
     
     /**
@@ -407,14 +518,6 @@ public class AccessorInfo extends SpecialMethodInfo {
             return new InvokerInfo(mixin, method);
         }
         throw new InvalidAccessorException(mixin, "Could not parse accessor for unknown type " + type.getName());
-    }
-
-    private static String toLowerCase(String string, boolean condition) {
-        return condition ? string.toLowerCase() : string;
-    }
-    
-    private static boolean isUpperCase(String string) {
-        return string.toUpperCase().equals(string);
     }
 
 }

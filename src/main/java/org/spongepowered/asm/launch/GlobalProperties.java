@@ -24,9 +24,12 @@
  */
 package org.spongepowered.asm.launch;
 
-import java.util.ServiceLoader;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.spongepowered.asm.service.IGlobalPropertyService;
+import org.spongepowered.asm.service.IPropertyKey;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Access to underlying global property service provided by the current
@@ -39,19 +42,56 @@ public final class GlobalProperties {
      */
     public static final class Keys {
 
-        public static final String INIT                         = "mixin.initialised";
-        public static final String AGENTS                       = "mixin.agents";
-        public static final String CONFIGS                      = "mixin.configs";
-        public static final String TRANSFORMER                  = "mixin.transformer";
-        public static final String PLATFORM_MANAGER             = "mixin.platform";
+        public static final Keys INIT                         = Keys.of("mixin.initialised");
+        public static final Keys AGENTS                       = Keys.of("mixin.agents");
+        public static final Keys CONFIGS                      = Keys.of("mixin.configs");
+        public static final Keys PLATFORM_MANAGER             = Keys.of("mixin.platform");
         
-        public static final String FML_LOAD_CORE_MOD            = "mixin.launch.fml.loadcoremodmethod";
-        public static final String FML_GET_REPARSEABLE_COREMODS = "mixin.launch.fml.reparseablecoremodsmethod";
-        public static final String FML_CORE_MOD_MANAGER         = "mixin.launch.fml.coremodmanagerclass";
-        public static final String FML_GET_IGNORED_MODS         = "mixin.launch.fml.ignoredmodsmethod";
+        public static final Keys FML_LOAD_CORE_MOD            = Keys.of("mixin.launch.fml.loadcoremodmethod");
+        public static final Keys FML_GET_REPARSEABLE_COREMODS = Keys.of("mixin.launch.fml.reparseablecoremodsmethod");
+        public static final Keys FML_CORE_MOD_MANAGER         = Keys.of("mixin.launch.fml.coremodmanagerclass");
+        public static final Keys FML_GET_IGNORED_MODS         = Keys.of("mixin.launch.fml.ignoredmodsmethod");
+        
+        private static Map<String, Keys> keys;
+        
+        private final String name;
+        
+        private IPropertyKey key;
 
-        private Keys() {}
+        private Keys(String name) {
+            this.name = name;
+        }
+        
+        IPropertyKey resolve(IGlobalPropertyService service) {
+            if (this.key != null) {
+                return this.key;
+            }
+            if (service == null) {
+                return null;
+            }
+            
+            return this.key = service.resolveKey(this.name);
+        }
 
+        /**
+         * Get or create a new global property key
+         * 
+         * @param name name of key to get or create
+         * @return new or existing key
+         */
+        public static Keys of(String name) {
+            if (Keys.keys == null) {
+                Keys.keys = new HashMap<String, Keys>();                
+            }
+            
+            Keys key = Keys.keys.get(name);
+            if (key == null) {
+                key = new Keys(name);
+                Keys.keys.put(name, key);
+            }
+            return key;
+        }
+        
     }
     
     private static IGlobalPropertyService service;
@@ -60,9 +100,7 @@ public final class GlobalProperties {
     
     private static IGlobalPropertyService getService() {
         if (GlobalProperties.service == null) {
-            ServiceLoader<IGlobalPropertyService> serviceLoader =
-                ServiceLoader.<IGlobalPropertyService>load(IGlobalPropertyService.class, GlobalProperties.class.getClassLoader());
-            GlobalProperties.service = serviceLoader.iterator().next();
+            GlobalProperties.service = MixinService.getGlobalPropertyService();
         }
         return GlobalProperties.service;
     }
@@ -74,8 +112,9 @@ public final class GlobalProperties {
      * @param <T> duck type
      * @return value
      */
-    public static <T> T get(String key) {
-        return GlobalProperties.getService().<T>getProperty(key);
+    public static <T> T get(Keys key) {
+        IGlobalPropertyService service = GlobalProperties.getService();
+        return service.<T>getProperty(key.resolve(service));
     }
 
     /**
@@ -84,8 +123,9 @@ public final class GlobalProperties {
      * @param key blackboard key
      * @param value new value
      */
-    public static void put(String key, Object value) {
-        GlobalProperties.getService().setProperty(key, value);
+    public static void put(Keys key, Object value) {
+        IGlobalPropertyService service = GlobalProperties.getService();
+        service.setProperty(key.resolve(service), value);
     }
     
     /**
@@ -97,8 +137,9 @@ public final class GlobalProperties {
      * @param <T> duck type
      * @return value from blackboard or default value
      */
-    public static <T> T get(String key, T defaultValue) {
-        return GlobalProperties.getService().getProperty(key, defaultValue);
+    public static <T> T get(Keys key, T defaultValue) {
+        IGlobalPropertyService service = GlobalProperties.getService();
+        return service.getProperty(key.resolve(service), defaultValue);
     }
     
     /**
@@ -110,8 +151,9 @@ public final class GlobalProperties {
      *      set or is null
      * @return value from blackboard or default
      */
-    public static String getString(String key, String defaultValue) {
-        return GlobalProperties.getService().getPropertyString(key, defaultValue);
+    public static String getString(Keys key, String defaultValue) {
+        IGlobalPropertyService service = GlobalProperties.getService();
+        return service.getPropertyString(key.resolve(service), defaultValue);
     }
 
 }

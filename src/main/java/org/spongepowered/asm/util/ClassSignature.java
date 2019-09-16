@@ -35,11 +35,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.signature.SignatureReader;
-import org.spongepowered.asm.lib.signature.SignatureVisitor;
-import org.spongepowered.asm.lib.signature.SignatureWriter;
-import org.spongepowered.asm.lib.tree.ClassNode;
+import org.objectweb.asm.signature.SignatureReader;
+import org.objectweb.asm.signature.SignatureVisitor;
+import org.objectweb.asm.signature.SignatureWriter;
+import org.objectweb.asm.tree.ClassNode;
 
 /**
  * Represents an object-oriented view of a generic class signature. We use ASM's
@@ -661,7 +660,7 @@ public class ClassSignature {
         abstract class SignatureElement extends SignatureVisitor {
             
             public SignatureElement() {
-                super(Opcodes.ASM5);
+                super(Bytecode.ASM_API_VERSION);
             }
             
         }
@@ -898,7 +897,7 @@ public class ClassSignature {
         private FormalParamElement param;
 
         SignatureParser() {
-            super(Opcodes.ASM5);
+            super(Bytecode.ASM_API_VERSION);
         }
         
         @Override

@@ -128,9 +128,6 @@
       <property name="scope" value="public"/>
       <property name="checkFirstSentence" value="false"/>
     </module>
-    <module name="IllegalImport">
-      <property name="illegalPkgs" value="org.objectweb.asm"/>
-    </module>
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
     <module name="TypecastParenPad">

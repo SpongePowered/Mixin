@@ -24,17 +24,34 @@
  */
 package org.spongepowered.asm.launch.platform;
 
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+
 /**
  * Base interface for platform agents. Platform agents are environment-specific
  * handlers which are used by the Mixin subsystem to perform platform-specific
- * tasks required by different environments without having to litter the Mixin
- * codebase with a bunch of environment-specific cruft.
+ * tasks required by different environments without having to litter other parts
+ * of the Mixin codebase with a bunch of environment-specific cruft.
  * 
  * <p>Platform Agents handle mixin environment tasks on a per-container basis,
  * with each container in the environment being assigned one of each available
  * type of agent to handle those tasks on behalf of the container.</p>
  */
 public interface IMixinPlatformAgent {
+    
+    /**
+     * Accept and bind to a container handle. This method is called for agents
+     * hosted by {@link MixinContainer} and the agent should react accordingly.
+     * If the agent is <em>not</em> able to delegate for container handles of
+     * the supplied type, this method should return <tt>false</tt> to indicate
+     * that the agent should not be added for this container.
+     * 
+     * @param manager platform manager instance
+     * @param handle handle to container
+     * @return true if this agent can accept a container of the supplied type,
+     *      false if the agent cannot handle the container (in which case it
+     *      will be discarded)
+     */
+    public abstract boolean accept(MixinPlatformManager manager, IContainerHandle handle);
 
     /**
      * Get the phase provider for this agent
@@ -58,11 +75,5 @@ public interface IMixinPlatformAgent {
      * Called from <tt>inject</tt> in the parent tweaker
      */
     public abstract void inject();
-    
-    /**
-     * Get the launch target from this container, should return null if no
-     * custom target is available.
-     */
-    public abstract String getLaunchTarget();
-    
+
 }

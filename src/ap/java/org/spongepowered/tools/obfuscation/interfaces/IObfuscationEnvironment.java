@@ -26,7 +26,7 @@ package org.spongepowered.tools.obfuscation.interfaces;
 
 import java.util.Collection;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
@@ -45,7 +45,7 @@ public interface IObfuscationEnvironment {
      * @param method method to locate a mapping for
      * @return remapped method or null if no mapping exists
      */
-    public abstract MappingMethod getObfMethod(MemberInfo method);
+    public abstract MappingMethod getObfMethod(ITargetSelectorRemappable method);
 
     /**
      * Get an obfuscation mapping for a method, returns null if no mapping
@@ -78,7 +78,7 @@ public interface IObfuscationEnvironment {
      * @param field field to locate a mapping for
      * @return remapped field or null if no mapping exists
      */
-    public abstract MappingField getObfField(MemberInfo field);
+    public abstract MappingField getObfField(ITargetSelectorRemappable field);
 
     /**
      * Get an obfuscation mapping for a field, returns null if no mapping
@@ -119,7 +119,7 @@ public interface IObfuscationEnvironment {
      * @param method method to remap
      * @return remapped method or null if no remapping occurred
      */
-    public abstract MemberInfo remapDescriptor(MemberInfo method);
+    public abstract ITargetSelectorRemappable remapDescriptor(ITargetSelectorRemappable method);
 
     /**
      * Remap a single descriptor in the context of this environment

@@ -26,15 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,7 +34,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
-import org.spongepowered.asm.lib.tree.ClassNode;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -139,7 +131,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         public abstract void onInit(MixinInfo mixin);
 
     }
-
+    
     /**
      * Global order of mixin configs, used to determine ordering between configs
      * with equivalent priority
@@ -328,7 +320,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Config plugin, if supplied
      */
-    private transient IMixinConfigPlugin plugin;
+    private transient PluginHandle plugin;
     
     /**
      * Reference mapper for injectors
@@ -448,7 +440,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
         
         if (this.mixinPriority < 0) {
-            this.priority = defaultMixinPriority;
+            this.mixinPriority = defaultMixinPriority;
         }
     }
 
@@ -469,7 +461,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             return;
         }
         
-        CompatibilityLevel level = CompatibilityLevel.valueOf(this.compatibility.trim().toUpperCase());
+        CompatibilityLevel level = CompatibilityLevel.valueOf(this.compatibility.trim().toUpperCase(Locale.ROOT));
         CompatibilityLevel current = MixinEnvironment.getCompatibilityLevel();
         
         if (level == current) {
@@ -573,19 +565,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Initialise the config once it's selected
      */
     void onSelect() {
-        if (this.pluginClassName != null) {
-            try {
-                Class<?> pluginClass = this.service.getClassProvider().findClass(this.pluginClassName, true);
-                this.plugin = (IMixinConfigPlugin)pluginClass.newInstance();
-                
-                if (this.plugin != null) {
-                    this.plugin.onLoad(this.mixinPackage);
-                }
-            } catch (Throwable th) {
-                th.printStackTrace();
-                this.plugin = null;
-            }
-        }
+        this.plugin = new PluginHandle(this, this.service, this.pluginClassName);
+        this.plugin.onLoad(this.mixinPackage);
 
         if (!this.mixinPackage.endsWith(".")) {
             this.mixinPackage += ".";
@@ -594,9 +575,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         boolean suppressRefMapWarning = false; 
         
         if (this.refMapperConfig == null) {
-            if (this.plugin != null) {
-                this.refMapperConfig = this.plugin.getRefMapperConfig();
-            }
+            this.refMapperConfig = this.plugin.getRefMapperConfig();
             
             if (this.refMapperConfig == null) {
                 suppressRefMapWarning = true;
@@ -703,7 +682,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             MixinInfo mixin = null;
             
             try {
-                mixin = new MixinInfo(this.service, this, mixinClass, true, this.plugin, suppressPlugin);
+                mixin = new MixinInfo(this.service, this, mixinClass, this.plugin, suppressPlugin);
                 if (mixin.getTargetClasses().size() > 0) {
                     MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
@@ -917,7 +896,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @Override
     public IMixinConfigPlugin getPlugin() {
-        return this.plugin;
+        return this.plugin.get();
     }
 
     /* (non-Javadoc)
@@ -987,14 +966,14 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * Updates a mixin with new bytecode
      *
      * @param mixinClass Name of the mixin class
-     * @param bytes New bytecode
+     * @param classNode New class
      * @return List of classes that need to be updated
      */
-    public List<String> reloadMixin(String mixinClass, byte[] bytes) {
+    public List<String> reloadMixin(String mixinClass, ClassNode classNode) {
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
             MixinInfo mixin = iter.next();
             if (mixin.getClassName().equals(mixinClass)) {
-                mixin.reloadMixin(bytes);
+                mixin.reloadMixin(classNode);
                 return mixin.getTargetClasses();
             }
         }

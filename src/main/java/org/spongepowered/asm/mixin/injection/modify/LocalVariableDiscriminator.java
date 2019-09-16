@@ -31,10 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AbstractInsnNode;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.LocalVariableNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator.Context.Local;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.Bytecode;
@@ -122,7 +122,7 @@ public class LocalVariableDiscriminator {
         private final boolean isStatic;
 
         public Context(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
-            this.isStatic = Bytecode.methodIsStatic(target.method);
+            this.isStatic = Bytecode.isStatic(target.method);
             this.returnType = returnType;
             this.target = target;
             this.node = node;
@@ -147,7 +147,7 @@ public class LocalVariableDiscriminator {
             
             Local[] lvt = new Local[this.baseArgIndex + target.arguments.length];
             if (!this.isStatic) {
-                lvt[0] = new Local("this", Type.getType(target.classNode.name));
+                lvt[0] = new Local("this", Type.getObjectType(target.classNode.name));
             }
             for (int local = this.baseArgIndex; local < lvt.length; local++) {
                 Type arg = target.arguments[local - this.baseArgIndex];

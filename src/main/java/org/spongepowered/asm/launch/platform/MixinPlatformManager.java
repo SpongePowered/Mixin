@@ -24,26 +24,24 @@
  */
 package org.spongepowered.asm.launch.platform;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-//import org.spongepowered.asm.launch.MixinBootstrap.Delegate;
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.service.ServiceVersionError;
 import org.spongepowered.asm.mixin.Mixins;
+import org.spongepowered.asm.mixin.throwables.MixinError;
 
 //import com.google.common.collect.ImmutableList;
 
@@ -54,7 +52,6 @@ import org.spongepowered.asm.mixin.Mixins;
 public class MixinPlatformManager {
 
     private static final String DEFAULT_MAIN_CLASS = "net.minecraft.client.main.Main";
-    private static final String MIXIN_TWEAKER_CLASS = "org.spongepowered.asm.launch.MixinTweaker";
     
     /**
      * Make with the logging already
@@ -69,7 +66,7 @@ public class MixinPlatformManager {
     /**
      * Tweak containers
      */
-    private final Map<URI, MixinContainer> containers = new LinkedHashMap<URI, MixinContainer>();
+    private final Map<IContainerHandle, MixinContainer> containers = new LinkedHashMap<IContainerHandle, MixinContainer>();
     
     /**
      * Container for this tweaker 
@@ -92,25 +89,16 @@ public class MixinPlatformManager {
     }
     
     /**
-     * Initialise this platform manager by scanning the classpath
+     * Initialise the platform manager
      */
     public void init() {
         MixinPlatformManager.logger.debug("Initialising Mixin Platform Manager");
-                
-        // Add agents for the tweak container 
-        URI uri = null;
-        try {
-            uri = this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI();
-            if (uri != null) {
-                MixinPlatformManager.logger.debug("Mixin platform: primary container is {}", uri);
-                this.primaryContainer = this.addContainer(uri);
-            }
-        } catch (URISyntaxException ex) {
-            ex.printStackTrace();
-        }
-        
+
+        IContainerHandle primaryContainerHandle = MixinService.getService().getPrimaryContainer();
+        this.primaryContainer = this.addContainer(primaryContainerHandle);
+
         // Do an early scan to ensure preinit mixins are discovered
-        this.scanClasspath();
+        this.scanForContainers();
     }
     
     /**
@@ -126,26 +114,39 @@ public class MixinPlatformManager {
     }
 
     /**
-     * Add a new URI to this platform and return the new container (or an
-     * existing container if the URI was previously registered)
+     * Add a new container to this platform and return the new container (or an
+     * existing container if the handle was previously registered)
      * 
-     * @param uri URI to add
-     * @return container for specified URI
+     * @param handle Container handle to add
+     * @return container for specified resource handle
      */
-    public final MixinContainer addContainer(URI uri) {
-        MixinContainer existingContainer = this.containers.get(uri);
+    public final MixinContainer addContainer(IContainerHandle handle) {
+        MixinContainer existingContainer = this.containers.get(handle);
         if (existingContainer != null) {
             return existingContainer;
         }
         
-        MixinPlatformManager.logger.debug("Adding mixin platform agents for container {}", uri);
-        MixinContainer container = new MixinContainer(this, uri);
-        this.containers.put(uri, container);
-        
+        MixinContainer container = this.createContainerFor(handle);
+        this.containers.put(handle, container);
+        this.addNestedContainers(handle);
+        return container;
+    }
+
+    private MixinContainer createContainerFor(IContainerHandle handle) {
+        MixinPlatformManager.logger.debug("Adding mixin platform agents for container {}", handle);
+        MixinContainer container = new MixinContainer(this, handle);
         if (this.prepared) {
             container.prepare();
         }
         return container;
+    }
+
+    private void addNestedContainers(IContainerHandle handle) {
+        for (IContainerHandle nested : handle.getNestedContainers()) {
+            if (!this.containers.containsKey(nested)) {
+                this.addContainer(nested);
+            }
+        }
     }
 
     /**
@@ -153,33 +154,14 @@ public class MixinPlatformManager {
      * 
      * @param args command-line arguments from tweaker
      */
-    public final void prepare(List<String> args) {
+    public final void prepare(CommandLineOptions args) {
         this.prepared = true;
         for (MixinContainer container : this.containers.values()) {
             container.prepare();
         }
-        if (args != null) {
-            this.parseArgs(args);
-        } else {
-            String argv = System.getProperty("sun.java.command");
-            if (argv != null) {
-                this.parseArgs(Arrays.asList(argv.split(" "))); 
-            }            
-        }
-    }
-
-    /**
-     * Read and parse command-line arguments
-     * 
-     * @param args command-line arguments
-     */
-    private void parseArgs(List<String> args) {
-        boolean captureNext = false;
-        for (String arg : args) {
-            if (captureNext) {
-                this.addConfig(arg);
-            }
-            captureNext = "--mixin".equals(arg);
+        
+        for (String config : args.getConfigs()) {
+            this.addConfig(config);
         }
     }
 
@@ -196,7 +178,7 @@ public class MixinPlatformManager {
             this.primaryContainer.initPrimaryContainer();
         }
         
-        this.scanClasspath();
+        this.scanForContainers();
         MixinPlatformManager.logger.debug("inject() running with {} agents", this.containers.size());
         for (MixinContainer container : this.containers.values()) {
             try {
@@ -208,27 +190,26 @@ public class MixinPlatformManager {
     }
 
     /**
-     * Scan the classpath for mixin containers (containers which declare the
-     * mixin tweaker in their manifest) and add agents for them
+     * Scan the current environment for mixin containers and add agents for them
      */
-    private void scanClasspath() {
-        URL[] sources = MixinService.getService().getClassProvider().getClassPath();
-        for (URL url : sources) {
+    private void scanForContainers() {
+        Collection<IContainerHandle> mixinContainers = null;
+        
+        try {
+            mixinContainers = MixinService.getService().getMixinContainers();
+        } catch (AbstractMethodError ame) {
+            throw new ServiceVersionError("Mixin service is out of date");
+        }
+        
+        List<IContainerHandle> existingContainers = new ArrayList<IContainerHandle>(this.containers.keySet());
+        for (IContainerHandle existingContainer : existingContainers) {
+            this.addNestedContainers(existingContainer);
+        }
+        
+        for (IContainerHandle handle : mixinContainers) {
             try {
-                URI uri = url.toURI();
-                if (this.containers.containsKey(uri)) {
-                    continue;
-                }
-                MixinPlatformManager.logger.debug("Scanning {} for mixin tweaker", uri);
-                if (!"file".equals(uri.getScheme()) || !new File(uri).exists()) {
-                    continue;
-                }
-                MainAttributes attributes = MainAttributes.of(uri);
-                String tweaker = attributes.get(Constants.ManifestAttributes.TWEAKER);
-                if (MixinPlatformManager.MIXIN_TWEAKER_CLASS.equals(tweaker)) {
-                    MixinPlatformManager.logger.debug("{} contains a mixin tweaker, adding agents", uri);
-                    this.addContainer(uri);
-                }
+                MixinPlatformManager.logger.debug("Adding agents for Mixin Container {}", handle);
+                this.addContainer(handle);
             } catch (Exception ex) {
                 ex.printStackTrace();
             } 
@@ -240,13 +221,6 @@ public class MixinPlatformManager {
      * specify a launch target
      */
     public String getLaunchTarget() {
-        for (MixinContainer container : this.containers.values()) {
-            String mainClass = container.getLaunchTarget();
-            if (mainClass != null) {
-                return mainClass;
-            }
-        }
-        
         return MixinPlatformManager.DEFAULT_MAIN_CLASS;
     }
 
@@ -259,7 +233,7 @@ public class MixinPlatformManager {
     @SuppressWarnings("deprecation")
     final void setCompatibilityLevel(String level) {
         try {
-            CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase());
+            CompatibilityLevel value = CompatibilityLevel.valueOf(level.toUpperCase(Locale.ROOT));
             MixinPlatformManager.logger.debug("Setting mixin compatibility level: {}", value);
             MixinEnvironment.setCompatibilityLevel(value);
         } catch (IllegalArgumentException ex) {
@@ -275,21 +249,12 @@ public class MixinPlatformManager {
      * 
      * @param config config resource name, does not require a leading /
      */
-    @SuppressWarnings("deprecation")
     final void addConfig(String config) {
         if (config.endsWith(".json")) {
             MixinPlatformManager.logger.debug("Registering mixin config: {}", config);
             Mixins.addConfiguration(config);
         } else if (config.contains(".json@")) {
-            int pos = config.indexOf(".json@");
-            String phaseName = config.substring(pos + 6);
-            config = config.substring(0, pos + 5);
-            Phase phase = Phase.forName(phaseName);
-            if (phase != null) {
-                MixinPlatformManager.logger.warn("Setting config phase via manifest is deprecated: {}. Specify target in config instead", config);
-                MixinPlatformManager.logger.debug("Registering mixin config: {}", config);
-                MixinEnvironment.getEnvironment(phase).addConfiguration(config);
-            }
+            throw new MixinError("Setting config phase via manifest is no longer supported: " + config + ". Specify target in config instead");
         }
     }
     

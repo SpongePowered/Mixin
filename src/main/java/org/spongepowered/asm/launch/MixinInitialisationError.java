@@ -24,10 +24,12 @@
  */
 package org.spongepowered.asm.launch;
 
+import org.spongepowered.asm.mixin.throwables.MixinError;
+
 /**
  * Error raised when mixin subsystem initialisation fails
  */
-public class MixinInitialisationError extends Error {
+public class MixinInitialisationError extends MixinError {
 
     private static final long serialVersionUID = 1L;
 

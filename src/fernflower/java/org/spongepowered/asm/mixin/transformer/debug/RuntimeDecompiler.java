@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.jar.Manifest;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -43,6 +42,8 @@ import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import com.google.common.io.MoreFiles;
+import com.google.common.io.RecursiveDeleteOption;
 
 /**
  * Wrapper for FernFlower to support runtime-decompilation of post-mixin classes
@@ -63,7 +64,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
         this.outputPath = outputPath;
         if (this.outputPath.exists()) {
             try {
-                FileUtils.deleteDirectory(this.outputPath);
+                MoreFiles.deleteRecursively(this.outputPath.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
             } catch (IOException ex) {
                 this.logger.warn("Error cleaning output directory: {}", ex.getMessage());
             }

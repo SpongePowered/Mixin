@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation;
 import java.lang.reflect.Constructor;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -112,7 +113,7 @@ public final class ObfuscationType {
     public boolean isDefault() {
         String defaultEnv = this.options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
         return (defaultEnv == null && this.key.equals(ObfuscationServiceMCP.SEARGE))
-                || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase()));
+                || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase(Locale.ROOT)));
     }
     
     /**

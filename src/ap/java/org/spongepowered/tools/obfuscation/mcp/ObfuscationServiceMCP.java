@@ -27,11 +27,14 @@ package org.spongepowered.tools.obfuscation.mcp;
 import java.util.Collection;
 import java.util.Set;
 
+import org.spongepowered.tools.obfuscation.SupportedOptions;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.service.IObfuscationService;
 import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList.Builder;
 
 /**
  * Default obfuscation service, provides MCP
@@ -63,15 +66,20 @@ public class ObfuscationServiceMCP implements IObfuscationService {
     }
 
     @Override
-    public Collection<ObfuscationTypeDescriptor> getObfuscationTypes() {
-        return ImmutableList.<ObfuscationTypeDescriptor>of(
-              new ObfuscationTypeDescriptor(
-                  ObfuscationServiceMCP.SEARGE,
-                  ObfuscationServiceMCP.REOBF_SRG_FILE,
-                  ObfuscationServiceMCP.REOBF_EXTRA_SRG_FILES,
-                  ObfuscationServiceMCP.OUT_SRG_SRG_FILE,
-                  ObfuscationEnvironmentMCP.class
-              ),
+    public Collection<ObfuscationTypeDescriptor> getObfuscationTypes(IMixinAnnotationProcessor ap) {
+        Builder<ObfuscationTypeDescriptor> list = ImmutableList.<ObfuscationTypeDescriptor>builder();
+        if (!ap.getOptions(SupportedOptions.MAPPING_TYPES).contains("tsrg")) {
+            list.add(
+                new ObfuscationTypeDescriptor(
+                    ObfuscationServiceMCP.SEARGE,
+                    ObfuscationServiceMCP.REOBF_SRG_FILE,
+                    ObfuscationServiceMCP.REOBF_EXTRA_SRG_FILES,
+                    ObfuscationServiceMCP.OUT_SRG_SRG_FILE,
+                    ObfuscationEnvironmentMCP.class
+                )
+            );
+        }
+        list.add(
               new ObfuscationTypeDescriptor(
                   ObfuscationServiceMCP.NOTCH,
                   ObfuscationServiceMCP.REOBF_NOTCH_FILE,
@@ -80,6 +88,7 @@ public class ObfuscationServiceMCP implements IObfuscationService {
                   ObfuscationEnvironmentMCP.class
               )
         );
+        return list.build();
     }
     
 }

@@ -106,4 +106,5 @@ public class ObfuscationTypeDescriptor {
     public Class<? extends ObfuscationEnvironment> getEnvironmentType() {
         return this.environmentType;
     }
+
 }

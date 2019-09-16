@@ -24,47 +24,46 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Constructor;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
-import org.spongepowered.asm.mixin.injection.ModifyConstant;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.ISliceContext;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.code.MethodSlice;
 import org.spongepowered.asm.mixin.injection.code.MethodSlices;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
+import org.spongepowered.asm.mixin.throwables.MixinError;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.ElementNode;
 
 import com.google.common.base.Strings;
 
@@ -73,6 +72,97 @@ import com.google.common.base.Strings;
  * and allows the injection to be processed.
  */
 public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceContext {
+    
+    /**
+     * Decoration for subclasses which indicates the injector annotation that
+     * the subclass handles
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(ElementType.TYPE)
+    public @interface AnnotationType {
+        
+        /**
+         * The injector annotation this InjectionInfo can handle
+         */
+        public Class<? extends Annotation> value();
+        
+    }
+    
+    /**
+     * Decoration for subclasses which specifies the prefix to use when
+     * conforming annotated handler methods
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(ElementType.TYPE)
+    public @interface HandlerPrefix {
+        
+        /**
+         * String prefix for conforming handler methods
+         */
+        public String value();
+        
+    }
+
+    /**
+     * An injector registration entry
+     */
+    static class InjectorEntry {
+        
+        final Class<? extends Annotation> annotationType;
+        
+        final Class<? extends InjectionInfo> type;
+        
+        final Constructor<? extends InjectionInfo> ctor;
+        
+        final String simpleName;
+        
+        final String prefix;
+
+        InjectorEntry(Class<? extends Annotation> annotationType, Class<? extends InjectionInfo> type) throws NoSuchMethodException {
+            this.annotationType = annotationType;
+            this.type = type;
+            this.ctor = type.getDeclaredConstructor(MixinTargetContext.class, MethodNode.class, AnnotationNode.class);
+            this.simpleName = annotationType.getSimpleName() + ";";
+            
+            HandlerPrefix handlerPrefix = type.<HandlerPrefix>getAnnotation(HandlerPrefix.class);
+            this.prefix = handlerPrefix != null ? handlerPrefix.value() : InjectionInfo.DEFAULT_PREFIX;
+        }
+        
+        InjectionInfo create(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
+            try {
+                return this.ctor.newInstance(mixin, method, annotation);
+            } catch (ReflectiveOperationException ex) {
+                throw new MixinError("Failed to instantiate injector metaclass [" + this.type + "] for annotation " + annotation.desc, ex);
+            }
+        }
+    }
+    
+    /**
+     * Default conform prefix for handler methods 
+     */
+    public static final String DEFAULT_PREFIX = "handler";
+    
+    /**
+     * Registry of subclasses
+     */
+    private static Map<String, InjectorEntry> registry = new LinkedHashMap<String, InjectorEntry>();
+    
+    /**
+     * Registered annotations, baked and used to call
+     * Annotations::getSingleVisible efficiently 
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Class<? extends Annotation>[] registeredAnnotations = new Class[0];
+    
+    static {
+        // Standard injectors
+        InjectionInfo.register(CallbackInjectionInfo.class);        // @Inject
+        InjectionInfo.register(ModifyArgInjectionInfo.class);       // @ModifyArg
+        InjectionInfo.register(ModifyArgsInjectionInfo.class);      // @ModifyArgs
+        InjectionInfo.register(RedirectInjectionInfo.class);        // @Redirect
+        InjectionInfo.register(ModifyVariableInjectionInfo.class);  // @ModifyVariable
+        InjectionInfo.register(ModifyConstantInjectionInfo.class);  // @ModifyConstant
+    }
     
     /**
      * Annotated method is static 
@@ -153,7 +243,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     
     protected InjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation, String atKey) {
         super(mixin, method, annotation);
-        this.isStatic = Bytecode.methodIsStatic(method);
+        this.isStatic = Bytecode.isStatic(method);
         this.slices = MethodSlices.parse(this);
         this.atKey = atKey;
         this.readAnnotation();
@@ -175,28 +265,30 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         this.injector = this.parseInjector(this.annotation);
     }
 
-    protected Set<MemberInfo> parseTargets(String type) {
+    protected Set<ITargetSelector> parseTargets(String type) {
         List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
         if (methods == null) {
             throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name", type, this.method.name));
         }
         
-        Set<MemberInfo> members = new LinkedHashSet<MemberInfo>();
+        Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
         for (String method : methods) {
             try {
-                MemberInfo targetMember = MemberInfo.parseAndValidate(method, this.mixin);
-                if (targetMember.owner != null && !targetMember.owner.equals(this.mixin.getTargetClassRef())) {
-                    throw new InvalidInjectionException(this,
-                            String.format("%s annotation on %s specifies a target class '%s', which is not supported", type, this.method.name,
-                                    targetMember.owner));
-                }
-                members.add(targetMember);
+                selectors.add(TargetSelector.parseAndValidate(method, this.mixin).attach(this.mixin));
             } catch (InvalidMemberDescriptorException ex) {
                 throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s", type,
                         this.method.name, method, this.mixin.getReferenceMapper().getStatus()));
+            } catch (TargetNotSupportedException ex) {
+                throw new InvalidInjectionException(this,
+                        String.format("%s annotation on %s specifies a target class '%s', which is not supported", type, this.method.name,
+                        ex.getMessage()));
+            } catch (InvalidSelectorException ex) {
+                throw new InvalidInjectionException(this,
+                        String.format("%s annotation on %s is decorated with an invalid selector: %s", type, this.method.name,
+                        ex.getMessage()));
             }
         }
-        return members;
+        return selectors;
     }
 
     protected List<AnnotationNode> readInjectionPoints(String type) {
@@ -365,7 +457,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * @return new method
      */
     public MethodNode addMethod(int access, String name, String desc) {
-        MethodNode method = new MethodNode(Opcodes.ASM5, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
+        MethodNode method = new MethodNode(Bytecode.ASM_API_VERSION, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
         this.injectedMethods.add(method);
         return method;
     }
@@ -382,10 +474,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     /**
      * Finds methods in the target class which match searchFor
      * 
-     * @param searchFor members to search for
+     * @param selectors members to search for
      * @param type annotation type
      */
-    private void findMethods(Set<MemberInfo> searchFor, String type) {
+    private void findMethods(Set<ITargetSelector> selectors, String type) {
         this.targets.clear();
 
         // When remapping refmap is enabled this implies we are in a development
@@ -394,32 +486,35 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         // descriptor if this happens.
         int passes = this.mixin.getEnvironment().getOption(Option.REFMAP_REMAP) ? 2 : 1;
         
-        for (MemberInfo member : searchFor) {
+        for (ITargetSelector selector : selectors) {
+            int matchCount = selector.getMatchCount();
             for (int count = 0, pass = 0; pass < passes && count < 1; pass++) {
-                int ordinal = 0;
                 for (MethodNode target : this.classNode.methods) {
-                    if (member.matches(target.name, target.desc, ordinal)) {
+                    if (selector.match(ElementNode.of(this.classNode, target)).isExactMatch()) {
                         boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
-                        if (member.matchAll && (Bytecode.methodIsStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
+                        if (matchCount > 1 && (Bytecode.isStatic(target) != this.isStatic || target == this.method || isMixinMethod)) {
                             continue;
                         }
                         
                         this.checkTarget(target);
                         this.targets.add(target);
-                        ordinal++;
                         count++;
+                        
+                        if (count >= matchCount) {
+                            break;
+                        }
                     }
                 }
                 
                 // Second pass ignores descriptor
-                member = member.transform(null);
+                selector = selector.configure("permissive");
             }
         }
         
         if (this.targets.size() == 0) {
             throw new InvalidInjectionException(this,
                     String.format("%s annotation on %s could not find any targets matching %s in the target class %s. %s%s", 
-                            type, this.method.name, InjectionInfo.namesOf(searchFor), this.mixin.getTarget(),
+                            type, this.method.name, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
                             this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
         }
     }
@@ -468,18 +563,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return null;
         }
         
-        if (annotation.desc.endsWith(Inject.class.getSimpleName() + ";")) {
-            return new CallbackInjectionInfo(mixin, method, annotation);
-        } else if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
-            return new ModifyArgInjectionInfo(mixin, method, annotation);
-        } else if (annotation.desc.endsWith(ModifyArgs.class.getSimpleName() + ";")) {
-            return new ModifyArgsInjectionInfo(mixin, method, annotation);
-        } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
-            return new RedirectInjectionInfo(mixin, method, annotation);
-        } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
-            return new ModifyVariableInjectionInfo(mixin, method, annotation);
-        } else if (annotation.desc.endsWith(ModifyConstant.class.getSimpleName() + ";")) {
-            return new ModifyConstantInjectionInfo(mixin, method, annotation);
+        for (InjectorEntry injector : InjectionInfo.registry.values()) {
+            if (annotation.desc.endsWith(injector.simpleName)) {
+                return injector.create(mixin, method, annotation);
+            }
         }
         
         return null;
@@ -494,18 +581,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * @param method mixin method
      * @return annotation or null
      */
-    @SuppressWarnings("unchecked")
     public static AnnotationNode getInjectorAnnotation(IMixinInfo mixin, MethodNode method) {
         AnnotationNode annotation = null;
         try {
-            annotation = Annotations.getSingleVisible(method,
-                Inject.class,
-                ModifyArg.class,
-                ModifyArgs.class,
-                Redirect.class,
-                ModifyVariable.class,
-                ModifyConstant.class
-            );
+            annotation = Annotations.getSingleVisible(method, InjectionInfo.registeredAnnotations);
         } catch (IllegalArgumentException ex) {
             throw new InvalidMixinException(mixin, String.format("Error parsing annotations on %s in %s: %s", method.name, mixin.getClassName(),
                     ex.getMessage()));
@@ -520,20 +599,17 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * @return conform prefix
      */
     public static String getInjectorPrefix(AnnotationNode annotation) {
-        if (annotation != null) {
-            if (annotation.desc.endsWith(ModifyArg.class.getSimpleName() + ";")) {
-                return "modify";
-            } else if (annotation.desc.endsWith(ModifyArgs.class.getSimpleName() + ";")) {
-                return "args";
-            } else if (annotation.desc.endsWith(Redirect.class.getSimpleName() + ";")) {
-                return "redirect";
-            } else if (annotation.desc.endsWith(ModifyVariable.class.getSimpleName() + ";")) {
-                return "localvar";
-            } else if (annotation.desc.endsWith(ModifyConstant.class.getSimpleName() + ";")) {
-                return "constant";
+        if (annotation == null) {
+            return InjectionInfo.DEFAULT_PREFIX;
+        }
+        
+        for (InjectorEntry injector : InjectionInfo.registry.values()) {
+            if (annotation.desc.endsWith(injector.simpleName)) {
+                return injector.prefix;
             }
         }
-        return "handler";
+        
+        return InjectionInfo.DEFAULT_PREFIX;
     }
 
     static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
@@ -543,13 +619,13 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     /**
      * Print the names of the specified members as a human-readable list 
      * 
-     * @param members members to print
+     * @param selectors members to print
      * @return human-readable list of member names
      */
-    private static String namesOf(Collection<MemberInfo> members) {
-        int index = 0, count = members.size();
+    private static String namesOf(Collection<ITargetSelector> selectors) {
+        int index = 0, count = selectors.size();
         StringBuilder sb = new StringBuilder();
-        for (MemberInfo member : members) {
+        for (ITargetSelector selector : selectors) {
             if (index > 0) {
                 if (index == (count - 1)) {
                     sb.append(" or ");
@@ -557,10 +633,47 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                     sb.append(", ");
                 }
             }
-            sb.append('\'').append(member.name).append('\'');
+            sb.append('\'').append(selector.toString()).append('\'');
             index++;
         }
         return sb.toString();
+    }
+
+    /**
+     * Register an injector info class. The supplied class must be decorated
+     * with an {@link AnnotationType} annotation for registration purposes.
+     * 
+     * @param type injection info subclass to register
+     */
+    public static void register(Class<? extends InjectionInfo> type) {
+        AnnotationType annotationType = type.<AnnotationType>getAnnotation(AnnotationType.class);
+        if (annotationType == null) {
+            throw new IllegalArgumentException("Injection info class " + type + " is not annotated with @AnnotationType");
+        }
+        
+        Logger logger = LogManager.getLogger("mixin");
+        
+        InjectorEntry entry;
+        try {
+            entry = new InjectorEntry(annotationType.value(), type);
+        } catch (NoSuchMethodException ex) {
+            throw new MixinError("InjectionInfo class " + type.getName() + " is missing a valid constructor");
+        }
+        InjectorEntry existing = InjectionInfo.registry.get(entry.simpleName);
+        if (existing != null && !existing.type.equals(type)) {
+            logger.debug("WARNING: Overriding InjectionInfo for {} with {} (previously {})", annotationType.value().getSimpleName(), type.getName(),
+                    existing.type.getName());
+        } else {
+            logger.debug("Registering new injector for {} with {}", annotationType.value().getSimpleName(), type.getName());
+        }
+        
+        InjectionInfo.registry.put(entry.simpleName, entry);
+        
+        ArrayList<Class<? extends Annotation>> annotations = new ArrayList<Class<? extends Annotation>>();
+        for (InjectorEntry injector : InjectionInfo.registry.values()) {
+            annotations.add(injector.annotationType);
+        }
+        InjectionInfo.registeredAnnotations = annotations.toArray(InjectionInfo.registeredAnnotations);
     }
 
 }

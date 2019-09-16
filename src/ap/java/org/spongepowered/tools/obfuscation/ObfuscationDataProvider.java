@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.List;
 
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
@@ -62,13 +63,13 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public <T> ObfuscationData<T> getObfEntryRecursive(final MemberInfo targetMember) {
-        MemberInfo currentTarget = targetMember;
-        ObfuscationData<String> obfTargetNames = this.getObfClass(currentTarget.owner);
+    public <T> ObfuscationData<T> getObfEntryRecursive(final ITargetSelectorRemappable targetMember) {
+        ITargetSelectorRemappable currentTarget = targetMember;
+        ObfuscationData<String> obfTargetNames = this.getObfClass(currentTarget.getOwner());
         ObfuscationData<T> obfData = this.getObfEntry(currentTarget);
         try {
             while (obfData.isEmpty()) {
-                TypeHandle targetType = this.ap.getTypeProvider().getTypeHandle(currentTarget.owner);
+                TypeHandle targetType = this.ap.getTypeProvider().getTypeHandle(currentTarget.getOwner());
                 if (targetType == null) {
                     return obfData;
                 }
@@ -109,7 +110,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      <tt>null</tt> then an empty dataset is returned 
      * @return obfuscation data for the relocated member
      */
-    private <T> ObfuscationData<T> getObfEntryUsing(MemberInfo targetMember, TypeHandle targetClass) {
+    private <T> ObfuscationData<T> getObfEntryUsing(ITargetSelectorRemappable targetMember, TypeHandle targetClass) {
         return targetClass == null ? new ObfuscationData<T>() : this.<T>getObfEntry(targetMember.move(targetClass.getName()));
     }
 
@@ -120,7 +121,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <T> ObfuscationData<T> getObfEntry(MemberInfo targetMember) {
+    public <T> ObfuscationData<T> getObfEntry(ITargetSelectorRemappable targetMember) {
         if (targetMember.isField()) {
             return (ObfuscationData<T>)this.getObfField(targetMember);
         }
@@ -147,7 +148,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public ObfuscationData<MappingMethod> getObfMethodRecursive(MemberInfo targetMember) {
+    public ObfuscationData<MappingMethod> getObfMethodRecursive(ITargetSelectorRemappable targetMember) {
         return this.<MappingMethod>getObfEntryRecursive(targetMember);
     }
 
@@ -157,16 +158,16 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public ObfuscationData<MappingMethod> getObfMethod(MemberInfo method) {
+    public ObfuscationData<MappingMethod> getObfMethod(ITargetSelectorRemappable method) {
         return this.getRemappedMethod(method, method.isConstructor());
     }
     
     @Override
-    public ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method) {
+    public ObfuscationData<MappingMethod> getRemappedMethod(ITargetSelectorRemappable method) {
         return this.getRemappedMethod(method, true);
     }
 
-    private ObfuscationData<MappingMethod> getRemappedMethod(MemberInfo method, boolean remapDescriptor) {
+    private ObfuscationData<MappingMethod> getRemappedMethod(ITargetSelectorRemappable method, boolean remapDescriptor) {
         ObfuscationData<MappingMethod> data = new ObfuscationData<MappingMethod>();
         
         for (ObfuscationEnvironment env : this.environments) {
@@ -222,9 +223,9 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      * @param method Method to remap
      * @return data 
      */
-    public ObfuscationData<MappingMethod> remapDescriptor(ObfuscationData<MappingMethod> data, MemberInfo method) {
+    public ObfuscationData<MappingMethod> remapDescriptor(ObfuscationData<MappingMethod> data, ITargetSelectorRemappable method) {
         for (ObfuscationEnvironment env : this.environments) {
-            MemberInfo obfMethod = env.remapDescriptor(method);
+            ITargetSelectorRemappable obfMethod = env.remapDescriptor(method);
             if (obfMethod != null) {
                 data.put(env.getType(), obfMethod.asMethodMapping());
             }
@@ -239,7 +240,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public ObfuscationData<MappingField> getObfFieldRecursive(MemberInfo targetMember) {
+    public ObfuscationData<MappingField> getObfFieldRecursive(ITargetSelectorRemappable targetMember) {
         return this.<MappingField>getObfEntryRecursive(targetMember);
     }
 
@@ -248,7 +249,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      *      #getObfField(java.lang.String)
      */
     @Override
-    public ObfuscationData<MappingField> getObfField(MemberInfo field) {
+    public ObfuscationData<MappingField> getObfField(ITargetSelectorRemappable field) {
         return this.getObfField(field.asFieldMapping());
     }
     

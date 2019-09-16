@@ -5,7 +5,7 @@ buildscript {
     }
     dependencies {
         classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.4'
     }
 }
 
@@ -35,9 +35,8 @@ ext.packaging = 'jar'
 ext.buildNumber = project.hasProperty("buildNumber") ? buildNumber : '0'
 ext.ciSystem = project.hasProperty("ciSystem") ? ciSystem : 'unknown'
 ext.commit = project.hasProperty("commit") ? commit : 'unknown'
-
-// Location to store renamed packages
-ext.renamedPackageRoot = new File("build/renamed-packages/")
+ext.asmVersion = project.hasProperty("asmVersion") ? asmVersion : '6.2'
+ext.legacyForgeAsmVersion = project.hasProperty("legacyForgeAsmVersion") ? asmVersion : '5.0.3'
 
 // True to do jar signing task
 ext.doSignJar = project.hasProperty("keyStorePath")
@@ -54,27 +53,29 @@ repositories {
         url = 'https://libraries.minecraft.net/'
     }
     maven {
-        name = 'renamed-packages'
-        url = file(renamedPackageRoot)
-    }
-    maven {
         // For fernflower
         name = 'sponge'
         url = 'http://repo.spongepowered.org/maven'
+    }
+    maven {
+        // For modlauncher
+        name = 'forge'
+        url = 'https://files.minecraftforge.net/maven'
     }
 }
 
 configurations {
     deployerJars // maven stuff
-    asm // renamer input
-    jarjar // renamer task
-    
-    // Exclude non-repackaged ASM so that we don't use it by mistake
-    compile.exclude module: 'asm-debug-all'
+    thinJar
+    stagingJar
 }
 
 // Include annotation processor sourceSet
 sourceSets {
+    legacy
+    main {
+        compileClasspath += legacy.output
+    }
     ap {
         compileClasspath += main.output
     }
@@ -94,69 +95,29 @@ sourceSets {
     launchwrapper {
         compileClasspath += main.output
     }
-}
-
-// Dependencies for renamed ASM
-dependencies {
-    asm 'org.ow2.asm:asm-debug-all:5.2'
-    asm 'org.ow2.asm:asm-debug-all:5.2:sources'
-    jarjar 'com.googlecode.jarjar:jarjar:1.1'
-}
-
-// Task to read ASM library and rename packages
-task renamedASM {
-    outputs.file files(configurations.asm.files.withIndex().collect { file, i -> def dep = configurations.asm.dependencies[i]
-        new File(new File(renamedPackageRoot, "org/spongepowered/mixin-" + dep.name + "/" + dep.version), "mixin-" + file.name).path
-    })
-    ant {
-        taskdef (
-            name: "jarjar",
-            classname: "com.tonicsystems.jarjar.JarJarTask",
-            classpath: configurations.jarjar.asPath,
-        )
-        outputs.files.eachWithIndex { elem, index ->
-            logger.info "Generating renamed jar {}", elem.name
-            def inJar = configurations.asm.files[index]
-            if (elem.name.contains("sources")) {
-                def tmpDir = new File(temporaryDir, elem.name + ".tmp")
-                def rootOld = new File(tmpDir, "org/objectweb")
-                def tmpOld = new File(rootOld, "asm")
-                def tmpNew = new File(tmpDir, "org/spongepowered/asm/lib")
-                unzip (src: inJar, dest: tmpDir)
-                replace (dir: tmpDir, token: "org.objectweb.asm", value: "org.spongepowered.asm.lib")
-                move (file: tmpOld, tofile: tmpNew)
-                delete rootOld
-                jar (destFile: new File(elem.path)) { fileset(dir: tmpDir) }
-                delete tmpDir
-            } else {
-                jarjar (jarfile: elem.path) {
-                    zipfileset (src: inJar)
-                    rule (
-                        pattern: "org.objectweb.asm.**",
-                        result: "org.spongepowered.asm.lib.@1"
-                    )
-                }
-            }
-        }
+    modlauncher {
+        compileClasspath += main.output
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
     }
-    
-    project.dependencies.add('compile', 'org.spongepowered:mixin-asm-debug-all:5.2')
-    project.dependencies.add('apCompile', 'org.spongepowered:mixin-asm-debug-all:5.2')
-    project.dependencies.add('agentCompile', 'org.spongepowered:mixin-asm-debug-all:5.2')
-
 }
-eclipseClasspath.dependsOn(renamedASM)
 
 // Project dependencies
 dependencies {
-    def guava = 'com.google.guava:guava:17.0'
+    def guava = 'com.google.guava:guava:21.0' // from mc1.12 onwards
     def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     
     compile guava
     compile log4j2
-    compile 'commons-io:commons-io:2.4'
     compile 'com.google.code.gson:gson:2.2.4'
-    compile files(tasks.renamedASM.outputs.files[0])         // Establish implicit dependency on remapped ASM
+    compile "org.ow2.asm:asm-tree:$asmVersion"
+    compile "org.ow2.asm:asm-commons:$asmVersion"
+    compile "org.ow2.asm:asm-util:$asmVersion"
+
+    thinJar "org.ow2.asm:asm-tree:$asmVersion"
+    thinJar "org.ow2.asm:asm-util:$asmVersion"
+    
+    stagingJar "org.ow2.asm:asm-util:$asmVersion"
 
     // Tests
 //    testCompile 'junit:junit:4.11'
@@ -164,6 +125,7 @@ dependencies {
 //    testCompile 'org.mockito:mockito-core:1.9.0'
     
     // Annotation Processor
+    apCompile "org.ow2.asm:asm-tree:$asmVersion"
     apCompile guava
     
     // AP extension example
@@ -178,8 +140,14 @@ dependencies {
 
     // LegacyLauncher service
     launchwrapperCompile configurations.compile
-    launchwrapperCompile('net.minecraft:launchwrapper:1.11') {
+    launchwrapperCompile ('net.minecraft:launchwrapper:1.11') {
         exclude module: 'lwjgl'
+    }
+    
+    modlauncherCompile configurations.compile
+    modlauncherCompile 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    modlauncherCompile ('cpw.mods:modlauncher:3.2.0') {
+        exclude module: 'log4j-core'
     }
     
     // agent
@@ -187,13 +155,20 @@ dependencies {
     
     // asm bridge
     bridgeCompile log4j2
-    bridgeCompile 'org.ow2.asm:asm-commons:5.0.3'
+    bridgeCompile "org.ow2.asm:asm-commons:$legacyForgeAsmVersion"
+    
+    legacyCompile "org.ow2.asm:asm-tree:$asmVersion"
+}
+
+javadoc {
+    classpath += sourceSets.legacy.output // why?
 }
 
 // Eclipse
 eclipse.classpath.plusConfigurations += [
     configurations.fernflowerCompile,
     configurations.launchwrapperCompile,
+    configurations.modlauncherCompile,
     configurations.bridgeCompile
 ]
 
@@ -201,6 +176,7 @@ eclipse.classpath.plusConfigurations += [
 idea.module.scopes.COMPILE.plus += [
     configurations.fernflowerCompile,
     configurations.launchwrapperCompile,
+    configurations.modlauncherCompile,
     configurations.bridgeCompile
 ]
 
@@ -240,7 +216,7 @@ checkstyle {
 
 // Source compiler configuration
 tasks.withType(JavaCompile) {
-    options.compilerArgs += ['-Xlint:all', '-Xlint:-path']
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-path', '-proc:none']
     options.deprecation = true
     options.encoding = 'utf8'
 }
@@ -252,37 +228,17 @@ if (JavaVersion.current().isJava8Compatible()) {
     }
 }
 
-jar {
-    // Include annotation processor
-    from sourceSets.ap.output
-    
-    // Include fernflower bridge
-    from sourceSets.fernflower.output
-
-    // Include hotswap agent
-    from sourceSets.agent.output
-    
-    // Bridge
-    from sourceSets.bridge.output
-    
-    // Launchwrapper
-    from sourceSets.launchwrapper.output
-    
-    // Renamed ASM
-    from zipTree(tasks.renamedASM.outputs.files[0]).matching {
-        include 'org/spongepowered/asm/lib/*'
-        include 'org/spongepowered/asm/lib/commons/*Remapper*'
-        include 'org/spongepowered/asm/lib/commons/Remapper*'
-        include 'org/spongepowered/asm/lib/commons/SignatureRemapper*'
-        include 'org/spongepowered/asm/lib/signature/**'
-        include 'org/spongepowered/asm/lib/tree/**'
-        include 'org/spongepowered/asm/lib/util/**'
+task stagingJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    sourceSets.each {
+        if (it.name != 'example') {
+            from it.output
+        }
     }
     
-    exclude 'org/objectweb/**'
+    configurations = [project.configurations.stagingJar]
     
     // JAR manifest configuration
-    manifest.mainAttributes(
+    manifest.attributes(
         "Built-By": System.properties['user.name'],
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
@@ -298,18 +254,18 @@ jar {
     if (project.doSignJar) {
         classifier = 'unsigned'
     }
+    
+    mergeServiceFiles()
 }
+
+// Clear artifacts because jar will be there by default and we want to use staging jar instead
+configurations.archives.artifacts.clear()
 
 task thinJar(type: Jar) {
     from sourceSets.main.output
-    from zipTree(tasks.renamedASM.outputs.files[0])
+//    from { configurations.thinJar.collect { zipTree(it) }
     classifier = 'thin'
     
-    exclude 'org/objectweb/**'
-    exclude 'org/spongepowered/asm/lib/commons/**'
-    exclude 'org/spongepowered/asm/lib/signature/**'
-    exclude 'org/spongepowered/asm/lib/tree/analysis/**'
-    exclude 'org/spongepowered/asm/lib/xml/**'
     exclude 'org/spongepowered/asm/launch/**'
     exclude 'org/spongepowered/asm/mixin/injection/invoke/**'
     exclude 'org/spongepowered/asm/mixin/transformer/*.class'
@@ -334,7 +290,6 @@ shadowJar  {
     dependencies {
         include(dependency('com.google.guava:guava'))
         include(dependency('com.google.code.gson:gson'))
-        include(dependency('commons-io:commons-io'))
         include(dependency('org.apache.logging.log4j:log4j-core'))
         include(dependency('org.apache.logging.log4j:log4j-api'))
     }
@@ -343,13 +298,10 @@ shadowJar  {
 build.dependsOn(shadowJar)
 
 if (project.doSignJar) {
-    // Clear artifacts because jar will be there by default
-    configurations.archives.artifacts.clear()
-
     // Define signjar task    
     task signJar() {
         inputs.files(jar.outputs)
-        outputs.file jar.outputs.files.collect {
+        outputs.files jar.outputs.files.collect {
             new File(it.parent, it.name.replace('-unsigned', ''))
         }
         doLast {
@@ -378,18 +330,10 @@ task timestamp(type: Jar, dependsOn: build) {
 }
 
 task sourceJar(type: Jar) {
-	from sourceSets.main.java
-	from sourceSets.main.resources
-	from sourceSets.ap.java
-	from sourceSets.ap.resources
-	from sourceSets.fernflower.java
-	from sourceSets.fernflower.resources
-    from sourceSets.agent.java
-    from sourceSets.agent.resources
-    from sourceSets.bridge.java
-    from sourceSets.bridge.resources
-    from sourceSets.example.java
-    from sourceSets.example.resources
+    sourceSets.each {
+        from it.java
+        from it.resources
+    }
 	classifier = "sources"
 }
 
@@ -401,6 +345,8 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 artifacts {
     if (project.doSignJar) {
         archives signJar.outputs.files[0]
+    } else {
+        archives stagingJar
     }
     archives thinJar
     archives sourceJar
@@ -435,7 +381,7 @@ uploadArchives {
                 artifactId = project.archivesBaseName
                 project {
                     name project.archivesBaseName
-                    packaging 'jar'
+                    packaging project.packaging
                     description project.projectName
                     url 'http://www.spongepowered.org/'
 

@@ -34,11 +34,14 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.mixin.transformer.MixinTransformer;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * An agent that re-transforms a mixin's target classes if the mixin has been
@@ -61,11 +64,14 @@ public class MixinAgent implements IHotSwap {
             
             byte[] mixinBytecode = MixinAgent.classLoader.getFakeMixinBytecode(classBeingRedefined);
             if (mixinBytecode != null) {
-                List<String> targets = this.reloadMixin(className, classfileBuffer);
+                ClassNode classNode = new ClassNode(Bytecode.ASM_API_VERSION);
+                ClassReader cr = new ClassReader(classfileBuffer);
+                cr.accept(classNode, ClassReader.EXPAND_FRAMES);
+                
+                List<String> targets = this.reloadMixin(className, classNode);
                 if (targets == null || !this.reApplyMixins(targets)) {
                     return MixinAgent.ERROR_BYTECODE;
                 }
-                
                 return mixinBytecode;
             }
             
@@ -78,10 +84,10 @@ public class MixinAgent implements IHotSwap {
             }
         }
 
-        private List<String> reloadMixin(String className, byte[] classfileBuffer) {
+        private List<String> reloadMixin(String className, ClassNode classNode) {
             MixinAgent.logger.info("Redefining mixin {}", className);
             try {
-                return MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classfileBuffer);
+                return MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classNode);
             } catch (MixinReloadException e) {
                 MixinAgent.logger.error("Mixin {} cannot be reloaded, needs a restart to be applied: {} ", e.getMixinInfo(), e.getMessage());
             } catch (Throwable th) {
@@ -149,7 +155,7 @@ public class MixinAgent implements IHotSwap {
     /**
      * MixinTransformer instance to use to transform the mixin's target classes
      */
-    final MixinTransformer classTransformer;
+    final IMixinTransformer classTransformer;
 
     /**
      * Constructs an agent from a class transformer in which it will use to
@@ -158,7 +164,7 @@ public class MixinAgent implements IHotSwap {
      * @param classTransformer Class transformer that will transform a mixin's
      *                         target class
      */
-    public MixinAgent(MixinTransformer classTransformer) {
+    public MixinAgent(IMixinTransformer classTransformer) {
         this.classTransformer = classTransformer;
         MixinAgent.agents.add(this);
         if (MixinAgent.instrumentation != null) {

@@ -37,6 +37,8 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
@@ -51,7 +53,6 @@ public abstract class TypeUtils {
     private static final int MAX_GENERIC_RECURSION_DEPTH = 5;
     
     private static final String OBJECT_SIG = "java.lang.Object";
-    private static final String OBJECT_REF = "java/lang/Object";
 
     // No instances for you
     private TypeUtils() {}
@@ -186,6 +187,16 @@ public abstract class TypeUtils {
     }
 
     /**
+     * Get the simple type name for the specified type
+     * 
+     * @param type type mirror
+     * @return type name
+     */
+    public static String getSimpleName(TypeMirror type) {
+        return Bytecode.getSimpleName(TypeUtils.getTypeName(type));
+    }
+
+    /**
      * Get the type name for the specified type
      * 
      * @param type type mirror
@@ -285,7 +296,7 @@ public abstract class TypeUtils {
             case SHORT:    return "S";
             case VOID:     return "V";
             // TODO figure out a better way to not crash when we get here
-            case ERROR:    return "L" + TypeUtils.OBJECT_REF + ";";
+            case ERROR:    return Constants.OBJECT_DESC;
             default:
         }
 
@@ -300,7 +311,7 @@ public abstract class TypeUtils {
      */
     public static String getInternalName(DeclaredType type) {
         if (type == null) {
-            return TypeUtils.OBJECT_REF;
+            return Constants.OBJECT;
         }
         return TypeUtils.getInternalName((TypeElement)type.asElement());
     }

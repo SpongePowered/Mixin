@@ -31,18 +31,19 @@ import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.AnnotationVisitor;
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassVisitor;
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.commons.Remapper;
-import org.spongepowered.asm.lib.commons.ClassRemapper;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.commons.ClassRemapper;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.service.ISyntheticClassInfo;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.transformers.MixinClassWriter;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.IConsumer;
 
 /**
  * Class generator which creates unique copies of inner classes within mixins
@@ -54,10 +55,15 @@ final class InnerClassGenerator implements IClassGenerator {
      * Information about an inner class instance. Implements {@link Remapper} so
      * that it can participate in the remapping process.
      */
-    static class InnerClassInfo extends Remapper {
+    static class InnerClassInfo extends Remapper implements ISyntheticClassInfo {
         
         /**
-         * Generated class name
+         * Mixin which provides this class
+         */
+        private final IMixinInfo mixin;
+        
+        /**
+         * Class name (internal name)
          */
         private final String name;
         
@@ -85,8 +91,14 @@ final class InnerClassGenerator implements IClassGenerator {
          * Name of the target class (class ref) 
          */
         private final String targetName;
+        
+        /**
+         *  Number of times this inner class has been generated
+         */
+        private int loadCounter;
 
-        InnerClassInfo(String name, String originalName, MixinInfo owner, MixinTargetContext target) {
+        InnerClassInfo(IMixinInfo mixin, String name, String originalName, MixinInfo owner, MixinTargetContext target) {
+            this.mixin = mixin;
             this.name = name;
             this.originalName = originalName;
             this.owner = owner;
@@ -95,8 +107,24 @@ final class InnerClassGenerator implements IClassGenerator {
             this.targetName = target.getTargetClassRef();
         }
         
-        String getName() {
+        @Override
+        public IMixinInfo getMixin() {
+            return this.mixin;
+        }
+        
+        @Override
+        public boolean isLoaded() {
+            return this.loadCounter > 0;
+        }
+
+        @Override
+        public String getName() {
             return this.name;
+        }
+        
+        @Override
+        public String getClassName() {
+            return this.name.replace('/', '.');
         }
         
         String getOriginalName() {
@@ -119,8 +147,10 @@ final class InnerClassGenerator implements IClassGenerator {
             return this.targetName;
         }
         
-        byte[] getClassBytes() throws ClassNotFoundException, IOException {
-            return MixinService.getService().getBytecodeProvider().getClassBytes(this.originalName, true);
+        void accept(final ClassVisitor classVisitor) throws ClassNotFoundException, IOException {
+            ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(this.originalName);
+            classNode.accept(classVisitor);
+            this.loadCounter++;
         }
         
         /**
@@ -139,7 +169,7 @@ final class InnerClassGenerator implements IClassGenerator {
         }
 
         /* (non-Javadoc)
-         * @see org.spongepowered.asm.lib.commons.Remapper#map(java.lang.String)
+         * @see org.objectweb.asm.commons.Remapper#map(java.lang.String)
          */
         @Override
         public String map(String key) {
@@ -170,12 +200,12 @@ final class InnerClassGenerator implements IClassGenerator {
         private final InnerClassInfo info;
         
         public InnerClassAdapter(ClassVisitor cv, InnerClassInfo info) {
-            super(Opcodes.ASM5, cv, info);
+            super(Bytecode.ASM_API_VERSION, cv, info);
             this.info = info;
         }
         
         /* (non-Javadoc)
-         * @see org.spongepowered.asm.lib.ClassVisitor
+         * @see org.objectweb.asm.ClassVisitor
          *      #visitSource(java.lang.String, java.lang.String)
          */
         @Override
@@ -188,7 +218,7 @@ final class InnerClassGenerator implements IClassGenerator {
         }
         
         /* (non-Javadoc)
-         * @see org.spongepowered.asm.lib.commons.RemappingClassAdapter
+         * @see org.objectweb.asm.commons.RemappingClassAdapter
          *      #visitInnerClass(java.lang.String, java.lang.String,
          *      java.lang.String, int)
          */
@@ -210,6 +240,11 @@ final class InnerClassGenerator implements IClassGenerator {
     private static final Logger logger = LogManager.getLogger("mixin");
     
     /**
+     * Synthetic class registry 
+     */
+    private final IConsumer<ISyntheticClassInfo> registry;
+    
+    /**
      * Mapping of target class context ids to generated inner class names, used
      * so we don't accidentally conform the same class twice.
      */
@@ -219,6 +254,15 @@ final class InnerClassGenerator implements IClassGenerator {
      * Mapping of generated class names to the respective inner class info
      */
     private final Map<String, InnerClassInfo> innerClasses = new HashMap<String, InnerClassInfo>();
+
+    /**
+     * Ctor
+     * 
+     * @param registry sythetic class registry
+     */
+    public InnerClassGenerator(IConsumer<ISyntheticClassInfo> registry) {
+        this.registry = registry;
+    }
     
     /**
      * @param owner Mixin which owns the original inner class
@@ -231,8 +275,10 @@ final class InnerClassGenerator implements IClassGenerator {
         String ref = this.innerClassNames.get(id);
         if (ref == null) {
             ref = InnerClassGenerator.getUniqueReference(originalName, context);
+            InnerClassInfo info = new InnerClassInfo(owner, ref, originalName, owner, context);
             this.innerClassNames.put(id, ref);
-            this.innerClasses.put(ref, new InnerClassInfo(ref, originalName, owner, context));
+            this.innerClasses.put(ref, info);
+            this.registry.accept(info);
             InnerClassGenerator.logger.debug("Inner class {} in {} on {} gets unique name {}", originalName, owner.getClassRef(),
                     context.getTargetClassRef(), ref);
         }
@@ -240,17 +286,17 @@ final class InnerClassGenerator implements IClassGenerator {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.transformer.IClassGenerator
-     *      #generate(java.lang.String)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IClassGenerator
+     *      #generate(java.lang.String, org.objectweb.asm.tree.ClassNode)
      */
     @Override
-    public byte[] generate(String name) {
+    public boolean generate(String name, ClassNode classNode) {
         String ref = name.replace('.', '/');
         InnerClassInfo info = this.innerClasses.get(ref);
-        if (info != null) {
-            return this.generate(info);
+        if (info == null) {
+            return false;
         }
-        return null;
+        return this.generate(info, classNode);
     }
     
     /**
@@ -258,22 +304,20 @@ final class InnerClassGenerator implements IClassGenerator {
      * and remapping it against the target class.
      * 
      * @param info inner class info to process
-     * @return generated class or null if generation failed
+     * @return true if class was generated successfully
      */
-    private byte[] generate(InnerClassInfo info) {
+    private boolean generate(InnerClassInfo info, ClassNode classNode) {
         try {
             InnerClassGenerator.logger.debug("Generating mapped inner class {} (originally {})", info.getName(), info.getOriginalName());
-            ClassReader cr = new ClassReader(info.getClassBytes());
-            ClassWriter cw = new MixinClassWriter(cr, 0);
-            cr.accept(new InnerClassAdapter(cw, info), ClassReader.EXPAND_FRAMES);
-            return cw.toByteArray();
+            info.accept(new InnerClassAdapter(classNode, info));
+            return true;
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
             InnerClassGenerator.logger.catching(ex);
         }
         
-        return null;
+        return false;
     }
 
     /**

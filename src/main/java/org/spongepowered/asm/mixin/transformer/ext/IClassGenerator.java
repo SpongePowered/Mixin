@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.transformer.ext;
 
+import org.objectweb.asm.tree.ClassNode;
+
 /**
  * Base interface for class generators
  */
@@ -36,8 +38,9 @@ public interface IClassGenerator {
      * generator to return a value will halt further processing of the request.
      * 
      * @param name Class name to generate
-     * @return Class bytecode or null
+     * @param classNode Empty ClassNode to populate
+     * @return True if the class was generated
      */
-    public abstract byte[] generate(String name);
+    public abstract boolean generate(String name, ClassNode classNode);
 
 }

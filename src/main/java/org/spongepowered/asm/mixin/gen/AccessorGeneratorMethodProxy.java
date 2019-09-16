@@ -24,12 +24,12 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -40,41 +40,43 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
     /**
      * The target field, identified by the accessor info
      */
-    private final MethodNode targetMethod;
+    protected final MethodNode targetMethod;
     
     /**
      * Accessor method argument types (raw, from method)
      */
-    private final Type[] argTypes;
+    protected final Type[] argTypes;
     
     /**
      * Accessor method return type (raw, from method)
      */
-    private final Type returnType;
-    
-    /**
-     * True for instance method, false for static method 
-     */
-    private final boolean isInstanceMethod;
+    protected final Type returnType;
 
     public AccessorGeneratorMethodProxy(AccessorInfo info) {
-        super(info);
+        super(info, Bytecode.isStatic(info.getTargetMethod()));
         this.targetMethod = info.getTargetMethod();
         this.argTypes = info.getArgTypes();
         this.returnType = info.getReturnType();
-        this.isInstanceMethod = !Bytecode.hasFlag(this.targetMethod, Opcodes.ACC_STATIC);
+        this.checkModifiers();
+    }
+    
+    protected AccessorGeneratorMethodProxy(AccessorInfo info, boolean isStatic) {
+        super(info, isStatic);
+        this.targetMethod = info.getTargetMethod();
+        this.argTypes = info.getArgTypes();
+        this.returnType = info.getReturnType();
     }
 
     @Override
     public MethodNode generate() {
-        int size = Bytecode.getArgsSize(this.argTypes) + this.returnType.getSize() + (this.isInstanceMethod ? 1 : 0);
+        int size = Bytecode.getArgsSize(this.argTypes) + this.returnType.getSize() + (this.targetIsStatic ? 0 : 1);
         MethodNode method = this.createMethod(size, size);
-        if (this.isInstanceMethod) {
+        if (!this.targetIsStatic) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
-        Bytecode.loadArgs(this.argTypes, method.instructions, this.isInstanceMethod ? 1 : 0);
+        Bytecode.loadArgs(this.argTypes, method.instructions, this.targetIsStatic ? 0 : 1);
         boolean isPrivate = Bytecode.hasFlag(this.targetMethod, Opcodes.ACC_PRIVATE);
-        int opcode = this.isInstanceMethod ? (isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL) : Opcodes.INVOKESTATIC;
+        int opcode = this.targetIsStatic ? (isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL) : Opcodes.INVOKESTATIC;
         method.instructions.add(new MethodInsnNode(opcode, this.info.getClassNode().name, this.targetMethod.name, this.targetMethod.desc, false));
         method.instructions.add(new InsnNode(this.returnType.getOpcode(Opcodes.IRETURN)));
         return method;

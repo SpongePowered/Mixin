@@ -26,9 +26,12 @@ package org.spongepowered.asm.mixin.gen;
 
 import java.util.ArrayList;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Base class for accessor generators
@@ -39,9 +42,23 @@ public abstract class AccessorGenerator {
      * Accessor info which describes the accessor
      */
     protected final AccessorInfo info;
-    
-    public AccessorGenerator(AccessorInfo info) {
+
+    /**
+     * True for static field, false for instance field 
+     */
+    protected final boolean targetIsStatic;
+
+    public AccessorGenerator(AccessorInfo info, boolean isStatic) {
         this.info = info;
+        this.targetIsStatic = isStatic;
+    }
+
+    protected void checkModifiers() {
+        if (this.info.isStatic() && !this.targetIsStatic) {
+            IMixinContext context = this.info.getContext();
+            throw new InvalidInjectionException(context, String.format("%s is invalid. Accessor method is%s static but the target is not.",
+                    this.info, this.info.isStatic() ? "" : " not"));
+        }
     }
 
     /**
@@ -53,8 +70,8 @@ public abstract class AccessorGenerator {
      */
     protected final MethodNode createMethod(int maxLocals, int maxStack) {
         MethodNode method = this.info.getMethod();
-        MethodNode accessor = new MethodNode(Opcodes.ASM5, (method.access & ~Opcodes.ACC_ABSTRACT) | Opcodes.ACC_SYNTHETIC, method.name, method.desc,
-                null, null);
+        MethodNode accessor = new MethodNode(Bytecode.ASM_API_VERSION, (method.access & ~Opcodes.ACC_ABSTRACT) | Opcodes.ACC_SYNTHETIC, method.name,
+                method.desc, null, null);
         accessor.visibleAnnotations = new ArrayList<AnnotationNode>();
         accessor.visibleAnnotations.add(this.info.getAnnotation());
         accessor.maxLocals = maxLocals;

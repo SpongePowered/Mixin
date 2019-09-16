@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.launch.platform;
 
-import java.lang.reflect.Constructor;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,10 +31,12 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.GlobalProperties;
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.service.MixinService;
 
 /**
- * A collection of {@link IMixinPlatformAgent} platform agents)
+ * A collection of {@link IMixinPlatformAgent} platform agents) for a particular
+ * container
  */
 public class MixinContainer {
 
@@ -50,25 +50,39 @@ public class MixinContainer {
         MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentDefault");
     }
     
-    private final Logger logger = LogManager.getLogger("mixin");
+    private static final Logger logger = LogManager.getLogger("mixin");
     
-    private final URI uri;
+    private final IContainerHandle handle;
     
     private final List<IMixinPlatformAgent> agents = new ArrayList<IMixinPlatformAgent>();
 
-    public MixinContainer(MixinPlatformManager manager, URI uri) {
-        this.uri = uri;
+    public MixinContainer(MixinPlatformManager manager, IContainerHandle handle) {
+        this.handle = handle;
         
         for (String agentClass : MixinContainer.agentClasses) {
             try {
                 @SuppressWarnings("unchecked")
                 Class<IMixinPlatformAgent> clazz = (Class<IMixinPlatformAgent>)Class.forName(agentClass);
-                Constructor<IMixinPlatformAgent> ctor = clazz.getDeclaredConstructor(MixinPlatformManager.class, URI.class);
-                this.logger.debug("Instancing new {} for {}", clazz.getSimpleName(), this.uri);
-                IMixinPlatformAgent agent = ctor.newInstance(manager, uri);
-                this.agents.add(agent);
-            } catch (Exception ex) {
-                this.logger.catching(ex);
+                String simpleName = clazz.getSimpleName();
+                String acceptAction = "rejected";
+                
+                MixinContainer.logger.debug("Instancing new {} for {}", simpleName, this.handle);
+                IMixinPlatformAgent agent = clazz.newInstance();
+                
+                if (agent.accept(manager, this.handle)) {
+                    this.agents.add(agent);
+                    acceptAction = "accepted";
+                }
+                
+                MixinContainer.logger.debug("{} {} container {}", simpleName, acceptAction, this.handle);
+            } catch (InstantiationException ex) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException)cause;
+                }
+                throw new RuntimeException(cause);
+            } catch (ReflectiveOperationException ex) {
+                MixinContainer.logger.catching(ex);
             }
         }
     }
@@ -76,8 +90,8 @@ public class MixinContainer {
     /**
      * 
      */
-    public URI getURI() {
-        return this.uri;
+    public IContainerHandle getDescriptor() {
+        return this.handle;
     }
 
     /**
@@ -99,7 +113,7 @@ public class MixinContainer {
      */
     public void prepare() {
         for (IMixinPlatformAgent agent : this.agents) {
-            this.logger.debug("Processing prepare() for {}", agent);
+            MixinContainer.logger.debug("Processing prepare() for {}", agent);
             agent.prepare();
         }
     }
@@ -110,7 +124,7 @@ public class MixinContainer {
      */
     public void initPrimaryContainer() {
         for (IMixinPlatformAgent agent : this.agents) {
-            this.logger.debug("Processing launch tasks for {}", agent);
+            MixinContainer.logger.debug("Processing launch tasks for {}", agent);
             agent.initPrimaryContainer();
         }
     }
@@ -120,26 +134,9 @@ public class MixinContainer {
      */
     public void inject() {
         for (IMixinPlatformAgent agent : this.agents) {
-            this.logger.debug("Processing inject() for {}", agent);
+            MixinContainer.logger.debug("Processing inject() for {}", agent);
             agent.inject();
         }
-    }
-
-    /**
-     * Analogue of <tt>ITweaker::getLaunchTarget</tt>, queries all agents and
-     * returns first valid launch target. Returns null if no agents have launch
-     * target.
-     * 
-     * @return launch target from agent or null
-     */
-    public String getLaunchTarget() {
-        for (IMixinPlatformAgent agent : this.agents) {
-            String launchTarget = agent.getLaunchTarget();
-            if (launchTarget != null) {
-                return launchTarget;
-            }
-        }
-        return null;
     }
     
 }

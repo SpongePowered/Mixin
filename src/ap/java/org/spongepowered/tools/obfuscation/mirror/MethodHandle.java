@@ -27,7 +27,7 @@ package org.spongepowered.tools.obfuscation.mirror;
 import javax.lang.model.element.ExecutableElement;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
-import org.spongepowered.tools.obfuscation.mirror.mapping.ResolvableMappingMethod;
+import org.spongepowered.tools.obfuscation.mirror.mapping.MappingMethodResolvable;
 
 import com.google.common.base.Strings;
 
@@ -83,7 +83,7 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
     public MappingMethod asMapping(boolean includeOwner) {
         if (includeOwner) {
             if (this.ownerHandle != null) {
-                return new ResolvableMappingMethod(this.ownerHandle, this.getName(), this.getDesc());
+                return new MappingMethodResolvable(this.ownerHandle, this.getName(), this.getDesc());
             }
             return new MappingMethod(this.getOwner(), this.getName(), this.getDesc());
         }

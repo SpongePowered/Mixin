@@ -27,6 +27,7 @@ package org.spongepowered.asm.service;
 import java.io.InputStream;
 import java.util.Collection;
 
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.ReEntranceLock;
 
@@ -95,10 +96,28 @@ public interface IMixinService {
      */
     public abstract IClassBytecodeProvider getBytecodeProvider();
     
+//    /**
+//     * Return the synthetic class registry for this service
+//     */
+//    public abstract ISyntheticClassRegistry getSyntheticClassRegistry();
+    
     /**
      * Get additional platform agents for this service 
      */
     public abstract Collection<String> getPlatformAgents();
+    
+    /**
+     * Get the primary container for the current environment, this is usually
+     * the container which contains the Mixin classes but can be another type
+     * of container as required by the environment
+     */
+    public abstract IContainerHandle getPrimaryContainer();
+    
+    /**
+     * Get a collection of containers in the current environment which contain
+     * mixins we should process 
+     */
+    public abstract Collection<IContainerHandle> getMixinContainers();
     
     /**
      * Get a resource as a stream from the appropriate classloader, this is
@@ -140,6 +159,18 @@ public interface IMixinService {
      * Get currently available transformers in the environment
      */
     public abstract Collection<ITransformer> getTransformers();
+
+    /**
+     * Get currently available transformers in the environment
+     */
+    public abstract Collection<ITransformer> getDelegatedTransformers();
+    
+    /**
+     * Adds a transformer to the transformer exclusions list
+     * 
+     * @param name Class transformer exclusion to add
+     */
+    public abstract void addTransformerExclusion(String name);
 
     /**
      * Get the detected side name for this environment

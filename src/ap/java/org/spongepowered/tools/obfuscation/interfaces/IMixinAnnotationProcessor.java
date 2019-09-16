@@ -24,7 +24,6 @@
  */
 package org.spongepowered.tools.obfuscation.interfaces;
 
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 
 import org.spongepowered.asm.util.ITokenProvider;
@@ -32,7 +31,7 @@ import org.spongepowered.asm.util.ITokenProvider;
 /**
  * Interface for annotation processor core
  */
-public interface IMixinAnnotationProcessor extends Messager, IOptionProvider {
+public interface IMixinAnnotationProcessor extends IMessagerSuppressible, IOptionProvider {
 
     /**
      * Detected compiler argument, specifies the behaviour of some operations

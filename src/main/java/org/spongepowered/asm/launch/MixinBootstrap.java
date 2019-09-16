@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.launch.platform.CommandLineOptions;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -60,7 +61,7 @@ public abstract class MixinBootstrap {
     /**
      * Subsystem version
      */
-    public static final String VERSION = "0.7.12";
+    public static final String VERSION = "0.8-preview";
     
     /**
      * Log all the things
@@ -81,6 +82,11 @@ public abstract class MixinBootstrap {
      * Platform manager instance
      */
     private static MixinPlatformManager platform;
+    
+    /**
+     * Connectors 
+     */
+    private static MixinConnectorManager connectors = new MixinConnectorManager();
 
     private MixinBootstrap() {}
     
@@ -117,7 +123,7 @@ public abstract class MixinBootstrap {
             return;
         }
 
-        MixinBootstrap.doInit(null);
+        MixinBootstrap.doInit(CommandLineOptions.defaultArgs());
     }
 
     /**
@@ -137,16 +143,11 @@ public abstract class MixinBootstrap {
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
             
-            String command = System.getProperty("sun.java.command");
-            if (command != null && command.contains("GradleStart")) {
-                System.setProperty("mixin.env.remapRefMap", "true");
-            }
-            
             Phase initialPhase = MixinService.getService().getInitialPhase();
             if (initialPhase == Phase.DEFAULT) {
                 MixinBootstrap.logger.error("Initialising mixin subsystem after game pre-init phase! Some mixins may be skipped.");
                 MixinEnvironment.init(initialPhase);
-                MixinBootstrap.getPlatform().prepare(null);
+                MixinBootstrap.getPlatform().prepare(CommandLineOptions.defaultArgs());
                 MixinBootstrap.initState = false;
             } else {
                 MixinEnvironment.init(initialPhase);
@@ -160,10 +161,15 @@ public abstract class MixinBootstrap {
         return true;
     }
 
+    @Deprecated
+    static void doInit(List<String> args) {
+        MixinBootstrap.doInit(CommandLineOptions.ofArgs(args));
+    }
+    
     /**
      * Phase 2 of mixin initialisation, initialise the phases
      */
-    static void doInit(List<String> args) {
+    static void doInit(CommandLineOptions args) {
         if (!MixinBootstrap.initialised) {
             if (MixinBootstrap.isSubsystemRegistered()) {
                 MixinBootstrap.logger.warn("Multiple Mixin containers present, init suppressed for " + MixinBootstrap.VERSION);
@@ -187,6 +193,7 @@ public abstract class MixinBootstrap {
 
     static void inject() {
         MixinBootstrap.getPlatform().inject();
+        MixinBootstrap.connectors.inject();
     }
 
     private static boolean isSubsystemRegistered() {

@@ -111,8 +111,9 @@ public abstract class MixinValidator implements IMixinValidator {
      * 
      * @param warning Message
      * @param element Element to attach the warning to
+     * @param suppressedBy {@link SuppressWarnings} value to support
      */
-    protected final void warning(String warning, Element element) {
+    protected final void warning(String warning, Element element, String suppressedBy) {
         this.messager.printMessage(Kind.WARNING, warning, element);
     }
     

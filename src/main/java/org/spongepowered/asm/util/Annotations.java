@@ -27,14 +27,22 @@ package org.spongepowered.asm.util;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.regex.Pattern;
 
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.Debug;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Intrinsic;
+import org.spongepowered.asm.mixin.Overwrite;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -44,6 +52,20 @@ import com.google.common.collect.Lists;
  * Utility class for working with ASM annotations
  */
 public final class Annotations {
+    
+    /**
+     * Annotations which are eligible for merge via {@link #mergeAnnotations}
+     */
+    private static final Class<?>[] MERGEABLE_MIXIN_ANNOTATIONS = new Class<?>[] {
+        Overwrite.class,
+        Intrinsic.class,
+        Final.class,
+        Debug.class
+    };
+
+    private static Pattern mergeableAnnotationPattern = Annotations.getMergeableAnnotationPattern();
+
+    private static final Logger logger = LogManager.getLogger("mixin");
     
     private Annotations() {
         // Utility class
@@ -187,6 +209,7 @@ public final class Annotations {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
+    @SuppressWarnings("unchecked") // @SafeVarargs will not compile on Java 6
     public static AnnotationNode getSingleVisible(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return Annotations.getSingle(method.visibleAnnotations, annotationClasses);
     }
@@ -199,6 +222,7 @@ public final class Annotations {
      * @param annotationClasses Types of annotation to search for
      * @return the annotation, or null if not present
      */
+    @SuppressWarnings("unchecked") // @SafeVarargs will not compile on Java 6
     public static AnnotationNode getSingleInvisible(MethodNode method, Class<? extends Annotation>... annotationClasses) {
         return Annotations.getSingle(method.invisibleAnnotations, annotationClasses);
     }
@@ -207,7 +231,7 @@ public final class Annotations {
      * Get a runtime-visible annotation of the specified class from the supplied
      * class node
      *
-     * @param classNode Source classNode
+     * @param classNode Source ClassNode
      * @param annotationClass Type of annotation to search for
      * @return the annotation, or null if not present
      */
@@ -219,7 +243,7 @@ public final class Annotations {
      * Get an invisible annotation of the specified class from the supplied
      * class node
      *
-     * @param classNode Source classNode
+     * @param classNode Source ClassNode
      * @param annotationClass Type of annotation to search for
      * @return the annotation, or null if not present
      */
@@ -467,6 +491,153 @@ public final class Annotations {
         return Collections.<T>emptyList();
     }
 
+    /**
+     * Set the value of an annotation node and do pseudo-duck-typing via Java's
+     * crappy generics
+     *
+     * @param annotation Annotation node to modify
+     * @param key Key to set
+     * @param value Value to set
+     *      {@link ClassCastException} if your duck is actually a rooster 
+     */
+    public static void setValue(AnnotationNode annotation, String key, Object value) {
+        if (annotation == null) {
+            return;
+        }
+        
+        int existingIndex = 0;
+        for (int pos = 0; pos < annotation.values.size() - 1; pos += 2) {
+            String keyName = annotation.values.get(pos).toString();
+            if (key.equals(keyName)) {
+                existingIndex = pos + 1;
+                break;
+            }
+        }
+        
+        if (existingIndex > 0) {
+            annotation.values.set(existingIndex, Annotations.packValue(value));
+            return;
+        }
+        
+        annotation.values.add(key);
+        annotation.values.add(Annotations.packValue(value));
+    }
+
+    private static Object packValue(Object value) {
+        Class<? extends Object> type = value.getClass();
+        if (type.isEnum()) {
+            return new String[] { Type.getDescriptor(type), value.toString()};
+        }
+        return value;
+    }
+
+    /**
+     * Merge annotations from the specified source ClassNode to the destination
+     * ClassNode, replaces annotations of the equivalent type on the target with
+     * annotations from the source. If the source node has no annotations then
+     * no action will take place, if the target node has no annotations then a
+     * new annotation list will be created. Annotations from the mixin package
+     * are not merged. 
+     * 
+     * @param from ClassNode to merge annotations from
+     * @param to ClassNode to merge annotations to
+     */
+    public static void merge(ClassNode from, ClassNode to) {
+        to.visibleAnnotations = Annotations.merge(from.visibleAnnotations, to.visibleAnnotations, "class", from.name);
+        to.invisibleAnnotations = Annotations.merge(from.invisibleAnnotations, to.invisibleAnnotations, "class", from.name);
+    }
+        
+    /**
+     * Merge annotations from the specified source MethodNode to the destination
+     * MethodNode, replaces annotations of the equivalent type on the target
+     * with annotations from the source. If the source node has no annotations
+     * then no action will take place, if the target node has no annotations
+     * then a new annotation list will be created. Annotations from the mixin
+     * package are not merged. 
+     * 
+     * @param from MethodNode to merge annotations from
+     * @param to MethodNode to merge annotations to
+     */
+    public static void merge(MethodNode from, MethodNode to) {
+        to.visibleAnnotations = Annotations.merge(from.visibleAnnotations, to.visibleAnnotations, "method", from.name);
+        to.invisibleAnnotations = Annotations.merge(from.invisibleAnnotations, to.invisibleAnnotations, "method", from.name);
+    }
+    
+    /**
+     * Merge annotations from the specified source FieldNode to the destination
+     * FieldNode, replaces annotations of the equivalent type on the target with
+     * annotations from the source. If the source node has no annotations then
+     * no action will take place, if the target node has no annotations then a
+     * new annotation list will be created. Annotations from the mixin package
+     * are not merged. 
+     * 
+     * @param from FieldNode to merge annotations from
+     * @param to FieldNode to merge annotations to
+     */
+    public static void merge(FieldNode from, FieldNode to) {
+        to.visibleAnnotations = Annotations.merge(from.visibleAnnotations, to.visibleAnnotations, "field", from.name);
+        to.invisibleAnnotations = Annotations.merge(from.invisibleAnnotations, to.invisibleAnnotations, "field", from.name);
+    }
+    
+    /**
+     * Merge annotations from the source list to the target list. Returns the
+     * target list or a new list if the target list was null.
+     * 
+     * @param from Annotations to merge
+     * @param to Annotation list to merge into
+     * @param type Type of element being merged
+     * @param name Name of the item being merged, for debugging purposes
+     * @return The merged list (or a new list if the target list was null)
+     */
+    private static List<AnnotationNode> merge(List<AnnotationNode> from, List<AnnotationNode> to, String type, String name) {
+        try {
+            if (from == null) {
+                return to;
+            }
+            
+            if (to == null) {
+                to = new ArrayList<AnnotationNode>();
+            }
+            
+            for (AnnotationNode annotation : from) {
+                if (!Annotations.isMergeableAnnotation(annotation)) {
+                    continue;
+                }
+                
+                for (Iterator<AnnotationNode> iter = to.iterator(); iter.hasNext();) {
+                    if (iter.next().desc.equals(annotation.desc)) {
+                        iter.remove();
+                        break;
+                    }
+                }
+                
+                to.add(annotation);
+            }
+        } catch (Exception ex) {
+            Annotations.logger.warn("Exception encountered whilst merging annotations for {} {}", type, name);
+        }
+        
+        return to;
+    }
+
+    private static boolean isMergeableAnnotation(AnnotationNode annotation) {
+        if (annotation.desc.startsWith("L" + Constants.MIXIN_PACKAGE_REF)) {
+            return Annotations.mergeableAnnotationPattern.matcher(annotation.desc).matches();
+        }
+        return true;
+    }
+    
+    private static Pattern getMergeableAnnotationPattern() {
+        StringBuilder sb = new StringBuilder("^L(");
+        for (int i = 0; i < Annotations.MERGEABLE_MIXIN_ANNOTATIONS.length; i++) {
+            if (i > 0) {
+                sb.append('|');
+            }
+            sb.append(Annotations.MERGEABLE_MIXIN_ANNOTATIONS[i].getName().replace('.', '/'));
+        }
+        return Pattern.compile(sb.append(");$").toString());
+    }
+    
     private static <T extends Enum<T>> T toEnumValue(Class<T> enumClass, String[] value) {
         if (!enumClass.getName().equals(Type.getType(value[0]).getClassName())) {
             throw new IllegalArgumentException("The supplied enum class does not match the stored enum value");

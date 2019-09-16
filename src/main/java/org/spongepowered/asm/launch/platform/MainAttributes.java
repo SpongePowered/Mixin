@@ -26,6 +26,7 @@ package org.spongepowered.asm.launch.platform;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,11 +34,14 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import com.google.common.io.ByteSource;
+import com.google.common.io.Files;
+
 /**
  * "Main" attribute cache for a URI container, mainly to avoid constantly
  * opening jar files just to read odd values out of the manifest.
  */
-final class MainAttributes {
+public final class MainAttributes {
     
     private static final Map<URI, MainAttributes> instances = new HashMap<URI, MainAttributes>();
     
@@ -54,6 +58,13 @@ final class MainAttributes {
         this.attributes = MainAttributes.getAttributes(jar);
     }
 
+    /**
+     * Retrieve the value of attribute with the specified name, or null if not
+     * present
+     * 
+     * @param name attribute name
+     * @return attribute value or null if not present
+     */
     public final String get(String name) {
         if (this.attributes != null) {
             return this.attributes.getValue(name);
@@ -61,11 +72,29 @@ final class MainAttributes {
         return null;
     }
     
-    private static Attributes getAttributes(File jar) {
-        if (jar == null) {
+    private static Attributes getAttributes(File codeSource) {
+        if (codeSource == null) {
             return null;
         }
         
+        if (codeSource.isFile()) {
+            Attributes attributes = MainAttributes.getJarAttributes(codeSource);
+            if (attributes != null) {
+                return attributes;
+            }
+        }
+        
+        if (codeSource.isDirectory()) {
+            Attributes attributes = MainAttributes.getDirAttributes(codeSource);
+            if (attributes != null) {
+                return attributes;
+            }
+        }
+        
+        return new Attributes();
+    }
+
+    private static Attributes getJarAttributes(File jar) {
         JarFile jarFile = null;
         try {
             jarFile = new JarFile(jar);
@@ -84,13 +113,51 @@ final class MainAttributes {
                 // ignore
             }
         }
-        return new Attributes();
+        return null;
     }
     
+    private static Attributes getDirAttributes(File dir) {
+        File manifestFile = new File(dir, JarFile.MANIFEST_NAME);
+        if (manifestFile.isFile()) {
+            ByteSource source = Files.asByteSource(manifestFile);
+            InputStream inputStream = null;
+            try {
+                inputStream = source.openBufferedStream();
+                Manifest manifest = new Manifest(inputStream);
+                return manifest.getMainAttributes();
+            } catch (IOException ex) {
+                // be quiet checkstyle
+            } finally {
+                try {
+                    if (inputStream != null) {
+                        inputStream.close();
+                    }
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+        
+        return null;
+    }
+
+
+    /**
+     * Create a MainAttributes instance for the supplied jar file
+     * 
+     * @param jar jar file
+     * @return MainAttributes instance
+     */
     public static MainAttributes of(File jar) {
         return MainAttributes.of(jar.toURI());
     }
 
+    /**
+     * Create a MainAttributes instance for the supplied jar file
+     * 
+     * @param uri jar file location
+     * @return MainAttributes instance
+     */
     public static MainAttributes of(URI uri) {
         MainAttributes attributes = MainAttributes.instances.get(uri);
         if (attributes == null) {

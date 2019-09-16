@@ -24,11 +24,11 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.tree.FieldInsnNode;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 /**
  * Generator for instance field getters
@@ -45,10 +45,10 @@ public class AccessorGeneratorFieldGetter extends AccessorGeneratorField {
     @Override
     public MethodNode generate() {
         MethodNode method = this.createMethod(this.targetType.getSize(), this.targetType.getSize());
-        if (this.isInstanceField) {
+        if (!this.targetIsStatic) {
             method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
         }
-        int opcode = this.isInstanceField ? Opcodes.GETFIELD : Opcodes.GETSTATIC;
+        int opcode = this.targetIsStatic ? Opcodes.GETSTATIC : Opcodes.GETFIELD;
         method.instructions.add(new FieldInsnNode(opcode, this.info.getClassNode().name, this.targetField.name, this.targetField.desc));
         method.instructions.add(new InsnNode(this.targetType.getOpcode(Opcodes.IRETURN)));
         return method;

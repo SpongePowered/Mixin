@@ -25,7 +25,8 @@
 package org.spongepowered.asm.util;
 
 /**
- * Re-entrance semaphore used to share re-entrance data with the TreeInfo
+ * Re-entrance semaphore used to share re-entrance data with the metadata
+ * service
  */
 public class ReEntranceLock {
     

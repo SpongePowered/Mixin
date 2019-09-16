@@ -33,7 +33,11 @@ public interface IClassProvider {
 
     /**
      * Get the current classpath from the service classloader
+     * 
+     * @deprecated As of 0.8, use of this method is not a sensible way to access
+     *      available containers.  
      */
+    @Deprecated
     public abstract URL[] getClassPath();
 
     /**

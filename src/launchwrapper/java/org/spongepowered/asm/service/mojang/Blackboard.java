@@ -25,6 +25,7 @@
 package org.spongepowered.asm.service.mojang;
 
 import org.spongepowered.asm.service.IGlobalPropertyService;
+import org.spongepowered.asm.service.IPropertyKey;
 
 import net.minecraft.launchwrapper.Launch;
 
@@ -32,6 +33,32 @@ import net.minecraft.launchwrapper.Launch;
  * Global property service backed by LaunchWrapper blackboard
  */
 public class Blackboard implements IGlobalPropertyService {
+    
+    /**
+     * Property key
+     */
+    class Key implements IPropertyKey {
+        
+        private final String key;
+
+        Key(String key) {
+            this.key = key;
+        }
+        
+        @Override
+        public String toString() {
+            return this.key;
+        }
+    }
+
+    public Blackboard() {
+        Launch.classLoader.hashCode();
+    }
+    
+    @Override
+    public IPropertyKey resolveKey(String name) {
+        return new Key(name);
+    }
 
     /**
      * Get a value from the blackboard and duck-type it to the specified type
@@ -42,8 +69,8 @@ public class Blackboard implements IGlobalPropertyService {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T getProperty(String key) {
-        return (T)Launch.blackboard.get(key);
+    public final <T> T getProperty(IPropertyKey key) {
+        return (T)Launch.blackboard.get(key.toString());
     }
 
     /**
@@ -53,8 +80,8 @@ public class Blackboard implements IGlobalPropertyService {
      * @param value new value
      */
     @Override
-    public final void setProperty(String key, Object value) {
-        Launch.blackboard.put(key, value);
+    public final void setProperty(IPropertyKey key, Object value) {
+        Launch.blackboard.put(key.toString(), value);
     }
     
     /**
@@ -68,8 +95,8 @@ public class Blackboard implements IGlobalPropertyService {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public final <T> T getProperty(String key, T defaultValue) {
-        Object value = Launch.blackboard.get(key);
+    public final <T> T getProperty(IPropertyKey key, T defaultValue) {
+        Object value = Launch.blackboard.get(key.toString());
         return value != null ? (T)value : defaultValue;
     }
     
@@ -83,8 +110,8 @@ public class Blackboard implements IGlobalPropertyService {
      * @return value from blackboard or default
      */
     @Override
-    public final String getPropertyString(String key, String defaultValue) {
-        Object value = Launch.blackboard.get(key);
+    public final String getPropertyString(IPropertyKey key, String defaultValue) {
+        Object value = Launch.blackboard.get(key.toString());
         return value != null ? value.toString() : defaultValue;
     }
 

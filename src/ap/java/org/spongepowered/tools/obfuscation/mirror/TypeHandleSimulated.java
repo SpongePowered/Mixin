@@ -32,7 +32,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.SignaturePrinter;
 
@@ -117,9 +117,9 @@ public class TypeHandleSimulated extends TypeHandle {
      *  #findDescriptor(org.spongepowered.asm.mixin.injection.struct.MemberInfo)
      */
     @Override
-    public String findDescriptor(MemberInfo memberInfo) {
+    public String findDescriptor(ITargetSelectorByName memberInfo) {
         // Identity, refs need to be FQ
-        return memberInfo != null ? memberInfo.desc : null;
+        return memberInfo != null ? memberInfo.getDesc() : null;
     }
 
     /* (non-Javadoc)

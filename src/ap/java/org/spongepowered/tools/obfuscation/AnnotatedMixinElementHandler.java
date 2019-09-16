@@ -33,7 +33,8 @@ import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -373,7 +374,7 @@ abstract class AnnotatedMixinElementHandler {
                 this.ap.printMessage(Kind.ERROR, ex.getMessage(), method, annotation.asMirror());
             }
         } catch (InvalidConstraintException ex) {
-            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation.asMirror());
+            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation.asMirror(), "constraints");
         }
     }
     
@@ -420,7 +421,7 @@ abstract class AnnotatedMixinElementHandler {
                     this.validateMethodVisibility(method, annotation, type, target, targetMethod);
                 }
             } else if (!merge) {
-                this.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation);
+                this.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation, "target");
             }
         }
     }
@@ -435,9 +436,9 @@ abstract class AnnotatedMixinElementHandler {
         Visibility visMethod = TypeUtils.getVisibility(method);
         String visibility = "visibility of " + visTarget + " method in " + target;
         if (visTarget.ordinal() > visMethod.ordinal()) {
-            this.printMessage(Kind.WARNING, visMethod + " " + type + " method cannot reduce " + visibility, method, annotation);
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method cannot reduce " + visibility, method, annotation, "visibility");
         } else if (visTarget == Visibility.PRIVATE && visMethod.ordinal() > visTarget.ordinal()) {
-            this.printMessage(Kind.WARNING, visMethod + " " + type + " method will upgrade " + visibility, method, annotation);
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method will upgrade " + visibility, method, annotation, "visibility");
         }
     }
 
@@ -468,7 +469,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetField == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation.asMirror());
+                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation.asMirror(), "target");
             }
         }
     }
@@ -477,26 +478,35 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the referenced method exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateReferencedTarget(ExecutableElement method, AnnotationHandle inject, MemberInfo reference, String type) {
-        String signature = reference.toDescriptor();
+    protected final void validateReferencedTarget(ExecutableElement method, AnnotationHandle inject, ITargetSelector reference, String type) {
+        if (!(reference instanceof ITargetSelectorByName)) {
+            return;
+        }
+        
+        ITargetSelectorByName nameRef = (ITargetSelectorByName)reference;
+        String signature = nameRef.toDescriptor();
         
         for (TypeHandle target : this.mixin.getTargets()) {
             if (target.isImaginary()) {
                 continue;
             }
             
-            MethodHandle targetMethod = target.findMethod(reference.name, signature);
+            MethodHandle targetMethod = target.findMethod(nameRef.getName(), signature);
             if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror());
+                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror(), "target");
             }
         }            
     }
 
     private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation) {
+        this.printMessage(kind, msg, e, annotation, null);
+    }
+    
+    private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation, String suppressedBy) {
         if (annotation == null) {
-            this.ap.printMessage(kind, msg, e);
+            this.ap.printMessage(kind, msg, e, suppressedBy);
         } else {
-            this.ap.printMessage(kind, msg, e, annotation.asMirror());
+            this.ap.printMessage(kind, msg, e, annotation.asMirror(), suppressedBy);
         }
     }
 

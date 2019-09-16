@@ -1,3 +1,4 @@
+
 ### [![Build Status](http://ci.liteloader.com/view/Other/job/Mixin/badge/icon)](http://ci.liteloader.com/view/Other/job/Mixin/lastSuccessfulBuild/)
 
 ![Mixin Logo](docs/logo.png?raw=true)
@@ -64,6 +65,54 @@ plugin developed by [DemonWav](https://github.com/demonwav).
     </tr>
   </thead>
   <tbody>
+    <tr>
+      <td valign="top"><b>0.8</b></td>
+      <td valign="top">August 2019</td>
+      <td valign="top">
+        <ul>
+          <li><b>Updated to ASM 6.2</b></li>
+          <li><b>Support for <a href="/cpw/modlauncher">ModLauncher</b></li>
+          <li>Added recognition for Java 9 and 10</li>
+          <li>Support for <em>ForgeGradle 3+</em> tsrg obfuscation tables
+          <li>Configs can now inherit from other configs</li>
+          <li><tt>&#064;Invoke</tt> can now be used to expose constructors</li>
+          <li>Dramatically improved context reporting of unexpected applicator
+            and preprocessor exceptions, making it easier to diagnose when an
+            agent chokes on a specific opcode</li>
+          <li>Bug fixes for
+            <ul>
+              <li>Calling members of accessor mixins from inside mixin code</li>
+              <li>Incorrect handling of spaces in explicit target declarations</li>
+              <li>Unexpected behaviour when attempting to redirect a ctor</li>
+              <li>Properly detect incompatible accessor overlap and ignore valid
+                ones (don't warn)</li>
+              <li>Interface static accessors now correctly conform target if
+                interface is classloaded before target class</li>
+              <li>Staticness mismatch for accessor correctly detected and
+                reported instead of causing crash</li>
+              <li>Fixed generator and injector errors relating to double-word
+                operands on the stack needing DUP2</li>
+              <li>Fixed issue in LVT generator folded in from FabricMC</li>
+              <li>Fail-fast when a <tt>final</tt> method is accidentally hidden
+                by a mixin</li>  
+            </ul>
+          </li>
+          <li>Apache Commons-IO Dependency removed</li>
+          <li>Renamed shaded ASM removed</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>0.7.11</b></td>
+      <td valign="top">July 2018</td>
+      <td valign="top">
+        <ul>
+          <li>Fixes for 3 minor bugs: handling of maxShiftBy fixed, improved
+            BeforeInvoke permissive search, disable generic signature merging
+            unless decompiler is active.</li>
+        </ul>
+      </td>
+    </tr>
     <tr>
       <td valign="top"><b>0.7.10</b></td>
       <td valign="top">June 2018</td>

@@ -30,13 +30,15 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 
@@ -251,33 +253,40 @@ public class InjectionPointData {
     }
 
     /**
-     * Get the supplied value from the named args as a {@link MemberInfo},
-     * throws an exception if the argument cannot be parsed as a MemberInfo.
+     * Get the supplied value from the named args as a target selector,
+     * throws an exception if the argument cannot be parsed as a target selector
      * 
      * @param key argument name
-     * @return argument value as a MemberInfo
+     * @return argument value as a target selector
      */
-    public MemberInfo get(String key) {
+    public ITargetSelector get(String key) {
         try {
-            return MemberInfo.parseAndValidate(this.get(key, ""), this.context);
+            return TargetSelector.parseAndValidate(this.get(key, ""), this.context);
         } catch (InvalidMemberDescriptorException ex) {
             throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
-                    this.at, key, this.target, InjectionInfo.describeInjector(this.context, this.parent, this.method));
+                    this.at, key, this.target, this.getDescription());
         }
     }
     
     /**
      * Get the target value specified on the injector
      */
-    public MemberInfo getTarget() {
+    public ITargetSelector getTarget() {
         try {
-            return MemberInfo.parseAndValidate(this.target, this.context);
+            return TargetSelector.parseAndValidate(this.target, this.context);
         } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\") descriptor \"%s\" on %s",
-                    this.at, this.target, InjectionInfo.describeInjector(this.context, this.parent, this.method));
+            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\").target descriptor \"%s\" on %s",
+                    this.at, this.target, this.getDescription());
         }
     }
-    
+
+    /**
+     * Get a description of this injector for use in error messages
+     */
+    public String getDescription() {
+        return InjectionInfo.describeInjector(this.context, this.parent, this.method);
+    }
+
     /**
      * Get the ordinal specified on the injection point
      */

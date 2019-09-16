@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.refmap;
 
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;

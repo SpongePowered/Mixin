@@ -31,7 +31,8 @@ import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
@@ -59,6 +60,11 @@ public class MethodMapper {
     private static final Map<String, Counter> methods = new HashMap<String, Counter>();
 
     private final ClassInfo info;
+
+    /**
+     * Unique method and field indices for *this* class 
+     */
+    private int nextUniqueMethodIndex, nextUniqueFieldIndex;
 
     public MethodMapper(MixinEnvironment env, ClassInfo info) {
         this.info = info;
@@ -90,7 +96,7 @@ public class MethodMapper {
         }
         
         String handlerName = this.getHandlerName((MixinMethodNode)handler);
-        handler.name = method.renameTo(handlerName);
+        handler.name = method.conform(handlerName);
     }
     
     /**
@@ -103,7 +109,34 @@ public class MethodMapper {
         String prefix = InjectionInfo.getInjectorPrefix(method.getInjectorAnnotation());
         String classUID = MethodMapper.getClassUID(method.getOwner().getClassRef());
         String methodUID = MethodMapper.getMethodUID(method.name, method.desc, !method.isSurrogate());
-        return String.format("%s$%s$%s%s", prefix, method.name, classUID, methodUID);
+        return String.format("%s$%s%s$%s", prefix, classUID, methodUID, method.name);
+    }
+
+    /**
+     * Get a unique name for a method
+     * 
+     * @param method Method to obtain a unique name for
+     * @param sessionId Session ID, for uniqueness
+     * @param preservePrefix If true, appends the unique part, preserving any
+     *      method name prefix
+     * @return Unique method name
+     */
+    public String getUniqueName(MethodNode method, String sessionId, boolean preservePrefix) {
+        String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
+        String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
+        return String.format(pattern, sessionId.substring(30), method.name, uniqueIndex);
+    }
+
+    /**
+     * Get a unique name for a field
+     * 
+     * @param field Field to obtain a unique name for
+     * @param sessionId Session ID, for uniqueness
+     * @return Unique field name
+     */
+    public String getUniqueName(FieldNode field, String sessionId) {
+        String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
+        return String.format("fd%s$%s$%s", sessionId.substring(30), field.name, uniqueIndex);
     }
 
     /**

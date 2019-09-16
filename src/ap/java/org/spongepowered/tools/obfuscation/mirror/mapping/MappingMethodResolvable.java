@@ -33,11 +33,11 @@ import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
  * mapping allows references in superclasses to be resolved when necessary since
  * the hierarchy information is available.
  */
-public final class ResolvableMappingMethod extends MappingMethod {
+public final class MappingMethodResolvable extends MappingMethod {
     
     private final TypeHandle ownerHandle;
 
-    public ResolvableMappingMethod(TypeHandle owner, String name, String desc) {
+    public MappingMethodResolvable(TypeHandle owner, String name, String desc) {
         super(owner.getName(), name, desc);
         this.ownerHandle = owner;
     }
@@ -87,22 +87,22 @@ public final class ResolvableMappingMethod extends MappingMethod {
      * @return remapped method
      */
     public MappingMethod move(TypeHandle newOwner) {
-        return new ResolvableMappingMethod(newOwner, this.getSimpleName(), this.getDesc());
+        return new MappingMethodResolvable(newOwner, this.getSimpleName(), this.getDesc());
     }
 
     @Override
     public MappingMethod remap(String newName) {
-        return new ResolvableMappingMethod(this.ownerHandle, newName, this.getDesc());
+        return new MappingMethodResolvable(this.ownerHandle, newName, this.getDesc());
     }
     
     @Override
     public MappingMethod transform(String newDesc) {
-        return new ResolvableMappingMethod(this.ownerHandle, this.getSimpleName(), newDesc);
+        return new MappingMethodResolvable(this.ownerHandle, this.getSimpleName(), newDesc);
     }
 
     @Override
     public MappingMethod copy() {
-        return new ResolvableMappingMethod(this.ownerHandle, this.getSimpleName(), this.getDesc());
+        return new MappingMethodResolvable(this.ownerHandle, this.getSimpleName(), this.getDesc());
     }
 
 }

@@ -24,11 +24,11 @@
  */
 package org.spongepowered.asm.util;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.LocalVariableNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 
 import com.google.common.base.Strings;
 
@@ -78,8 +78,8 @@ public class SignaturePrinter {
         this.setModifiers(method);
     }
     
-    public SignaturePrinter(MemberInfo member) {
-        this(member.name, member.desc);
+    public SignaturePrinter(ITargetSelectorByName member) {
+        this(member.getName(), member.getDesc());
     }
 
     public SignaturePrinter(String name, String desc) {

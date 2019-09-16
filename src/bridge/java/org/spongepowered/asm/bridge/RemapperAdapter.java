@@ -26,6 +26,7 @@ package org.spongepowered.asm.bridge;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.commons.Remapper;
 import org.spongepowered.asm.mixin.extensibility.IRemapper;
 import org.spongepowered.asm.util.ObfuscationUtil;
 import org.spongepowered.asm.util.ObfuscationUtil.IClassRemapper;
@@ -38,7 +39,7 @@ public abstract class RemapperAdapter implements IRemapper, IClassRemapper {
     protected final Logger logger = LogManager.getLogger("mixin");
     protected final org.objectweb.asm.commons.Remapper remapper;
     
-    public RemapperAdapter(org.objectweb.asm.commons.Remapper remapper) {
+    public RemapperAdapter(Remapper remapper) {
         this.remapper = remapper;
     }
     

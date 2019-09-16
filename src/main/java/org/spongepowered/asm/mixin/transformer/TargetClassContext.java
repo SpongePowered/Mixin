@@ -34,10 +34,10 @@ import java.util.SortedSet;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.ClassNode;
-import org.spongepowered.asm.lib.tree.FieldNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -52,7 +52,7 @@ import org.spongepowered.asm.util.ClassSignature;
 /**
  * Struct for containing target class information during mixin application
  */
-class TargetClassContext extends ClassContext implements ITargetClassContext {
+final class TargetClassContext extends ClassContext implements ITargetClassContext {
 
     /**
      * Logger
@@ -88,7 +88,7 @@ class TargetClassContext extends ClassContext implements ITargetClassContext {
      * Target class metadata 
      */
     private final ClassInfo classInfo;
-
+    
     /**
      * Source map that is generated for target class
      */
@@ -116,11 +116,6 @@ class TargetClassContext extends ClassContext implements ITargetClassContext {
      * target class. 
      */
     private final Set<MethodNode> mixinMethods = new HashSet<MethodNode>();
-
-    /**
-     * Unique method and field indices 
-     */
-    private int nextUniqueMethodIndex, nextUniqueFieldIndex;
 
     /**
      * True once mixins have been applied to this class 
@@ -328,18 +323,7 @@ class TargetClassContext extends ClassContext implements ITargetClassContext {
         }
         return target;
     }
-    
-    String getUniqueName(MethodNode method, boolean preservePrefix) {
-        String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
-        String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
-        return String.format(pattern, this.sessionId.substring(30), method.name, uniqueIndex);
-    }
 
-    String getUniqueName(FieldNode field) {
-        String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
-        return String.format("fd%s$%s$%s", this.sessionId.substring(30), field.name, uniqueIndex);
-    }
-    
     /**
      * Apply mixins to this class
      */
@@ -364,7 +348,7 @@ class TargetClassContext extends ClassContext implements ITargetClassContext {
     }
 
     private void applySignature() {
-        this.getClassNode().signature = this.signature.toString();
+        this.classNode.signature = this.signature.toString();
     }
 
     private void checkMerges() {

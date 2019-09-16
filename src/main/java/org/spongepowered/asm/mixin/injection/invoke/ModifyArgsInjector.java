@@ -24,12 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.InsnList;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.VarInsnNode;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -83,7 +83,7 @@ public class ModifyArgsInjector extends InvokeInjector {
                     + targetMethod.name + targetMethod.desc + " with no arguments!");
         }
         
-        String clArgs = this.argsClassGenerator.getClassRef(targetMethod.desc);
+        String clArgs = this.argsClassGenerator.getArgsClass(targetMethod.desc, this.info.getContext().getMixin()).getName();
         boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();

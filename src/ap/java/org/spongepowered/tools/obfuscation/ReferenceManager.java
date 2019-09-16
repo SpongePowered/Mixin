@@ -33,6 +33,7 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
@@ -190,11 +191,12 @@ public class ReferenceManager implements IReferenceManager {
      *      org.spongepowered.tools.obfuscation.ObfuscationData)
      */
     @Override
-    public void addMethodMapping(String className, String reference, MemberInfo context, ObfuscationData<MappingMethod> obfMethodData) {
+    public void addMethodMapping(String className, String reference, ITargetSelectorRemappable context,
+            ObfuscationData<MappingMethod> obfMethodData) {
         for (ObfuscationEnvironment env : this.environments) {
             MappingMethod obfMethod = obfMethodData.get(env.getType());
             if (obfMethod != null) {
-                MemberInfo remappedReference = context.remapUsing(obfMethod, true);
+                ITargetSelectorRemappable remappedReference = context.remapUsing(obfMethod, true);
                 this.addMapping(env.getType(), className, reference, remappedReference.toString());
             }
         }
@@ -207,11 +209,11 @@ public class ReferenceManager implements IReferenceManager {
      *      org.spongepowered.tools.obfuscation.ObfuscationData)
      */
     @Override
-    public void addFieldMapping(String className, String reference, MemberInfo context, ObfuscationData<MappingField> obfFieldData) {
+    public void addFieldMapping(String className, String reference, ITargetSelectorRemappable context, ObfuscationData<MappingField> obfFieldData) {
         for (ObfuscationEnvironment env : this.environments) {
             MappingField obfField = obfFieldData.get(env.getType());
             if (obfField != null) {
-                MemberInfo remappedReference = MemberInfo.fromMapping(obfField.transform(env.remapDescriptor(context.desc)));
+                MemberInfo remappedReference = MemberInfo.fromMapping(obfField.transform(env.remapDescriptor(context.getDesc())));
                 this.addMapping(env.getType(), className, reference, remappedReference.toString());
             }
         }

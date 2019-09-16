@@ -25,15 +25,18 @@
 package org.spongepowered.tools.obfuscation;
 
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
+import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorName;
 import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorType;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
@@ -41,6 +44,7 @@ import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
@@ -61,16 +65,19 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
      */
     static class AnnotatedElementAccessor extends AnnotatedElement<ExecutableElement> {
 
-        private final boolean shouldRemap;
+        protected final boolean shouldRemap;
 
-        private final TypeMirror returnType;
+        protected final TypeMirror returnType;
 
-        private String targetName;
+        protected String targetName;
 
         public AnnotatedElementAccessor(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation);
             this.shouldRemap = shouldRemap;
             this.returnType = this.getElement().getReturnType();
+        }
+
+        public void attach(TypeHandle target) {
         }
 
         public boolean shouldRemap() {
@@ -100,7 +107,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return TypeUtils.getInternalName(this.getTargetType());
         }
 
-        public MemberInfo getContext() {
+        public ITargetSelectorRemappable getContext() {
             return new MemberInfo(this.getTargetName(), null, this.getAccessorDesc());
         }
 
@@ -115,20 +122,65 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         public String getTargetName() {
             return this.targetName;
         }
+        
+        public TypeMirror getReturnType() {
+            return this.returnType;
+        }
+        
+        public boolean isStatic() {
+            return this.element.getModifiers().contains(Modifier.STATIC);
+        }
 
         @Override
         public String toString() {
             return this.targetName != null ? this.targetName : "<invalid>";
         }
+    
     }
 
     /**
      * Invoker element
      */
     static class AnnotatedElementInvoker extends AnnotatedElementAccessor {
+        
+        private AccessorType type = AccessorType.METHOD_PROXY;
 
         public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation, shouldRemap);
+        }
+        
+        @Override
+        public void attach(TypeHandle target) {
+            this.type = AccessorType.METHOD_PROXY;
+            if (this.returnType.getKind() != TypeKind.DECLARED) {
+                return;
+            }
+            
+            String specifiedName = this.getAnnotationValue();
+            if (specifiedName != null) {
+                if (Constants.CTOR.equals(specifiedName) || target.getName().equals(specifiedName.replace('.',  '/'))) {
+                    this.type = AccessorType.OBJECT_FACTORY;
+                }
+                return;
+            }
+
+            AccessorName accessorName = AccessorName.of(this.getSimpleName(), false);
+            if (accessorName == null) {
+                return;
+            }
+            
+            for (String prefix : AccessorType.OBJECT_FACTORY.getExpectedPrefixes()) {
+                if (prefix.equals(accessorName.prefix)
+                        && (Constants.CTOR.equals(accessorName.name) || target.getSimpleName().equals(accessorName.name))) {
+                    this.type = AccessorType.OBJECT_FACTORY;
+                    return;
+                }
+            }
+        }
+        
+        @Override
+        public boolean shouldRemap() {
+            return (this.type == AccessorType.METHOD_PROXY || this.getAnnotationValue() != null) && super.shouldRemap();
         }
 
         @Override
@@ -138,7 +190,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
 
         @Override
         public AccessorType getAccessorType() {
-            return AccessorType.METHOD_PROXY;
+            return this.type;
         }
 
         @Override
@@ -216,7 +268,15 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         elem.setTargetName(targetName);
 
         for (TypeHandle target : this.mixin.getTargets()) {
-            if (elem.getAccessorType() == AccessorType.METHOD_PROXY) {
+            try {
+                elem.attach(target);
+            } catch (Exception ex) {
+                elem.printMessage(this.ap, Kind.ERROR, ex.getMessage());
+                continue;
+            }
+            if (elem.getAccessorType() == AccessorType.OBJECT_FACTORY) {
+                this.registerFactoryForTarget((AnnotatedElementInvoker)elem, target);
+            } else if (elem.getAccessorType() == AccessorType.METHOD_PROXY) {
                 this.registerInvokerForTarget((AnnotatedElementInvoker)elem, target);
             } else {
                 this.registerAccessorForTarget(elem, target);
@@ -286,6 +346,22 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Invoker target " + elem + ": " + ex.getNew() + " for target "
                     + target + " conflicts with existing mapping " + ex.getOld());
         }
+    }
+
+    private void registerFactoryForTarget(AnnotatedElementInvoker elem, TypeHandle target) {
+        if (!elem.getReturnType().equals(target.getType())) {
+            throw new RuntimeException("Invalid Factory @Invoker return type, expected " + target.getType());
+        }
+        if (!elem.isStatic()) {
+            throw new RuntimeException("Factory @Invoker must be static");
+        }
+
+        if (!elem.shouldRemap()) {
+            return;
+        }
+
+        ObfuscationData<String> obfData = this.obf.getDataProvider().getObfClass(elem.getAnnotationValue().replace('.', '/'));
+        this.obf.getReferenceManager().addClassMapping(this.mixin.getClassRef(), elem.getAnnotationValue(), obfData);
     }
 
     private String getAccessorTargetName(AnnotatedElementAccessor elem) {

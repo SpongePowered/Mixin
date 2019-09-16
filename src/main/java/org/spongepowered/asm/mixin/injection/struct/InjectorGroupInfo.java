@@ -31,8 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
 import org.spongepowered.asm.util.Annotations;

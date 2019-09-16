@@ -36,6 +36,10 @@ import org.spongepowered.asm.mixin.Shadow;
  * return the field type and take no arguments) or a setter (must take an
  * argument of the field type and return void). The annotated method must be
  * <tt>abstract</tt>.
+ * 
+ * <p>The target field for an accessor can be specified as part of the decorated
+ * method name (eg. <tt>setFoo</tt> or <tt>getFoo</tt> to provide accessors for
+ * a target field <tt>foo</tt>) or specified in the annotation value.</p>
  *
  * <p>Accessors provide a simple way of gaining access to internal class members
  * in a target class without needing to resort to access transformers, and

@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -49,7 +50,6 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
-import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
@@ -74,6 +74,7 @@ import org.spongepowered.tools.obfuscation.validation.ParentValidator;
 import org.spongepowered.tools.obfuscation.validation.TargetValidator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 /**
  * Mixin info manager, stores all of the mixin info during processing and also
@@ -173,7 +174,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         if (tokens != null) {
             Pattern tokenPattern = Pattern.compile("^([A-Z0-9\\-_\\.]+)=([0-9]+)$");
 
-            String[] tokenValues = tokens.replaceAll("\\s", "").toUpperCase().split("[;,]");
+            String[] tokenValues = tokens.replaceAll("\\s", "").toUpperCase(Locale.ROOT).split("[;,]");
             for (String tokenValue : tokenValues) {
                 Matcher tokenMatcher = tokenPattern.matcher(tokenValue);
                 if (tokenMatcher.matches()) {
@@ -243,6 +244,24 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         return this.getProperties().getProperty(option);
+    }
+    
+    @Override
+    public boolean getOption(String option, boolean defaultValue) {
+        String value = this.getOption(option);
+        return value != null ? Boolean.parseBoolean(value) : defaultValue;
+    }
+    
+    @Override
+    public List<String> getOptions(String option) {
+        Builder<String> list = ImmutableList.<String>builder();
+        String value = this.getOption(option);
+        if (value != null) {
+            for (String part : value.split(",")) {
+                list.add(part);
+            }
+        }
+        return list.build();
     }
 
     public Properties getProperties() {
@@ -354,7 +373,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         AnnotationHandle accessor = AnnotationHandle.of(method, Accessor.class);
-        mixinClass.registerAccessor(method, accessor, this.shouldRemap(mixinClass, accessor));
+        mixinClass.registerAccessor(method, accessor, AnnotatedMixins.shouldRemap(mixinClass, accessor));
     }
 
     /**
@@ -371,7 +390,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         AnnotationHandle invoker = AnnotationHandle.of(method, Invoker.class);
-        mixinClass.registerInvoker(method, invoker, this.shouldRemap(mixinClass, invoker));
+        mixinClass.registerInvoker(method, invoker, AnnotatedMixins.shouldRemap(mixinClass, invoker));
     }
 
     /**
@@ -388,7 +407,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         AnnotationHandle overwrite = AnnotationHandle.of(method, Overwrite.class);
-        mixinClass.registerOverwrite(method, overwrite, this.shouldRemap(mixinClass, overwrite));
+        mixinClass.registerOverwrite(method, overwrite, AnnotatedMixins.shouldRemap(mixinClass, overwrite));
     }
 
     /**
@@ -405,7 +424,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             return;
         }
 
-        mixinClass.registerShadow(field, shadow, this.shouldRemap(mixinClass, shadow));
+        mixinClass.registerShadow(field, shadow, AnnotatedMixins.shouldRemap(mixinClass, shadow));
     }
 
     /**
@@ -422,7 +441,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             return;
         }
 
-        mixinClass.registerShadow(method, shadow, this.shouldRemap(mixinClass, shadow));
+        mixinClass.registerShadow(method, shadow, AnnotatedMixins.shouldRemap(mixinClass, shadow));
     }
 
     /**
@@ -440,7 +459,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             return;
         }
 
-        InjectorRemap remap = new InjectorRemap(this.shouldRemap(mixinClass, inject));
+        InjectorRemap remap = new InjectorRemap(AnnotatedMixins.shouldRemap(mixinClass, inject));
         mixinClass.registerInjector(method, inject, remap);
         remap.dispatchPendingMessages(this);
     }
@@ -484,15 +503,25 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
     }
 
-    private boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationHandle annotation) {
+    private static boolean shouldRemap(AnnotatedMixin mixinClass, AnnotationHandle annotation) {
         return annotation.getBoolean("remap", mixinClass.remap());
+    }
+
+    private static boolean shouldSuppress(Element element, String suppressedBy) {
+        if (element == null || suppressedBy == null) {
+            return false;
+        }
+        if (AnnotationHandle.of(element, SuppressWarnings.class).<String>getList().contains(suppressedBy)) {
+            return true;
+        }
+        return AnnotatedMixins.shouldSuppress(element.getEnclosingElement(), suppressedBy);
     }
 
     /**
      * Print a message to the AP messager
      */
     @Override
-    public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
+    public void printMessage(Kind kind, CharSequence msg) {
         if (this.env == CompilerEnvironment.JAVAC || kind != Kind.NOTE) {
             this.processingEnv.getMessager().printMessage(kind, msg);
         }
@@ -502,8 +531,18 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
-    public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element element) {
+    public void printMessage(Kind kind, CharSequence msg, Element element) {
         this.processingEnv.getMessager().printMessage(kind, msg, element);
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(Kind kind, CharSequence msg, Element element, String suppressedBy) {
+        if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
+            this.processingEnv.getMessager().printMessage(kind, msg, element);
+        }
     }
 
     /**
@@ -518,8 +557,28 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, String suppressedBy) {
+        if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
+            this.processingEnv.getMessager().printMessage(kind, msg, element, annotation);
+        }
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
     public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
         this.processingEnv.getMessager().printMessage(kind, msg, element, annotation, value);
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value, String suppressedBy) {
+        if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
+            this.processingEnv.getMessager().printMessage(kind, msg, element, annotation, value);
+        }
     }
 
     /**

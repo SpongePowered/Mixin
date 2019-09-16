@@ -58,8 +58,8 @@ public final class Proxy implements IClassTransformer, ILegacyClassTransformer {
     private boolean isActive = true;
     
     public Proxy() {
-        for (Proxy hook : Proxy.proxies) {
-            hook.isActive = false;
+        for (Proxy proxy : Proxy.proxies) {
+            proxy.isActive = false;
         }
         
         Proxy.proxies.add(this);

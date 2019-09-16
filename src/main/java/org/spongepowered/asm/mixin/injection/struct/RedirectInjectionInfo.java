@@ -24,15 +24,20 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.AnnotationType;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.HandlerPrefix;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
  * Information about a redirector injector
  */
+@AnnotationType(Redirect.class)
+@HandlerPrefix("redirect")
 public class RedirectInjectionInfo extends InjectionInfo {
 
     public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

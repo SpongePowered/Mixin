@@ -27,6 +27,8 @@ package org.spongepowered.asm.launch;
 import java.io.File;
 import java.util.List;
 
+import org.spongepowered.asm.launch.platform.CommandLineOptions;
+
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -50,7 +52,7 @@ public class MixinTweaker implements ITweaker {
      */
     @Override
     public final void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        MixinBootstrap.doInit(args);
+        MixinBootstrap.doInit(CommandLineOptions.ofArgs(args));
     }
 
     /* (non-Javadoc)

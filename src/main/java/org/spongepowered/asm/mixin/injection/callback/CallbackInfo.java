@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.callback;
 
-import org.spongepowered.asm.lib.Type;
+import org.objectweb.asm.Type;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.util.Constants;
 
@@ -128,14 +128,14 @@ public class CallbackInfo implements Cancellable {
         }
 
         if (returnType.getSort() == Type.OBJECT || returnType.getSort() == Type.ARRAY) {
-            return String.format("(%sZ%s)V", Constants.STRING, Constants.OBJECT);
+            return String.format("(%sZ%s)V", Constants.STRING_DESC, Constants.OBJECT_DESC);
         }
 
-        return String.format("(%sZ%s)V", Constants.STRING, returnType.getDescriptor());
+        return String.format("(%sZ%s)V", Constants.STRING_DESC, returnType.getDescriptor());
     }
 
     static String getConstructorDescriptor() {
-        return String.format("(%sZ)V", Constants.STRING);
+        return String.format("(%sZ)V", Constants.STRING_DESC);
     }
 
     static String getIsCancelledMethodName() {

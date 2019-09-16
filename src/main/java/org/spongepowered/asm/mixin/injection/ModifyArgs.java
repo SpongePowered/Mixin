@@ -31,6 +31,7 @@ import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
@@ -79,8 +80,8 @@ public @interface ModifyArgs {
     
     /**
      * String representation of one or more
-     * {@link org.spongepowered.asm.mixin.injection.struct.MemberInfo 
-     * MemberInfo} which identify the target methods.
+     * {@link ITargetSelector target selectors} which identify the target
+     * methods.
      * 
      * @return target method(s) for this injector
      */
@@ -97,7 +98,7 @@ public @interface ModifyArgs {
     /**
      * An {@link At} annotation which describes the {@link InjectionPoint} in
      * the target method. The specified {@link InjectionPoint} <i>must only</i>
-     * return {@link org.spongepowered.asm.lib.tree.MethodInsnNode} instances
+     * return {@link org.objectweb.asm.tree.MethodInsnNode} instances
      * and an exception will be thrown if this is not the case.
      * 
      * @return {@link At} which identifies the target method invocation

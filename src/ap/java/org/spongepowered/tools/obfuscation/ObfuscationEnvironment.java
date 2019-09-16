@@ -36,6 +36,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -182,14 +183,14 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
      * Get an obfuscation mapping for a method
      */
     @Override
-    public MappingMethod getObfMethod(MemberInfo method) {
+    public MappingMethod getObfMethod(ITargetSelectorRemappable method) {
         MappingMethod obfd = this.getObfMethod(method.asMethodMapping());
         if (obfd != null || !method.isFullyQualified()) {
             return obfd;
         }
         
         // Get a type handle for the declared method owner
-        TypeHandle type = this.ap.getTypeProvider().getTypeHandle(method.owner);
+        TypeHandle type = this.ap.getTypeProvider().getTypeHandle(method.getOwner());
         if (type == null || type.isImaginary()) {
             return null;
         }
@@ -202,7 +203,7 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
         
         // Well we found it, let's inflect the class name and recurse the search
         String superClassName = ((TypeElement)((DeclaredType)superClass).asElement()).getQualifiedName().toString();
-        return this.getObfMethod(new MemberInfo(method.name, superClassName.replace('.', '/'), method.desc, method.matchAll));
+        return this.getObfMethod(method.move(superClassName.replace('.', '/')));
     }
 
     /**
@@ -220,8 +221,9 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
     public MappingMethod getObfMethod(MappingMethod method, boolean lazyRemap) {
         if (this.initMappings()) {
             boolean remapped = true;
+            boolean superRef = false;
             MappingMethod mapping = null;
-            for (MappingMethod md = method; md != null && mapping == null; md = md.getSuper()) {
+            for (MappingMethod md = method; md != null && mapping == null; md = md.getSuper(), superRef = true) {
                 mapping = this.mappingProvider.getMethodMapping(md);
             }
             
@@ -232,6 +234,11 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
                 }
                 mapping = method.copy();
                 remapped = false;
+            } else if (superRef) {
+                // If we mapped via super and owner class is non-obf, restore the
+                // original owner
+                String obfOwner = this.getObfClass(method.getOwner());
+                mapping = mapping.move(obfOwner != null ? obfOwner : method.getOwner());
             }
             String remappedOwner = this.getObfClass(mapping.getOwner());
             if (remappedOwner == null || remappedOwner.equals(method.getOwner()) || remappedOwner.equals(mapping.getOwner())) {
@@ -253,10 +260,10 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
      * @return remapped method or null if no remapping occurred
      */
     @Override
-    public MemberInfo remapDescriptor(MemberInfo method) {
+    public ITargetSelectorRemappable remapDescriptor(ITargetSelectorRemappable method) {
         boolean transformed = false;
         
-        String owner = method.owner;
+        String owner = method.getOwner();
         if (owner != null) {
             String newOwner = this.remapper.map(owner);
             if (newOwner != null) {
@@ -265,16 +272,16 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
             }
         }
         
-        String desc = method.desc;
+        String desc = method.getDesc();
         if (desc != null) {
-            String newDesc = ObfuscationUtil.mapDescriptor(method.desc, this.remapper);
-            if (!newDesc.equals(method.desc)) {
+            String newDesc = ObfuscationUtil.mapDescriptor(method.getDesc(), this.remapper);
+            if (!newDesc.equals(method.getDesc())) {
                 desc = newDesc;
                 transformed = true;
             }
         }
         
-        return transformed ? new MemberInfo(method.name, owner, desc, method.matchAll) : null; 
+        return transformed ? new MemberInfo(method.getName(), owner, desc, method.getMatchCount() > 1) : null; 
     }
     
     /**
@@ -293,7 +300,7 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
      * Get an obfuscation mapping for a field
      */
     @Override
-    public MappingField getObfField(MemberInfo field) {
+    public MappingField getObfField(ITargetSelectorRemappable field) {
         return this.getObfField(field.asFieldMapping(), true);
     }
     

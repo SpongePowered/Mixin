@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.transformer.throwables;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.mixin.transformer.ActivityStack;
 
 /**
  * Thrown by the mixin validator when a mixin fails a pre-flight check
@@ -42,8 +43,17 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
+    public InvalidMixinException(IMixinInfo mixin, String message, ActivityStack activityContext) {
+        super(message, activityContext);
+        this.mixin = mixin;
+    }
+    
     public InvalidMixinException(IMixinContext context, String message) {
         this(context.getMixin(), message);
+    }
+
+    public InvalidMixinException(IMixinContext context, String message, ActivityStack activityContext) {
+        this(context.getMixin(), message, activityContext);
     }
 
     public InvalidMixinException(IMixinInfo mixin, Throwable cause) {
@@ -51,8 +61,17 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
 
+    public InvalidMixinException(IMixinInfo mixin, Throwable cause, ActivityStack activityContext) {
+        super(cause, activityContext);
+        this.mixin = mixin;
+    }
+
     public InvalidMixinException(IMixinContext context, Throwable cause) {
         this(context.getMixin(), cause);
+    }
+    
+    public InvalidMixinException(IMixinContext context, Throwable cause, ActivityStack activityContext) {
+        this(context.getMixin(), cause, activityContext);
     }
     
     public InvalidMixinException(IMixinInfo mixin, String message, Throwable cause) {
@@ -60,8 +79,18 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
+    public InvalidMixinException(IMixinInfo mixin, String message, Throwable cause, ActivityStack activityContext) {
+        super(message, cause, activityContext);
+        this.mixin = mixin;
+    }
+    
     public InvalidMixinException(IMixinContext context, String message, Throwable cause) {
         super(message, cause);
+        this.mixin = context.getMixin();
+    }
+    
+    public InvalidMixinException(IMixinContext context, String message, Throwable cause, ActivityStack activityContext) {
+        super(message, cause, activityContext);
         this.mixin = context.getMixin();
     }
     

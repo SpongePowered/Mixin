@@ -24,12 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
-import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 
 /**
  * Thrown when a {@link MemberInfo} fails basic syntax validation
  */
-public class InvalidMemberDescriptorException extends MixinException {
+public class InvalidMemberDescriptorException extends InvalidSelectorException {
 
     private static final long serialVersionUID = 1L;
 

@@ -27,6 +27,8 @@ package org.spongepowered.tools.obfuscation.service;
 import java.util.Collection;
 import java.util.Set;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+
 /**
  * Service interface for obfuscation services
  */
@@ -43,8 +45,9 @@ public interface IObfuscationService {
      * This method should return a collection of available obfuscation types
      * supported by this service
      *  
+     * @param ap Annotation Processor instance
      * @return available obfuscation types or null
      */
-    public abstract Collection<ObfuscationTypeDescriptor> getObfuscationTypes();
+    public abstract Collection<ObfuscationTypeDescriptor> getObfuscationTypes(IMixinAnnotationProcessor ap);
     
 }

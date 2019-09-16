@@ -25,6 +25,7 @@
 package org.spongepowered.tools.obfuscation;
 
 import java.lang.reflect.Method;
+import java.util.Locale;
 
 import javax.lang.model.element.ExecutableElement;
 import javax.tools.Diagnostic.Kind;
@@ -85,16 +86,16 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
             
             String javadoc = this.ap.getJavadocProvider().getJavadoc(elem.getElement());
             if (javadoc == null) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement());
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement(), "overwrite");
                 return;
             }
             
-            if (!javadoc.toLowerCase().contains("@author")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement());
+            if (!javadoc.toLowerCase(Locale.ROOT).contains("@author")) {
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement(), "overwrite");
             }
             
-            if (!javadoc.toLowerCase().contains("@reason")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement());
+            if (!javadoc.toLowerCase(Locale.ROOT).contains("@reason")) {
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement(), "overwrite");
             }
         }
     }

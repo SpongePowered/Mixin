@@ -122,7 +122,7 @@ public class MappingMethod implements IMapping<MappingMethod> {
     
     @Override
     public int hashCode() {
-        return Objects.hashCode(this.getName(), this.getDesc());
+        return Objects.hashCode(this.getName(), this.desc);
     }
 
     @Override
@@ -143,7 +143,7 @@ public class MappingMethod implements IMapping<MappingMethod> {
 
     @Override
     public String toString() {
-        String desc = this.getDesc();
+        String desc = this.desc;
         return String.format("%s%s%s", this.getName(), desc != null ? " " : "", desc != null ? desc : "");
     }
     

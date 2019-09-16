@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation.json;
 import java.util.Collection;
 import java.util.Set;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mcp.ObfuscationServiceMCP;
 import org.spongepowered.tools.obfuscation.service.IObfuscationService;
 import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
@@ -54,7 +55,7 @@ public class ObfuscationServiceJson implements IObfuscationService {
     }
 
     @Override
-    public Collection<ObfuscationTypeDescriptor> getObfuscationTypes() {
+    public Collection<ObfuscationTypeDescriptor> getObfuscationTypes(IMixinAnnotationProcessor ap) {
         return ImmutableList.<ObfuscationTypeDescriptor>of(
             new ObfuscationTypeDescriptor(
                 ObfuscationServiceJson.KEY,

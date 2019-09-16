@@ -28,5 +28,24 @@ package org.spongepowered.asm.service;
  * Base interface for transformer types
  */
 public interface ITransformer {
+    
+    /**
+     * Get the identifier for this transformer, usually the class name but for
+     * wrapped transformers this is the class name of the wrapped transformer
+     * 
+     * @return transformer's identifying name
+     */
+    public abstract String getName();
+    
+    /**
+     * Get whether this transformer is excluded from delegation. Some
+     * transformers (such as the mixin transformer itself) should not be
+     * included in the delegation list because they are re-entrant or do not
+     * need to run on incoming bytecode.
+     * 
+     * @return true if this transformer should be <em>excluded</em> from the
+     *      transformer delegation list
+     */
+    public abstract boolean isDelegationExcluded();
 
 }

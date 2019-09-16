@@ -33,9 +33,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
@@ -92,6 +92,8 @@ public class ExtensionCheckInterfaces implements IExtension {
         debugOutputFolder.mkdirs();
         this.csv = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_CSV_FILENAME);
         this.report = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_TXT_FILENAME);
+        
+        this.csv.getParentFile().mkdirs();
 
         try {
             Files.write("Class,Method,Signature,Interface\n", this.csv, Charsets.ISO_8859_1);
@@ -188,12 +190,12 @@ public class ExtensionCheckInterfaces implements IExtension {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension#export(
-     *      org.spongepowered.asm.mixin.MixinEnvironment, java.lang.String,
-     *      boolean, byte[])
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension
+     *      #export(org.spongepowered.asm.mixin.MixinEnvironment,
+     *      java.lang.String, boolean, org.objectweb.asm.tree.ClassNode)
      */
     @Override
-    public void export(MixinEnvironment env, String name, boolean force, byte[] bytes) {
+    public void export(MixinEnvironment env, String name, boolean force, ClassNode classNode) {
     }
 
     private void appendToCSVReport(String className, Method method, String iface) {
@@ -215,7 +217,13 @@ public class ExtensionCheckInterfaces implements IExtension {
         } catch (Exception ex) {
             // never mind
         } finally {
-            IOUtils.closeQuietly(fos);
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException ex) {
+                    ExtensionCheckInterfaces.logger.catching(ex);
+                }
+            }
         }
     }
 

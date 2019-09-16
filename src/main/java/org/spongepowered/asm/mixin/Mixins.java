@@ -32,6 +32,9 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.GlobalProperties;
+import org.spongepowered.asm.launch.GlobalProperties.Keys;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.Config;
 
 /**
@@ -49,7 +52,7 @@ public final class Mixins {
     /**
      * GlobalProperties key storing mixin configs which are pending
      */
-    private static final String CONFIGS_KEY = GlobalProperties.Keys.CONFIGS + ".queue";
+    private static final Keys CONFIGS_KEY = Keys.of(GlobalProperties.Keys.CONFIGS + ".queue");
     
     /**
      * Error handlers for environment
@@ -156,6 +159,21 @@ public final class Mixins {
             GlobalProperties.put(Mixins.CONFIGS_KEY, mixinConfigs);
         }
         return mixinConfigs;
+    }
+    
+    /**
+     * Get information about mixins applied to the specified class in the
+     * current session.
+     * 
+     * @param className Name of class to retrieve mixins for
+     * @return Set of applied mixins
+     */
+    public static Set<IMixinInfo> getMixinsForClass(String className) {
+        ClassInfo classInfo = ClassInfo.fromCache(className);
+        if (classInfo != null) {
+            return classInfo.getAppliedMixins();
+        }
+        return Collections.<IMixinInfo>emptySet();
     }
 
     /**

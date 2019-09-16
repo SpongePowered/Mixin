@@ -26,31 +26,29 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.spongepowered.asm.lib.ClassReader;
-import org.spongepowered.asm.lib.ClassVisitor;
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.FieldVisitor;
-import org.spongepowered.asm.lib.MethodVisitor;
-import org.spongepowered.asm.lib.Opcodes;
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.AnnotationNode;
-import org.spongepowered.asm.lib.tree.InsnNode;
-import org.spongepowered.asm.lib.tree.MethodInsnNode;
-import org.spongepowered.asm.lib.tree.MethodNode;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
-import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel.LanguageFeature;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
+import org.spongepowered.asm.mixin.transformer.meta.MixinProxy;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
-import org.spongepowered.asm.transformers.MixinClassWriter;
-import org.spongepowered.asm.transformers.TreeTransformer;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -58,7 +56,12 @@ import org.spongepowered.asm.util.Bytecode;
  * through the mixin transformer, such as transforming synthetic inner classes
  * and populating accessor methods in accessor mixins.
  */
-class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListener {
+class MixinPostProcessor implements MixinConfig.IListener {
+
+    /**
+     * Transformer session ID
+     */
+    private final String sessionId;
     
     /**
      * Synthetic inner classes in mixins
@@ -75,6 +78,10 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
      */
     private final Set<String> loadable = new HashSet<String>();
     
+    MixinPostProcessor(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
     @Override
     public void onInit(MixinInfo mixin) {
         for (String innerClass : mixin.getSyntheticInnerClasses()) {
@@ -116,43 +123,23 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
      * @return True if the specified class name has been registered for post-
      *      processing
      */
-    boolean canTransform(String className) {
+    boolean canProcess(String className) {
         return this.syntheticInnerClasses.contains(className) || this.loadable.contains(className);
     }
     
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer#getName()
-     */
-    @Override
-    public String getName() {
-        return this.getClass().getName();
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer
-     *      #isDelegationExcluded()
-     */
-    @Override
-    public boolean isDelegationExcluded() {
-        return true;
-    }
+    public boolean processClass(String name, ClassNode classNode) {
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.ILegacyClassTransformer
-     *      #transformClassBytes(java.lang.String, java.lang.String, byte[])
-     */
-    @Override
-    public byte[] transformClassBytes(String name, String transformedName, byte[] bytes) {
-        if (this.syntheticInnerClasses.contains(transformedName)) {
-            return this.processSyntheticInner(bytes);
+        if (this.syntheticInnerClasses.contains(name)) {
+            this.processSyntheticInner(classNode);
+            return true;
         }
         
-        if (this.accessorMixins.containsKey(transformedName)) {
-            MixinInfo mixin = this.accessorMixins.get(transformedName);
-            return this.processAccessor(bytes, mixin);
+        if (this.accessorMixins.containsKey(name)) {
+            MixinInfo mixin = this.accessorMixins.get(name);
+            return this.processAccessor(classNode, mixin);
         }
         
-        return bytes;
+        return false;
     }
 
     /**
@@ -160,11 +147,8 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
      * members in the class into public so that they are accessible from their
      * new home in the target class
      */
-    private byte[] processSyntheticInner(byte[] bytes) {
-        ClassReader cr = new ClassReader(bytes);
-        ClassWriter cw = new MixinClassWriter(cr, 0);
-
-        ClassVisitor visibilityVisitor = new ClassVisitor(Opcodes.ASM5, cw) {
+    private void processSyntheticInner(ClassNode classNode) {
+        ClassVisitor visibilityVisitor = new ClassVisitor(Bytecode.ASM_API_VERSION, classNode) {
             
             @Override
             public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
@@ -190,21 +174,19 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
             
         };
         
-        cr.accept(visibilityVisitor, ClassReader.EXPAND_FRAMES);
-        return cw.toByteArray();
+        classNode.accept(visibilityVisitor);
     }
 
-    private byte[] processAccessor(byte[] bytes, MixinInfo mixin) {
-        if (!MixinEnvironment.getCompatibilityLevel().isAtLeast(CompatibilityLevel.JAVA_8)) {
-            return bytes;
+    private boolean processAccessor(ClassNode classNode, MixinInfo mixin) {
+        if (!MixinEnvironment.getCompatibilityLevel().supports(LanguageFeature.METHODS_IN_INTERFACES)) {
+            return false;
         }
         
         boolean transformed = false;
-        MixinClassNode classNode = mixin.getClassNode(0);
+        MixinClassNode mixinClassNode = mixin.getClassNode(0);
         ClassInfo targetClass = mixin.getTargets().get(0);
         
-        for (Iterator<MixinMethodNode> iter = classNode.mixinMethods.iterator(); iter.hasNext();) {
-            MixinMethodNode methodNode = iter.next();
+        for (MixinMethodNode methodNode : mixinClassNode.mixinMethods) {
             if (!Bytecode.hasFlag(methodNode, Opcodes.ACC_STATIC)) {
                 continue;
             }
@@ -212,32 +194,37 @@ class MixinPostProcessor extends TreeTransformer implements MixinConfig.IListene
             AnnotationNode accessor = methodNode.getVisibleAnnotation(Accessor.class);
             AnnotationNode invoker = methodNode.getVisibleAnnotation(Invoker.class);
             if (accessor != null || invoker != null) {
-                Method method = MixinPostProcessor.getAccessorMethod(mixin, methodNode, targetClass);
+                Method method = this.getAccessorMethod(mixin, methodNode, targetClass);
                 MixinPostProcessor.createProxy(methodNode, targetClass, method);
+                Annotations.setVisible(methodNode, MixinProxy.class, "sessionId", this.sessionId);
+                classNode.methods.add(methodNode);
                 transformed = true;
             }
         }
         
-        if (transformed) {
-            return this.writeClass(classNode);
+        if (!transformed) {
+            return false;
         }
         
-        return bytes;
+        Bytecode.replace(mixinClassNode, classNode);
+        return true;
     }
 
-    private static Method getAccessorMethod(MixinInfo mixin, MethodNode methodNode, ClassInfo targetClass) throws MixinTransformerError {
+    private Method getAccessorMethod(MixinInfo mixin, MethodNode methodNode, ClassInfo targetClass) throws MixinTransformerError {
         Method method = mixin.getClassInfo().findMethod(methodNode, ClassInfo.INCLUDE_ALL);
         
         // Normally the target will be renamed when the mixin is conformed to the target, if we get here
         // without this happening then we will end up invoking an undecorated method, which is bad!
-        if (!method.isRenamed()) {
-            throw new MixinTransformerError("Unexpected state: " + mixin + " loaded before " + targetClass + " was conformed");
+        if (!method.isConformed()) {
+            String uniqueName = targetClass.getMethodMapper().getUniqueName(methodNode, this.sessionId, true);
+            method.conform(uniqueName);
         }
         
         return method;
     }
 
     private static void createProxy(MethodNode methodNode, ClassInfo targetClass, Method method) {
+        methodNode.access |= Opcodes.ACC_SYNTHETIC;
         methodNode.instructions.clear();
         Type[] args = Type.getArgumentTypes(methodNode.desc);
         Type returnType = Type.getReturnType(methodNode.desc);

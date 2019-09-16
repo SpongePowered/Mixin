@@ -26,9 +26,10 @@ package org.spongepowered.asm.util.asm;
 
 import java.util.List;
 
-import org.spongepowered.asm.lib.Type;
-import org.spongepowered.asm.lib.tree.analysis.SimpleVerifier;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.analysis.SimpleVerifier;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.TypeLookup;
 
 /**
  * Verifier which handles class info lookups via {@link ClassInfo}
@@ -40,8 +41,8 @@ public class MixinVerifier extends SimpleVerifier {
     private List<Type> currentClassInterfaces;
     private boolean isInterface;
 
-    public MixinVerifier(Type currentClass, Type currentSuperClass, List<Type> currentClassInterfaces, boolean isInterface) {
-        super(currentClass, currentSuperClass, currentClassInterfaces, isInterface);
+    public MixinVerifier(int api, Type currentClass, Type currentSuperClass, List<Type> currentClassInterfaces, boolean isInterface) {
+        super(api, currentClass, currentSuperClass, currentClassInterfaces, isInterface);
         this.currentClass = currentClass;
         this.currentSuperClass = currentSuperClass;
         this.currentClassInterfaces = currentClassInterfaces;
@@ -53,7 +54,7 @@ public class MixinVerifier extends SimpleVerifier {
         if (this.currentClass != null && type.equals(this.currentClass)) {
             return this.isInterface;
         }
-        return ClassInfo.forType(type).isInterface();
+        return ClassInfo.forType(type, TypeLookup.ELEMENT_TYPE).isInterface();
     }
 
     @Override
@@ -61,7 +62,7 @@ public class MixinVerifier extends SimpleVerifier {
         if (this.currentClass != null && type.equals(this.currentClass)) {
             return this.currentSuperClass;
         }
-        ClassInfo c = ClassInfo.forType(type).getSuperClass();
+        ClassInfo c = ClassInfo.forType(type, TypeLookup.ELEMENT_TYPE).getSuperClass();
         return c == null ? null : Type.getType("L" + c.getName() + ";");
     }
 
@@ -93,13 +94,13 @@ public class MixinVerifier extends SimpleVerifier {
             }
             return false;
         }
-        ClassInfo typeInfo = ClassInfo.forType(type);
+        ClassInfo typeInfo = ClassInfo.forType(type, TypeLookup.ELEMENT_TYPE);
         if (typeInfo == null) {
             return false;
         }
         if (typeInfo.isInterface()) {
             typeInfo = ClassInfo.forName("java/lang/Object");
         }
-        return ClassInfo.forType(other).hasSuperClass(typeInfo);
+        return ClassInfo.forType(other, TypeLookup.ELEMENT_TYPE).hasSuperClass(typeInfo);
     }
 }

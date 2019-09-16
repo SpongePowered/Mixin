@@ -24,8 +24,9 @@
  */
 package org.spongepowered.asm.mixin.transformer.ext.extensions;
 
-import org.spongepowered.asm.lib.ClassWriter;
-import org.spongepowered.asm.lib.util.CheckClassAdapter;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.throwables.MixinException;
@@ -91,12 +92,12 @@ public class ExtensionCheckClass implements IExtension {
     }
     
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension#export(
-     *      org.spongepowered.asm.mixin.MixinEnvironment, java.lang.String,
-     *      boolean, byte[])
+     * @see org.spongepowered.asm.mixin.transformer.ext.IExtension
+     *      #export(org.spongepowered.asm.mixin.MixinEnvironment,
+     *      java.lang.String, boolean, org.objectweb.asm.tree.ClassNode)
      */
     @Override
-    public void export(MixinEnvironment env, String name, boolean force, byte[] bytes) {
+    public void export(MixinEnvironment env, String name, boolean force, ClassNode classNode) {
     }
 
 }

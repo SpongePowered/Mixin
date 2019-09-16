@@ -48,4 +48,5 @@ public interface IHotSwap {
      * @param bytecode Bytecode of the class before mixin's have been applied
      */
     public abstract void registerTargetClass(String name, byte[] bytecode);
+
 }

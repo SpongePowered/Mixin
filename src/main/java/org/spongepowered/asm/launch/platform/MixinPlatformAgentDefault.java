@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.launch.platform;
 
-import java.net.URI;
-
 import org.spongepowered.asm.util.Constants.ManifestAttributes;
 
 /**
@@ -34,48 +32,27 @@ import org.spongepowered.asm.util.Constants.ManifestAttributes;
  */
 public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
 
-    /**
-     * @param manager platform manager
-     * @param uri URI of the resource for this agent
-     */
-    public MixinPlatformAgentDefault(MixinPlatformManager manager, URI uri) {
-        super(manager, uri);
-    }
-
     @Override
     public void prepare() {
         @SuppressWarnings("deprecation")
-        String compatibilityLevel = this.attributes.get(ManifestAttributes.COMPATIBILITY);
+        String compatibilityLevel = this.handle.getAttribute(ManifestAttributes.COMPATIBILITY);
         if (compatibilityLevel != null) {
             this.manager.setCompatibilityLevel(compatibilityLevel);
         }
         
-        String mixinConfigs = this.attributes.get(ManifestAttributes.MIXINCONFIGS);
+        String mixinConfigs = this.handle.getAttribute(ManifestAttributes.MIXINCONFIGS);
         if (mixinConfigs != null) {
             for (String config : mixinConfigs.split(",")) {
                 this.manager.addConfig(config.trim());
             }
         }
         
-        String tokenProviders = this.attributes.get(ManifestAttributes.TOKENPROVIDERS);
+        String tokenProviders = this.handle.getAttribute(ManifestAttributes.TOKENPROVIDERS);
         if (tokenProviders != null) {
             for (String provider : tokenProviders.split(",")) {
                 this.manager.addTokenProvider(provider.trim());
             }
         }
-    }
-    
-    @Override
-    public void initPrimaryContainer() {
-    }
-
-    @Override
-    public void inject() {
-    }
-    
-    @Override
-    public String getLaunchTarget() {
-        return this.attributes.get(ManifestAttributes.MAINCLASS);
     }
 
 }
