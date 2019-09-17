@@ -746,7 +746,7 @@ public class CallbackInjector extends Injector {
             String accessor = CallbackInfoReturnable.getReturnAccessor(callback.target.returnType);
             String descriptor = CallbackInfoReturnable.getReturnDescriptor(callback.target.returnType);
             callback.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, this.callbackInfoClass, accessor, descriptor, false));
-            if (callback.target.returnType.getSort() == Type.OBJECT) {
+            if (callback.target.returnType.getSort() >= Type.ARRAY) {
                 callback.add(new TypeInsnNode(Opcodes.CHECKCAST, callback.target.returnType.getInternalName()));
             }
             callback.add(new InsnNode(callback.target.returnType.getOpcode(Opcodes.IRETURN)));
