@@ -36,6 +36,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -148,33 +149,19 @@ class MixinPostProcessor implements MixinConfig.IListener {
      * new home in the target class
      */
     private void processSyntheticInner(ClassNode classNode) {
-        ClassVisitor visibilityVisitor = new ClassVisitor(Bytecode.ASM_API_VERSION, classNode) {
-            
-            @Override
-            public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-                super.visit(version, access | Opcodes.ACC_PUBLIC, name, signature, superName, interfaces);
-            }
-            
-            
-            @Override
-            public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-                if ((access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                    access |= Opcodes.ACC_PUBLIC;
-                }
-                return super.visitField(access, name, desc, signature, value);
-            }
-            
-            @Override
-            public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                if ((access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
-                    access |= Opcodes.ACC_PUBLIC;
-                }
-                return super.visitMethod(access, name, desc, signature, exceptions);
-            }
-            
-        };
+        classNode.access |= Opcodes.ACC_PUBLIC;
         
-        classNode.accept(visibilityVisitor);
+        for (FieldNode field : classNode.fields) {
+            if ((field.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                field.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
+
+        for (MethodNode method : classNode.methods) {
+            if ((method.access & (Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED)) == 0) {
+                method.access |= Opcodes.ACC_PUBLIC;
+            }
+        }
     }
 
     private boolean processAccessor(ClassNode classNode, MixinInfo mixin) {
