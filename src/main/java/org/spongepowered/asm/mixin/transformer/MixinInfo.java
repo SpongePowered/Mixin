@@ -797,7 +797,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         } catch (InvalidMixinException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new InvalidMixinException(this, ex);
+            throw new InvalidMixinException(this, ex.getMessage(), ex);
         }
         
         if (!this.type.isLoadable()) {

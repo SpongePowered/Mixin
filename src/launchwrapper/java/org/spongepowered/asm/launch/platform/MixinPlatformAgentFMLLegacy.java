@@ -140,7 +140,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
 
     @Override
     public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
-        if (!(handle instanceof ContainerHandleURI)) {
+        if (!(handle instanceof ContainerHandleURI) || !super.accept(manager, handle)) {
             return false;
         }
         
@@ -148,7 +148,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
         this.fileName = this.file.getName();
         this.coreModWrapper = this.initFMLCoreMod();
 
-        return super.accept(manager, handle);
+        return true;
     }
 
     /**
