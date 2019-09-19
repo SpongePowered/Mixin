@@ -50,7 +50,6 @@ public class ObfuscationServiceMCP implements IObfuscationService {
     public static final String REOBF_EXTRA_NOTCH_FILES = "reobfNotchSrgFiles";
     public static final String OUT_SRG_SRG_FILE        = "outSrgFile";
     public static final String OUT_NOTCH_SRG_FILE      = "outNotchSrgFile";
-    public static final String OUT_REFMAP_FILE         = "outRefMapFile";
     
     @Override
     public Set<String> getSupportedOptions() {
@@ -60,8 +59,7 @@ public class ObfuscationServiceMCP implements IObfuscationService {
             ObfuscationServiceMCP.REOBF_NOTCH_FILE,
             ObfuscationServiceMCP.REOBF_EXTRA_NOTCH_FILES,        
             ObfuscationServiceMCP.OUT_SRG_SRG_FILE,        
-            ObfuscationServiceMCP.OUT_NOTCH_SRG_FILE,        
-            ObfuscationServiceMCP.OUT_REFMAP_FILE        
+            ObfuscationServiceMCP.OUT_NOTCH_SRG_FILE        
         );
     }
 

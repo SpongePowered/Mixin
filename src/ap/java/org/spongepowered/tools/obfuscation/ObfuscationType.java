@@ -32,7 +32,6 @@ import java.util.Map;
 
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
-import org.spongepowered.tools.obfuscation.mcp.ObfuscationServiceMCP;
 import org.spongepowered.tools.obfuscation.service.ObfuscationTypeDescriptor;
 
 import com.google.common.collect.ImmutableList;
@@ -42,6 +41,8 @@ import com.google.common.collect.ImmutableList.Builder;
  * Obfuscation types supported by the annotation processor
  */
 public final class ObfuscationType {
+    
+    public static final String DEFAULT_TYPE = "searge";
     
     /**
      * Available obfuscation types indexed by key
@@ -111,9 +112,8 @@ public final class ObfuscationType {
      * Get whether this is ithe default obfuscation environment
      */
     public boolean isDefault() {
-        String defaultEnv = this.options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
-        return (defaultEnv == null && this.key.equals(ObfuscationServiceMCP.SEARGE))
-                || (defaultEnv != null && this.key.equals(defaultEnv.toLowerCase(Locale.ROOT)));
+        String defaultEnv = this.options.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV, ObfuscationType.DEFAULT_TYPE).toLowerCase(Locale.ROOT);
+        return (this.key.equals(defaultEnv));
     }
     
     /**

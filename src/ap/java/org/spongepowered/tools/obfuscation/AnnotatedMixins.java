@@ -247,6 +247,12 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     }
     
     @Override
+    public String getOption(String option, String defaultValue) {
+        String value = this.getOption(option);
+        return value != null ? value : defaultValue;
+    }
+    
+    @Override
     public boolean getOption(String option, boolean defaultValue) {
         String value = this.getOption(option);
         return value != null ? Boolean.parseBoolean(value) : defaultValue;
