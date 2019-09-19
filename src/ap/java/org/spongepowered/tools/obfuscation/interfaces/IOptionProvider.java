@@ -47,6 +47,16 @@ public interface IOptionProvider {
      * @param defaultValue Default value to return if the option is not present
      * @return Option value or default if absent
      */
+    public abstract String getOption(String option, String defaultValue);
+
+    /**
+     * Fetch the value of the specified option, if available. If the option is
+     * not available, return the specified default value
+     * 
+     * @param option Name of the option to fetch
+     * @param defaultValue Default value to return if the option is not present
+     * @return Option value or default if absent
+     */
     public abstract boolean getOption(String option, boolean defaultValue);
     
     /**

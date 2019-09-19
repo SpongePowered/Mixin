@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation.service;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -33,6 +34,7 @@ import java.util.Set;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.tools.obfuscation.ObfuscationType;
+import org.spongepowered.tools.obfuscation.SupportedOptions;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
@@ -78,6 +80,8 @@ public final class ObfuscationServices {
      * @param ap annotation processor
      */
     public void initProviders(IMixinAnnotationProcessor ap) {
+        boolean defaultIsPresent = false;
+        
         try {
             for (IObfuscationService service : this.serviceLoader) {
                 if (!this.services.contains(service)) {
@@ -91,6 +95,7 @@ public final class ObfuscationServices {
                             try {
                                 ObfuscationType type = ObfuscationType.create(obfType, ap);
                                 ap.printMessage(Kind.NOTE, serviceName + " supports type: \"" + type + "\"");
+                                defaultIsPresent |= type.isDefault();
                             } catch (Exception ex) {
                                 ex.printStackTrace();
                             }
@@ -101,6 +106,17 @@ public final class ObfuscationServices {
         } catch (ServiceConfigurationError serviceError) {
             ap.printMessage(Kind.ERROR, serviceError.getClass().getSimpleName() + ": " + serviceError.getMessage());
             serviceError.printStackTrace();
+        }
+        
+        if (!defaultIsPresent) {
+            String defaultEnv = ap.getOption(SupportedOptions.DEFAULT_OBFUSCATION_ENV);
+            if (defaultEnv == null) {
+                ap.printMessage(Kind.WARNING, "No default obfuscation environment was specified and \"" + ObfuscationType.DEFAULT_TYPE
+                    + "\" is not available. Please ensure defaultObfuscationEnv is specified in your build configuration");
+            } else {
+                ap.printMessage(Kind.WARNING, "Specified default obfuscation environment \"" + defaultEnv.toLowerCase(Locale.ROOT)
+                        + "\" was not defined. This probably means your build configuration is out of date or a required service is missing");
+            }
         }
     }
 

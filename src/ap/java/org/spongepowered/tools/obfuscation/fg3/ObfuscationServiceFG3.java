@@ -45,7 +45,6 @@ public class ObfuscationServiceFG3 implements IObfuscationService {
 
     public static final String REOBF_TSRG_FILE       = "reobfTsrgFile";
     public static final String OUT_TSRG_SRG_FILE     = "outTsrgFile";
-    public static final String OUT_REFMAP_FILE       = "outRefMapFile";
     public static final String TSRG_OUTPUT_BEHAVIOUR = "mergeBehaviour";
     
     @Override
@@ -53,7 +52,6 @@ public class ObfuscationServiceFG3 implements IObfuscationService {
         return ImmutableSet.<String>of(
             ObfuscationServiceFG3.REOBF_TSRG_FILE,        
             ObfuscationServiceFG3.OUT_TSRG_SRG_FILE,        
-            ObfuscationServiceFG3.OUT_REFMAP_FILE,
             ObfuscationServiceFG3.TSRG_OUTPUT_BEHAVIOUR
         );
     }

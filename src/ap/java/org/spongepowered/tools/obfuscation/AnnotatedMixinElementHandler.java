@@ -498,10 +498,6 @@ abstract class AnnotatedMixinElementHandler {
         }            
     }
 
-    private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation) {
-        this.printMessage(kind, msg, e, annotation, null);
-    }
-    
     private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation, String suppressedBy) {
         if (annotation == null) {
             this.ap.printMessage(kind, msg, e, suppressedBy);
