@@ -146,6 +146,7 @@ dependencies {
     
     modlauncherCompile configurations.compile
     modlauncherCompile 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    modlauncherCompile 'cpw.mods:grossjava9hacks:1.1.0'
     modlauncherCompile ('cpw.mods:modlauncher:3.2.0') {
         exclude module: 'log4j-core'
     }
