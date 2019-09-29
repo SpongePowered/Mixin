@@ -53,6 +53,11 @@ public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
                 this.manager.addTokenProvider(provider.trim());
             }
         }
+        
+        String connectorClass = this.handle.getAttribute(ManifestAttributes.MIXINCONNECTOR);
+        if (connectorClass != null) {
+            this.manager.addConnector(connectorClass.trim());
+        }
     }
 
 }

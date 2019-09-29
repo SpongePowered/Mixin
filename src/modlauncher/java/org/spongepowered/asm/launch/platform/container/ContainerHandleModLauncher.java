@@ -24,13 +24,67 @@
  */
 package org.spongepowered.asm.launch.platform.container;
 
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map.Entry;
+
 /**
  * ModLauncher root container
  */
 public class ContainerHandleModLauncher extends ContainerHandleVirtual {
+    
+    /**
+     * Container handle for resources offered by ModLauncher
+     */
+    public class Resource extends ContainerHandleURI {
+
+        private String name;
+        private Path path;
+
+        public Resource(String name, Path path) {
+            super(path.toUri());
+            this.name = name;
+            this.path = path;
+        }
+        
+        public String getName() {
+            return this.name;
+        }
+        
+        public Path getPath() {
+            return this.path;
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("ContainerHandleModLauncher.Resource(%s:%s)", this.name, this.path);
+        }
+        
+    }
 
     public ContainerHandleModLauncher(String name) {
         super(name);
+    }
+    
+    /**
+     * Add a resource to to this container
+     * 
+     * @param name Resource name
+     * @param path Resource path
+     */
+    public void addResource(String name, Path path) {
+        this.add(new Resource(name, path));
+    }
+    
+    /**
+     * Add a collection of resources to this container
+     * 
+     * @param resources Resources to add
+     */
+    public void addResources(List<Entry<String, Path>> resources) {
+        for (Entry<String, Path> resource : resources) {
+            this.addResource(resource.getKey(), resource.getValue());
+        }
     }
     
     @Override

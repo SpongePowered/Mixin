@@ -82,11 +82,6 @@ public abstract class MixinBootstrap {
      * Platform manager instance
      */
     private static MixinPlatformManager platform;
-    
-    /**
-     * Connectors 
-     */
-    private static MixinConnectorManager connectors = new MixinConnectorManager();
 
     private MixinBootstrap() {}
     
@@ -193,7 +188,6 @@ public abstract class MixinBootstrap {
 
     static void inject() {
         MixinBootstrap.getPlatform().inject();
-        MixinBootstrap.connectors.inject();
     }
 
     private static boolean isSubsystemRegistered() {

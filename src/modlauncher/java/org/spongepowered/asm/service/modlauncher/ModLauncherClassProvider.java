@@ -26,21 +26,15 @@ package org.spongepowered.asm.service.modlauncher;
 
 import java.net.URL;
 
-import org.spongepowered.asm.service.modlauncher.ext.IModLauncherClassProvider;
+import org.spongepowered.asm.service.IClassProvider;
 
 import cpw.mods.gross.Java9ClassLoaderUtil;
 import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.TransformingClassLoader;
 
 /**
  * Class provider for use under ModLauncher
  */
-class ModLauncherClassProvider implements IModLauncherClassProvider {
-    
-    /**
-     * Here be dragons
-     */
-    private final Internals internals = Internals.getInstance();
+class ModLauncherClassProvider implements IClassProvider {
     
     ModLauncherClassProvider() {
     }
@@ -60,7 +54,7 @@ class ModLauncherClassProvider implements IModLauncherClassProvider {
      */
     @Override
     public Class<?> findClass(String name) throws ClassNotFoundException {
-        return Class.forName(name, true, this.getClassLoader());
+        return Class.forName(name, true, Thread.currentThread().getContextClassLoader());
     }
 
     /* (non-Javadoc)
@@ -69,12 +63,7 @@ class ModLauncherClassProvider implements IModLauncherClassProvider {
      */
     @Override
     public Class<?> findClass(String name, boolean initialize) throws ClassNotFoundException {
-        return Class.forName(name, initialize, this.getClassLoader());
-    }
-
-    private ClassLoader getClassLoader() {
-        TransformingClassLoader tcl = this.internals.getTransformingClassLoader();
-        return tcl != null ? tcl : Launcher.class.getClassLoader();
+        return Class.forName(name, initialize, Thread.currentThread().getContextClassLoader());
     }
 
     /* (non-Javadoc)

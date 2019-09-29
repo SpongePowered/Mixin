@@ -45,9 +45,10 @@ public interface IClassProcessor {
      * @param classType the class to consider
      * @param isEmpty if the class is empty at present (indicates no backing
      *      file found)
+     * @param reason the reason for processing
      * @return the set of Phases the plugin wishes to be called back with
      */
-    public abstract EnumSet<Phase> handlesClass(Type classType, boolean isEmpty);
+    public abstract EnumSet<Phase> handlesClass(Type classType, boolean isEmpty, String reason);
 
     
     /**
@@ -56,8 +57,9 @@ public interface IClassProcessor {
      * @param phase The phase of the supplied class node
      * @param classNode the classnode to process
      * @param classType the name of the class
+     * @param reason the reason for processing
      * @return true if the class was processed
      */
-    public abstract boolean processClass(Phase phase, ClassNode classNode, Type classType);
+    public abstract boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason);
     
 }

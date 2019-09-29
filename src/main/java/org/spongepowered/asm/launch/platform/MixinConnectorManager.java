@@ -22,17 +22,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.launch.platform;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.connect.IMixinConnector;
+import org.spongepowered.asm.service.IClassProvider;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Manager for Mixin containers bootstrapping via {@link IMixinConnector}
@@ -43,10 +47,16 @@ public class MixinConnectorManager {
      * Logging to the max
      */
     private static final Logger logger = LogManager.getLogger("mixin");
+    
+    private final Set<String> connectorClasses = new LinkedHashSet<String>();
 
-    private List<IMixinConnector> connectors = new ArrayList<IMixinConnector>();
+    private final List<IMixinConnector> connectors = new ArrayList<IMixinConnector>();
 
     MixinConnectorManager() {
+    }
+
+    void addConnector(String connectorClass) {
+        this.connectorClasses.add(connectorClass);
     }
 
     void inject() {
@@ -54,16 +64,33 @@ public class MixinConnectorManager {
         this.initConnectors();
     }
 
+    @SuppressWarnings("unchecked")
     void loadConnectors() {
-        ServiceLoader<IMixinConnector> serviceLoader = ServiceLoader.load(IMixinConnector.class);
-        for (Iterator<IMixinConnector> iterator = serviceLoader.iterator(); iterator.hasNext(); ) {
+        IClassProvider classProvider = MixinService.getService().getClassProvider();
+        
+        for (String connectorClassName : this.connectorClasses) {
+            Class<IMixinConnector> connectorClass = null; 
             try {
-                IMixinConnector connector = iterator.next();
+                Class<?> clazz = classProvider.findClass(connectorClassName);
+                if (!IMixinConnector.class.isAssignableFrom(clazz)) {
+                    MixinConnectorManager.logger.error("Mixin Connector [" + connectorClassName + "] does not implement IMixinConnector");
+                    continue;
+                }
+                connectorClass = (Class<IMixinConnector>)clazz;
+            } catch (ClassNotFoundException ex) {
+                MixinConnectorManager.logger.catching(ex);
+                continue;
+            }
+            
+            try {
+                IMixinConnector connector = connectorClass.newInstance();
                 this.connectors.add(connector);
-            } catch (ServiceConfigurationError e) {
-                MixinConnectorManager.logger.catching(e);
+                MixinConnectorManager.logger.info("Successfully loaded Mixin Connector [" + connectorClassName + "]");
+            } catch (ReflectiveOperationException ex) {
+                MixinConnectorManager.logger.warn("Error loading Mixin Connector [" + connectorClassName + "]", ex);
             }
         }
+        this.connectorClasses.clear();
     }
     
     void initConnectors() {

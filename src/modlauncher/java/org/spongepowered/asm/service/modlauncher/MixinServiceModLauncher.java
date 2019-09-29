@@ -26,27 +26,20 @@ package org.spongepowered.asm.service.modlauncher;
 
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
 
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
-import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.transformer.MixinTransformationHandler;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.ITransformer;
 import org.spongepowered.asm.service.MixinServiceAbstract;
-import org.spongepowered.asm.service.modlauncher.ext.IModLauncherClassBytecodeProvider;
-import org.spongepowered.asm.service.modlauncher.ext.IModLauncherClassProvider;
 import org.spongepowered.asm.util.IConsumer;
 
 import com.google.common.collect.ImmutableList;
 
 import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.TransformingClassLoader;
 import cpw.mods.modlauncher.api.ITransformationService;
 
 /**
@@ -57,17 +50,17 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     /**
      * Specification version to check for at startup
      */
-    private static final String MODLAUNCHER_SPECIFICATION_VERSION = "1.0";
+    private static final String MODLAUNCHER_SPECIFICATION_VERSION = "4.0";
 
     /**
      * Class provider, either uses hacky internals or provided service
      */
-    private IModLauncherClassProvider classProvider;
+    private IClassProvider classProvider;
     
     /**
      * Bytecode provider, either uses hacky internals or provided service
      */
-    private IModLauncherClassBytecodeProvider bytecodeProvider;
+    private IClassBytecodeProvider bytecodeProvider;
     
     /**
      * Container for the mixin pipeline which is called by the launch plugin
@@ -88,25 +81,29 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      * Only allow onInit to be called once
      */
     private volatile boolean initialised;
+
+    /**
+     * Root container
+     */
+    private ContainerHandleModLauncher rootContainer = new ContainerHandleModLauncher(this.getName());
     
     /**
      * Begin init
      * 
-     * @param startupListener Lifecyle listener
+     * @param bytecodeProvider bytecode provider
      */
-    public void onInit(Runnable startupListener) {
+    public void onInit(IClassBytecodeProvider bytecodeProvider) {
         if (this.initialised) {
             throw new IllegalStateException("Already initialised");
         }
         this.initialised = true;
-        Internals.getInstance().registerStartupListener(startupListener);
-        Internals.getInstance().registerStartupListener(MixinServiceModLauncher.this::onStartup);
+        this.bytecodeProvider = bytecodeProvider;
     }
     
     /**
      * Lifecycle event
      */
-    private void onStartup() {
+    public void onStartup() {
         this.phaseConsumer.accept(Phase.DEFAULT);
     }
 
@@ -149,7 +146,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public IClassProvider getClassProvider() {
         if (this.classProvider == null) {
-            this.classProvider = MixinServiceModLauncher.createClassProvider();
+            this.classProvider = new ModLauncherClassProvider();
         }
         return this.classProvider;
     }
@@ -160,7 +157,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public IClassBytecodeProvider getBytecodeProvider() {
         if (this.bytecodeProvider == null) {
-            this.bytecodeProvider = MixinServiceModLauncher.createBytecodeProvider();
+            throw new IllegalStateException("Service initialisation incomplete");
         }
         return this.bytecodeProvider;
     }
@@ -199,8 +196,8 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      * @see org.spongepowered.asm.service.IMixinService#getPrimaryContainer()
      */
     @Override
-    public IContainerHandle getPrimaryContainer() {
-        return new ContainerHandleModLauncher(this.getName());
+    public ContainerHandleModLauncher getPrimaryContainer() {
+        return this.rootContainer;
     }
 
     /* (non-Javadoc)
@@ -209,12 +206,6 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      */
     @Override
     public InputStream getResourceAsStream(String name) {
-        TransformingClassLoader tcl = Internals.getInstance().getTransformingClassLoader();
-        if (tcl != null) {
-            return tcl.getResourceAsStream(name);
-        }
-        
-        // Probably not what we want :/
         return Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
     }
 
@@ -280,30 +271,6 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
             this.getTransformationHandler(),
             this.getClassTracker()
         );
-    }
-
-    private static IModLauncherClassProvider createClassProvider() {
-        IModLauncherClassProvider service =
-                MixinServiceModLauncher.<IModLauncherClassProvider>loadFirstAvailableService(IModLauncherClassProvider.class);
-        return service != null ? service : new ModLauncherClassProvider();
-    }
-
-    private static IModLauncherClassBytecodeProvider createBytecodeProvider() {
-        IModLauncherClassBytecodeProvider service =
-                MixinServiceModLauncher.<IModLauncherClassBytecodeProvider>loadFirstAvailableService(IModLauncherClassBytecodeProvider.class);
-        return service != null ? service : new ModLauncherBytecodeProvider();
-    }
-
-    private static <TService> TService loadFirstAvailableService(Class<TService> serviceClass) {
-        Iterator<TService> loader = ServiceLoader.<TService>load(serviceClass).iterator();
-        if (loader.hasNext()) {
-            try {
-                return loader.next();
-            } catch (ServiceConfigurationError ex) {
-                ex.printStackTrace();
-            }
-        }
-        return null;
     }
 
 }

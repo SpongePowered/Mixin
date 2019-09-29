@@ -27,6 +27,6 @@ package org.spongepowered.asm.launch;
 /**
  * Class interceptor. Decorator interface only. Blatant h4x.
  */
-public interface IClassInterceptor extends IClassProcessor {
-
-}
+//public interface IClassInterceptor extends IClassProcessor {
+//
+//}

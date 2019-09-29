@@ -69,6 +69,7 @@ public abstract class Constants {
         public static final String MAINCLASS = "Main-Class";
         public static final String MIXINCONFIGS = "MixinConfigs";
         public static final String TOKENPROVIDERS = "MixinTokenProviders";
+        public static final String MIXINCONNECTOR = "MixinConnector";
         
         @Deprecated
         public static final String COMPATIBILITY = "MixinCompatibilityLevel";
