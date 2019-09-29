@@ -13,7 +13,8 @@ The main documentation for **Mixin** can be found in the [Wiki](../../wiki).
 
 Additional documentation for individual features and annotations can be found in
 the extensive [Javadoc](http://jenkins.liteloader.com/job/Mixin/javadoc/). For
-additional help use the channel `#spongedev` on the Espernet IRC network.
+additional help use the channel `#mixin` on the
+[Sponge Discord Server](https://discord.gg/sponge).
 
 ### Building Mixin
 **Mixin** uses the [Gradle](http://gradle.org/) build automation system. To

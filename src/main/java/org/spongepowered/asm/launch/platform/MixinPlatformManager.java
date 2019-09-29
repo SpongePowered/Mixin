@@ -69,6 +69,12 @@ public class MixinPlatformManager {
     private final Map<IContainerHandle, MixinContainer> containers = new LinkedHashMap<IContainerHandle, MixinContainer>();
     
     /**
+     * Connectors 
+     */
+    private final MixinConnectorManager connectors = new MixinConnectorManager();
+
+    
+    /**
      * Container for this tweaker 
      */
     private MixinContainer primaryContainer;
@@ -187,6 +193,8 @@ public class MixinPlatformManager {
                 ex.printStackTrace();
             }
         }
+        
+        this.connectors.inject();
     }
 
     /**
@@ -279,6 +287,17 @@ public class MixinPlatformManager {
         }
 
         MixinEnvironment.getDefaultEnvironment().registerTokenProviderClass(provider);
+    }
+    
+    /**
+     * Add a mixin connector class for a jar manifest source. Supports only bare
+     * class names.
+     * 
+     * @param connectorClass Name of the connector class to load
+     */
+    final void addConnector(String connectorClass) {
+        this.connectors.addConnector(connectorClass);
+        
     }
 
 }

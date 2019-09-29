@@ -60,10 +60,10 @@ public class MixinTransformationHandler implements IClassProcessor {
     
     /* (non-Javadoc)
      * @see org.spongepowered.asm.launch.IClassProcessor#handlesClass(
-     *      org.objectweb.asm.Type, boolean)
+     *      org.objectweb.asm.Type, boolean, java.lang.String)
      */
     @Override
-    public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty) {
+    public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty, String reason) {
         if (!isEmpty) {
             return Phases.AFTER_ONLY;
         }
@@ -77,13 +77,13 @@ public class MixinTransformationHandler implements IClassProcessor {
     }
 
     /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IClassProcessor
-     *      #processClass(
+     * @see org.spongepowered.asm.launch.IClassProcessor#processClass(
      *      cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase,
-     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type)
+     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type,
+     *      java.lang.String)
      */
     @Override
-    public synchronized boolean processClass(Phase phase, ClassNode classNode, Type classType) {
+    public synchronized boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
         if (phase == Phase.BEFORE) {
             return false;
         }

@@ -24,17 +24,24 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map.Entry;
 
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.launch.platform.CommandLineOptions;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher;
+
+import com.google.common.io.Resources;
 
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
@@ -42,7 +49,7 @@ import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 /**
  * Mixin launch plugin 
  */
-public class MixinLaunchPlugin implements ILaunchPluginService {
+public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodeProvider {
     
     /**
      * Name used for ModLauncher mixin service components
@@ -50,14 +57,18 @@ public class MixinLaunchPlugin implements ILaunchPluginService {
     public static final String NAME = "mixin";
     
     /**
-     * Interceptor if present 
-     */
-    private IClassInterceptor interceptor;
-    
-    /**
      * Class processing components
      */
     private List<IClassProcessor> processors = new ArrayList<IClassProcessor>();
+
+    /**
+     * Mixin config names specified on the command line 
+     */
+    private List<String> commandLineMixins;
+
+    private ITransformerLoader transformerLoader;
+    
+    private MixinServiceModLauncher service;
     
     /* (non-Javadoc)
      * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService#name()
@@ -67,27 +78,31 @@ public class MixinLaunchPlugin implements ILaunchPluginService {
         return MixinLaunchPlugin.NAME;
     }
     
-    /* (non-Javadoc)
-     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService
-     *      #handlesClass(org.objectweb.asm.Type, boolean)
-     */
     @Override
     public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty) {
-        if (this.interceptor != null) {
-            // If the interceptor wants to handle this class, it has executive
-            // power since this entry is almost certainly simulated. If it's 
-            // not a simulated entry then something is probably not right. RIP?
-            EnumSet<Phase> interceptorVote = this.interceptor.handlesClass(classType, isEmpty);
-            if (interceptorVote != null) {
-                return interceptorVote;
-            }
+        throw new IllegalStateException("Outdated ModLauncher");
+    }
+    
+    @Override
+    public boolean processClass(Phase phase, ClassNode classNode, Type classType) {
+        throw new IllegalStateException("Outdated ModLauncher");
+    }
+    
+    /* (non-Javadoc)
+     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService#handlesClass(
+     *      org.objectweb.asm.Type, boolean, java.lang.String)
+     */
+    @Override
+    public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty, final String reason) {
+        if (MixinLaunchPlugin.NAME.equals(reason)) {
+            return Phases.NONE;
         }
-
+        
         // All processors can nominate phases, we aggregate the results
         EnumSet<Phase> phases = EnumSet.<Phase>noneOf(Phase.class);
         synchronized (this.processors) {
             for (IClassProcessor postProcessor : this.processors) {
-                EnumSet<Phase> processorVote = postProcessor.handlesClass(classType, isEmpty);
+                EnumSet<Phase> processorVote = postProcessor.handlesClass(classType, isEmpty, reason);
                 if (processorVote != null) {
                     phases.addAll(processorVote);
                 }
@@ -98,40 +113,53 @@ public class MixinLaunchPlugin implements ILaunchPluginService {
     }
 
     /* (non-Javadoc)
-     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService
-     *      #processClass(
+     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService#processClass(
      *      cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase,
-     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type)
+     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type,
+     *      java.lang.String)
      */
     @Override
-    public boolean processClass(Phase phase, ClassNode classNode, Type classType) {
-        if (this.interceptor != null) {
-            if (this.interceptor.processClass(phase, classNode, classType)) {
-                // If the interceptor handles the class, then this is likely a
-                // simulated entry. Return immediately and don't delegate to
-                // other processors
-                return true;
-            }
+    public boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
+        if (MixinLaunchPlugin.NAME.equals(reason)) {
+            return false;
         }
-        
+
         boolean processed = false;
         
         synchronized (this.processors) {
             for (IClassProcessor postProcessor : this.processors) {
-                processed |= postProcessor.processClass(phase, classNode, classType);
+                processed |= postProcessor.processClass(phase, classNode, classType, reason);
             }
         }
         
         return processed;
     }
-
-    /* (non-Javadoc)
-     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService#addResource(
-     *      java.nio.file.Path, java.lang.String)
+    
+    /**
+     * Initialisation routine, called as a lifecycle event from the
+     * transformation service
      */
+    void init(IEnvironment environment, List<String> commandLineMixins) {
+        IMixinService service = MixinService.getService();
+        if (!(service instanceof MixinServiceModLauncher)) {
+            throw new IllegalStateException("Unsupported service type for ModLauncher Mixin Service");
+        }
+        this.service = (MixinServiceModLauncher)service;
+        synchronized (this.processors) {
+            this.processors.addAll(this.service.getProcessors());
+        }
+        this.commandLineMixins = commandLineMixins;
+        this.service.onInit(this);
+    }
+    
     @Override
     public void addResource(Path resource, String name) {
-        // This is never called, I'm not sure what it's for
+        this.service.getPrimaryContainer().addResource(name, resource);
+    }
+
+    @Override
+    public void addResources(List<Entry<String, Path>> resources) {
+        this.service.getPrimaryContainer().addResources(resources);
     }
 
     /* (non-Javadoc)
@@ -142,24 +170,49 @@ public class MixinLaunchPlugin implements ILaunchPluginService {
         return null;
     }
     
-    /**
-     * Initialisation routine, called as a lifecycle event from the
-     * transformation service
-     */
-    void init(IEnvironment environment, Runnable startupListener) {
-        IMixinService service = MixinService.getService();
-        if (!(service instanceof MixinServiceModLauncher)) {
-            throw new IllegalStateException("Unsupported service type for ModLauncher Mixin Service");
+    @Override
+    public void initializeLaunch(ITransformerLoader transformerLoader, Path[] specialPaths) {
+        this.transformerLoader = transformerLoader;
+        MixinBootstrap.doInit(CommandLineOptions.of(this.commandLineMixins));
+        MixinBootstrap.inject();
+        this.service.onStartup();
+    }
+
+    @Override
+    public ClassNode getClassNode(String name) throws ClassNotFoundException, IOException {
+        return this.getClassNode(name, true);
+    }
+
+    @Override
+    public ClassNode getClassNode(String name, boolean runTransformers) throws ClassNotFoundException, IOException {
+        if (!runTransformers) {
+            throw new IllegalArgumentException("ModLauncher service does not currently support retrieval of untransformed bytecode");
         }
-        IClassBytecodeProvider bytecodeProvider = service.getBytecodeProvider();
-        if (bytecodeProvider instanceof IClassInterceptor) {
-            this.interceptor = (IClassInterceptor)bytecodeProvider;
+        
+        byte[] classBytes;
+        
+        try {
+            classBytes = this.transformerLoader.buildTransformedClassNodeFor(name);
+        } catch (ClassNotFoundException ex) {
+            URL url = Thread.currentThread().getContextClassLoader().getResource(name + ".class");
+            if (url == null) {
+                throw ex;
+            }
+            try {
+                classBytes = Resources.asByteSource(url).read();
+            } catch (IOException ioex) {
+                throw ex;
+            }
         }
-        MixinServiceModLauncher modLauncherService = (MixinServiceModLauncher)service;
-        synchronized (this.processors) {
-            this.processors.addAll(modLauncherService.getProcessors());
+        
+        if (classBytes == null) {
+            throw new ClassNotFoundException(name.replace('/', '.'));
         }
-        modLauncherService.onInit(startupListener);
+
+        ClassNode classNode = new ClassNode();
+        ClassReader classReader = new ClassReader(classBytes);
+        classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
+        return classNode;
     }
 
 }

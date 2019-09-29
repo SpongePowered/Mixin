@@ -24,12 +24,11 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
-
-import org.spongepowered.asm.launch.platform.CommandLineOptions;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,7 +46,7 @@ import joptsimple.OptionSpecBuilder;
 public class MixinTransformationService implements ITransformationService {
     
     private ArgumentAcceptingOptionSpec<String> mixinsArgument;
-    private List<String> commandLineMixins;
+    private List<String> commandLineMixins = new ArrayList<String>();
     private MixinLaunchPlugin plugin;
     
     @Override
@@ -63,7 +62,7 @@ public class MixinTransformationService implements ITransformationService {
     
     @Override
     public void argumentValues(OptionResult option) {
-        this.commandLineMixins = option.values(this.mixinsArgument);
+        this.commandLineMixins.addAll(option.values(this.mixinsArgument));
     }
 
     @Override
@@ -83,14 +82,9 @@ public class MixinTransformationService implements ITransformationService {
         this.plugin = (MixinLaunchPlugin)launchPlugin;
         
         MixinBootstrap.start();
-        this.plugin.init(environment, this::onStartup);
+        this.plugin.init(environment, this.commandLineMixins);
     }
     
-    private void onStartup() {
-        MixinBootstrap.doInit(CommandLineOptions.of(this.commandLineMixins));
-        MixinBootstrap.inject();
-    }
-
     @Override
     public void beginScanning(IEnvironment environment) {
     }

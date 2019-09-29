@@ -64,10 +64,10 @@ public class ModLauncherClassTracker implements IClassProcessor {
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.launch.IClassProcessor#handlesClass(
-     *      org.objectweb.asm.Type, boolean)
+     *      org.objectweb.asm.Type, boolean, java.lang.String)
      */
     @Override
-    public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty) {
+    public EnumSet<Phase> handlesClass(Type classType, boolean isEmpty, String reason) {
         String name = classType.getClassName();
         synchronized (this.invalidClasses) {
             if (this.invalidClasses.contains(name)) {
@@ -85,10 +85,11 @@ public class ModLauncherClassTracker implements IClassProcessor {
     /* (non-Javadoc)
      * @see org.spongepowered.asm.launch.IClassProcessor#processClass(
      *      cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase,
-     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type)
+     *      org.objectweb.asm.tree.ClassNode, org.objectweb.asm.Type,
+     *      java.lang.String)
      */
     @Override
-    public boolean processClass(Phase phase, ClassNode classNode, Type classType) {
+    public boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
         return false;
     }
         
