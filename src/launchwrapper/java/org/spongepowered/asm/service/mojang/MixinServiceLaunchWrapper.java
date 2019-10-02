@@ -453,9 +453,14 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
         if (classBytes != null) {
             return classBytes;
         }
-        
-        URLClassLoader appClassLoader = (URLClassLoader)Launch.class.getClassLoader();
-        
+
+        URLClassLoader appClassLoader;
+        if (Launch.class.getClassLoader() instanceof URLClassLoader) {
+            appClassLoader = (URLClassLoader) Launch.class.getClassLoader();
+        } else {
+            appClassLoader = new URLClassLoader(new URL[]{}, Launch.class.getClassLoader());
+        }
+
         InputStream classStream = null;
         try {
             final String resourcePath = transformedName.replace('.', '/').concat(".class");
