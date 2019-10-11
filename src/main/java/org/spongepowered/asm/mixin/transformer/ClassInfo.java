@@ -58,6 +58,7 @@ import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.ClassSignature;
+import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -205,17 +206,24 @@ public final class ClassInfo {
          * Frame local count
          */
         public final int locals;
+        
+        /**
+         * Frame local size 
+         */
+        public final int size;
 
-        FrameData(int index, int type, int locals) {
+        FrameData(int index, int type, int locals, int size) {
             this.index = index;
             this.type = type;
             this.locals = locals;
+            this.size = size;
         }
 
         FrameData(int index, FrameNode frameNode) {
             this.index = index;
             this.type = frameNode.type;
             this.locals = frameNode.local != null ? frameNode.local.size() : 0;
+            this.size = Locals.computeFrameSize(frameNode);
         }
 
         /* (non-Javadoc)

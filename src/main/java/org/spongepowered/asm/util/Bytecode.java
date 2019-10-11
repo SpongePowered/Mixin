@@ -390,8 +390,9 @@ public final class Bytecode {
      */
     public static void printMethod(MethodNode method) {
         System.err.printf("%s%s\n", method.name, method.desc);
+        int index = 0;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
-            System.err.print("  ");
+            System.err.printf("%-4d  ", index++);
             Bytecode.printNode(iter.next());
         }
     }
@@ -1216,4 +1217,5 @@ public final class Bytecode {
         destination.addAll(source);
         return destination;
     }
+
 }

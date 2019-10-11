@@ -57,6 +57,11 @@ import org.spongepowered.asm.util.throwables.LVTGeneratorError;
 public final class Locals {
 
     /**
+     * Frame type names just for the purposes of debug printing
+     */
+    private static final String[] FRAME_TYPES = { "TOP", "INTEGER", "FLOAT", "DOUBLE", "LONG", "NULL", "UNINITIALIZED_THIS" };
+    
+    /**
      * Cached local variable lists, to avoid having to recalculate them
      * (expensive) if multiple injectors are working with the same method
      */
@@ -157,24 +162,56 @@ public final class Locals {
         }
         
         int initialFrameSize = local;
-        int frameIndex = -1, locals = 0;
+        int frameSize = local;
+        int frameIndex = -1;
+        int lastFrameSize = local;
+        VarInsnNode storeInsn = null;
 
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
-            if (insn instanceof FrameNode) {
+            if (storeInsn != null) {
+                frame[storeInsn.var] = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
+                storeInsn = null;
+            }
+            
+            handleFrame: if (insn instanceof FrameNode) {
                 frameIndex++;
                 FrameNode frameNode = (FrameNode)insn;
-                FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
+                if (frameNode.type == Opcodes.F_SAME || frameNode.type == Opcodes.F_SAME1) {
+                    break handleFrame;
+                }
                 
-                locals = frameData != null && frameData.type == Opcodes.F_FULL ? Math.min(locals, frameData.locals) : frameNode.local.size();
+                FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
+
+                if (frameData != null) {
+                    if (frameData.type == Opcodes.F_FULL) {
+                        frameSize = Math.min(frameSize, frameData.locals);
+                        lastFrameSize = frameSize;
+                    } else {
+                        frameSize = Locals.getAdjustedFrameSize(frameSize, frameData);
+                    }
+                } else {
+                    frameSize = Locals.getAdjustedFrameSize(frameSize, frameNode);
+                }
+                
+                if (frameNode.type == Opcodes.F_CHOP) {
+                    for (int framePos = frameSize; framePos < frame.length; framePos++) {
+                        frame[framePos] = null; 
+                    }
+                    lastFrameSize = frameSize;
+                    break handleFrame;
+                }
+
+                int framePos = frameNode.type == Opcodes.F_APPEND ? lastFrameSize : 0;
+                lastFrameSize = frameSize;
 
                 // localPos tracks the location in the frame node's locals list, which doesn't leave space for TOP entries
-                for (int localPos = 0, framePos = 0; framePos < frame.length; framePos++, localPos++) {
+                for (int localPos = 0; framePos < frame.length; framePos++, localPos++) {
                     // Get the local at the current position in the FrameNode's locals list
                     final Object localType = (localPos < frameNode.local.size()) ? frameNode.local.get(localPos) : null;
 
                     if (localType instanceof String) { // String refers to a reference type
-                        frame[framePos] = Locals.getLocalVariableAt(classNode, method, node, framePos);
+                        frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
                     } else if (localType instanceof Integer) { // Integer refers to a primitive type or other marker
                         boolean isMarkerType = localType == Opcodes.UNINITIALIZED_THIS || localType == Opcodes.NULL;
                         boolean is32bitValue = localType == Opcodes.INTEGER || localType == Opcodes.FLOAT;
@@ -184,8 +221,8 @@ public final class Locals {
                         } else if (isMarkerType) {
                             frame[framePos] = null;
                         } else if (is32bitValue || is64bitValue) {
-                            frame[framePos] = Locals.getLocalVariableAt(classNode, method, node, framePos);
-
+                            frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
+                            
                             if (is64bitValue) {
                                 framePos++;
                                 frame[framePos] = null; // TOP
@@ -195,9 +232,11 @@ public final class Locals {
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
-                        if (framePos >= initialFrameSize && framePos >= locals && locals > 0) {
+                        if (framePos >= initialFrameSize && framePos >= frameSize && frameSize > 0) {
                             frame[framePos] = null;
                         }
+                    } else if (localType instanceof LabelNode) {
+                        // Uninitialised
                     } else {
                         throw new LVTGeneratorError("Invalid value " + localType + " in locals array at position " + localPos
                                 + " in " + classNode.name + "." + method.name + method.desc);
@@ -205,8 +244,16 @@ public final class Locals {
                 }
             } else if (insn instanceof VarInsnNode) {
                 VarInsnNode varNode = (VarInsnNode) insn;
-                frame[varNode.var] = Locals.getLocalVariableAt(classNode, method, node, varNode.var);
-            } 
+                boolean isLoad = insn.getOpcode() >= Opcodes.ILOAD && insn.getOpcode() <= Opcodes.SALOAD;
+                if (isLoad) {
+                    frame[varNode.var] = Locals.getLocalVariableAt(classNode, method, insn, varNode.var);
+                } else {
+                    // Update the LVT for the opcode AFTER this one, since we always want to know
+                    // the frame state BEFORE the *current* instruction to match the contract of
+                    // injection points
+                    storeInsn = varNode;
+                }
+            }
             
             if (insn == node) {
                 break;
@@ -223,7 +270,7 @@ public final class Locals {
         return frame;
     }
 
-    /**
+   /**
      * Attempts to locate the appropriate entry in the local variable table for
      * the specified local variable index at the location specified by node.
      * 
@@ -277,7 +324,7 @@ public final class Locals {
     }
 
     private static boolean isOpcodeInRange(InsnList insns, LocalVariableNode local, int pos) {
-        return insns.indexOf(local.start) < pos && insns.indexOf(local.end) > pos;
+        return insns.indexOf(local.start) <= pos && insns.indexOf(local.end) > pos;
     }
 
     /**
@@ -448,6 +495,109 @@ public final class Locals {
             return insns.get(index);
         }
         return insn;
+    }
+
+    /**
+     * Compute a new frame size based on the supplied frame type and the size of
+     * locals contained in the frame (this may differ from the number of actual
+     * frame slots if the frame contains doubles or longs)
+     * 
+     * @param currentSize current frame size
+     * @param frameNode frame entry
+     * @return new frame size
+     */
+    private static int getAdjustedFrameSize(int currentSize, FrameNode frameNode) {
+        return Locals.getAdjustedFrameSize(currentSize, frameNode.type, Locals.computeFrameSize(frameNode));
+    }
+
+    /**
+     * Compute a new frame size based on the supplied frame type and the size of
+     * locals contained in the frame (this may differ from the number of actual
+     * frame slots if the frame contains doubles or longs)
+     * 
+     * @param currentSize current frame size
+     * @param frameData frame entry
+     * @return new frame size
+     */
+    private static int getAdjustedFrameSize(int currentSize, FrameData frameData) {
+        return Locals.getAdjustedFrameSize(currentSize, frameData.type, frameData.size);
+    }
+    
+    /**
+     * Compute a new frame size based on the supplied frame type and the size of
+     * locals contained in the frame (this may differ from the number of actual
+     * frame slots if the frame contains doubles or longs)
+     * 
+     * @param currentSize current frame size
+     * @param type frame entry type
+     * @param size frame entry size
+     * @return new frame size
+     */
+    private static int getAdjustedFrameSize(int currentSize, int type, int size) {
+        switch (type) {
+            case Opcodes.F_NEW:
+            case Opcodes.F_FULL:
+                return size;
+            case Opcodes.F_APPEND:
+                return currentSize + size;
+            case Opcodes.F_CHOP:
+                return currentSize - size;
+            case Opcodes.F_SAME:
+            case Opcodes.F_SAME1:
+                return currentSize;
+            default:
+                return currentSize;
+        }
+     }
+    
+    /**
+     * Compute the size required to accomodate the entries described by the
+     * supplied frame node
+     * 
+     * @param frameNode frame node with locals to compute
+     * @return size of frame node locals
+     */
+    public static int computeFrameSize(FrameNode frameNode) {
+        if (frameNode.local == null) {
+            return 0;
+        }
+        int size = 0;
+        for (Object local : frameNode.local) {
+            if (local instanceof Integer) {
+                size += (local == Opcodes.DOUBLE || local == Opcodes.LONG) ? 2 : 1;
+            } else {
+                size++;
+            }
+        }
+        return size;
+    }
+    
+    /**
+     * Debug function to return printable name of a frame entry
+     * 
+     * @param frameEntry Frame entry
+     * @return string representation of the supplied frame entry
+     */
+    public static String getFrameTypeName(Object frameEntry) {
+        if (frameEntry == null) {
+            return "NULL";
+        }
+        
+        if (frameEntry instanceof String) {
+            return Bytecode.getSimpleName(frameEntry.toString());
+        }
+        
+        if (frameEntry instanceof Integer) {
+            int type = ((Integer)frameEntry).intValue();
+            
+            if (type >= Locals.FRAME_TYPES.length) {
+                return "INVALID";
+            }
+            
+            return Locals.FRAME_TYPES[type];
+        }
+        
+        return "?";
     }
     
 }
