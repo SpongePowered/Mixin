@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InsnList;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -506,23 +507,43 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return fallbackEnvironment;
     }
     
-    @SuppressWarnings("unchecked")
     private void initInjectionPoints() {
         if (this.injectorOptions.injectionPoints == null) {
             return;
         }
         
-        for (String injectionPoint : this.injectorOptions.injectionPoints) {
+        for (String injectionPointClassName : this.injectorOptions.injectionPoints) {
+            this.initInjectionPoint(injectionPointClassName);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void initInjectionPoint(String className) {
+        try {
+            Class<?> injectionPointClass = null;
             try {
-                Class<?> injectionPointClass = this.service.getClassProvider().findClass(injectionPoint, true);
-                if (InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
-                    InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
-                } else {
-                    this.logger.error("Unable to register injection point {} for {}, class must extend InjectionPoint", injectionPointClass, this);
-                }
-            } catch (Throwable th) {
-                this.logger.catching(th);
+                injectionPointClass = this.service.getClassProvider().findClass(className, true);
+            } catch (ClassNotFoundException cnfe) {
+                this.logger.error("Unable to register injection point {} for {}, the specified class was not found", className, this, cnfe);
+                return;
             }
+            
+            if (!InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
+                this.logger.error("Unable to register injection point {} for {}, class must extend InjectionPoint", className, this);
+                return;
+            }
+            
+            try {
+                injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
+            } catch (NoSuchMethodException cnfe) {
+                this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
+                        className, this, cnfe);
+                return;
+            }
+
+            InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
+        } catch (Throwable th) {
+            this.logger.catching(th);
         }
     }
 
