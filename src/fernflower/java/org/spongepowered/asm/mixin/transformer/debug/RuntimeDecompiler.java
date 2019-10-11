@@ -66,7 +66,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
             try {
                 MoreFiles.deleteRecursively(this.outputPath.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
             } catch (IOException ex) {
-                this.logger.warn("Error cleaning output directory: {}", ex.getMessage());
+                this.logger.debug("Error cleaning output directory: {}", ex.getMessage());
             }
         }
     }

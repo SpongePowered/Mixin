@@ -77,7 +77,7 @@ public class ExtensionClassExporter implements IExtension {
         try {
             MoreFiles.deleteRecursively(this.classExportDir.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
         } catch (IOException ex) {
-            ExtensionClassExporter.logger.warn("Error cleaning class output directory: {}", ex.getMessage());
+            ExtensionClassExporter.logger.debug("Error cleaning class output directory: {}", ex.getMessage());
         }
     }
     

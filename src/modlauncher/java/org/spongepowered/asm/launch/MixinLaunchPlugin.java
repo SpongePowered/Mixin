@@ -194,7 +194,7 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
         try {
             classBytes = this.transformerLoader.buildTransformedClassNodeFor(name);
         } catch (ClassNotFoundException ex) {
-            URL url = Thread.currentThread().getContextClassLoader().getResource(name + ".class");
+            URL url = Thread.currentThread().getContextClassLoader().getResource(name.replace('.', '/') + ".class");
             if (url == null) {
                 throw ex;
             }
