@@ -29,6 +29,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -58,6 +59,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionExceptio
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.throwables.MixinError;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
@@ -131,6 +133,13 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         InjectionInfo create(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
             try {
                 return this.ctor.newInstance(mixin, method, annotation);
+            } catch (InvocationTargetException itex) {
+                Throwable cause = itex.getCause();
+                if (cause instanceof MixinException) {
+                    throw (MixinException)cause;
+                }
+                Throwable ex = cause != null ? cause : itex;
+                throw new MixinError("Error initialising injector metaclass [" + this.type + "] for annotation " + annotation.desc, ex);
             } catch (ReflectiveOperationException ex) {
                 throw new MixinError("Failed to instantiate injector metaclass [" + this.type + "] for annotation " + annotation.desc, ex);
             }
