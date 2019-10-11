@@ -47,6 +47,7 @@ import org.spongepowered.asm.launch.platform.container.ContainerHandleVirtual;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
@@ -160,6 +161,15 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
         return Phase.PREINIT;
     }
     
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #getMaxCompatibilityLevel()
+     */
+    @Override
+    public CompatibilityLevel getMaxCompatibilityLevel() {
+        return CompatibilityLevel.JAVA_8;
+    }
+
     /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#init()
      */

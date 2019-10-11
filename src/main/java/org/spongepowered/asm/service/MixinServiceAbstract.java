@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.platform.IMixinPlatformAgent;
 import org.spongepowered.asm.launch.platform.IMixinPlatformServiceAgent;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.IConsumer;
@@ -71,19 +72,50 @@ public abstract class MixinServiceAbstract implements IMixinService {
      */
     private String sideName;
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#prepare()
+     */
     @Override
     public void prepare() {
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getInitialPhase()
+     */
     @Override
     public Phase getInitialPhase() {
         return Phase.PREINIT;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #getMinCompatibilityLevel()
+     */
+    @Override
+    public CompatibilityLevel getMinCompatibilityLevel() {
+        return null;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #getMaxCompatibilityLevel()
+     */
+    @Override
+    public CompatibilityLevel getMaxCompatibilityLevel() {
+        return null;
+    }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#beginPhase()
+     */
     @Override
     public void beginPhase() {
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #checkEnv(java.lang.Object)
+     */
     @Override
     public void checkEnv(Object bootSource) {
     }

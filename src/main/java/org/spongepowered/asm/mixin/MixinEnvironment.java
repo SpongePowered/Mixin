@@ -673,11 +673,16 @@ public final class MixinEnvironment implements ITokenProvider {
             public static final int NESTING = 4;
             
             /**
-             * Native nesting
+             * Dynamic constants
              */
             public static final int DYNAMIC_CONSTANTS = 8;
 
         }
+        
+        /**
+         * Default compatibility level to use if not specified by the service 
+         */
+        public static CompatibilityLevel DEFAULT = CompatibilityLevel.JAVA_6;
         
         private final int ver;
         
@@ -693,11 +698,6 @@ public final class MixinEnvironment implements ITokenProvider {
             this.languageFeatures = languageFeatures;
         }
         
-        @SuppressWarnings("unused")
-        private void setMaxCompatibleLevel(CompatibilityLevel maxCompatibleLevel) {
-            this.maxCompatibleLevel = maxCompatibleLevel;
-        }
-
         /**
          * Get whether this compatibility level is supported in the current
          * environment
@@ -744,6 +744,16 @@ public final class MixinEnvironment implements ITokenProvider {
          */
         public boolean isAtLeast(CompatibilityLevel level) {
             return level == null || this.ver >= level.ver; 
+        }
+        
+        /**
+         * Get whether this level is less than the specified level
+         * 
+         * @param level level to compare to
+         * @return true if this level is less than the supplied level
+         */
+        public boolean isLessThan(CompatibilityLevel level) {
+            return level == null || this.ver < level.ver; 
         }
         
         /**
@@ -857,7 +867,7 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Current compatibility level
      */
-    private static CompatibilityLevel compatibility = Option.DEFAULT_COMPATIBILITY_LEVEL.<CompatibilityLevel>getEnumValue(CompatibilityLevel.JAVA_6);
+    private static CompatibilityLevel compatibility;
     
     /**
      * Show debug header info on first environment construction
@@ -966,7 +976,8 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.add("SpongePowered MIXIN%s", verbose ? " (Verbose debugging enabled)" : "").centre().hr();
             printer.kv("Code source", codeSource);
             printer.kv("Internal Version", version);
-            printer.kv("Java Versions Supported", CompatibilityLevel.getSupportedVersions()).hr();
+            printer.kv("Java Versions Supported", CompatibilityLevel.getSupportedVersions());
+            printer.kv("Current Compatibility Level", MixinEnvironment.getCompatibilityLevel()).hr();
             printer.kv("Service Name", serviceName);
             printer.kv("Mixin Service Class", this.service.getClass().getName());
             printer.kv("Global Property Service Class", MixinService.getGlobalPropertyService().getClass().getName()).hr();
@@ -1343,7 +1354,17 @@ public final class MixinEnvironment implements ITokenProvider {
      * Get the current compatibility level
      */
     public static CompatibilityLevel getCompatibilityLevel() {
+        if (MixinEnvironment.compatibility == null) {
+            CompatibilityLevel minLevel = MixinEnvironment.getMinCompatibilityLevel();
+            CompatibilityLevel optionLevel = Option.DEFAULT_COMPATIBILITY_LEVEL.<CompatibilityLevel>getEnumValue(minLevel);
+            MixinEnvironment.compatibility = optionLevel.isAtLeast(minLevel) ? optionLevel : minLevel;
+        }
         return MixinEnvironment.compatibility;
+    }
+    
+    private static CompatibilityLevel getMinCompatibilityLevel() {
+        CompatibilityLevel minLevel = MixinService.getService().getMinCompatibilityLevel();
+        return minLevel == null ? CompatibilityLevel.DEFAULT : minLevel;
     }
     
     /**
@@ -1360,9 +1381,17 @@ public final class MixinEnvironment implements ITokenProvider {
             MixinEnvironment.logger.warn("MixinEnvironment::setCompatibilityLevel is deprecated and will be removed. Set level via config instead!");
         }
         
-        if (level != MixinEnvironment.compatibility && level.isAtLeast(MixinEnvironment.compatibility)) {
+        CompatibilityLevel currentLevel = MixinEnvironment.getCompatibilityLevel();
+        if (level != currentLevel && level.isAtLeast(currentLevel)) {
             if (!level.isSupported()) {
                 throw new IllegalArgumentException("The requested compatibility level " + level + " could not be set. Level is not supported");
+            }
+
+            IMixinService service = MixinService.getService();
+            CompatibilityLevel maxLevel = service.getMaxCompatibilityLevel();
+            if (maxLevel != null && maxLevel.isLessThan(level)) {
+                MixinEnvironment.logger.warn("The requested compatibility level {} is higher than the level supported by the active subsystem '{}'"
+                        + " which supports {}. This is not a supported configuration and instability may occur.", level, service.getName(), maxLevel);
             }
             
             MixinEnvironment.compatibility = level;

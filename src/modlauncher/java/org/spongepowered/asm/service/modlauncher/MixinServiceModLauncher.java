@@ -29,6 +29,7 @@ import java.util.Collection;
 
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.transformer.MixinTransformationHandler;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
@@ -121,6 +122,15 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public String getName() {
         return "ModLauncher";
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #getMinCompatibilityLevel()
+     */
+    @Override
+    public CompatibilityLevel getMinCompatibilityLevel() {
+        return CompatibilityLevel.JAVA_8;
     }
 
     /* (non-Javadoc)

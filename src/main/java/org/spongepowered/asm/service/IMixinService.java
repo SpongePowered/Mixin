@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.util.Collection;
 
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.ReEntranceLock;
 
@@ -176,5 +177,25 @@ public interface IMixinService {
      * Get the detected side name for this environment
      */
     public abstract String getSideName();
+    
+    /**
+     * Get the minimum compatibility level supported by this service. Can return
+     * <tt>null</tt> if the service has no specific minimum compatibility level,
+     * however if a value is returned, it will be used as the minimum
+     * compatibility level and no lower levels will be supported. 
+     * 
+     * @return minimum supported {@link CompatibilityLevel} or null
+     */
+    public abstract CompatibilityLevel getMinCompatibilityLevel();
+    
+    /**
+     * Get the maximum compatibility level supported by this service. Can return
+     * <tt>null</tt> if the service has no specific maximum compatibility level.
+     * If a value is returned, a warning will be raised if a configuration
+     * attempts to se a higher compatibility level.
+     * 
+     * @return minimum supported {@link CompatibilityLevel} or null
+     */
+    public abstract CompatibilityLevel getMaxCompatibilityLevel();
 
 }

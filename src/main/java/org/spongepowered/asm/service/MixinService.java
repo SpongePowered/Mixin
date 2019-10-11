@@ -24,14 +24,18 @@
  */
 package org.spongepowered.asm.service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.google.common.base.Joiner;
 
 /**
  * Provides access to the service layer which connects the mixin transformer to
@@ -79,15 +83,17 @@ public final class MixinService {
 
     private void runBootServices() {
         this.bootstrapServiceLoader = ServiceLoader.<IMixinServiceBootstrap>load(IMixinServiceBootstrap.class, this.getClass().getClassLoader());
-        for (IMixinServiceBootstrap bootService : this.bootstrapServiceLoader) {
+        Iterator<IMixinServiceBootstrap> iter = this.bootstrapServiceLoader.iterator();
+        while (iter.hasNext()) {
             try {
+                IMixinServiceBootstrap bootService = iter.next();
                 bootService.bootstrap();
                 this.bootedServices.add(bootService.getServiceClassName());
             } catch (ServiceInitialisationException ex) {
                 // Expected if service cannot start
-                MixinService.logger.debug("Mixin bootstrap service {} is not available: {}", bootService.getClass().getName(), ex.getMessage());
+                MixinService.logger.error("Mixin bootstrap service {} is not available: {}", ex.getStackTrace()[0].getClassName(), ex.getMessage());
             } catch (Throwable th) {
-                MixinService.logger.throwing(th);
+                MixinService.logger.debug("Catching {}:{} initialising service", th.getClass().getName(), th.getMessage(), th);
             }
         }
     }
@@ -124,6 +130,7 @@ public final class MixinService {
     private IMixinService initService() {
         this.serviceLoader = ServiceLoader.<IMixinService>load(IMixinService.class, this.getClass().getClassLoader());
         Iterator<IMixinService> iter = this.serviceLoader.iterator();
+        List<String> rejectedServices = new ArrayList<String>();
         while (iter.hasNext()) {
             try {
                 IMixinService service = iter.next();
@@ -133,13 +140,14 @@ public final class MixinService {
                 if (service.isValid()) {
                     return service;
                 }
+                rejectedServices.add(service.getName());
             } catch (ServiceConfigurationError serviceError) {
 //                serviceError.printStackTrace();
             } catch (Throwable th) {
 //                th.printStackTrace();
             }
         }
-        throw new ServiceNotAvailableError("No mixin host service is available");
+        throw new ServiceNotAvailableError("No mixin host service is available. Rejected services: " + Joiner.on(", ").join(rejectedServices));
     }
 
     /**
