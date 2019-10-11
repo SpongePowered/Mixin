@@ -32,8 +32,8 @@ import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry;
 import org.spongepowered.asm.transformers.TreeTransformer;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.asm.ASM;
 
 /**
  * Transformer which manages the mixin configuration and application process
@@ -203,7 +203,7 @@ class MixinTransformer extends TreeTransformer implements IMixinTransformer {
      * You need to ask yourself why you're reading this comment  
      */
     private static ClassNode createEmptyClass(String name) {
-        ClassNode classNode = new ClassNode(Bytecode.ASM_API_VERSION);
+        ClassNode classNode = new ClassNode(ASM.API_VERSION);
         classNode.name = name.replace('.', '/');
         classNode.version = MixinEnvironment.getCompatibilityLevel().classVersion();
         classNode.superName = Constants.OBJECT;

@@ -42,8 +42,8 @@ import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.service.ISyntheticClassInfo;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.IConsumer;
+import org.spongepowered.asm.util.asm.ASM;
 
 /**
  * Class generator which creates unique copies of inner classes within mixins
@@ -200,7 +200,7 @@ final class InnerClassGenerator implements IClassGenerator {
         private final InnerClassInfo info;
         
         public InnerClassAdapter(ClassVisitor cv, InnerClassInfo info) {
-            super(Bytecode.ASM_API_VERSION, cv, info);
+            super(ASM.API_VERSION, cv, info);
             this.info = info;
         }
         

@@ -54,6 +54,7 @@ import org.spongepowered.asm.util.IConsumer;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.JavaVersion;
 import org.spongepowered.asm.util.PrettyPrinter;
+import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.perf.Profiler;
 
 import com.google.common.collect.ImmutableList;
@@ -977,7 +978,8 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.kv("Code source", codeSource);
             printer.kv("Internal Version", version);
             printer.kv("Java Versions Supported", CompatibilityLevel.getSupportedVersions());
-            printer.kv("Current Compatibility Level", MixinEnvironment.getCompatibilityLevel()).hr();
+            printer.kv("Current Compatibility Level", MixinEnvironment.getCompatibilityLevel());
+            printer.kv("Detected ASM API Version", ASM.getApiVersionString()).hr();
             printer.kv("Service Name", serviceName);
             printer.kv("Mixin Service Class", this.service.getClass().getName());
             printer.kv("Global Property Service Class", MixinService.getGlobalPropertyService().getClass().getName()).hr();

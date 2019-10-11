@@ -110,6 +110,9 @@ dependencies {
     compile guava
     compile log4j2
     compile 'com.google.code.gson:gson:2.2.4'
+    if (Float.parseFloat(asmVersion) < 6) {
+        compile "org.ow2.asm:asm-debug-all:$asmVersion"
+    }
     compile "org.ow2.asm:asm-tree:$asmVersion"
     compile "org.ow2.asm:asm-commons:$asmVersion"
     compile "org.ow2.asm:asm-util:$asmVersion"
@@ -144,6 +147,9 @@ dependencies {
     
     modlauncherCompile configurations.compile
     modlauncherCompile 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    modlauncherCompile "org.ow2.asm:asm-tree:$modlauncherAsmVersion"
+    modlauncherCompile "org.ow2.asm:asm-commons:$modlauncherAsmVersion"
+    modlauncherCompile "org.ow2.asm:asm-util:$modlauncherAsmVersion"
     modlauncherCompile ('cpw.mods:modlauncher:4.0.0') {
         exclude module: 'log4j-core'
     }

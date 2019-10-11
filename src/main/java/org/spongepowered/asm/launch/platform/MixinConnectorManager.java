@@ -25,11 +25,8 @@
 package org.spongepowered.asm.launch.platform;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;

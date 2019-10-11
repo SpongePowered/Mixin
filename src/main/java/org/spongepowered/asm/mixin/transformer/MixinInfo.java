@@ -67,6 +67,7 @@ import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -87,7 +88,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         private final String originalName;
         
         public MixinMethodNode(int access, String name, String desc, String signature, String[] exceptions) {
-            super(Bytecode.ASM_API_VERSION, access, name, desc, signature, exceptions);
+            super(ASM.API_VERSION, access, name, desc, signature, exceptions);
             this.originalName = name;
         }
         
@@ -134,7 +135,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         public final List<MixinMethodNode> mixinMethods;
         
         MixinClassNode(MixinInfo mixin) {
-            this(Bytecode.ASM_API_VERSION);
+            this(ASM.API_VERSION);
         }
         
         @SuppressWarnings("unchecked")

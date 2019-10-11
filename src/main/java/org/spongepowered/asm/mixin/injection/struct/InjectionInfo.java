@@ -65,6 +65,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.asm.ElementNode;
 
 import com.google.common.base.Strings;
@@ -466,7 +467,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * @return new method
      */
     public MethodNode addMethod(int access, String name, String desc) {
-        MethodNode method = new MethodNode(Bytecode.ASM_API_VERSION, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
+        MethodNode method = new MethodNode(ASM.API_VERSION, access | Opcodes.ACC_SYNTHETIC, name, desc, null, null);
         this.injectedMethods.add(method);
         return method;
     }

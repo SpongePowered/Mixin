@@ -34,7 +34,7 @@ import org.spongepowered.asm.util.Bytecode;
 public class MethodVisitorEx extends MethodVisitor {
 
     public MethodVisitorEx(MethodVisitor mv) {
-        super(Bytecode.ASM_API_VERSION, mv);
+        super(ASM.API_VERSION, mv);
     }
 
     /**

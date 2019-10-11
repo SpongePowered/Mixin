@@ -43,6 +43,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
+import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException.Problem;
 
@@ -143,8 +144,6 @@ public final class Bytecode {
             return this.isSuper ? "super" : "this";
         }
     }
-    
-    public static final int ASM_API_VERSION = Opcodes.ASM6;
 
     /**
      * Integer constant opcodes
@@ -1162,7 +1161,6 @@ public final class Bytecode {
         dest.sourceDebug = source.sourceDebug;
 
         dest.sourceFile = source.sourceFile;
-        dest.module = source.module;
         dest.outerClass = source.outerClass;
         dest.outerMethod = source.outerMethod;
         dest.outerMethodDesc = source.outerMethodDesc;
@@ -1176,7 +1174,10 @@ public final class Bytecode {
         Bytecode.<InnerClassNode>clear(dest.innerClasses);
         Bytecode.<FieldNode>clear(dest.fields);
         Bytecode.<MethodNode>clear(dest.methods);
-        
+
+        if (ASM.API_VERSION >= Opcodes.ASM6) {
+            dest.module = source.module;
+        }
         
         // TODO Java 10
 //        dest.nestHostClassExperimental = source.nestHostClassExperimental;

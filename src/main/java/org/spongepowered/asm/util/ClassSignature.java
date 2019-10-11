@@ -39,6 +39,7 @@ import org.objectweb.asm.signature.SignatureReader;
 import org.objectweb.asm.signature.SignatureVisitor;
 import org.objectweb.asm.signature.SignatureWriter;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.util.asm.ASM;
 
 /**
  * Represents an object-oriented view of a generic class signature. We use ASM's
@@ -660,7 +661,7 @@ public class ClassSignature {
         abstract class SignatureElement extends SignatureVisitor {
             
             public SignatureElement() {
-                super(Bytecode.ASM_API_VERSION);
+                super(ASM.API_VERSION);
             }
             
         }
@@ -897,7 +898,7 @@ public class ClassSignature {
         private FormalParamElement param;
 
         SignatureParser() {
-            super(Bytecode.ASM_API_VERSION);
+            super(ASM.API_VERSION);
         }
         
         @Override

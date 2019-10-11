@@ -41,7 +41,7 @@ import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.ASM;
 
 /**
  * An agent that re-transforms a mixin's target classes if the mixin has been
@@ -64,7 +64,7 @@ public class MixinAgent implements IHotSwap {
             
             byte[] mixinBytecode = MixinAgent.classLoader.getFakeMixinBytecode(classBeingRedefined);
             if (mixinBytecode != null) {
-                ClassNode classNode = new ClassNode(Bytecode.ASM_API_VERSION);
+                ClassNode classNode = new ClassNode(ASM.API_VERSION);
                 ClassReader cr = new ClassReader(classfileBuffer);
                 cr.accept(classNode, ClassReader.EXPAND_FRAMES);
                 
