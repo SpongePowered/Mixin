@@ -34,7 +34,6 @@ import org.objectweb.asm.tree.analysis.BasicValue;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.Interpreter;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Utility class for finding instructions using static analysis
@@ -164,7 +163,6 @@ public class InsnFinder {
         try {
             new PopAnalyzer(node).analyze(target.classNode.name, target.method);
         } catch (AnalyzerException ex) {
-            Bytecode.printMethod(target.method);
             if (ex.getCause() instanceof AnalysisResultException) {
                 return ((AnalysisResultException)ex.getCause()).getResult();
             }

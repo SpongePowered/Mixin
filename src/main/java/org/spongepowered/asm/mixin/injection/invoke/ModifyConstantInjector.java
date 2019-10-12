@@ -99,7 +99,6 @@ public class ModifyConstantInjector extends RedirectInjector {
      * @param jumpNode jump instruction (must be IFLT, IFGE, IFGT or IFLE)
      */
     private void injectExpandedConstantModifier(Target target, JumpInsnNode jumpNode) {
-        Bytecode.printMethod(target.method);
         int opcode = jumpNode.getOpcode();
         if (opcode < Opcodes.IFLT || opcode > Opcodes.IFLE) {
             throw new InvalidInjectionException(this.info, this.annotationType + " annotation selected an invalid opcode "
@@ -113,7 +112,6 @@ public class ModifyConstantInjector extends RedirectInjector {
         insns.add(new JumpInsnNode(opcode + ModifyConstantInjector.OPCODE_OFFSET, jumpNode.label));
         extraStack.add(1).apply();
         target.replaceNode(jumpNode, invoke, insns);
-        Bytecode.printMethod(target.method);
     }
 
     private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
@@ -129,7 +127,6 @@ public class ModifyConstantInjector extends RedirectInjector {
         AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, extraStack, before, after);
         extraStack.apply();
         target.wrapNode(constNode, invoke, before, after);
-        Bytecode.printMethod(target.method);
     }
 
     private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, Extension extraStack, InsnList before, InsnList after) {

@@ -100,6 +100,7 @@ public class ModifyArgsInjector extends InvokeInjector {
         this.invokeHandler(insns);
         this.unpackArgs(insns, clArgs, args);
         
+        extraStack.apply();
         target.insns.insertBefore(targetMethod, insns);
     }
 

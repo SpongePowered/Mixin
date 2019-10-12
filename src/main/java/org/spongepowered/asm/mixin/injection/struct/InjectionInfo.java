@@ -366,8 +366,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      */
     public void inject() {
         for (Entry<Target, List<InjectionNode>> entry : this.targetNodes.entrySet()) {
-            Target target = entry.getKey();
-            this.injector.inject(target, entry.getValue());
+            this.injector.inject(entry.getKey(), entry.getValue());
         }
         this.targets.clear();
     }
