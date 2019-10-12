@@ -51,6 +51,111 @@ import org.spongepowered.asm.util.Constants;
  * rather than passing a bunch of values around.
  */
 public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
+    
+    /**
+     * A stateful extension of stack or locals space for a target method which
+     * can be applied.
+     * 
+     * <p>Stack and locals extensions are generally localised to a particular
+     * injection. This means they don't necessarily need to accumulate, it's
+     * generally sufficient to expand the method's <em>original</em> stack or
+     * locals size by the extension amount, with the largest extension
+     * determining the final stack size of the method.</p>
+     * 
+     * <p>Before this mechanism, injectors generally needed to keep track of
+     * their extension sizes via arbitrary integers, then apply them in one go.
+     * However some injector logic made the flow of these integers hard to track
+     * and lead to insidious bugs when values which should be combined were
+     * instead applied sequentially. The minor performance trade-off of using
+     * extensions to track these operations is covered by the increase in
+     * robustness.</p>
+     */
+    public class Extension {
+        
+        /**
+         * True if this is a locals extension, false for stack.
+         */
+        private final boolean locals;
+        
+        /**
+         * The current 'depth' of this extension. Discrete operations maintain
+         * their own size value. When an extension is applied this value resets
+         * to zero so that the same extension can be used for multiple
+         * operations.
+         */
+        private int size;
+        
+        Extension(boolean locals) {
+            this.locals = locals;
+        }
+
+        /**
+         * Add 1 to this extension
+         * 
+         * @return fluent interface
+         */
+        public Extension add() {
+            this.size++;
+            return this;
+        }
+        
+        /**
+         * Add the specified size to this extension
+         * 
+         * @param size size to add
+         * @return fluent interface
+         */
+        public Extension add(int size) {
+            this.size += size;
+            return this;
+        }
+        
+        /**
+         * Add the size of the supplied type array to this extension. The size
+         * of the supplied args will first be computed, then the result will be
+         * added to the extension.
+         * 
+         * @param types Types to add
+         * @return fluent interface
+         */
+        public Extension add(Type[] types) {
+            return this.add(Bytecode.getArgsSize(types));
+        }
+        
+        /**
+         * Set the size of this extension
+         * 
+         * @param size Size to set
+         * @return fluent interface
+         */
+        public Extension set(int size) {
+            this.size = size;
+            return this;
+        }
+        
+        /**
+         * Get the current size of this extension
+         * 
+         * @return fluent interface
+         */
+        public int get() {
+            return this.size;
+        }
+        
+        /**
+         * Apply this extension to the target. This reduces the current size to
+         * zero so that a new operation can begin if required.
+         */
+        public void apply() {
+            if (this.locals) {
+                Target.this.extendLocalsBy(this.size);
+            } else {
+                Target.this.extendStackBy(this.size);
+            }
+            this.size = 0;
+        }
+        
+    }
 
     /**
      * Target class node
@@ -211,6 +316,12 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     /**
      * Allocate a new local variable for the method
      * 
+     * <p>Note that <b>allocating</b> a local differs from <em>extending</em>
+     * locals (see {@link #extendLocals()}) in that the allocation immediately
+     * increases the target max locals and returns the new index of the local
+     * just allocated. <b>Extending</b> locals is used for temporary localised
+     * extensions to the locals table for the purposes of injectors.</p>
+     * 
      * @return the allocated local index
      */
     public int allocateLocal() {
@@ -219,7 +330,13 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     
     /**
      * Allocate a number of new local variables for this method, returns the
-     * first local variable index of the allocated range
+     * first local variable index of the allocated range.
+     * 
+     * <p>Note that <b>allocating</b> locals differs from <em>extending</em>
+     * locals (see {@link #extendLocals()}) in that the allocation immediately
+     * increases the target max locals and returns the new index of the local
+     * just allocated. <b>Extending</b> locals is used for temporary localised
+     * extensions to the locals table for the purposes of injectors.</p>
      * 
      * @param locals number of locals to allocate
      * @return the first local variable index of the allocated range
@@ -229,13 +346,37 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         this.method.maxLocals += locals;
         return nextLocal;
     }
+    
+    /**
+     * Creates a new locals extension. The returned object can be used to create
+     * extensions to the method locals for an injector to use. Extensions are
+     * not designed to overlap, and the largest extension for a method will
+     * determine the amount by which the locals table is extended.
+     * 
+     * @return extension handle
+     */
+    public Extension extendLocals() {
+        return new Extension(true);
+    }
+    
+    /**
+     * Creates a new stack extension. The returned object can be used to create
+     * extensions to the method stack for an injector to use. Extensions are
+     * not designed to overlap, and the largest extension for a method will
+     * determine the amount by which the stack is extended.
+     * 
+     * @return extension handle
+     */
+    public Extension extendStack() {
+        return new Extension(false);
+    }
 
     /**
      * Allocate a number of new local variables for this method
      * 
      * @param locals number of locals to allocate
      */
-    public void addToLocals(int locals) {
+    void extendLocalsBy(int locals) {
         this.setMaxLocals(this.maxLocals + locals);
     }
 
@@ -245,7 +386,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * 
      * @param maxLocals max locals value to set
      */
-    public void setMaxLocals(int maxLocals) {
+    private void setMaxLocals(int maxLocals) {
         if (maxLocals > this.method.maxLocals) {
             this.method.maxLocals = maxLocals;
         }
@@ -256,7 +397,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * 
      * @param stack number of stack entries to allocate
      */
-    public void addToStack(int stack) {
+    void extendStackBy(int stack) {
         this.setMaxStack(this.maxStack + stack);
     }
 
@@ -266,7 +407,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * 
      * @param maxStack max stack value to set
      */
-    public void setMaxStack(int maxStack) {
+    private void setMaxStack(int maxStack) {
         if (maxStack > this.method.maxStack) {
             this.method.maxStack = maxStack;
         }

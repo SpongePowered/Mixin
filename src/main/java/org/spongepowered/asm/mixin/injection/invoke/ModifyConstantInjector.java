@@ -40,13 +40,15 @@ import org.spongepowered.asm.mixin.injection.invoke.util.InsnFinder;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Locals;
 import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
- * A bytecode injector which allows a specific
+ * A bytecode injector which allows a specific constant value to be identified
+ * and replaced with a callback
  */
 public class ModifyConstantInjector extends RedirectInjector {
     
@@ -97,18 +99,21 @@ public class ModifyConstantInjector extends RedirectInjector {
      * @param jumpNode jump instruction (must be IFLT, IFGE, IFGT or IFLE)
      */
     private void injectExpandedConstantModifier(Target target, JumpInsnNode jumpNode) {
+        Bytecode.printMethod(target.method);
         int opcode = jumpNode.getOpcode();
         if (opcode < Opcodes.IFLT || opcode > Opcodes.IFLE) {
             throw new InvalidInjectionException(this.info, this.annotationType + " annotation selected an invalid opcode "
                     + Bytecode.getOpcodeName(opcode) + " in " + target + " in " + this); 
         }
         
+        Extension extraStack = target.extendStack();
         final InsnList insns = new InsnList();
         insns.add(new InsnNode(Opcodes.ICONST_0));
-        AbstractInsnNode invoke = this.invokeConstantHandler(Type.getType("I"), target, insns, insns);
+        AbstractInsnNode invoke = this.invokeConstantHandler(Type.getType("I"), target, extraStack, insns, insns);
         insns.add(new JumpInsnNode(opcode + ModifyConstantInjector.OPCODE_OFFSET, jumpNode.label));
+        extraStack.add(1).apply();
         target.replaceNode(jumpNode, invoke, insns);
-        target.addToStack(1);
+        Bytecode.printMethod(target.method);
     }
 
     private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
@@ -118,24 +123,27 @@ public class ModifyConstantInjector extends RedirectInjector {
             this.checkNarrowing(target, constNode, constantType);
         }
         
+        Extension extraStack = target.extendStack();
         final InsnList before = new InsnList();
         final InsnList after = new InsnList();
-        AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, before, after);
+        AbstractInsnNode invoke = this.invokeConstantHandler(constantType, target, extraStack, before, after);
+        extraStack.apply();
         target.wrapNode(constNode, invoke, before, after);
+        Bytecode.printMethod(target.method);
     }
 
-    private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, InsnList before, InsnList after) {
+    private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, Extension extraStack, InsnList before, InsnList after) {
         final String handlerDesc = Bytecode.generateDescriptor(constantType, constantType);
         final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
         if (!this.isStatic) {
             before.insert(new VarInsnNode(Opcodes.ALOAD, 0));
-            target.addToStack(1);
+            extraStack.add();
         }
         
         if (withArgs) {
             this.pushArgs(target.arguments, after, target.getArgIndices(), 0, target.arguments.length);
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
         }
         
         return this.invokeHandler(after);

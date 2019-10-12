@@ -39,6 +39,7 @@ import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
@@ -143,7 +144,7 @@ public class CallbackInjector extends Injector {
          * then set the MAXS value on the target method to its original value
          * plus the larger of the two values.
          */
-        int ctor, invoke;
+        Extension ctor, invoke;
 
         /**
          * Marshal var is the local where we marshal the utility references we
@@ -196,8 +197,14 @@ public class CallbackInjector extends Injector {
             this.desc = target.getCallbackDescriptor(this.localTypes, target.arguments);
             this.descl = target.getCallbackDescriptor(true, this.localTypes, target.arguments, this.frameSize, this.extraArgs);
 //            this.typeCasts = new Type[this.frameSize + this.extraArgs];
+            
+            this.invoke = target.extendStack();
+            this.ctor = target.extendStack();
 
-            this.invoke = target.arguments.length + (this.canCaptureLocals ? this.localTypes.length - this.frameSize : 0);
+            this.invoke.add(target.arguments.length);
+            if (this.canCaptureLocals) {
+                this.invoke.add(this.localTypes.length - this.frameSize);
+            }
         }
 
         /**
@@ -241,8 +248,12 @@ public class CallbackInjector extends Injector {
             } else {
                 this.add(insn);
             }
-            this.ctor += (ctorStack ? 1 : 0);
-            this.invoke += (invokeStack ? 1 : 0);
+            if (ctorStack) {
+                this.ctor.add();
+            }
+            if (invokeStack) {
+                this.invoke.add();
+            }
         }        
         
         /**
@@ -251,7 +262,8 @@ public class CallbackInjector extends Injector {
          */
         void inject() {
             this.target.insertBefore(this.node, this);
-            this.target.addToStack(Math.max(this.invoke, this.ctor));
+            this.invoke.apply();
+            this.ctor.apply();
         }
 
         boolean checkDescriptor(String desc) {

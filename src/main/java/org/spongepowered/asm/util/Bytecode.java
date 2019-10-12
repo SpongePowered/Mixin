@@ -388,7 +388,7 @@ public final class Bytecode {
      * @param method Method to print
      */
     public static void printMethod(MethodNode method) {
-        System.err.printf("%s%s\n", method.name, method.desc);
+        System.err.printf("%s%s maxStack=%d maxLocals=%d\n", method.name, method.desc, method.maxStack, method.maxLocals);
         int index = 0;
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             System.err.printf("%-4d  ", index++);

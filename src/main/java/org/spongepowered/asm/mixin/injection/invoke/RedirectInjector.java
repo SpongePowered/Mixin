@@ -43,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Annotations;
@@ -311,19 +312,19 @@ public class RedirectInjector extends InvokeInjector {
         this.validateParams(invoke);
         
         InsnList insns = new InsnList();
-        int extraLocals = Bytecode.getArgsSize(invoke.locals) + 1;
-        int extraStack = 1; // Normally only need 1 extra stack pos to store target ref 
+        Extension extraLocals = target.extendLocals().add(invoke.locals).add(1);
+        Extension extraStack = target.extendStack().add(1); // Normally only need 1 extra stack pos to store target ref 
         int[] argMap = this.storeArgs(target, invoke.locals, insns, 0);
         if (invoke.captureTargetArgs) {
             int argSize = Bytecode.getArgsSize(target.arguments);
-            extraLocals += argSize;
-            extraStack += argSize;
+            extraLocals.add(argSize);
+            extraStack.add(argSize);
             argMap = Ints.concat(argMap, target.getArgIndices());
         }
         AbstractInsnNode insn = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
         target.replaceNode(invoke.node, insn, insns);
-        target.addToLocals(extraLocals);
-        target.addToStack(extraStack);
+        extraLocals.apply();
+        extraStack.apply();
     }
 
     /**
@@ -465,7 +466,7 @@ public class RedirectInjector extends InvokeInjector {
      *      the target method signature
      * @param type description of access type for use in error messages
      */
-    public void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs, String type) {
+    private void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs, String type) {
         if (varNode == null) {
             String advice = "";
             throw new InvalidInjectionException(this.info, String.format(
@@ -473,16 +474,19 @@ public class RedirectInjector extends InvokeInjector {
                     this.annotationType, this, type, target, advice));
         }
         
+        Extension extraStack = target.extendStack();
+        
         if (!this.isStatic) {
             target.insns.insertBefore(fieldNode, new VarInsnNode(Opcodes.ALOAD, 0));
-            target.addToStack(1);
+            extraStack.add();
         }
         
         InsnList invokeInsns = new InsnList();
         if (withArgs) {
             this.pushArgs(target.arguments, invokeInsns, target.getArgIndices(), 0, target.arguments.length);
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
         }
+        extraStack.apply();
         target.replaceNode(varNode, this.invokeHandler(invokeInsns), invokeInsns);
     }
 
@@ -495,7 +499,7 @@ public class RedirectInjector extends InvokeInjector {
      * @param ownerType type of the field owner
      * @param fieldType field type
      */
-    public void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType) {
+    private void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType) {
         AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
         if (opCode == Opcodes.GETSTATIC || opCode == Opcodes.GETFIELD) {
@@ -519,7 +523,10 @@ public class RedirectInjector extends InvokeInjector {
         final String handlerDesc = staticField ? Bytecode.generateDescriptor(fieldType) : Bytecode.generateDescriptor(fieldType, owner);
         final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
 
+        Extension extraStack = target.extendStack();
+        
         if (!this.isStatic) {
+            extraStack.add();
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
             if (!staticField) {
                 insns.add(new InsnNode(Opcodes.SWAP));
@@ -528,10 +535,10 @@ public class RedirectInjector extends InvokeInjector {
         
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
         }
         
-        target.addToStack(this.isStatic ? 0 : 1);
+        extraStack.apply();
         return this.invokeHandler(insns);
     }
 
@@ -545,11 +552,14 @@ public class RedirectInjector extends InvokeInjector {
         String handlerDesc = staticField ? Bytecode.generateDescriptor(null, fieldType) : Bytecode.generateDescriptor(null, owner, fieldType);
         boolean withArgs = this.checkDescriptor(handlerDesc, target, "setter");
 
+        Extension extraStack = target.extendStack();
+        
         if (!this.isStatic) {
             if (staticField) {
                 insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
                 insns.add(new InsnNode(Opcodes.SWAP));
             } else {
+                extraStack.add();
                 int marshallVar = target.allocateLocals(fieldType.getSize());
                 insns.add(new VarInsnNode(fieldType.getOpcode(Opcodes.ISTORE), marshallVar));
                 insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
@@ -560,10 +570,10 @@ public class RedirectInjector extends InvokeInjector {
         
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
         }
         
-        target.addToStack(!this.isStatic && !staticField ? 1 : 0);
+        extraStack.apply();
         return this.invokeHandler(insns);
     }
 
@@ -635,13 +645,15 @@ public class RedirectInjector extends InvokeInjector {
             target.replaceNode(newNode, new VarInsnNode(Opcodes.ALOAD, 0));
         }
         
+        Extension extraStack = target.extendStack();
         InsnList insns = new InsnList();
         if (withArgs) {
             this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
         }
         
         this.invokeHandler(insns);
+        extraStack.apply();
         
         if (isAssigned) {
             // Do a null-check following the redirect to ensure that the handler
@@ -653,12 +665,13 @@ public class RedirectInjector extends InvokeInjector {
             this.throwException(insns, "java/lang/NullPointerException", String.format("%s constructor handler %s returned null for %s",
                     this.annotationType, this, newNode.desc.replace('/', '.')));
             insns.add(nullCheckSucceeded);
-            target.addToStack(1);
+            extraStack.add();
         } else {
             // Result is not assigned, so just pop it from the operand stack
             insns.add(new InsnNode(Opcodes.POP));
         }
         
+        extraStack.apply();
         target.replaceNode(initNode, insns);
         meta.injected++;
     }

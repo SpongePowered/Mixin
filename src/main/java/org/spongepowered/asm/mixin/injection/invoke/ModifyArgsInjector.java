@@ -34,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
@@ -87,12 +88,12 @@ public class ModifyArgsInjector extends InvokeInjector {
         boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();
-        target.addToStack(1);
+        Extension extraStack = target.extendStack().add(1);
         
         this.packArgs(insns, clArgs, targetMethod);
         
         if (withArgs) {
-            target.addToStack(Bytecode.getArgsSize(target.arguments));
+            extraStack.add(target.arguments);
             Bytecode.loadArgs(target.arguments, insns, target.isStatic ? 0 : 1);
         }
         

@@ -47,7 +47,7 @@ public final class ASM {
     /**
      * Get the ASM API version as a string (mostly for debugging and the banner)
      * 
-     * @return
+     * @return ASM API version as string
      */
     public static String getApiVersionString() {
         String suffix = "";

@@ -34,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
@@ -110,33 +111,33 @@ public class ModifyArgInjector extends InvokeInjector {
         Type[] args = Type.getArgumentTypes(methodNode.desc);
         int argIndex = this.findArgIndex(target, args);
         InsnList insns = new InsnList();
-        int extraLocals = 0;
+        Extension extraLocals = target.extendLocals();
         
         if (this.singleArgMode) {
-            extraLocals = this.injectSingleArgHandler(target, args, argIndex, insns);
+            this.injectSingleArgHandler(target, extraLocals, args, argIndex, insns);
         } else {
-            extraLocals = this.injectMultiArgHandler(target, args, argIndex, insns);
+            this.injectMultiArgHandler(target, extraLocals, args, argIndex, insns);
         }
         
         target.insns.insertBefore(methodNode, insns);
-        target.addToLocals(extraLocals);
-        target.addToStack(2 - (extraLocals - 1));
+        target.extendStack().set(2 - (extraLocals.get() - 1)).apply();
+        extraLocals.apply();
     }
 
     /**
      * Inject handler opcodes for a single arg handler
      */
-    private int injectSingleArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
+    private void injectSingleArgHandler(Target target, Extension extraLocals, Type[] args, int argIndex, InsnList insns) {
         int[] argMap = this.storeArgs(target, args, insns, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, argIndex, argIndex + 1);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return (argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize();
+        extraLocals.add((argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize());
     }
 
     /**
      * Inject handler opcodes for a multi arg handler
      */
-    private int injectMultiArgHandler(Target target, Type[] args, int argIndex, InsnList insns) {
+    private void injectMultiArgHandler(Target target, Extension extraLocals, Type[] args, int argIndex, InsnList insns) {
         if (!Arrays.equals(args, this.methodArgs)) {
             throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
                     + Bytecode.getDescriptor(args) + ", expected " + Bytecode.getDescriptor(this.methodArgs));
@@ -146,7 +147,7 @@ public class ModifyArgInjector extends InvokeInjector {
         this.pushArgs(args, insns, argMap, 0, argIndex);
         this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
-        return (argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize();
+        extraLocals.add((argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize());
     }
 
     protected int findArgIndex(Target target, Type[] args) {

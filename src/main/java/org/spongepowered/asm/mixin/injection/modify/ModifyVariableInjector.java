@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
@@ -154,11 +155,13 @@ public class ModifyVariableInjector extends Injector {
             throw new InvalidInjectionException(this.info, "Variable modifier " + this + " has an invalid signature, expected " + handlerDesc
                     + " but found " + this.methodNode.desc);
         }
+
+        Extension extraStack = target.extendStack();
         
         try {
             int local = this.discriminator.findLocal(context);
             if (local > -1) {
-                this.inject(context, local);
+                this.inject(context, extraStack, local);
             }
         } catch (InvalidImplicitDiscriminatorException ex) {
             if (this.discriminator.printLVT()) {
@@ -168,8 +171,8 @@ public class ModifyVariableInjector extends Injector {
             throw new InvalidInjectionException(this.info, "Implicit variable modifier injection failed in " + this, ex);
         }
         
+        extraStack.apply();
         target.insns.insertBefore(context.node, context.insns);
-        target.addToStack(this.isStatic ? 1 : 2);
     }
 
     /**
@@ -199,14 +202,17 @@ public class ModifyVariableInjector extends Injector {
      * Perform the injection
      * 
      * @param context target context
+     * @param extraStack stack extension
      * @param local local variable to capture
      */
-    private void inject(final Context context, final int local) {
+    private void inject(final Context context, Extension extraStack, final int local) {
         if (!this.isStatic) {
             context.insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            extraStack.add();
         }
         
         context.insns.add(new VarInsnNode(this.returnType.getOpcode(Opcodes.ILOAD), local));
+        extraStack.add();
         this.invokeHandler(context.insns);
         context.insns.add(new VarInsnNode(this.returnType.getOpcode(Opcodes.ISTORE), local));
     }
