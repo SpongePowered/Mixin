@@ -55,6 +55,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.TypeLookup;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
@@ -421,7 +422,7 @@ public abstract class Injector {
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
      */
     private static boolean canCoerce(ClassInfo from, ClassInfo to) {
-        return from != null && to != null && (to == from || to.hasSuperClass(from));
+        return from != null && to != null && (to == from || to.hasSuperClass(from, Traversal.NONE, true));
     }
 
 }

@@ -97,10 +97,16 @@ plugin developed by [DemonWav](https://github.com/demonwav).
               <li>Fixed issue in LVT generator folded in from FabricMC</li>
               <li>Fail-fast when a <tt>final</tt> method is accidentally hidden
                 by a mixin</li>  
+              <li>Fix the appearance of stray <tt>CallbackInfo</tt> instances in
+                local capture injector LVTs</li>
             </ul>
           </li>
           <li>Apache Commons-IO Dependency removed</li>
           <li>Renamed shaded ASM removed</li>
+          <li>Improved resolution of local variables for local variable capture
+            injections</li>
+          <li><tt>&#064;Coerce</tt> on callback injectors and redirects can now
+            resolve super interfaces including mixed-in interfaces</li>
         </ul>
       </td>
     </tr>
