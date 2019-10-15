@@ -271,9 +271,18 @@ class MixinApplicatorStandard {
     final void apply(SortedSet<MixinInfo> mixins) {
         List<MixinTargetContext> mixinContexts = new ArrayList<MixinTargetContext>();
         
-        for (MixinInfo mixin : mixins) {
-            this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
-            mixinContexts.add(mixin.createContextFor(this.context));
+        for (Iterator<MixinInfo> iter = mixins.iterator(); iter.hasNext();) {
+            MixinInfo mixin = iter.next();
+            try {
+                this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
+                mixinContexts.add(mixin.createContextFor(this.context));
+            } catch (InvalidMixinException ex) {
+                if (mixin.isRequired()) {
+                    throw ex;
+                }
+                this.context.addSuppressed(ex);
+                iter.remove(); // Do not process this mixin further
+            }
         }
         
         MixinTargetContext current = null;
@@ -292,9 +301,18 @@ class MixinApplicatorStandard {
                 activity.next("%s Applicator Phase", pass);
                 Section timer = this.profiler.begin("pass", pass.name().toLowerCase(Locale.ROOT));
                 Activity applyActivity = this.activities.begin("Mixin");
-                for (MixinTargetContext context : mixinContexts) {
-                    applyActivity.next(context.toString());
-                    this.applyMixin(current = context, pass);
+                for (Iterator<MixinTargetContext> iter = mixinContexts.iterator(); iter.hasNext();) {
+                    current = iter.next();
+                    applyActivity.next(current.toString());
+                    try {
+                        this.applyMixin(current, pass);
+                    } catch (InvalidMixinException ex) {
+                        if (current.isRequired()) {
+                            throw ex;
+                        }
+                        this.context.addSuppressed(ex);
+                        iter.remove(); // Do not process this mixin further
+                    }
                 }
                 applyActivity.end();
                 timer.end();
@@ -302,9 +320,18 @@ class MixinApplicatorStandard {
             
             activity.next("PostApply Phase");
             Activity postApplyActivity = this.activities.begin("Mixin");
-            for (MixinTargetContext context : mixinContexts) {
-                postApplyActivity.next(context.toString());
-                (current = context).postApply(this.targetName, this.targetClass);
+            for (Iterator<MixinTargetContext> iter = mixinContexts.iterator(); iter.hasNext();) {
+                current = iter.next();
+                postApplyActivity.next(current.toString());
+                try {
+                    current.postApply(this.targetName, this.targetClass);
+                } catch (InvalidMixinException ex) {
+                    if (current.isRequired()) {
+                        throw ex;
+                    }
+                    this.context.addSuppressed(ex);
+                    iter.remove();
+                }
             }
             activity.end();
         } catch (InvalidMixinException ex) {

@@ -539,7 +539,7 @@ public class MixinProcessor {
         Section timer = this.profiler.begin("preapply");
         this.extensions.preApply(context);
         timer = timer.next("apply");
-        this.apply(context);
+        context.applyMixins();
         timer = timer.next("postapply");
         boolean export = false;
         try {
@@ -554,15 +554,9 @@ public class MixinProcessor {
         if (export) {
             this.extensions.export(this.currentEnvironment, context.getClassName(), context.isExportForced(), context.getClassNode());
         }
-    }
-
-    /**
-     * Apply the mixins to the target class
-     * 
-     * @param context Target class context
-     */
-    private void apply(TargetClassContext context) {
-        context.applyMixins();
+        for (InvalidMixinException suppressed : context.getSuppressedExceptions()) {
+            this.handleMixinApplyError(context.getClassName(), suppressed, environment);
+        }
     }
 
     private void handleMixinPrepareError(MixinConfig config, InvalidMixinException ex, MixinEnvironment environment) throws MixinPrepareError {
@@ -589,6 +583,7 @@ public class MixinProcessor {
         
         if (environment.getOption(Option.DEBUG_VERBOSE)) {
             new PrettyPrinter()
+                .wrapTo(160)
                 .add("Invalid Mixin").centre()
                 .hr('-')
                 .kvWidth(10)
@@ -602,7 +597,7 @@ public class MixinProcessor {
                 .addWrapped("    %s", ex.getMessage())
                 .hr('-')
                 .add(ex, 8)
-                .trace(action.logLevel);
+                .log(action.logLevel);
         }
     
         for (IMixinErrorHandler handler : this.getErrorHandlers(mixin.getPhase())) {

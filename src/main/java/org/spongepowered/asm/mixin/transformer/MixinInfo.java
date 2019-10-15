@@ -1072,6 +1072,13 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
+     * True if the parent mixin config is marked as required
+     */
+    public boolean isRequired() {
+        return this.parent.isRequired();
+    }
+    
+    /**
      * Get the logging level for this mixin
      */
     public Level getLoggingLevel() {

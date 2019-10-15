@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,6 +46,7 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.struct.SourceMap;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
@@ -116,6 +118,12 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
      * target class. 
      */
     private final Set<MethodNode> mixinMethods = new HashSet<MethodNode>();
+    
+    /**
+     * Exceptions which were suppressed during mixin application because they
+     * were raised by an optional mixin 
+     */
+    private final List<InvalidMixinException> suppressedExceptions = new ArrayList<InvalidMixinException>();
 
     /**
      * True once mixins have been applied to this class 
@@ -381,6 +389,14 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
                 Bytecode.textify(method, System.err);
             }
         }
+    }
+    
+    void addSuppressed(InvalidMixinException ex) {
+        this.suppressedExceptions.add(ex);
+    }
+    
+    List<InvalidMixinException> getSuppressedExceptions() {
+        return this.suppressedExceptions;
     }
     
 }

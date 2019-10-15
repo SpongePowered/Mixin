@@ -1048,6 +1048,13 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     MixinInfo getInfo() {
         return this.mixin;
     }
+    
+    /**
+     * True if the parent mixin config is marked as required
+     */
+    boolean isRequired() {
+        return this.mixin.isRequired();
+    }
 
     /**
      * Get the mixin priority

@@ -603,7 +603,7 @@ class MixinPreProcessorStandard {
                 target = context.findRemappedField(mixinField);
                 if (target == null) {
                     // If this field is a shadow field but is NOT found in the target class, that's bad, mmkay
-                    throw new InvalidMixinException(this.mixin, String.format("Shadow field %s was not located in the target class %s. %s%s",
+                    throw new InvalidMixinException(this.mixin, String.format("@Shadow field %s was not located in the target class %s. %s%s",
                             mixinField.name, context.getTarget(), context.getReferenceMapper().getStatus(),
                             MixinPreProcessorStandard.getDynamicInfo(mixinField)));
                 }

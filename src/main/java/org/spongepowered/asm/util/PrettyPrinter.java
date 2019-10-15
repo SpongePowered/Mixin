@@ -379,6 +379,11 @@ public class PrettyPrinter {
     }
     
     /**
+     * Minimum allowed width 
+     */
+    private static final int MIN_WIDTH = 40;
+    
+    /**
      * Horizontal rule
      */
     private final HorizontalRule horizontalRule = new HorizontalRule('*');
@@ -421,7 +426,8 @@ public class PrettyPrinter {
     }
     
     public PrettyPrinter(int width) {
-        this.width = width;
+        this.width = Math.max(PrettyPrinter.MIN_WIDTH, width);
+        this.wrapWidth = this.width - 20;
     }
     
     /**
@@ -684,7 +690,7 @@ public class PrettyPrinter {
      */
     public PrettyPrinter add(Throwable th, int indent) {
         while (th != null) {
-            this.add("%s: %s", th.getClass().getName(), th.getMessage());
+            this.addWrapped("    %s: %s", th.getClass().getName(), th.getMessage());
             this.add(th.getStackTrace(), indent);
             th = th.getCause();
         }
@@ -783,7 +789,7 @@ public class PrettyPrinter {
         
         try {
             for (String wrappedLine : this.getWrapped(width, line, indent)) {
-                this.addLine(wrappedLine);
+                this.add(wrappedLine);
             }
         } catch (Exception ex) {
             this.add(line);
@@ -1097,6 +1103,16 @@ public class PrettyPrinter {
      */
     public PrettyPrinter log(Logger logger) {
         return this.log(logger, Level.INFO);
+    }
+    
+    /**
+     * Write this printer to the specified logger at {@link Level#INFO}
+     * 
+     * @param level log level
+     * @return fluent interface
+     */
+    public PrettyPrinter log(Level level) {
+        return this.log(LogManager.getLogger(PrettyPrinter.getDefaultLoggerName()), level);
     }
     
     /**
