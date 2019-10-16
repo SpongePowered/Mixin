@@ -52,8 +52,10 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
+import org.spongepowered.asm.service.IClassTracker;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
 import org.spongepowered.asm.service.ITransformer;
+import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler;
@@ -72,7 +74,7 @@ import net.minecraft.launchwrapper.Launch;
 /**
  * Mixin service for launchwrapper
  */
-public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements IClassProvider, IClassBytecodeProvider {
+public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements IClassProvider, IClassBytecodeProvider, ITransformerProvider {
 
     // Blackboard keys
     public static final Keys BLACKBOARD_KEY_TWEAKCLASSES = Keys.of("TweakClasses");
@@ -260,6 +262,22 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     }
     
     /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getTransformerProvider()
+     */
+    @Override
+    public ITransformerProvider getTransformerProvider() {
+        return this;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getClassTracker()
+     */
+    @Override
+    public IClassTracker getClassTracker() {
+        return this.classLoaderUtil;
+    }
+    
+    /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IClassProvider#findClass(
      *      java.lang.String)
      */
@@ -313,40 +331,6 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     @Override
     public InputStream getResourceAsStream(String name) {
         return Launch.classLoader.getResourceAsStream(name);
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#registerInvalidClass(
-     *      java.lang.String)
-     */
-    @Override
-    public void registerInvalidClass(String className) {
-        this.classLoaderUtil.registerInvalidClass(className);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#isClassLoaded(
-     *      java.lang.String)
-     */
-    @Override
-    public boolean isClassLoaded(String className) {
-        return this.classLoaderUtil.isClassLoaded(className);
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#getClassRestrictions(
-     *      java.lang.String)
-     */
-    @Override
-    public String getClassRestrictions(String className) {
-        String restrictions = "";
-        if (this.classLoaderUtil.isClassClassLoaderExcluded(className, null)) {
-            restrictions = "PACKAGE_CLASSLOADER_EXCLUSION";
-        }
-        if (this.classLoaderUtil.isClassTransformerExcluded(className, null)) {
-            restrictions = (restrictions.length() > 0 ? restrictions + "," : "") + "PACKAGE_TRANSFORMER_EXCLUSION";
-        }
-        return restrictions;
     }
     
     /* (non-Javadoc)

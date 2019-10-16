@@ -97,10 +97,20 @@ public interface IMixinService {
      */
     public abstract IClassBytecodeProvider getBytecodeProvider();
     
-//    /**
-//     * Return the synthetic class registry for this service
-//     */
-//    public abstract ISyntheticClassRegistry getSyntheticClassRegistry();
+    /**
+     * Return the transformer provider for this service. <b>Note that unlike
+     * other service components, this component is allowed to be <tt>null</tt>
+     * for services which do not support transformers, or don't support
+     * interacting with them</b>!
+     */
+    public abstract ITransformerProvider getTransformerProvider();
+    
+    /**
+     * Return the class tracker for this service. <b>Note that unlike
+     * other service components, this component is allowed to be <tt>null</tt>
+     * for services which do not support this functionality</b>!
+     */
+    public abstract IClassTracker getClassTracker();
     
     /**
      * Get additional platform agents for this service 
@@ -129,49 +139,6 @@ public interface IMixinService {
      * @return input stream or null if resource not found
      */
     public abstract InputStream getResourceAsStream(String name);
-
-    /**
-     * Register an invalid class with the service classloader
-     * 
-     * @param className invalid class name
-     */
-    public abstract void registerInvalidClass(String className);
-
-    /**
-     * Check whether the specified class was already loaded by the service
-     * classloader
-     * 
-     * @param className class name to check
-     * @return true if the class was already loaded
-     */
-    public abstract boolean isClassLoaded(String className);
-
-    /**
-     * Check whether the specified class name is subject to any restrictions in
-     * the context of this service
-     * 
-     * @param className class name to check
-     * @return comma-separated list of restrictions, empty string if no
-     *      restrictions apply
-     */
-    public abstract String getClassRestrictions(String className);
-
-    /**
-     * Get currently available transformers in the environment
-     */
-    public abstract Collection<ITransformer> getTransformers();
-
-    /**
-     * Get currently available transformers in the environment
-     */
-    public abstract Collection<ITransformer> getDelegatedTransformers();
-    
-    /**
-     * Adds a transformer to the transformer exclusions list
-     * 
-     * @param name Class transformer exclusion to add
-     */
-    public abstract void addTransformerExclusion(String name);
 
     /**
      * Get the detected side name for this environment

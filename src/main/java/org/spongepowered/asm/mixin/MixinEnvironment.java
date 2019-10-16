@@ -47,6 +47,7 @@ import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.obfuscation.RemapperChain;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.ITransformer;
+import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.util.Constants;
@@ -1263,7 +1264,8 @@ public final class MixinEnvironment implements ITokenProvider {
     @Deprecated
     public List<ITransformer> getTransformers() {
         MixinEnvironment.logger.warn("MixinEnvironment::getTransformers is deprecated!");
-        return (List<ITransformer>)this.service.getTransformers();
+        ITransformerProvider transformers = this.service.getTransformerProvider();
+        return transformers != null ? (List<ITransformer>)transformers.getTransformers() : Collections.<ITransformer>emptyList();
     }
 
     /**
@@ -1275,7 +1277,10 @@ public final class MixinEnvironment implements ITokenProvider {
     @Deprecated
     public void addTransformerExclusion(String name) {
         MixinEnvironment.logger.warn("MixinEnvironment::addTransformerExclusion is deprecated!");
-        this.service.addTransformerExclusion(name);
+        ITransformerProvider transformers = this.service.getTransformerProvider();
+        if (transformers != null) {
+            transformers.addTransformerExclusion(name);
+        }
     }
 
     /* (non-Javadoc)

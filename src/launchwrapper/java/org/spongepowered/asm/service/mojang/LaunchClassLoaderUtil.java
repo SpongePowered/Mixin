@@ -29,6 +29,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import org.spongepowered.asm.service.IClassTracker;
+
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -37,7 +39,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  * them to perform some validation tasks, and insert entries for mixin "classes"
  * into the invalid classes set.
  */
-final class LaunchClassLoaderUtil {
+final class LaunchClassLoaderUtil implements IClassTracker {
     
     private static final String CACHED_CLASSES_FIELD = "cachedClasses";
     private static final String INVALID_CLASSES_FIELD = "invalidClasses";
@@ -67,7 +69,7 @@ final class LaunchClassLoaderUtil {
         this.classLoaderExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.CLASS_LOADER_EXCEPTIONS_FIELD);
         this.transformerExceptions = LaunchClassLoaderUtil.<Set<String>>getField(classLoader, LaunchClassLoaderUtil.TRANSFORMER_EXCEPTIONS_FIELD);
     }
-    
+
     /**
      * Get the classloader
      */
@@ -82,8 +84,25 @@ final class LaunchClassLoaderUtil {
      * @param name class name
      * @return true if the class name exists in the cache
      */
-    boolean isClassLoaded(String name) {
+    @Override
+    public boolean isClassLoaded(String name) {
         return this.cachedClasses.containsKey(name);
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getClassRestrictions(
+     *      java.lang.String)
+     */
+    @Override
+    public String getClassRestrictions(String className) {
+        String restrictions = "";
+        if (this.isClassClassLoaderExcluded(className, null)) {
+            restrictions = "PACKAGE_CLASSLOADER_EXCLUSION";
+        }
+        if (this.isClassTransformerExcluded(className, null)) {
+            restrictions = (restrictions.length() > 0 ? restrictions + "," : "") + "PACKAGE_TRANSFORMER_EXCLUSION";
+        }
+        return restrictions;
     }
 
     /**
@@ -143,7 +162,8 @@ final class LaunchClassLoaderUtil {
      * 
      * @param name class name
      */
-    void registerInvalidClass(String name) {
+    @Override
+    public void registerInvalidClass(String name) {
         if (this.invalidClasses != null) {
             this.invalidClasses.add(name);
         }

@@ -34,7 +34,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.transformer.MixinTransformationHandler;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
-import org.spongepowered.asm.service.ITransformer;
+import org.spongepowered.asm.service.IClassTracker;
+import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.util.IConsumer;
 
@@ -171,6 +172,25 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
         }
         return this.bytecodeProvider;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getTransformerProvider()
+     */
+    @Override
+    public ITransformerProvider getTransformerProvider() {
+        return null;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getClassTracker()
+     */
+    @Override
+    public IClassTracker getClassTracker() {
+        if (this.classTracker == null) {
+            this.classTracker = new ModLauncherClassTracker();
+        }
+        return this.classTracker;
+    }
 
     /**
      * Get (or create) the transformation handler
@@ -180,16 +200,6 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
             this.transformationHandler = new MixinTransformationHandler();
         }
         return this.transformationHandler;
-    }
-
-    /**
-     * Get (or create) the class tracker
-     */
-    private ModLauncherClassTracker getClassTracker() {
-        if (this.classTracker == null) {
-            this.classTracker = new ModLauncherClassTracker();
-        }
-        return this.classTracker;
     }
     
     /* (non-Javadoc)
@@ -219,59 +229,6 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
         return Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#registerInvalidClass(
-     *      java.lang.String)
-     */
-    @Override
-    public void registerInvalidClass(String className) {
-        this.getClassTracker().registerInvalidClass(className);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#isClassLoaded(
-     *      java.lang.String)
-     */
-    @Override
-    public boolean isClassLoaded(String className) {
-        return this.getClassTracker().isClassLoaded(className);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#getClassRestrictions(
-     *      java.lang.String)
-     */
-    @Override
-    public String getClassRestrictions(String className) {
-        return this.getClassTracker().getClassRestrictions(className);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#getTransformers()
-     */
-    @Override
-    public Collection<ITransformer> getTransformers() {
-        return ImmutableList.<ITransformer>of();
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService
-     *      #getDelegatedTransformers()
-     */
-    @Override
-    public Collection<ITransformer> getDelegatedTransformers() {
-        return ImmutableList.<ITransformer>of();
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#addTransformerExclusion(
-     *      java.lang.String)
-     */
-    @Override
-    public void addTransformerExclusion(String name) {
-        // TODO ?
-    }
-
     /**
      * Internal method to retrieve the class processors which will be called by
      * the launch plugin
@@ -279,7 +236,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     public Collection<IClassProcessor> getProcessors() {
         return ImmutableList.<IClassProcessor>of(
             this.getTransformationHandler(),
-            this.getClassTracker()
+            (IClassProcessor)this.getClassTracker()
         );
     }
 

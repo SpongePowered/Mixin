@@ -32,6 +32,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.Phases;
+import org.spongepowered.asm.service.IClassTracker;
 
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase;
 
@@ -40,25 +41,40 @@ import cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase;
  * TCL and class load events so we can report when classes were loaded before
  * we could transform them
  */
-public class ModLauncherClassTracker implements IClassProcessor {
+public class ModLauncherClassTracker implements IClassProcessor, IClassTracker {
     
     private final Set<String> invalidClasses = new HashSet<String>();
     
     private final Set<String> loadedClasses = new HashSet<String>();
     
-    void registerInvalidClass(String className) {
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IClassTracker#registerInvalidClass(
+     *      java.lang.String)
+     */
+    @Override
+    public void registerInvalidClass(String className) {
         synchronized (this.invalidClasses) {
             this.invalidClasses.add(className);
         }
     }
     
-    boolean isClassLoaded(String className) {
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IClassTracker#isClassLoaded(
+     *      java.lang.String)
+     */
+    @Override
+    public boolean isClassLoaded(String className) {
         synchronized (this.loadedClasses) {
             return this.loadedClasses.contains(className);
         }
     }
 
-    String getClassRestrictions(String className) {
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IClassTracker#getClassRestrictions(
+     *      java.lang.String)
+     */
+    @Override
+    public String getClassRestrictions(String className) {
         return ""; // TODO ?
     }
 

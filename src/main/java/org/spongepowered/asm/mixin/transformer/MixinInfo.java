@@ -64,8 +64,8 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
+import org.spongepowered.asm.service.IClassTracker;
 import org.spongepowered.asm.service.IMixinService;
-import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.ASM;
@@ -703,11 +703,6 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     }
     
     /**
-     * Mixin service
-     */
-    private static final IMixinService classLoaderUtil = MixinService.getService();
-
-    /**
      * Global order of mixin infos, used to determine ordering between mixins
      * with equivalent priority
      */
@@ -843,7 +838,10 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
             // Inject the mixin class name into the LaunchClassLoader's invalid
             // classes set so that any classes referencing the mixin directly will
             // cause the game to crash
-            MixinInfo.classLoaderUtil.registerInvalidClass(this.className);
+            IClassTracker tracker = this.service.getClassTracker();
+            if (tracker != null) {
+                tracker.registerInvalidClass(this.className);
+            }
         }
         
         // Read the class bytes and transform
@@ -906,13 +904,14 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
             throw new InvalidMixinException(this, String.format("The mixin '%s' is missing an @Mixin annotation", this.className));
         }
         
+        IClassTracker tracker = this.service.getClassTracker();
         List<DeclaredTarget> declaredTargets = new ArrayList<DeclaredTarget>();
         for (Object target : this.readTargets(mixin)) {
             DeclaredTarget declaredTarget = DeclaredTarget.of(target, this);
             if (declaredTarget == null) {
                 continue;
             }
-            if (MixinInfo.classLoaderUtil.isClassLoaded(declaredTarget.name) && !this.isReloading()) {
+            if (tracker != null && tracker.isClassLoaded(declaredTarget.name) && !this.isReloading()) {
                 String message = String.format("Critical problem: %s target %s was loaded too early.", this, declaredTarget.name);
                 if (this.parent.isRequired()) {
                     throw new MixinTargetAlreadyLoadedException(this, message, declaredTarget.name);
@@ -1265,9 +1264,12 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         ClassNode classNode = null;
 
         try {
-            String restrictions = this.service.getClassRestrictions(mixinClassName);
-            if (restrictions.length() > 0) {
-                this.logger.error("Classloader restrictions [{}] encountered loading {}, name: {}", restrictions, this, mixinClassName);
+            IClassTracker tracker = this.service.getClassTracker();
+            if (tracker != null) {
+                String restrictions = tracker.getClassRestrictions(mixinClassName);
+                if (restrictions.length() > 0) {
+                    this.logger.error("Classloader restrictions [{}] encountered loading {}, name: {}", restrictions, this, mixinClassName);
+                }
             }
             classNode = this.service.getBytecodeProvider().getClassNode(mixinClassName, true);
         } catch (ClassNotFoundException ex) {
