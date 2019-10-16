@@ -53,6 +53,7 @@ import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionClassExpo
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
+import org.spongepowered.asm.mixin.transformer.throwables.ReEntrantTransformerError;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -282,7 +283,15 @@ public class MixinProcessor {
         boolean locked = this.lock.push().check();
         Section mixinTimer = this.profiler.begin("mixin");
 
-        if (!locked) {
+        if (locked) {
+            for (MixinConfig config : this.pendingConfigs) {
+                if (config.hasPendingMixinsFor(name)) {
+                    ReEntrantTransformerError error = new ReEntrantTransformerError("Re-entrance error.");
+                    MixinProcessor.logger.warn("Re-entrance detected during prepare phase, this will cause serious problems.", error);
+                    throw error;
+                }
+            }
+        } else {
             try {
                 this.checkSelect(environment);
             } catch (Exception ex) {
@@ -321,15 +330,16 @@ public class MixinProcessor {
                     mixins.addAll(config.getMixinsFor(name));
                 }
             }
-            
+
             if (invalidRef) {
                 throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", name));
             }
             
             if (mixins != null) {
+                
                 // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
                 if (locked) {
-                    MixinApplyError error = new MixinApplyError("Re-entrance error.");
+                    ReEntrantTransformerError error = new ReEntrantTransformerError("Re-entrance error.");
                     MixinProcessor.logger.warn("Re-entrance detected, this will cause serious problems.", error);
                     throw error;
                 }
@@ -353,7 +363,8 @@ public class MixinProcessor {
                     this.handleMixinApplyError(name, th, environment);
                 }
             }
-
+        } catch (MixinTransformerError er) {
+            throw er;
         } catch (Throwable th) {
             th.printStackTrace();
             this.dumpClassOnFailure(name, targetClassNode, environment);

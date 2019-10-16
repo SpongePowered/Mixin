@@ -160,6 +160,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private final transient Set<String> unhandledTargets = new HashSet<String>();
     
     /**
+     * Mixins which have been parsed but not yet prepared 
+     */
+    private final transient List<MixinInfo> pendingMixins = new ArrayList<MixinInfo>();
+    
+    /**
      * All mixins loaded by this config 
      */
     private final transient List<MixinInfo> mixins = new ArrayList<MixinInfo>();
@@ -688,7 +693,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
 
-    private void prepareMixins(List<String> mixinClasses, boolean suppressPlugin) {
+    private void prepareMixins(List<String> mixinClasses, boolean ignorePlugin) {
         if (mixinClasses == null) {
             return;
         }
@@ -703,9 +708,25 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             MixinInfo mixin = null;
             
             try {
-                mixin = new MixinInfo(this.service, this, mixinClass, this.plugin, suppressPlugin);
+                this.pendingMixins.add(mixin = new MixinInfo(this.service, this, mixinClass, this.plugin, ignorePlugin));
+                MixinConfig.globalMixinList.add(fqMixinClass);
+            } catch (InvalidMixinException ex) {
+                if (this.required) {
+                    throw ex;
+                }
+                this.logger.error(ex.getMessage(), ex);
+            } catch (Exception ex) {
+                if (this.required) {
+                    throw new InvalidMixinException(mixin, "Error initialising mixin " + mixin + " - " + ex.getClass() + ": " + ex.getMessage(), ex);
+                }
+                this.logger.error(ex.getMessage(), ex);
+            }
+        }
+        
+        for (MixinInfo mixin : this.pendingMixins) {
+            try {
+                mixin.parseTargets();
                 if (mixin.getTargetClasses().size() > 0) {
-                    MixinConfig.globalMixinList.add(fqMixinClass);
                     for (String targetClass : mixin.getTargetClasses()) {
                         String targetClassName = targetClass.replace('/', '.');
                         this.mixinsFor(targetClassName).add(mixin);
@@ -728,6 +749,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 this.logger.error(ex.getMessage(), ex);
             }
         }
+        
+        this.pendingMixins.clear();
     }
 
     void postApply(String transformedName, ClassNode targetClass) {
@@ -962,6 +985,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     public boolean hasMixinsFor(String targetClass) {
         return this.mixinMapping.containsKey(targetClass);
+    }
+    
+    boolean hasPendingMixinsFor(String targetClass) {
+        if (this.packageMatch(targetClass)) {
+            return false;
+        }
+        for (MixinInfo pendingMixin : this.pendingMixins) {
+            if (pendingMixin.hasDeclaredTarget(targetClass)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
