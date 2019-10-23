@@ -24,15 +24,15 @@
  */
 package org.spongepowered.asm.mixin;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * I'm probably going to the special hell for this
+ * This annotation is used to define information for a soft-implemented
+ * interface. See {@link Implements} for details.
  */
-@Target(ElementType.TYPE)
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.CLASS)
 public @interface Interface {
     

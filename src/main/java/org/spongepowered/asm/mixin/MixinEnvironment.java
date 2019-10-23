@@ -1029,6 +1029,20 @@ public final class MixinEnvironment implements ITokenProvider {
         return mixinConfigs;
     }
     
+    /**
+     * Add a mixin configuration to the blackboard
+     * 
+     * @param config Name of configuration resource to add
+     * @return fluent interface
+     * @deprecated use Mixins::addConfiguration instead
+     */
+    @Deprecated
+    public MixinEnvironment addConfiguration(String config) {
+        MixinEnvironment.logger.warn("MixinEnvironment::addConfiguration is deprecated and will be removed. Use Mixins::addConfiguration instead!");
+        Mixins.addConfiguration(config, this);
+        return this;
+    }
+
     void registerConfig(String config) {
         List<String> configs = this.getMixinConfigs();
         if (!configs.contains(config)) {

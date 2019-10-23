@@ -33,6 +33,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.code.Injector;
@@ -80,6 +81,11 @@ public class ModifyConstantInjector extends RedirectInjector {
             this.checkTargetModifiers(target, false);
             this.injectExpandedConstantModifier(target, (JumpInsnNode)targetNode);
             return;
+        }
+        
+        if (targetNode instanceof TypeInsnNode) {
+            // TODO inject at type constant
+            throw new InvalidInjectionException(this.info, "Inject at TypeInsnNode not implemented");
         }
         
         if (Bytecode.isConstant(targetNode)) {
@@ -130,17 +136,16 @@ public class ModifyConstantInjector extends RedirectInjector {
     }
 
     private AbstractInsnNode invokeConstantHandler(Type constantType, Target target, Extension extraStack, InsnList before, InsnList after) {
-        final String handlerDesc = Bytecode.generateDescriptor(constantType, constantType);
-        final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
+        InjectorData handler = new InjectorData(target, "constant modifier");
+        this.validateParams(handler, constantType, constantType);
 
         if (!this.isStatic) {
             before.insert(new VarInsnNode(Opcodes.ALOAD, 0));
             extraStack.add();
         }
         
-        if (withArgs) {
-            this.pushArgs(target.arguments, after, target.getArgIndices(), 0, target.arguments.length);
-            extraStack.add(target.arguments);
+        if (handler.captureTargetArgs > 0) {
+            this.pushArgs(target.arguments, after, target.getArgIndices(), 0, handler.captureTargetArgs, extraStack);
         }
         
         return this.invokeHandler(after);

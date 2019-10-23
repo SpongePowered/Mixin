@@ -31,6 +31,7 @@ import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
@@ -41,6 +42,65 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * Specifies that this mixin method should inject a callback (or
  * callback<b>s</b>) to itself in the target method(s) identified by
  * {@link #method}.
+ * 
+ * <p>Callbacks are simple injectors which simply inject a call to the decorated
+ * method (the <em>handler</em>) in the <em>target</em> method (or methods)
+ * selected by the selectors specified in {@link #method}. Callback Injectors
+ * can also capture arguments and local variables from the <em>target</em> for
+ * use in the handler.</p>
+ * 
+ * <p>Callback handler methods should always return <tt>void</tt> and should
+ * have the same <tt>static</tt>-ness as their target (though it is allowable to
+ * have a <tt>static</tt> callback injected into an instance method, and for
+ * obvious reasons the inverse is not permitted).</p> 
+ * 
+ * <h3>Basic usage</h3>
+ * 
+ * <p>The simplest usage of <tt>&#064;Inject</tt> captures no context from the
+ * target scope. This is particularly useful if the injector is targetting
+ * multiple methods with different signatures. In this case only the 
+ * {@link CallbackInfo} (or {@link CallbackInfoReturnable} as appropriate) is
+ * required.</p>
+ * 
+ * <blockquote><tt>private void onSomeEvent(CallbackInfo ci)</tt></blockquote>
+ * 
+ * <h3>Capture target arguments</h3>
+ * 
+ * <p>Callbacks can also capture the arguments passed to the target method. To
+ * do so specify the target arguments before the {@link CallbackInfo}:</p>
+ * 
+ * <blockquote><tt>private void onSomeEvent(int arg1, String arg2,
+ *      CallbackInfo ci)</tt></blockquote>
+ * 
+ * <h3>Surrogate methods</h3>
+ * 
+ * <p>If injecting into multiple methods with different target arguments it is 
+ * obviously possible to ignore the target arguments (see "Basic Usage" above)
+ * but this may be unsuitable if arguments from the target are required. If you
+ * need to inject into multiple methods but also wish to capture method
+ * arguments you may provide a <em>surrogate</em> method with the alternative
+ * signature. In fact you may provide as many surrogates as required by the
+ * injection. Surrogate methods much have the same name as the handler method
+ * and must be decorated with {@link Surrogate}. A surrogate may also be
+ * required where the LVT of a method with <em>local capture</em> (see below) is
+ * known to change between different environments or injection points.</p>
+ * 
+ * <h3>Capture local variables</h3>
+ * 
+ * <p>In addition to capturing the target method arguments, it may be desirable
+ * to capture locally-scoped variables from the target method at the point of
+ * injection. This is usually executed in two stages:</p>
+ * 
+ * <ol>
+ *   <li>Set the {@link #locals()} value of your injection to
+ *     {@link LocalCapture#PRINT} and run the application.</li>
+ *   <li>When the injector is processed, a listing of the LVT is produced
+ *     accompanied by a generated signature for your handler method including
+ *     the discovered args. Modify your handler signature accordingly.</li>
+ * </ol>
+ * 
+ * <p>For more details see {@link #locals()}.</p> 
+ * 
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -113,6 +173,13 @@ public @interface Inject {
      * provide <em>overloads</em> for the handler method which will become
      * surrogate targets for the orphaned injector by annotating them with an
      * {@link Surrogate} annotation.</p>
+     * 
+     * <p>You can improve the robustness of your local capture injection by only
+     * specifying locals up to the last variable you wish to use. For example if
+     * the target LVT contains <tt>&lt;int, int, int, float, String&gt;</tt> and
+     * you only need the <tt>float</tt> value, you can choose to omit the unused
+     * <tt>String</tt> and changes to the LVT beyond that point will not affect
+     * your injection.</p>
      * 
      * <p>It is also important to nominate the failure behaviour to follow when
      * local capture fails and so all {@link LocalCapture} behaviours which

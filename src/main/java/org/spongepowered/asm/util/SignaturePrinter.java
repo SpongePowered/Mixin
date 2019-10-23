@@ -85,7 +85,15 @@ public class SignaturePrinter {
     public SignaturePrinter(String name, String desc) {
         this(name, Type.getReturnType(desc), Type.getArgumentTypes(desc));
     }
+    
+    public SignaturePrinter(Type[] args) {
+        this(null, null, args);
+    }
 
+    public SignaturePrinter(Type returnType, Type[] args) {
+        this(null, returnType, args);
+    }
+    
     public SignaturePrinter(String name, Type returnType, Type[] args) {
         this.name = name;
         this.returnType = returnType;
@@ -193,7 +201,8 @@ public class SignaturePrinter {
      */
     @Override
     public String toString() {
-        return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(this.name), false, true).toString();
+        String name = this.name != null ? this.name : "method";
+        return this.appendArgs(new StringBuilder().append(this.modifiers).append(" ").append(name), false, true).toString();
     }
     
     /**
@@ -254,6 +263,17 @@ public class SignaturePrinter {
         }
         return sb;
     }
+    
+    /**
+     * Get the source code name for the specified type
+     * 
+     * @param type Type to generate a friendly name for
+     * @return String representation of the specified type, eg "int" for an
+     *         integer primitive or "String" for java.lang.String
+     */
+    public static String getTypeName(Type type) {
+        return SignaturePrinter.getTypeName(type, false, true);
+    }
 
     /**
      * Get the source code name for the specified type
@@ -277,6 +297,9 @@ public class SignaturePrinter {
      *         integer primitive or "String" for java.lang.String
      */
     public static String getTypeName(Type type, boolean box, boolean fullyQualified) {
+        if (type == null) {
+            return "{null?}";
+        }
         switch (type.getSort()) {
             case Type.VOID:    return box ? "Void"      : "void";
             case Type.BOOLEAN: return box ? "Boolean"   : "boolean";

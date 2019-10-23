@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.points.*;
@@ -44,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.points.*;
  * should be consulted for the meaning of the argument to that particular class.
  * A general description of each parameter is provided below. 
  */
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface At {
     

@@ -35,13 +35,20 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * defining the query parameters. They are used by injectors and other
  * components which need to identify a target element using a string.
  * 
- * <h4>Explicit Target Selectors</h4>
+ * <h3>Explicit Target Selectors</h3>
  * 
  * <p><b>Explicit</b> Target Selectors are handled internally using
  * {@link MemberInfo} structs, see the javadoc for {@link MemberInfo} for the
  * supported variants and examples.</p>
  */
 public interface ITargetSelector {
+    
+    /**
+     * Get the next target selector in this path (or <tt>null</tt> if this
+     * selector is the last selector in the chain. Called at recurse points in
+     * the subject in order to match against the child subject.  
+     */
+    public abstract ITargetSelector next();
     
     /**
      * Configure and return a modified version of this selector by consuming the

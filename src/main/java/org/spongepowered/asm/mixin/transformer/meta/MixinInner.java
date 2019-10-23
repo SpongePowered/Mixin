@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer.meta;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -33,7 +32,7 @@ import java.lang.annotation.Target;
  * Decoration annotation used by the mixin inner class generator to mark inner
  * classes which have been generated from an existing inner class in a mixin 
  */
-@Target(ElementType.TYPE)
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.CLASS)
 public @interface MixinInner {
 

@@ -257,10 +257,14 @@ public final class Annotations {
      *
      * @param method Source method
      * @param annotationClass Type of annotation to search for
-     * @param paramIndex Index of the parameter to fetch annotation for
+     * @param paramIndex Index of the parameter to fetch annotation for, or the
+     *      method itself if less than zero
      * @return the annotation, or null if not present
      */
     public static AnnotationNode getVisibleParameter(MethodNode method, Class<? extends Annotation> annotationClass, int paramIndex) {
+        if (paramIndex < 0) {
+            return Annotations.getVisible(method, annotationClass);
+        }
         return Annotations.getParameter(method.visibleParameterAnnotations, Type.getDescriptor(annotationClass), paramIndex);
     }
 
@@ -270,10 +274,14 @@ public final class Annotations {
      *
      * @param method Source method
      * @param annotationClass Type of annotation to search for
-     * @param paramIndex Index of the parameter to fetch annotation for
+     * @param paramIndex Index of the parameter to fetch annotation for, or the
+     *      method itself if less than zero
      * @return the annotation, or null if not present
      */
     public static AnnotationNode getInvisibleParameter(MethodNode method, Class<? extends Annotation> annotationClass, int paramIndex) {
+        if (paramIndex < 0) {
+            return Annotations.getInvisible(method, annotationClass);
+        }
         return Annotations.getParameter(method.invisibleParameterAnnotations, Type.getDescriptor(annotationClass), paramIndex);
     }
 
@@ -506,12 +514,16 @@ public final class Annotations {
         }
         
         int existingIndex = 0;
-        for (int pos = 0; pos < annotation.values.size() - 1; pos += 2) {
-            String keyName = annotation.values.get(pos).toString();
-            if (key.equals(keyName)) {
-                existingIndex = pos + 1;
-                break;
+        if (annotation.values != null) {
+            for (int pos = 0; pos < annotation.values.size() - 1; pos += 2) {
+                String keyName = annotation.values.get(pos).toString();
+                if (key.equals(keyName)) {
+                    existingIndex = pos + 1;
+                    break;
+                }
             }
+        } else {
+            annotation.values = new ArrayList<Object>();
         }
         
         if (existingIndex > 0) {

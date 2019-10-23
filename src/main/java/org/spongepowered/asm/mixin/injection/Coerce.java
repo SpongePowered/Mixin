@@ -33,13 +33,16 @@ import java.lang.annotation.Target;
  * <p>This annotation has two usages applicable to Callback Injectors (defined
  * using {@link Inject &#064;Inject}. For local capture injectors, it indicates
  * that the injector should coerce top-level primitive types (int) to covariant
- * types defined on the handler. For other injectors, it can be used on a
- * reference type to indicate that the intended type is covariant over the
- * argument type (or that the argument type is contravariant on the target class
- * type). This can be used for multi-target injectors with a bounded type
- * argument on the class or target method.</p>
+ * types defined on the handler. It can also be used on a reference type to
+ * indicate that the intended type is covariant over the argument type (or that
+ * the argument type is contravariant on the target class type). This can be
+ * used for multi-target injectors with a bounded type argument on the class or
+ * target method. It is also acceptable to use an interface directly or
+ * indirectly implemented by the relevant class, including interfaces applied by
+ * other mixins.</p>
  * 
- * <p>During LVT generation it is not always possible to inflect the exact local
+ * <p><tt>&#064;Coerce</tt> also has an important usage with primitive types. It
+ * is not always possible during LVT generation to determine the exact local
  * type for types represented internally as integers, for example booleans and
  * shorts. However adding a surrogate for these cases is overkill when the type
  * is known for certain by the injector. Since the bytecode for all types stored
@@ -56,8 +59,15 @@ import java.lang.annotation.Target;
  * indicate that an incoming parameter can be consumed as a valid supertype, up
  * to and including {@link Object}. This is particularly useful when an argument
  * on the target method invocation is inaccessible or unknown.</p>
+ * 
+ * <p>Since Mixin <tt>0.8</tt> it is also possible to use <tt>&#064;Coerce</tt>
+ * on the return type of a <em>field gettter</em> or <em>method invocation</em>
+ * redirector. To do so simply annotate the method itself. Note that doing so
+ * will cast the return type back to the original return type as part of the
+ * injection, so the object must be of an appropriate type regardless of
+ * visibility.</p>
  */
-@Target({ ElementType.PARAMETER })
+@Target({ ElementType.PARAMETER, ElementType.METHOD })
 public @interface Coerce {
     
 }

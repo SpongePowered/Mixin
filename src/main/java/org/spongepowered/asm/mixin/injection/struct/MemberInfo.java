@@ -262,6 +262,11 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     }
     
     @Override
+    public ITargetSelector next() {
+        return null; // Not supported yet
+    }
+    
+    @Override
     public String getOwner() {
         return this.owner;
     }

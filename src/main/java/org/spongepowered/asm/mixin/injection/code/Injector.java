@@ -49,8 +49,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
@@ -161,7 +161,7 @@ public abstract class Injector {
     
     @Override
     public String toString() {
-        return String.format("%s::%s", this.classNode.name, this.methodNode.name);
+        return String.format("%s::%s", this.classNode.name, this.info.getMethodName());
     }
 
     /**
@@ -377,7 +377,12 @@ public abstract class Injector {
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
      */
     public static boolean canCoerce(Type from, Type to) {
-        if (from.getSort() == Type.OBJECT && to.getSort() == Type.OBJECT) {
+        int fromSort = from.getSort();
+        int toSort = to.getSort();
+        if (fromSort >= Type.ARRAY && toSort >= Type.ARRAY && fromSort == toSort) {
+            if (fromSort == Type.ARRAY && from.getDimensions() != to.getDimensions()) {
+                return false;
+            }
             return Injector.canCoerce(ClassInfo.forType(from, TypeLookup.ELEMENT_TYPE), ClassInfo.forType(to, TypeLookup.ELEMENT_TYPE));
         }
         
@@ -422,7 +427,7 @@ public abstract class Injector {
      * @return true if <tt>from</tt> can be coerced to <tt>to</tt>
      */
     private static boolean canCoerce(ClassInfo from, ClassInfo to) {
-        return from != null && to != null && (to == from || to.hasSuperClass(from, Traversal.NONE, true));
+        return from != null && to != null && (to == from || to.hasSuperClass(from, Traversal.ALL, true));
     }
 
 }

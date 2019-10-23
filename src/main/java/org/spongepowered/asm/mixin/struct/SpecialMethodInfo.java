@@ -30,6 +30,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.util.asm.MethodNodeEx;
 
 /**
  * Information about a special mixin method such as an injector or accessor
@@ -50,6 +51,11 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
      * Annotated method
      */
     protected final MethodNode method;
+    
+    /**
+     * Original name of the method, if available 
+     */
+    protected final String methodName;
 
     /**
      * Mixin data
@@ -61,6 +67,7 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
         this.method = method;
         this.annotation = annotation;
         this.classNode = mixin.getTargetClassNode();
+        this.methodName = method instanceof MethodNodeEx ? ((MethodNodeEx)this.method).getOriginalName() : method.name;
     }
     
     /**
@@ -100,6 +107,13 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
     @Override
     public final MethodNode getMethod() {
         return this.method;
+    }
+    
+    /**
+     * Get the original name of the method, if available
+     */
+    public String getMethodName() {
+        return this.methodName;
     }
 
 }

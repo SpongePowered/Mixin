@@ -31,26 +31,31 @@ import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
-import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.primitives.Ints;
 
@@ -89,6 +94,8 @@ import com.google.common.primitives.Ints;
  * being created.</p>
  */
 public class RedirectInjector extends InvokeInjector {
+    
+    private static final String NPE = "java/lang/NullPointerException";
     
     private static final String KEY_NOMINATORS = "nominators";
     private static final String KEY_FUZZ = "fuzz";
@@ -129,36 +136,94 @@ public class RedirectInjector extends InvokeInjector {
         
         public static final String KEY = "ctor";
         
-        public boolean wildcard = false;
+        boolean wildcard = false;
         
-        public int injected = 0;
+        int injected = 0;
+        
+        InvalidInjectionException lastException;
+
+        public void throwOrCollect(InvalidInjectionException ex) {
+            if (!this.wildcard) {
+                throw ex;
+            }
+            this.lastException = ex;
+        }
         
     }
     
     /**
      * Data bundle for invoke redirectors
      */
-    static class RedirectedInvoke {
+    static class RedirectedInvokeData extends InjectorData {
         
-        final Target target;
         final MethodInsnNode node;
         final Type returnType;
-        final Type[] args;
-        final Type[] locals;
+        final Type[] targetArgs;
+        final Type[] handlerArgs;
         
-        boolean captureTargetArgs = false;
-        
-        RedirectedInvoke(Target target, MethodInsnNode node) {
-            this.target = target;
+        RedirectedInvokeData(Target target, MethodInsnNode node) {
+            super(target);
             this.node = node;
             this.returnType = Type.getReturnType(node.desc);
-            this.args = Type.getArgumentTypes(node.desc);
-            this.locals = node.getOpcode() == Opcodes.INVOKESTATIC
-                    ? this.args
-                    : ObjectArrays.concat(Type.getType("L" + node.owner + ";"), this.args);
+            this.targetArgs = Type.getArgumentTypes(node.desc);
+            this.handlerArgs = node.getOpcode() == Opcodes.INVOKESTATIC
+                    ? this.targetArgs
+                    : ObjectArrays.concat(Type.getObjectType(node.owner), this.targetArgs);
         }
+        
     }
     
+    /**
+     * Data bundle for field redirectors
+     */
+    static class RedirectedFieldData extends InjectorData {
+
+        final FieldInsnNode node;
+        final int opcode;
+        final Type owner;
+        final Type type;
+        final int dimensions;
+        final boolean isStatic;
+        final boolean isGetter;
+        final boolean isSetter;
+        
+        // This is actually the return type for array access, might be int for
+        // array length redirectors
+        Type elementType;
+        int extraDimensions = 1;
+        
+        RedirectedFieldData(Target target, FieldInsnNode node) {
+            super(target);
+            this.node = node;
+            this.opcode = node.getOpcode();
+            this.owner = Type.getObjectType(node.owner);
+            this.type = Type.getType(node.desc);
+            this.dimensions = (this.type.getSort() == Type.ARRAY) ? this.type.getDimensions() : 0;
+            this.isStatic = this.opcode == Opcodes.GETSTATIC || this.opcode == Opcodes.PUTSTATIC;
+            this.isGetter = this.opcode == Opcodes.GETSTATIC || this.opcode == Opcodes.GETFIELD;
+            this.isSetter = this.opcode == Opcodes.PUTSTATIC || this.opcode == Opcodes.PUTFIELD;
+            this.description = this.isGetter ? "field getter" : this.isSetter ? "field setter" : "handler";
+        }
+
+        int getTotalDimensions() {
+            return this.dimensions + this.extraDimensions;
+        }
+
+        Type[] getArrayArgs(Type... extra) {
+            int dimensions = this.getTotalDimensions();
+            Type[] args = new Type[dimensions + extra.length];
+            for (int i = 0; i < args.length; i++) {
+                args[i] = i == 0 ? this.type : i < dimensions ? Type.INT_TYPE : extra[dimensions - i];
+            }
+            return args;
+        }
+
+    }
+    
+    /**
+     * Meta is used to decorate the target node with information about this
+     * injection
+     */
     protected Meta meta;
 
     private Map<BeforeNew, ConstructorRedirectData> ctorRedirectors = new HashMap<BeforeNew, ConstructorRedirectData>();
@@ -297,7 +362,8 @@ public class RedirectInjector extends InvokeInjector {
         if (node.getOriginalTarget() instanceof TypeInsnNode && node.getOriginalTarget().getOpcode() == Opcodes.NEW) {
             ConstructorRedirectData meta = node.<ConstructorRedirectData>getDecoration(ConstructorRedirectData.KEY);
             if (meta.wildcard && meta.injected == 0) {
-                throw new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s", this.annotationType, target));
+                throw new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s", this.annotationType, target),
+                        meta.lastException);
             }
         }
     }
@@ -307,150 +373,99 @@ public class RedirectInjector extends InvokeInjector {
      */
     @Override
     protected void injectAtInvoke(Target target, InjectionNode node) {
-        RedirectedInvoke invoke = new RedirectedInvoke(target, (MethodInsnNode)node.getCurrentTarget());
+        RedirectedInvokeData invoke = new RedirectedInvokeData(target, (MethodInsnNode)node.getCurrentTarget());
         
-        this.validateParams(invoke);
+        this.validateParams(invoke, invoke.returnType, invoke.handlerArgs);
         
         InsnList insns = new InsnList();
-        Extension extraLocals = target.extendLocals().add(invoke.locals).add(1);
+        Extension extraLocals = target.extendLocals().add(invoke.handlerArgs).add(1);
         Extension extraStack = target.extendStack().add(1); // Normally only need 1 extra stack pos to store target ref 
-        int[] argMap = this.storeArgs(target, invoke.locals, insns, 0);
-        if (invoke.captureTargetArgs) {
-            int argSize = Bytecode.getArgsSize(target.arguments);
+        int[] argMap = this.storeArgs(target, invoke.handlerArgs, insns, 0);
+        if (invoke.captureTargetArgs > 0) {
+            int argSize = Bytecode.getArgsSize(target.arguments, 0, invoke.captureTargetArgs);
             extraLocals.add(argSize);
             extraStack.add(argSize);
+            // No need to truncate target arg indices, pushArgs ignores args which don't exist
             argMap = Ints.concat(argMap, target.getArgIndices());
         }
-        AbstractInsnNode insn = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
-        target.replaceNode(invoke.node, insn, insns);
+        AbstractInsnNode champion = this.invokeHandlerWithArgs(this.methodArgs, insns, argMap);
+        if (invoke.coerceReturnType && invoke.returnType.getSort() >= Type.ARRAY) {
+            insns.add(new TypeInsnNode(Opcodes.CHECKCAST, invoke.returnType.getInternalName()));
+        }
+        target.replaceNode(invoke.node, champion, insns);
         extraLocals.apply();
         extraStack.apply();
-    }
-
-    /**
-     * Perform validation of an invoke handler parameters, each parameter in the
-     * handler must match the expected type or be annotated with {@link Coerce}
-     * and be a supported supertype of the incoming type.
-     * 
-     * @param invoke invocation being redirected
-     */
-    protected void validateParams(RedirectedInvoke invoke) {
-        int argc = this.methodArgs.length;
-        
-        String description = String.format("%s handler method %s", this.annotationType, this);
-        if (!invoke.returnType.equals(this.returnType)) {
-            throw new InvalidInjectionException(this.info, String.format("%s has an invalid signature. Expected return type %s found %s",
-                    description, this.returnType, invoke.returnType));
-        }
-        
-        for (int index = 0; index < argc; index++) {
-            Type toType = null;
-            if (index >= this.methodArgs.length) {
-                throw new InvalidInjectionException(this.info, String.format(
-                        "%s has an invalid signature. Not enough arguments found for capture of target method args, expected %d but found %d",
-                        description, argc, this.methodArgs.length));
-            }
-            
-            Type fromType = this.methodArgs[index];
-            
-            if (index < invoke.locals.length) {
-                toType = invoke.locals[index];
-            } else {
-                invoke.captureTargetArgs = true;
-                argc = Math.max(argc, invoke.locals.length + invoke.target.arguments.length);
-                int arg = index - invoke.locals.length;
-                if (arg >= invoke.target.arguments.length) {
-                    throw new InvalidInjectionException(this.info, String.format( 
-                            "%s has an invalid signature. Found unexpected additional target argument with type %s at index %d",
-                            description, fromType, index));
-                }
-                toType = invoke.target.arguments[arg];
-            }
-            
-            AnnotationNode coerce = Annotations.getInvisibleParameter(this.methodNode, Coerce.class, index);
-            
-            if (fromType.equals(toType)) {
-                if (coerce != null && this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
-                    Injector.logger.warn("Redundant @Coerce on {} argument {}, {} is identical to {}", description, index, toType, fromType);
-                }
-                
-                continue;
-            }
-            
-            boolean canCoerce = Injector.canCoerce(fromType, toType);
-            if (coerce == null) {
-                throw new InvalidInjectionException(this.info, String.format(
-                        "%s has an invalid signature. Found unexpected argument type %s at index %d, expected %s",
-                        description, fromType, index, toType));
-            }
-            
-            if (!canCoerce) {
-                throw new InvalidInjectionException(this.info, String.format(
-                        "%s has an invalid signature. Cannot @Coerce argument type %s at index %d to %s",
-                        description, toType, index, fromType));
-            }
-        }
     }
 
     /**
      * Redirect a field get or set operation, or an array element access
      */
     private void injectAtFieldAccess(Target target, InjectionNode node) {
-        final FieldInsnNode fieldNode = (FieldInsnNode)node.getCurrentTarget();
-        final int opCode = fieldNode.getOpcode();
-        final Type ownerType = Type.getType("L" + fieldNode.owner + ";");
-        final Type fieldType = Type.getType(fieldNode.desc);
+        RedirectedFieldData field = new RedirectedFieldData(target, (FieldInsnNode)node.getCurrentTarget());
         
-        int targetDimensions = (fieldType.getSort() == Type.ARRAY) ? fieldType.getDimensions() : 0;
         int handlerDimensions = (this.returnType.getSort() == Type.ARRAY) ? this.returnType.getDimensions() : 0;
         
-        if (handlerDimensions > targetDimensions) {
+        if (handlerDimensions > field.dimensions) {
             throw new InvalidInjectionException(this.info, "Dimensionality of handler method is greater than target array on " + this);
-        } else if (handlerDimensions == 0 && targetDimensions > 0) {
+        } else if (handlerDimensions == 0 && field.dimensions > 0) {
             int fuzz = node.<Integer>getDecoration(RedirectInjector.KEY_FUZZ).intValue();
             int opcode = node.<Integer>getDecoration(RedirectInjector.KEY_OPCODE).intValue();
-            this.injectAtArrayField(target, fieldNode, opCode, ownerType, fieldType, fuzz, opcode);
+            this.injectAtArrayField(field, fuzz, opcode);
         } else {
-            this.injectAtScalarField(target, fieldNode, opCode, ownerType, fieldType);
+            this.injectAtScalarField(field);
         }
     }
 
     /**
      * Redirect an array element access
      */
-    private void injectAtArrayField(Target target, FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType, int fuzz, int opcode) {
-        Type elementType = fieldType.getElementType();
-        if (opCode != Opcodes.GETSTATIC && opCode != Opcodes.GETFIELD) {
+    private void injectAtArrayField(RedirectedFieldData field, int fuzz, int opcode) {
+        Type elementType = field.type.getElementType();
+        if (field.opcode != Opcodes.GETSTATIC && field.opcode != Opcodes.GETFIELD) {
             throw new InvalidInjectionException(this.info, String.format("Unspported opcode %s for array access %s",
-                    Bytecode.getOpcodeName(opCode), this.info));
+                    Bytecode.getOpcodeName(field.opcode), this.info));
         } else if (this.returnType.getSort() != Type.VOID) {
             if (opcode != Opcodes.ARRAYLENGTH) {
                 opcode = elementType.getOpcode(Opcodes.IALOAD);
             }
-            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, opcode, fuzz);
-            this.injectAtGetArray(target, fieldNode, varNode, ownerType, fieldType);
+            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(field.target.insns, field.node, opcode, fuzz);
+            this.injectAtGetArray(field, varNode);
         } else {
-            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(target.insns, fieldNode, elementType.getOpcode(Opcodes.IASTORE), fuzz);
-            this.injectAtSetArray(target, fieldNode, varNode, ownerType, fieldType);
+            AbstractInsnNode varNode = BeforeFieldAccess.findArrayNode(field.target.insns, field.node, elementType.getOpcode(Opcodes.IASTORE), fuzz);
+            this.injectAtSetArray(field, varNode);
         }
     }
     
     /**
      * Array element read (xALOAD) or array.length (ARRAYLENGTH)
      */
-    private void injectAtGetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = RedirectInjector.getGetArrayHandlerDescriptor(varNode, this.returnType, fieldType);
-        boolean withArgs = this.checkDescriptor(handlerDesc, target, "array getter");
-        this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array getter");
+    private void injectAtGetArray(RedirectedFieldData field, AbstractInsnNode varNode) {
+        field.description = "array getter";
+        field.elementType = field.type.getElementType();
+        
+        if (varNode != null && varNode.getOpcode() == Opcodes.ARRAYLENGTH) {
+            field.elementType = Type.INT_TYPE;
+            field.extraDimensions = 0;
+        }
+        
+        this.validateParams(field, field.elementType, field.getArrayArgs());
+        this.injectArrayRedirect(field, varNode, "array getter");
     }
 
     /**
      * Array element write (xASTORE)
      */
-    private void injectAtSetArray(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, Type ownerType, Type fieldType) {
-        String handlerDesc = Bytecode.generateDescriptor(null, (Object[])RedirectInjector.getArrayArgs(fieldType, 1, fieldType.getElementType()));
-        boolean withArgs = this.checkDescriptor(handlerDesc, target, "array setter");
-        this.injectArrayRedirect(target, fieldNode, varNode, withArgs, "array setter");
+    private void injectAtSetArray(RedirectedFieldData field, AbstractInsnNode varNode) {
+        field.description = "array setter";
+        Type elementType = field.type.getElementType();
+        int valueArgIndex = field.getTotalDimensions();
+        if (this.checkCoerce(valueArgIndex, elementType, String.format("%s array setter method %s from %s",
+                this.annotationType, this, this.info.getContext()), true)) {
+            elementType = this.methodArgs[valueArgIndex];
+        }
+        
+        this.validateParams(field, Type.VOID_TYPE, field.getArrayArgs(elementType));
+        this.injectArrayRedirect(field, varNode, "array setter");
     }
 
     /**
@@ -459,35 +474,38 @@ public class RedirectInjector extends InvokeInjector {
      * actual handler signature, the correct arguments are already on the stack
      * thanks to the nature of xALOAD and xASTORE.
      * 
+     * @param varNode array access node
+     * @param type description of access type for use in error messages
      * @param target target method
      * @param fieldNode field node
-     * @param varNode array access node
-     * @param withArgs true if the descriptor includes captured arguments from
-     *      the target method signature
-     * @param type description of access type for use in error messages
      */
-    private void injectArrayRedirect(Target target, FieldInsnNode fieldNode, AbstractInsnNode varNode, boolean withArgs, String type) {
+    private void injectArrayRedirect(RedirectedFieldData field, AbstractInsnNode varNode, String type) {
         if (varNode == null) {
             String advice = "";
             throw new InvalidInjectionException(this.info, String.format(
                     "Array element %s on %s could not locate a matching %s instruction in %s. %s",
-                    this.annotationType, this, type, target, advice));
+                    this.annotationType, this, type, field.target, advice));
         }
         
-        Extension extraStack = target.extendStack();
+        Extension extraStack = field.target.extendStack();
         
         if (!this.isStatic) {
-            target.insns.insertBefore(fieldNode, new VarInsnNode(Opcodes.ALOAD, 0));
+            VarInsnNode loadThis = new VarInsnNode(Opcodes.ALOAD, 0);
+            field.target.insns.insert(field.node, loadThis);
+            field.target.insns.insert(loadThis, new InsnNode(Opcodes.SWAP));
             extraStack.add();
         }
         
-        InsnList invokeInsns = new InsnList();
-        if (withArgs) {
-            this.pushArgs(target.arguments, invokeInsns, target.getArgIndices(), 0, target.arguments.length);
-            extraStack.add(target.arguments);
+        InsnList insns = new InsnList();
+        if (field.captureTargetArgs > 0) {
+            this.pushArgs(field.target.arguments, insns, field.target.getArgIndices(), 0, field.captureTargetArgs, extraStack);
         }
         extraStack.apply();
-        target.replaceNode(varNode, this.invokeHandler(invokeInsns), invokeInsns);
+        AbstractInsnNode champion = this.invokeHandler(insns);
+        if (field.coerceReturnType && field.type.getSort() >= Type.ARRAY) {
+            insns.add(new TypeInsnNode(Opcodes.CHECKCAST, field.elementType.getInternalName()));
+        }
+        field.target.replaceNode(varNode, champion, insns);
     }
 
     /**
@@ -499,18 +517,19 @@ public class RedirectInjector extends InvokeInjector {
      * @param ownerType type of the field owner
      * @param fieldType field type
      */
-    private void injectAtScalarField(Target target, final FieldInsnNode fieldNode, int opCode, Type ownerType, Type fieldType) {
+    private void injectAtScalarField(RedirectedFieldData field) {
         AbstractInsnNode invoke = null;
         InsnList insns = new InsnList();
-        if (opCode == Opcodes.GETSTATIC || opCode == Opcodes.GETFIELD) {
-            invoke = this.injectAtGetField(insns, target, fieldNode, opCode == Opcodes.GETSTATIC, ownerType, fieldType);
-        } else if (opCode == Opcodes.PUTSTATIC || opCode == Opcodes.PUTFIELD) {
-            invoke = this.injectAtPutField(insns, target, fieldNode, opCode == Opcodes.PUTSTATIC, ownerType, fieldType);
+        if (field.isGetter) {
+            invoke = this.injectAtGetField(field, insns);
+        } else if (field.isSetter) {
+            invoke = this.injectAtPutField(field, insns);
         } else {
-            throw new InvalidInjectionException(this.info, String.format("Unspported opcode %s for %s", Bytecode.getOpcodeName(opCode), this.info));
+            throw new InvalidInjectionException(this.info, String.format("Unspported opcode %s for %s",
+                    Bytecode.getOpcodeName(field.opcode), this.info));
         }
         
-        target.replaceNode(fieldNode, invoke, insns);
+        field.target.replaceNode(field.node, invoke, insns);
     }
 
     /**
@@ -519,27 +538,29 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private AbstractInsnNode injectAtGetField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
-        final String handlerDesc = staticField ? Bytecode.generateDescriptor(fieldType) : Bytecode.generateDescriptor(fieldType, owner);
-        final boolean withArgs = this.checkDescriptor(handlerDesc, target, "getter");
+    private AbstractInsnNode injectAtGetField(RedirectedFieldData field, InsnList insns) {
+        this.validateParams(field, field.type, field.isStatic ? null : field.owner);
 
-        Extension extraStack = target.extendStack();
+        Extension extraStack = field.target.extendStack();
         
         if (!this.isStatic) {
             extraStack.add();
             insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            if (!staticField) {
+            if (!field.isStatic) {
                 insns.add(new InsnNode(Opcodes.SWAP));
             }
         }
         
-        if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            extraStack.add(target.arguments);
+        if (field.captureTargetArgs > 0) {
+            this.pushArgs(field.target.arguments, insns, field.target.getArgIndices(), 0, field.captureTargetArgs, extraStack);
         }
         
         extraStack.apply();
-        return this.invokeHandler(insns);
+        AbstractInsnNode champion = this.invokeHandler(insns);
+        if (field.coerceReturnType && field.type.getSort() >= Type.ARRAY) {
+            insns.add(new TypeInsnNode(Opcodes.CHECKCAST, field.type.getInternalName()));
+        }
+        return champion;
     }
 
     /**
@@ -548,58 +569,31 @@ public class RedirectInjector extends InvokeInjector {
      * possible scenarios based on the possible combinations of static on the
      * handler and the field itself.
      */
-    private AbstractInsnNode injectAtPutField(InsnList insns, Target target, FieldInsnNode node, boolean staticField, Type owner, Type fieldType) {
-        String handlerDesc = staticField ? Bytecode.generateDescriptor(null, fieldType) : Bytecode.generateDescriptor(null, owner, fieldType);
-        boolean withArgs = this.checkDescriptor(handlerDesc, target, "setter");
+    private AbstractInsnNode injectAtPutField(RedirectedFieldData field, InsnList insns) {
+        this.validateParams(field, Type.VOID_TYPE, field.isStatic ? null : field.owner, field.type);
 
-        Extension extraStack = target.extendStack();
+        Extension extraStack = field.target.extendStack();
         
         if (!this.isStatic) {
-            if (staticField) {
+            if (field.isStatic) {
                 insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
                 insns.add(new InsnNode(Opcodes.SWAP));
             } else {
                 extraStack.add();
-                int marshallVar = target.allocateLocals(fieldType.getSize());
-                insns.add(new VarInsnNode(fieldType.getOpcode(Opcodes.ISTORE), marshallVar));
+                int marshallVar = field.target.allocateLocals(field.type.getSize());
+                insns.add(new VarInsnNode(field.type.getOpcode(Opcodes.ISTORE), marshallVar));
                 insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
                 insns.add(new InsnNode(Opcodes.SWAP));
-                insns.add(new VarInsnNode(fieldType.getOpcode(Opcodes.ILOAD), marshallVar));
+                insns.add(new VarInsnNode(field.type.getOpcode(Opcodes.ILOAD), marshallVar));
             }
         }
         
-        if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            extraStack.add(target.arguments);
+        if (field.captureTargetArgs > 0) {
+            this.pushArgs(field.target.arguments, insns, field.target.getArgIndices(), 0, field.captureTargetArgs, extraStack);
         }
         
         extraStack.apply();
         return this.invokeHandler(insns);
-    }
-
-    /**
-     * Check that the handler descriptor matches the calculated descriptor for
-     * the access being redirected.
-     * 
-     * @param desc computed descriptor
-     * @param target target method
-     * @param type redirector type in human-readable text, for error messages
-     * @return true if the descriptor was found and includes target method args,
-     *      false if the descriptor was found and does not capture target args
-     */
-    protected boolean checkDescriptor(String desc, Target target, String type) {
-        if (this.methodNode.desc.equals(desc)) {
-            return false;
-        }
-        
-        int pos = desc.indexOf(')');
-        String alternateDesc = String.format("%s%s%s", desc.substring(0, pos), Joiner.on("").join(target.arguments), desc.substring(pos));
-        if (this.methodNode.desc.equals(alternateDesc)) {
-            return true;
-        }
-        
-        throw new InvalidInjectionException(this.info, String.format("%s method %s %s has an invalid signature. Expected %s but found %s",
-                this.annotationType, type, this, desc, this.methodNode.desc));
     }
 
     protected void injectAtConstructor(Target target, InjectionNode node) {
@@ -616,22 +610,19 @@ public class RedirectInjector extends InvokeInjector {
         final MethodInsnNode initNode = target.findInitNodeFor(newNode);
         
         if (initNode == null) {
-            if (!meta.wildcard) {
-                throw new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s", this.annotationType, target));
-            }
+            meta.throwOrCollect(new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s",
+                    this.annotationType, target)));
             return;
         }
         
         // True if the result of the object construction is being assigned
         boolean isAssigned = dupNode.getOpcode() == Opcodes.DUP;
-        String desc = initNode.desc.replace(")V", ")L" + newNode.desc + ";");
-        boolean withArgs = false;
+        RedirectedInvokeData ctor = new RedirectedInvokeData(target, initNode);
+        ctor.description = "factory";
         try {
-            withArgs = this.checkDescriptor(desc, target, "constructor");
+            this.validateParams(ctor, Type.getObjectType(newNode.desc), ctor.targetArgs);
         } catch (InvalidInjectionException ex) {
-            if (!meta.wildcard) {
-                throw ex;
-            }
+            meta.throwOrCollect(ex);
             return;
         }
         
@@ -647,12 +638,14 @@ public class RedirectInjector extends InvokeInjector {
         
         Extension extraStack = target.extendStack();
         InsnList insns = new InsnList();
-        if (withArgs) {
-            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, target.arguments.length);
-            extraStack.add(target.arguments);
+        if (ctor.captureTargetArgs > 0) {
+            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, ctor.captureTargetArgs, extraStack);
         }
         
         this.invokeHandler(insns);
+        if (ctor.coerceReturnType) {
+            insns.add(new TypeInsnNode(Opcodes.CHECKCAST, newNode.desc));
+        }
         extraStack.apply();
         
         if (isAssigned) {
@@ -662,7 +655,7 @@ public class RedirectInjector extends InvokeInjector {
             LabelNode nullCheckSucceeded = new LabelNode();
             insns.add(new InsnNode(Opcodes.DUP));
             insns.add(new JumpInsnNode(Opcodes.IFNONNULL, nullCheckSucceeded));
-            this.throwException(insns, "java/lang/NullPointerException", String.format("%s constructor handler %s returned null for %s",
+            this.throwException(insns, RedirectInjector.NPE, String.format("%s constructor handler %s returned null for %s",
                     this.annotationType, this, newNode.desc.replace('/', '.')));
             insns.add(nullCheckSucceeded);
             extraStack.add();
@@ -674,22 +667,6 @@ public class RedirectInjector extends InvokeInjector {
         extraStack.apply();
         target.replaceNode(initNode, insns);
         meta.injected++;
-    }
-
-    private static String getGetArrayHandlerDescriptor(AbstractInsnNode varNode, Type returnType, Type fieldType) {
-        if (varNode != null && varNode.getOpcode() == Opcodes.ARRAYLENGTH) {
-            return Bytecode.generateDescriptor(Type.INT_TYPE, (Object[])RedirectInjector.getArrayArgs(fieldType, 0));
-        }
-        return Bytecode.generateDescriptor(returnType, (Object[])RedirectInjector.getArrayArgs(fieldType, 1));
-    }
-
-    private static Type[] getArrayArgs(Type fieldType, int extraDimensions, Type... extra) {
-        int dimensions = fieldType.getDimensions() + extraDimensions;
-        Type[] args = new Type[dimensions + extra.length];
-        for (int i = 0; i < args.length; i++) {
-            args[i] = i == 0 ? fieldType : i < dimensions ? Type.INT_TYPE : extra[dimensions - i];
-        }
-        return args;
     }
 
 }

@@ -125,4 +125,5 @@ public @interface Shadow {
      * @return Aliases for this member
      */
     public String[] aliases() default { }; 
+
 }

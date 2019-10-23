@@ -183,13 +183,15 @@ public final class Bytecode {
         Opcodes.LCONST_0, Opcodes.LCONST_1,
         Opcodes.FCONST_0, Opcodes.FCONST_1, Opcodes.FCONST_2, 
         Opcodes.DCONST_0, Opcodes.DCONST_1,
-        Opcodes.BIPUSH, // 15
-        Opcodes.SIPUSH, // 16
-        Opcodes.LDC,    // 17
+        Opcodes.BIPUSH,    // 15
+        Opcodes.SIPUSH,    // 16
+        Opcodes.LDC,       // 17
+        Opcodes.CHECKCAST, // 18
+        Opcodes.INSTANCEOF // 19
     };
     
     private static final Object[] CONSTANTS_VALUES = {
-        null,
+        Type.VOID_TYPE,
         Integer.valueOf(-1),
         Integer.valueOf(0), Integer.valueOf(1), Integer.valueOf(2), Integer.valueOf(3), Integer.valueOf(4), Integer.valueOf(5),
         Long.valueOf(0L), Long.valueOf(1L),
@@ -538,7 +540,7 @@ public final class Bytecode {
      *      argument or "this"
      */
     public static int getFirstNonArgLocalIndex(MethodNode method) {
-        return Bytecode.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), (method.access & Opcodes.ACC_STATIC) == 0);
+        return Bytecode.getFirstNonArgLocalIndex(Type.getArgumentTypes(method.desc), !Bytecode.isStatic(method));
     }
 
     /**
@@ -565,15 +567,29 @@ public final class Bytecode {
      * @return size of the specified arguments array in terms of stack slots
      */
     public static int getArgsSize(Type[] args) {
+        return Bytecode.getArgsSize(args, 0, args.length);
+    }
+    
+    /**
+     * Get the size of the specified args array in local variable terms (eg.
+     * doubles and longs take two spaces) using startIndex (inclusive) and
+     * endIndex (exclusive) to determine which arguments to process.
+     * 
+     * @param args Method argument types as array
+     * @param startIndex Start index in the array, not related to arg size 
+     * @param endIndex End index (exclusive) in the array, not related to size
+     * @return size of the specified arguments array in terms of stack slots
+     */
+    public static int getArgsSize(Type[] args, int startIndex, int endIndex) {
         int size = 0;
-
-        for (Type type : args) {
-            size += type.getSize();
+        
+        for (int index = startIndex; index < args.length && index < endIndex; index++) {
+            size += args[index].getSize();
         }
-
+        
         return size;
     }
-
+    
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
      * for each entry in the args array starting at pos
@@ -588,7 +604,8 @@ public final class Bytecode {
 
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
-     * for each entry in the args array starting at start and ending at end
+     * for each entry in the args array starting at start (inclusive) and ending
+     * at end (inclusive)
      * 
      * @param args Argument types
      * @param insns Instruction List to inject into
@@ -601,7 +618,8 @@ public final class Bytecode {
 
     /**
      * Injects appropriate LOAD opcodes into the supplied InsnList appropriate
-     * for each entry in the args array starting at start and ending at end
+     * for each entry in the args array starting at start (inclusive) and ending
+     * at end (inclusive)
      * 
      * @param args Argument types
      * @param insns Instruction List to inject into
@@ -610,18 +628,17 @@ public final class Bytecode {
      * @param casts Type casts array
      */
     public static void loadArgs(Type[] args, InsnList insns, int start, int end, Type[] casts) {
-        int pos = start, index = 0;
+        int pos = start;
 
-        for (Type type : args) {
-            insns.add(new VarInsnNode(type.getOpcode(Opcodes.ILOAD), pos));
+        for (int index = 0; index < args.length; index++) {
+            insns.add(new VarInsnNode(args[index].getOpcode(Opcodes.ILOAD), pos));
             if (casts != null && index < casts.length && casts[index] != null) {
                 insns.add(new TypeInsnNode(Opcodes.CHECKCAST, casts[index].getInternalName()));
             }
-            pos += type.getSize();
+            pos += args[index].getSize();
             if (end >= start && pos >= end) {
                 return;
             }
-            index++;
         }
     }
     
@@ -644,6 +661,17 @@ public final class Bytecode {
         }
         
         return labels;
+    }
+    
+    /**
+     * Generate a bytecode descriptor from the supplied types.
+     * 
+     * @param returnType the method return type, can be <tt>null</tt> for
+     *      <tt>void</tt>
+     * @param args argument types
+     */
+    public static String generateDescriptor(Type returnType, Type... args) {
+        return Bytecode.generateDescriptor(returnType, (Object[])args);
     }
     
     /**
@@ -783,7 +811,7 @@ public final class Bytecode {
      * 
      * @param insn constant instruction to process
      * @return the constant value or <tt>null</tt> if the value cannot be parsed
-     *      (or is null)
+     *      (<tt>null</tt> constant is returned as <tt>Type.VOID_TYPE</tt>)
      */
     public static Object getConstant(AbstractInsnNode insn) {
         if (insn == null) {
@@ -796,6 +824,11 @@ public final class Bytecode {
                 return Integer.valueOf(value);
             }
             throw new IllegalArgumentException("IntInsnNode with invalid opcode " + insn.getOpcode() + " in getConstant");
+        } else if (insn instanceof TypeInsnNode) {
+            if (insn.getOpcode() < Opcodes.CHECKCAST) {
+                return null; // Don't treat NEW and ANEWARRAY as constants 
+            }
+            return Type.getObjectType(((TypeInsnNode)insn).desc);
         }
         
         int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());
@@ -806,8 +839,8 @@ public final class Bytecode {
      * Returns the {@link Type} of a particular constant instruction's payload 
      * 
      * @param insn constant instruction
-     * @return type of constant or <tt>null</tt> if it cannot be parsed (or is
-     *      null)
+     * @return type of constant or <tt>null</tt> if it cannot be parsed (<tt>
+     *      null</tt> constant is returned as <tt>Type.VOID_TYPE</tt>)
      */
     public static Type getConstantType(AbstractInsnNode insn) {
         if (insn == null) {
@@ -828,6 +861,11 @@ public final class Bytecode {
                 return Type.getType(Constants.CLASS_DESC);
             }
             throw new IllegalArgumentException("LdcInsnNode with invalid payload type " + cst.getClass() + " in getConstant");
+        } else if (insn instanceof TypeInsnNode) {
+            if (insn.getOpcode() < Opcodes.CHECKCAST) {
+                return null; // Don't treat NEW and ANEWARRAY as constants 
+            }
+            return Type.getType(Constants.CLASS_DESC);
         }
         
         int index = Ints.indexOf(Bytecode.CONSTANTS_ALL, insn.getOpcode());

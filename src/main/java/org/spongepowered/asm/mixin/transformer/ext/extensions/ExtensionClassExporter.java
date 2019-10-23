@@ -158,7 +158,7 @@ public class ExtensionClassExporter implements IExtension {
         File outputFile = new File(this.classExportDir, fileName + ".class");
         outputFile.getParentFile().mkdirs();
         try {
-            byte[] bytecode = ExtensionClassExporter.getClassBytes(classNode);
+            byte[] bytecode = ExtensionClassExporter.getClassBytes(classNode, true);
             if (bytecode != null) {
                 Files.write(bytecode, outputFile);
             }
@@ -168,12 +168,22 @@ public class ExtensionClassExporter implements IExtension {
         return outputFile;
     }
 
-    private static byte[] getClassBytes(ClassNode classNode) {
+    private static byte[] getClassBytes(ClassNode classNode, boolean computeFrames) {
         byte[] bytes = null;
         try {
-            MixinClassWriter cw = new MixinClassWriter(ClassWriter.COMPUTE_FRAMES);
+            MixinClassWriter cw = new MixinClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : 0);
             classNode.accept(cw);
             bytes = cw.toByteArray();
+        } catch (NegativeArraySizeException ex) {
+            // Try again with compute frames turned off, this gives us a better chance
+            // of successful export when the class is corrupt which - given we are
+            // exporting for debugging purposes - is worthwhile so that we have a
+            // the bytecode to inspect!
+            if (computeFrames) {
+                ExtensionClassExporter.logger.warn("Exporting class {} with COMPUTE_FRAMES failed! Trying a raw export.", classNode.name);
+                return ExtensionClassExporter.getClassBytes(classNode, false);
+            }
+            ex.printStackTrace();
         } catch (Exception ex) {
             // well, damn
             ex.printStackTrace();

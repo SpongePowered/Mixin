@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer.meta;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -33,7 +32,7 @@ import java.lang.annotation.Target;
  * Decoration annotation used by postprocessor to mark methods which have had
  * their contents replaced with a proxy.
  */
-@Target({ ElementType.METHOD })
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MixinProxy {
 

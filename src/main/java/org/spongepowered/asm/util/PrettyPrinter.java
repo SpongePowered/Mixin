@@ -782,8 +782,8 @@ public class PrettyPrinter {
     public PrettyPrinter addWrapped(int width, String format, Object... args) {
         String indent = "";
         String line = String.format(format, args).replace("\t", "    ");
-        Matcher indentMatcher = Pattern.compile("^(\\s+)(.*)$").matcher(line);
-        if (indentMatcher.matches()) {
+        Matcher indentMatcher = Pattern.compile("^(\\s+)[^\\s]").matcher(line);
+        if (indentMatcher.find()) {
             indent = indentMatcher.group(1);
         }
         
@@ -801,7 +801,7 @@ public class PrettyPrinter {
         List<String> lines = new ArrayList<String>();
         
         while (line.length() > width) {
-            int wrapPoint = line.lastIndexOf(' ', width);
+            int wrapPoint = PrettyPrinter.lastBreakIndex(line, width);
             if (wrapPoint < 10) {
                 wrapPoint = width;
             }
@@ -817,6 +817,11 @@ public class PrettyPrinter {
         return lines;
     }
     
+    private static int lastBreakIndex(String line, int width) {
+        int lineBreakPos = line.lastIndexOf('\n', width);
+        return lineBreakPos > -1 ? lineBreakPos : Math.max(line.lastIndexOf(' ', width), line.lastIndexOf('\t', width));
+    }
+
     /**
      * Add a formatted key/value pair to the output
      * 

@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import org.objectweb.asm.Opcodes;
 
@@ -39,6 +40,7 @@ import org.objectweb.asm.Opcodes;
  * appropriate argument. Specifying values of different types will cause an
  * error to be raised by the injector.</p>
  */
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Constant {
     

@@ -147,7 +147,7 @@ public class ModifyVariableInjector extends Injector {
         Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
         
         if (this.discriminator.printLVT()) {
-            this.printLocals(context);
+            this.printLocals(target, context);
         }
         
         String handlerDesc = Bytecode.getDescriptor(new Type[] { this.returnType }, this.returnType);
@@ -178,17 +178,18 @@ public class ModifyVariableInjector extends Injector {
     /**
      * Pretty-print local variable information to stderr
      */
-    private void printLocals(final Context context) {
-        SignaturePrinter handlerSig = new SignaturePrinter(this.methodNode.name, this.returnType, this.methodArgs, new String[] { "var" });
+    private void printLocals(Target target, Context context) {
+        SignaturePrinter handlerSig = new SignaturePrinter(this.info.getMethodName(), this.returnType, this.methodArgs, new String[] { "var" });
         handlerSig.setModifiers(this.methodNode);
 
         new PrettyPrinter()
             .kvWidth(20)
             .kv("Target Class", this.classNode.name.replace('/', '.'))
             .kv("Target Method", context.target.method.name)
-            .kv("Callback Name", this.methodNode.name)
+            .kv("Callback Name", this.info.getMethodName())
             .kv("Capture Type", SignaturePrinter.getTypeName(this.returnType, false))
-            .kv("Instruction", "%s %s", context.node.getClass().getSimpleName(), Bytecode.getOpcodeName(context.node.getOpcode())).hr()
+            .kv("Instruction", "[%d] %s %s", target.insns.indexOf(context.node), context.node.getClass().getSimpleName(),
+                    Bytecode.getOpcodeName(context.node.getOpcode())).hr()
             .kv("Match mode", this.discriminator.isImplicit(context) ? "IMPLICIT (match single)" : "EXPLICIT (match by criteria)")
             .kv("Match ordinal", this.discriminator.getOrdinal() < 0 ? "any" : this.discriminator.getOrdinal())
             .kv("Match index", this.discriminator.getIndex() < context.baseArgIndex ? "any" : this.discriminator.getIndex())

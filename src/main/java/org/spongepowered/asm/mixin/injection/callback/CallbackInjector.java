@@ -531,6 +531,9 @@ public class CallbackInjector extends Injector {
         int position = callback.target.indexOf(callback.node);
         List<String> expected = CallbackInjector.summariseLocals(this.methodNode.desc, callback.target.arguments.length + 1);
         List<String> found = CallbackInjector.summariseLocals(callback.getDescriptor(), callback.frameSize + (callback.target.isStatic ? 1 : 0));
+        if (expected.equals(found)) {
+            return String.format("Invalid descriptor on %s! Expected %s but found %s", this.info, callback.getDescriptor(), this.methodNode.desc);
+        }
         return String.format("LVT in %s has incompatible changes at opcode %d in callback %s.\nExpected: %s\n   Found: %s",
                 callback.target, position, this, expected, found);
     }
@@ -564,7 +567,7 @@ public class CallbackInjector extends Injector {
     private void printLocals(final Callback callback) {
         Type[] args = Type.getArgumentTypes(callback.getDescriptorWithAllLocals());
         SignaturePrinter methodSig = new SignaturePrinter(callback.target.method, callback.argNames);
-        SignaturePrinter handlerSig = new SignaturePrinter(this.methodNode.name, callback.target.returnType, args, callback.argNames);
+        SignaturePrinter handlerSig = new SignaturePrinter(this.info.getMethodName(), callback.target.returnType, args, callback.argNames);
         handlerSig.setModifiers(this.methodNode);
         
         PrettyPrinter printer = new PrettyPrinter();
@@ -572,7 +575,7 @@ public class CallbackInjector extends Injector {
         printer.kv("Target Method", methodSig);
         printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
         printer.kv("Initial Frame Size", callback.frameSize);
-        printer.kv("Callback Name", this.methodNode.name);
+        printer.kv("Callback Name", this.info.getMethodName());
         printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(),
                 Bytecode.getOpcodeName(callback.node.getCurrentTarget().getOpcode()));
         printer.hr();

@@ -22,26 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin;
+package org.spongepowered.asm.util.asm;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 /**
- * Pseudo-implements decorator for Mixins with conflicting methods in a
- * superclass to soft-implement an interface
+ * MethodNode with some extra convenience functionality
  */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
-public @interface Implements {
+public class MethodNodeEx extends MethodNode {
     
-    /**
-     * Interfaces implemented, see javadoc in {@link Interface}
-     * 
-     * @return list of interfaces to implement
-     */
-    public Interface[] value();
+    private final IMixinInfo owner;
+
+    private final String originalName;
+    
+    public MethodNodeEx(int access, String name, String descriptor, String signature, String[] exceptions, IMixinInfo owner) {
+        super(ASM.API_VERSION, access, name, descriptor, signature, exceptions);
+        this.originalName = name;
+        this.owner = owner;
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("%s%s", this.originalName, this.desc);
+    }
+    
+    public String getQualifiedName() {
+        return String.format("%s::%s", this.owner.getName(), this.originalName);
+    }
+    
+    public String getOriginalName() {
+        return this.originalName;
+    }
+    
+    public IMixinInfo getOwner() {
+        return this.owner;
+    }
 
 }

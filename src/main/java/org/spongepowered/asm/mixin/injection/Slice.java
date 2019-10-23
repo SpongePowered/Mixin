@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 
@@ -123,6 +124,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
  * can distinguish different slices using {@link #id} and then specify the slice
  * to use in the {@link At#slice} argument.</p>
  */
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Slice {
     

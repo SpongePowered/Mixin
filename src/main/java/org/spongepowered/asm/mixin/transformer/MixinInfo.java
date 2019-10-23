@@ -69,6 +69,7 @@ import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.ASM;
+import org.spongepowered.asm.util.asm.MethodNodeEx;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -84,22 +85,10 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * A MethodNode in a mixin
      */
-    class MixinMethodNode extends MethodNode {
-        
-        private final String originalName;
+    class MixinMethodNode extends MethodNodeEx {
         
         public MixinMethodNode(int access, String name, String desc, String signature, String[] exceptions) {
-            super(ASM.API_VERSION, access, name, desc, signature, exceptions);
-            this.originalName = name;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("%s%s", this.originalName, this.desc);
-        }
-        
-        public String getOriginalName() {
-            return this.originalName;
+            super(access, name, desc, signature, exceptions, MixinInfo.this);
         }
 
         public boolean isInjector() {
@@ -120,10 +109,6 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
 
         public AnnotationNode getInjectorAnnotation() {
             return InjectionInfo.getInjectorAnnotation(MixinInfo.this, this);
-        }
-        
-        public IMixinInfo getOwner() {
-            return MixinInfo.this;
         }
 
     }

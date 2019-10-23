@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer.meta;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -36,7 +35,7 @@ import java.lang.annotation.Target;
  * <p>Decoration annotation used by the mixin applicator to mark methods in a
  * class which have been added or overwritten by a mixin.</p>
  */
-@Target({ ElementType.METHOD })
+@Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MixinMerged {
     
