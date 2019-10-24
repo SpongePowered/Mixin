@@ -43,7 +43,7 @@ public enum SuppressedBy {
     VISIBILITY("visibility"),
     
     /**
-     * Suppress warnings when an injector target cannot be found  
+     * Suppress warnings when an injector target cannot be found
      */
     TARGET("target"),
     
@@ -56,7 +56,13 @@ public enum SuppressedBy {
      * Suppress warnings for when an <tt>&#064;Overwrite</tt> method is missing
      * javadoc, or author or reason tags
      */
-    OVERWRITE("overwrite");
+    OVERWRITE("overwrite"),
+    
+    /**
+     * Suppress warnings when a mixin target specified by name is located in the
+     * default package
+     */
+    DEFAULT_PACKAGE("default-package");
     
     private final String token;
 

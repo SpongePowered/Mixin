@@ -215,21 +215,22 @@ class AnnotatedMixin {
 
         // Private targets, referenced by name
         try {
-            for (String privateTarget : this.annotation.<String>getList("targets")) {
-                TypeHandle type = this.typeProvider.getTypeHandle(privateTarget);
+            for (String softTarget : this.annotation.<String>getList("targets")) {
+                TypeHandle type = this.typeProvider.getTypeHandle(softTarget);
                 if (this.targets.contains(type)) {
                     continue;
                 }
                 if (this.virtual) {
-                    type = this.typeProvider.getSimulatedHandle(privateTarget, this.mixin.asType());
+                    type = this.typeProvider.getSimulatedHandle(softTarget, this.mixin.asType());
                 } else if (type == null) {
-                    this.printMessage(Kind.ERROR, "Mixin target " + privateTarget + " could not be found", this);
+                    this.printMessage(Kind.ERROR, "Mixin target " + softTarget + " could not be found", this);
                     return null;
                 } else if (type.isPublic()) {
-                    this.printMessage(Kind.WARNING, "Mixin target " + privateTarget + " is public and must be specified in value", this);
+                    SuppressedBy suppressedBy = (type.getPackage().isUnnamed()) ? SuppressedBy.DEFAULT_PACKAGE : null;
+                    this.printMessage(Kind.WARNING, "Mixin target " + softTarget + " is public and must be specified in value", this, suppressedBy);
                     return null;
                 }
-                this.addSoftTarget(type, privateTarget);
+                this.addSoftTarget(type, softTarget);
                 if (primaryTarget == null) {
                     primaryTarget = type;
                 }
@@ -250,6 +251,13 @@ class AnnotatedMixin {
      */
     private void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
         this.messager.printMessage(kind, msg, this.mixin, this.annotation.asMirror());
+    }
+    
+    /**
+     * Print a suppressible message to the AP messager
+     */
+    private void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin, SuppressedBy suppressedBy) {
+        this.messager.printMessage(kind, msg, this.mixin, this.annotation.asMirror(), suppressedBy);
     }
 
     private void addSoftTarget(TypeHandle type, String reference) {
