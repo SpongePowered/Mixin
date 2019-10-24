@@ -182,8 +182,8 @@ public class MixinAgent implements IHotSwap {
     }
 
     @Override
-    public void registerTargetClass(String name, byte[] bytecode) {
-        MixinAgent.classLoader.addTargetClass(name, bytecode);
+    public void registerTargetClass(String name, ClassNode classNode) {
+        MixinAgent.classLoader.addTargetClass(name, classNode);
     }
 
     /**
@@ -228,4 +228,5 @@ public class MixinAgent implements IHotSwap {
     public static void agentmain(String arg, Instrumentation instrumentation) {
         MixinAgent.init(instrumentation);
     }
+
 }

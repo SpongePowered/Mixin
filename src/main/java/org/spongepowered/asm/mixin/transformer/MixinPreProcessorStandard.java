@@ -518,10 +518,14 @@ class MixinPreProcessorStandard {
         String type = method.isSynthetic() ? "synthetic" : "@Unique";
         
         if (Bytecode.getVisibility(mixinMethod).ordinal() < Visibility.PUBLIC.ordinal()) {
-            String uniqueName = context.getUniqueName(mixinMethod, false);
-            MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming {} method {}{} to {} in {}",
-                    type, mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
-            mixinMethod.name = method.conform(uniqueName);
+            if (method.isConformed()) {
+                mixinMethod.name = method.getName();
+            } else {
+                String uniqueName = context.getUniqueName(mixinMethod, false);
+                MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming {} method {}{} to {} in {}",
+                        type, mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+                mixinMethod.name = method.conform(uniqueName);
+            }
             return false;
         }
 

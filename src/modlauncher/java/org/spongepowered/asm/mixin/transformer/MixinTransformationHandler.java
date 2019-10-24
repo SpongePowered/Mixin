@@ -108,4 +108,5 @@ public class MixinTransformationHandler implements IClassProcessor {
         }
         return transformer.transformClass(environment, classType.getClassName(), classNode);
     }
+
 }

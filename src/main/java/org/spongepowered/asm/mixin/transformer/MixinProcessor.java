@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
-import java.lang.reflect.Constructor;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -132,8 +131,6 @@ public class MixinProcessor {
         }
         
     }
-    
-    private static final String MIXIN_AGENT_CLASS = "org.spongepowered.tools.agent.MixinAgent";
 
     /**
      * Log all the things
@@ -210,34 +207,14 @@ public class MixinProcessor {
     /**
      * ctor 
      */
-    MixinProcessor(MixinEnvironment environment, Extensions extensions) {
+    MixinProcessor(MixinEnvironment environment, Extensions extensions, IHotSwap hotSwapper) {
         this.lock = this.service.getReEntranceLock();
         
         this.extensions = extensions;
-        this.hotSwapper = this.initHotSwapper(environment);
+        this.hotSwapper = hotSwapper;
         this.postProcessor = new MixinPostProcessor(this.sessionId);
         
         this.profiler = MixinEnvironment.getProfiler();
-    }
-
-    private IHotSwap initHotSwapper(MixinEnvironment environment) {
-        if (!environment.getOption(Option.HOT_SWAP)) {
-            return null;
-        }
-
-        try {
-            MixinProcessor.logger.info("Attempting to load Hot-Swap agent");
-            @SuppressWarnings("unchecked")
-            Class<? extends IHotSwap> clazz =
-                    (Class<? extends IHotSwap>)Class.forName(MixinProcessor.MIXIN_AGENT_CLASS);
-            Constructor<? extends IHotSwap> ctor = clazz.getDeclaredConstructor(MixinProcessor.class);
-            return ctor.newInstance(this);
-        } catch (Throwable th) {
-            MixinProcessor.logger.info("Hot-swap agent could not be loaded, hot swapping of mixins won't work. {}: {}",
-                    th.getClass().getSimpleName(), th.getMessage());
-        }
-
-        return null;
     }
 
     /**
@@ -345,8 +322,7 @@ public class MixinProcessor {
                 }
 
                 if (this.hotSwapper != null) {
-                    // TODO hotswapper
-//                    this.hotSwapper.registerTargetClass(transformedName, basicClass);
+                    this.hotSwapper.registerTargetClass(name, targetClassNode);
                 }
 
                 try {

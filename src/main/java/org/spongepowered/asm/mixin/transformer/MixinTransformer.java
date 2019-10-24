@@ -24,13 +24,16 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import java.lang.reflect.Constructor;
 import java.util.List;
 
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IExtensionRegistry;
+import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.transformers.TreeTransformer;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.asm.ASM;
@@ -40,10 +43,22 @@ import org.spongepowered.asm.util.asm.ASM;
  */
 class MixinTransformer extends TreeTransformer implements IMixinTransformer {
     
+    private static final String MIXIN_AGENT_CLASS = "org.spongepowered.tools.agent.MixinAgent";
+
+    /**
+     * Synthetic class registry
+     */
+    private final SyntheticClassRegistry syntheticClassRegistry;
+
     /**
      * Transformer extensions
      */
     private final Extensions extensions;
+    
+    /**
+     * Hotswap agent, if available 
+     */
+    private final IHotSwap hotSwapper;
 
     /**
      * Mixin processor which actually manages application of mixins
@@ -54,11 +69,6 @@ class MixinTransformer extends TreeTransformer implements IMixinTransformer {
      * Class generator 
      */
     private final MixinClassGenerator generator;
-
-    /**
-     * Synthetic class registry
-     */
-    private final SyntheticClassRegistry syntheticClassRegistry;
 
     public MixinTransformer() {
         MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
@@ -73,11 +83,33 @@ class MixinTransformer extends TreeTransformer implements IMixinTransformer {
         
         this.syntheticClassRegistry = new SyntheticClassRegistry();
         this.extensions = new Extensions(this.syntheticClassRegistry);
+        
+        this.hotSwapper = this.initHotSwapper(environment);
 
-        this.processor = new MixinProcessor(environment, this.extensions);
+        this.processor = new MixinProcessor(environment, this.extensions, this.hotSwapper);
         this.generator = new MixinClassGenerator(environment, this.extensions);
         
         DefaultExtensions.create(environment, this.extensions, this.syntheticClassRegistry);
+    }
+    
+    private IHotSwap initHotSwapper(MixinEnvironment environment) {
+        if (!environment.getOption(Option.HOT_SWAP)) {
+            return null;
+        }
+
+        try {
+            MixinProcessor.logger.info("Attempting to load Hot-Swap agent");
+            @SuppressWarnings("unchecked")
+            Class<? extends IHotSwap> clazz =
+                    (Class<? extends IHotSwap>)Class.forName(MixinTransformer.MIXIN_AGENT_CLASS);
+            Constructor<? extends IHotSwap> ctor = clazz.getDeclaredConstructor(IMixinTransformer.class);
+            return ctor.newInstance(this);
+        } catch (Throwable th) {
+            MixinProcessor.logger.info("Hot-swap agent could not be loaded, hot swapping of mixins won't work. {}: {}",
+                    th.getClass().getSimpleName(), th.getMessage());
+        }
+
+        return null;
     }
     
     /* (non-Javadoc)

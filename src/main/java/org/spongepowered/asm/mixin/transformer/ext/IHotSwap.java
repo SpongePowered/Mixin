@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.transformer.ext;
 
+import org.objectweb.asm.tree.ClassNode;
+
 /**
  * Interface to allow the hot-swap agent to be loaded on-demand
  */
@@ -42,11 +44,11 @@ public interface IHotSwap {
      * Registers a class targeted by at least one mixin.
      *
      * <p>This is used to rollback the target class to a state before the
-     * mixin's were applied.</p>
+     * mixins were applied.</p>
      *
      * @param name Name of the class
-     * @param bytecode Bytecode of the class before mixin's have been applied
+     * @param classNode ASM tree of the class before mixins have been applied
      */
-    public abstract void registerTargetClass(String name, byte[] bytecode);
+    public abstract void registerTargetClass(String name, ClassNode classNode);
 
 }

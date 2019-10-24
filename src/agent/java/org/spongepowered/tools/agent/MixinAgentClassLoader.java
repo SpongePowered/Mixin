@@ -33,6 +33,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.util.Constants;
 
@@ -78,10 +79,23 @@ class MixinAgentClassLoader extends ClassLoader {
      * Registers the bytecode for a class targeted by a mixin
      *
      * @param name Name of the target clas
-     * @param bytecode Bytecode of the target class
+     * @param classNode ASM tree node of the target class
      */
-    void addTargetClass(String name, byte[] bytecode) {
-        this.targets.put(name, bytecode);
+    void addTargetClass(String name, ClassNode classNode) {
+        synchronized (this.targets) {
+            if (this.targets.containsKey(name)) {
+                return;
+            }
+            try {
+                ClassWriter cw = new ClassWriter(0);
+                classNode.accept(cw);
+                this.targets.put(name, cw.toByteArray());
+            } catch (Exception ex) {
+                MixinAgentClassLoader.logger.error("Error storing original class bytecode for {} in mixin hotswap agent. {}: {}",
+                        name, ex.getClass().getName(), ex.getMessage());
+                MixinAgentClassLoader.logger.debug(ex);
+            }
+        }
     }
 
     /**
@@ -101,7 +115,9 @@ class MixinAgentClassLoader extends ClassLoader {
      * @return Original bytecode
      */
     byte[] getOriginalTargetBytecode(String name) {
-        return this.targets.get(name);
+        synchronized (this.targets) {
+            return this.targets.get(name);
+        }
     }
 
     /**
@@ -127,4 +143,5 @@ class MixinAgentClassLoader extends ClassLoader {
         cw.visitEnd();
         return cw.toByteArray();
     }
+
 }
