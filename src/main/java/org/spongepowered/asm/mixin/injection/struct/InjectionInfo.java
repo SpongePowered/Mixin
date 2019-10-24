@@ -204,6 +204,11 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Map of lists of nodes enumerated by calling {@link #prepare}
      */
     protected final Map<Target, List<InjectionNode>> targetNodes = new LinkedHashMap<Target, List<InjectionNode>>();
+    
+    /**
+     * Number of target methods identified by the injection points 
+     */
+    protected int targetCount = 0;
 
     /**
      * Bytecode injector
@@ -267,18 +272,18 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return;
         }
         
-        String type = "@" + Bytecode.getSimpleName(this.annotation);
-        List<AnnotationNode> injectionPoints = this.readInjectionPoints(type);
-        this.findMethods(this.parseTargets(type), type);
-        this.parseInjectionPoints(injectionPoints);
+        List<AnnotationNode> injectionPoints = this.readInjectionPoints();
         this.parseRequirements();
+        this.findMethods(this.parseTargets());
+        this.parseInjectionPoints(injectionPoints);
         this.injector = this.parseInjector(this.annotation);
     }
 
-    protected Set<ITargetSelector> parseTargets(String type) {
+    protected Set<ITargetSelector> parseTargets() {
         List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
         if (methods == null) {
-            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name", type, this.methodName));
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name",
+                    this.annotationType, this.methodName));
         }
         
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
@@ -286,26 +291,26 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             try {
                 selectors.add(TargetSelector.parseAndValidate(method, this.mixin).attach(this.mixin));
             } catch (InvalidMemberDescriptorException ex) {
-                throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s", type,
-                        this.methodName, method, this.mixin.getReferenceMapper().getStatus()));
+                throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s",
+                        this.annotationType, this.methodName, method, this.mixin.getReferenceMapper().getStatus()));
             } catch (TargetNotSupportedException ex) {
                 throw new InvalidInjectionException(this,
-                        String.format("%s annotation on %s specifies a target class '%s', which is not supported", type, this.methodName,
-                        ex.getMessage()));
+                        String.format("%s annotation on %s specifies a target class '%s', which is not supported",
+                        this.annotationType, this.methodName, ex.getMessage()));
             } catch (InvalidSelectorException ex) {
                 throw new InvalidInjectionException(this,
-                        String.format("%s annotation on %s is decorated with an invalid selector: %s", type, this.methodName,
+                        String.format("%s annotation on %s is decorated with an invalid selector: %s", this.annotationType, this.methodName,
                         ex.getMessage()));
             }
         }
         return selectors;
     }
 
-    protected List<AnnotationNode> readInjectionPoints(String type) {
+    protected List<AnnotationNode> readInjectionPoints() {
         List<AnnotationNode> ats = Annotations.<AnnotationNode>getValue(this.annotation, this.atKey, false);
         if (ats == null) {
-            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing '%s' value(s)", type, this.methodName,
-                    this.atKey));
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing '%s' value(s)",
+                    this.annotationType, this.methodName, this.atKey));
         }
         return ats;
     }
@@ -384,14 +389,14 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         String dynamicInfo = this.getDynamicInfo();
         if ((this.mixin.getEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
-                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. %s%s", description,
-                            this.methodName, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount, refMapStatus,
-                            dynamicInfo));
+                    String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. Scanned %d target(s). %s%s",
+                            description, this.methodName, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount,
+                            this.targetCount, refMapStatus, dynamicInfo));
         } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
             throw new InjectionError(
-                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. %s%s", description,
-                            this.methodName, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount, refMapStatus,
-                            dynamicInfo));
+                    String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. Scanned %d target(s). %s%s",
+                            description, this.methodName, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount,
+                            this.targetCount, refMapStatus, dynamicInfo));
         } else if (this.injectedCallbackCount > this.maxCallbackCount) {
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed.%s",
@@ -485,9 +490,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Finds methods in the target class which match searchFor
      * 
      * @param selectors members to search for
-     * @param type annotation type
      */
-    private void findMethods(Set<ITargetSelector> selectors, String type) {
+    private void findMethods(Set<ITargetSelector> selectors) {
         this.targets.clear();
 
         // When remapping refmap is enabled this implies we are in a development
@@ -521,10 +525,20 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             }
         }
         
-        if (this.targets.size() == 0) {
+        this.targetCount = this.targets.size(); 
+        if (this.targetCount > 0) {
+            return;
+        }
+        
+        if ((this.mixin.getEnvironment().getOption(Option.DEBUG_INJECTORS) && this.expectedCallbackCount > 0)) {
             throw new InvalidInjectionException(this,
-                    String.format("%s annotation on %s could not find any targets matching %s in the target class %s. %s%s", 
-                            type, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
+                    String.format("Injection validation failed: %s annotation on %s could not find any targets matching %s in %s. %s%s", 
+                            this.annotationType, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
+                            this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
+        } else if (this.requiredCallbackCount > 0) {
+            throw new InvalidInjectionException(this,
+                    String.format("Critical injection failure: %s annotation on %s could not find any targets matching %s in %s. %s%s", 
+                            this.annotationType, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
                             this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
         }
     }

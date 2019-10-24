@@ -55,8 +55,8 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
     }
     
     @Override
-    protected List<AnnotationNode> readInjectionPoints(String type) {
-        List<AnnotationNode> ats = super.readInjectionPoints(type);
+    protected List<AnnotationNode> readInjectionPoints() {
+        List<AnnotationNode> ats = super.readInjectionPoints();
         if (ats.isEmpty()) {
             AnnotationNode c = new AnnotationNode(ModifyConstantInjectionInfo.CONSTANT_ANNOTATION_CLASS);
             c.visit("log", Boolean.TRUE);

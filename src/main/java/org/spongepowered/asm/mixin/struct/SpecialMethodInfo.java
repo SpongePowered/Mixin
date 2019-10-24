@@ -30,6 +30,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
 
 /**
@@ -41,6 +42,11 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
      * Annotation on the method
      */
     protected final AnnotationNode annotation;
+    
+    /**
+     * Human-readable annotation type 
+     */
+    protected final String annotationType;
     
     /**
      * Class
@@ -66,6 +72,7 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
         this.mixin = mixin;
         this.method = method;
         this.annotation = annotation;
+        this.annotationType = this.annotation != null ? "@" + Bytecode.getSimpleName(this.annotation) : "Undecorated injector";
         this.classNode = mixin.getTargetClassNode();
         this.methodName = method instanceof MethodNodeEx ? ((MethodNodeEx)this.method).getOriginalName() : method.name;
     }
