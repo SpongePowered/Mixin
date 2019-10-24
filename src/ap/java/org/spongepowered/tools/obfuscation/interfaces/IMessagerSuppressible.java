@@ -30,6 +30,8 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
+import org.spongepowered.tools.obfuscation.SuppressedBy;
+
 /**
  * An extended {@link Messager} which supports messages that can be suppressed
  * using the standard Java {@link SuppressWarnings} annotation.
@@ -46,7 +48,7 @@ public interface IMessagerSuppressible extends Messager {
      * @param suppressedBy the {@link SuppressWarnings} value which will silence
      *      this message
      */
-    void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, String suppressedBy);
+    void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, SuppressedBy suppressedBy);
 
     /**
      * Prints a message of the specified kind at the location of the
@@ -59,7 +61,7 @@ public interface IMessagerSuppressible extends Messager {
      * @param suppressedBy the {@link SuppressWarnings} value which will silence
      *      this message
      */
-    void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a, String suppressedBy);
+    void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a, SuppressedBy suppressedBy);
 
     /**
      * Prints a message of the specified kind at the location of the
@@ -74,7 +76,7 @@ public interface IMessagerSuppressible extends Messager {
      * @param suppressedBy the {@link SuppressWarnings} value which will silence
      *      this message
      */
-    void printMessage(Diagnostic.Kind kind,CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v, String suppressedBy);
+    void printMessage(Diagnostic.Kind kind,CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v, SuppressedBy suppressedBy);
 
     
 }

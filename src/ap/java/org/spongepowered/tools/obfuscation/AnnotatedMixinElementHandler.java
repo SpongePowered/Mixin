@@ -374,7 +374,7 @@ abstract class AnnotatedMixinElementHandler {
                 this.ap.printMessage(Kind.ERROR, ex.getMessage(), method, annotation.asMirror());
             }
         } catch (InvalidConstraintException ex) {
-            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation.asMirror(), "constraints");
+            this.ap.printMessage(Kind.WARNING, ex.getMessage(), method, annotation.asMirror(), SuppressedBy.CONSTRAINTS);
         }
     }
     
@@ -421,7 +421,7 @@ abstract class AnnotatedMixinElementHandler {
                     this.validateMethodVisibility(method, annotation, type, target, targetMethod);
                 }
             } else if (!merge) {
-                this.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation, "target");
+                this.printMessage(Kind.WARNING, "Cannot find target for " + type + " method in " + target, method, annotation, SuppressedBy.TARGET);
             }
         }
     }
@@ -436,9 +436,11 @@ abstract class AnnotatedMixinElementHandler {
         Visibility visMethod = TypeUtils.getVisibility(method);
         String visibility = "visibility of " + visTarget + " method in " + target;
         if (visTarget.ordinal() > visMethod.ordinal()) {
-            this.printMessage(Kind.WARNING, visMethod + " " + type + " method cannot reduce " + visibility, method, annotation, "visibility");
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method cannot reduce " + visibility, method, annotation,
+                    SuppressedBy.VISIBILITY);
         } else if (visTarget == Visibility.PRIVATE && visMethod.ordinal() > visTarget.ordinal()) {
-            this.printMessage(Kind.WARNING, visMethod + " " + type + " method will upgrade " + visibility, method, annotation, "visibility");
+            this.printMessage(Kind.WARNING, visMethod + " " + type + " method will upgrade " + visibility, method, annotation,
+                    SuppressedBy.VISIBILITY);
         }
     }
 
@@ -469,7 +471,8 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetField == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation.asMirror(), "target");
+                this.ap.printMessage(Kind.WARNING, "Cannot find target for " + type + " field in " + target, field, annotation.asMirror(),
+                        SuppressedBy.TARGET);
             }
         }
     }
@@ -493,12 +496,13 @@ abstract class AnnotatedMixinElementHandler {
             
             MethodHandle targetMethod = target.findMethod(nameRef.getName(), signature);
             if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror(), "target");
+                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror(),
+                        SuppressedBy.TARGET);
             }
         }            
     }
 
-    private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation, String suppressedBy) {
+    private void printMessage(Kind kind, String msg, Element e, AnnotationHandle annotation, SuppressedBy suppressedBy) {
         if (annotation == null) {
             this.ap.printMessage(kind, msg, e, suppressedBy);
         } else {

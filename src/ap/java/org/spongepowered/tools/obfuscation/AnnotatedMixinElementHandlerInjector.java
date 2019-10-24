@@ -294,7 +294,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 ObfuscationData<MappingMethod> remapped = this.obf.getDataProvider().getRemappedMethod(m);
                 if (remapped.isEmpty()) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find class mapping for " + subject + " '" + target + "'", elem.getElement(),
-                            elem.getAnnotation().asMirror(), "mapping");
+                            elem.getAnnotation().asMirror(), SuppressedBy.MAPPING);
                     return;
                 }
     
@@ -346,7 +346,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
                 if (obfFieldData.isEmpty()) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
-                            errorsOn, "mapping");
+                            errorsOn, SuppressedBy.MAPPING);
                     return;
                 }
                 this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
@@ -355,7 +355,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 if (obfMethodData.isEmpty()) {
                     if (targetMember.getOwner() == null || !targetMember.getOwner().startsWith("java/lang/")) {
                         this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + subject + " '" + reference + "'", elem.getElement(),
-                                errorsOn, "mapping");
+                                errorsOn, SuppressedBy.MAPPING);
                         return;
                     }
                 }

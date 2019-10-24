@@ -513,11 +513,11 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         return annotation.getBoolean("remap", mixinClass.remap());
     }
 
-    private static boolean shouldSuppress(Element element, String suppressedBy) {
+    private static boolean shouldSuppress(Element element, SuppressedBy suppressedBy) {
         if (element == null || suppressedBy == null) {
             return false;
         }
-        if (AnnotationHandle.of(element, SuppressWarnings.class).<String>getList().contains(suppressedBy)) {
+        if (AnnotationHandle.of(element, SuppressWarnings.class).<String>getList().contains(suppressedBy.getToken())) {
             return true;
         }
         return AnnotatedMixins.shouldSuppress(element.getEnclosingElement(), suppressedBy);
@@ -545,7 +545,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
-    public void printMessage(Kind kind, CharSequence msg, Element element, String suppressedBy) {
+    public void printMessage(Kind kind, CharSequence msg, Element element, SuppressedBy suppressedBy) {
         if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
             this.processingEnv.getMessager().printMessage(kind, msg, element);
         }
@@ -563,7 +563,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
-    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, String suppressedBy) {
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, SuppressedBy suppressedBy) {
         if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
             this.processingEnv.getMessager().printMessage(kind, msg, element, annotation);
         }
@@ -581,7 +581,8 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
-    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value, String suppressedBy) {
+    public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value,
+            SuppressedBy suppressedBy) {
         if (kind != Kind.WARNING || !AnnotatedMixins.shouldSuppress(element, suppressedBy)) {
             this.processingEnv.getMessager().printMessage(kind, msg, element, annotation, value);
         }

@@ -86,16 +86,16 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
             
             String javadoc = this.ap.getJavadocProvider().getJavadoc(elem.getElement());
             if (javadoc == null) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement(), "overwrite");
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement(), SuppressedBy.OVERWRITE);
                 return;
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@author")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement(), "overwrite");
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement(), SuppressedBy.OVERWRITE);
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@reason")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement(), "overwrite");
+                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement(), SuppressedBy.OVERWRITE);
             }
         }
     }
