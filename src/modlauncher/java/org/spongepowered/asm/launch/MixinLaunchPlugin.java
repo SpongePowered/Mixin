@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
@@ -40,6 +41,7 @@ import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher;
+import org.spongepowered.asm.service.modlauncher.ModLauncherAuditTrail;
 
 import com.google.common.io.Resources;
 
@@ -150,6 +152,18 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
         }
         this.commandLineMixins = commandLineMixins;
         this.service.onInit(this);
+    }
+
+    /**
+     * Something something audit trail consumer
+     * 
+     * @param auditTrailConsumer probably a custom interface with
+     *      <tt>&lt;String, String...</tt> but this is a placeholder
+     */
+    public void setAuditTrailConsumer(BiConsumer<String, String[]> auditTrailConsumer) {
+        if (this.service != null) {
+            ((ModLauncherAuditTrail)this.service.getAuditTrail()).setConsumer(auditTrailConsumer);
+        }
     }
     
     @Override

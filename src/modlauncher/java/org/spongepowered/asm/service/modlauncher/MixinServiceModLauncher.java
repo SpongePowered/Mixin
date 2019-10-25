@@ -35,6 +35,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTransformationHandler;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.IClassTracker;
+import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.util.IConsumer;
@@ -73,6 +74,11 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      * Class tracker, tracks class loads and registered invalid classes
      */
     private ModLauncherClassTracker classTracker;
+    
+    /**
+     * Audit trail adapter 
+     */
+    private ModLauncherAuditTrail auditTrail;
 
     /**
      * Environment phase consumer, TEMP
@@ -190,6 +196,17 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
             this.classTracker = new ModLauncherClassTracker();
         }
         return this.classTracker;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getAuditTrail()
+     */
+    @Override
+    public IMixinAuditTrail getAuditTrail() {
+        if (this.auditTrail == null) {
+            this.auditTrail = new ModLauncherAuditTrail();
+        }
+        return this.auditTrail;
     }
 
     /**

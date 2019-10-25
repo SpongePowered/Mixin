@@ -53,6 +53,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.mixin.transformer.throwables.ReEntrantTransformerError;
+import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.PrettyPrinter;
@@ -183,6 +184,11 @@ public class MixinProcessor {
      * Profiler 
      */
     private final Profiler profiler;
+    
+    /**
+     * Audit trail (if available); 
+     */
+    private final IMixinAuditTrail auditTrail;
 
     /**
      * Current environment 
@@ -215,6 +221,7 @@ public class MixinProcessor {
         this.postProcessor = new MixinPostProcessor(this.sessionId);
         
         this.profiler = MixinEnvironment.getProfiler();
+        this.auditTrail = this.service.getAuditTrail();
     }
 
     /**
@@ -282,6 +289,9 @@ public class MixinProcessor {
         
         try {
             if (this.postProcessor.canProcess(name)) {
+                if (this.auditTrail != null) {
+                    this.auditTrail.onPostProcess(name);
+                }
                 Section postTimer = this.profiler.begin("postprocessor");
                 success = this.postProcessor.processClass(name, targetClassNode);
                 postTimer.end();
