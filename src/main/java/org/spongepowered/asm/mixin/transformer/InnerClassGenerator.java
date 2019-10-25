@@ -264,6 +264,15 @@ final class InnerClassGenerator implements IClassGenerator {
         this.registry = registry;
     }
     
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IClassGenerator
+     *      #getName()
+     */
+    @Override
+    public String getName() {
+        return "inner";
+    }
+
     /**
      * @param owner Mixin which owns the original inner class
      * @param originalName Original inner class name

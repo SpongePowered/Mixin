@@ -57,6 +57,8 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinApplicatorException;
+import org.spongepowered.asm.service.IMixinAuditTrail;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
@@ -242,6 +244,11 @@ class MixinApplicatorStandard {
     protected final Profiler profiler = MixinEnvironment.getProfiler();
     
     /**
+     * Audit trail (if available); 
+     */
+    protected final IMixinAuditTrail auditTrail;
+
+    /**
      * Activity tracker
      */
     protected final ActivityStack activities = new ActivityStack();
@@ -263,6 +270,8 @@ class MixinApplicatorStandard {
         ExtensionClassExporter exporter = context.getExtensions().<ExtensionClassExporter>getExtension(ExtensionClassExporter.class);
         this.mergeSignatures = exporter.isDecompilerActive()
                 && MixinEnvironment.getCurrentEnvironment().getOption(Option.DEBUG_EXPORT_DECOMPILE_MERGESIGNATURES);
+        
+        this.auditTrail = MixinService.getService().getAuditTrail();
     }
     
     /**
@@ -276,6 +285,9 @@ class MixinApplicatorStandard {
             try {
                 this.logger.log(mixin.getLoggingLevel(), "Mixing {} from {} into {}", mixin.getName(), mixin.getParent(), this.targetName);
                 mixinContexts.add(mixin.createContextFor(this.context));
+                if (this.auditTrail != null) {
+                    this.auditTrail.onApply(this.targetName, mixin.toString());
+                }
             } catch (InvalidMixinException ex) {
                 if (mixin.isRequired()) {
                     throw ex;

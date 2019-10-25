@@ -30,6 +30,11 @@ import org.objectweb.asm.tree.ClassNode;
  * Base interface for class generators
  */
 public interface IClassGenerator {
+    
+    /**
+     * Get the name of this generator for logging and auditing purposes
+     */
+    public abstract String getName();
 
     /**
      * Generate (if possible) the specified class name. The generator should

@@ -54,6 +54,7 @@ import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.IClassTracker;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
+import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.ITransformer;
 import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
@@ -275,6 +276,14 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     @Override
     public IClassTracker getClassTracker() {
         return this.classLoaderUtil;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#getAuditTrail()
+     */
+    @Override
+    public IMixinAuditTrail getAuditTrail() {
+        return null;
     }
     
     /* (non-Javadoc)

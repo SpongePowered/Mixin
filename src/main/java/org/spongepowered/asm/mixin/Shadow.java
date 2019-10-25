@@ -39,7 +39,6 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Shadow {
 
-    // CHECKSTYLE:OFF
     /**
      * <p>In general, shadow methods can be declared using their name in the
      * target class as you would expect, however we run into a problem when we
@@ -86,7 +85,6 @@ public @interface Shadow {
      * @return the shadow prefix
      */
     public String prefix() default "shadow$";
-    // CHECKSTYLE:ON
 
     /**
      * By default, the annotation processor will attempt to locate an

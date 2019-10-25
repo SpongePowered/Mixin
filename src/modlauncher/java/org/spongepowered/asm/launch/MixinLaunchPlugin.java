@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
@@ -40,6 +41,7 @@ import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher;
+import org.spongepowered.asm.service.modlauncher.ModLauncherAuditTrail;
 
 import com.google.common.io.Resources;
 
@@ -59,7 +61,7 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
     /**
      * Class processing components
      */
-    private List<IClassProcessor> processors = new ArrayList<IClassProcessor>();
+    private final List<IClassProcessor> processors = new ArrayList<IClassProcessor>();
 
     /**
      * Mixin config names specified on the command line 
@@ -69,6 +71,8 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
     private ITransformerLoader transformerLoader;
     
     private MixinServiceModLauncher service;
+    
+    private ModLauncherAuditTrail auditTrail;
     
     /* (non-Javadoc)
      * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService#name()
@@ -145,6 +149,7 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
             throw new IllegalStateException("Unsupported service type for ModLauncher Mixin Service");
         }
         this.service = (MixinServiceModLauncher)service;
+        this.auditTrail = (ModLauncherAuditTrail)this.service.getAuditTrail();
         synchronized (this.processors) {
             this.processors.addAll(this.service.getProcessors());
         }
@@ -152,6 +157,17 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
         this.service.onInit(this);
     }
     
+    /* (non-Javadoc)
+     * @see cpw.mods.modlauncher.serviceapi.ILaunchPluginService
+     *      #customAuditConsumer(java.lang.String, java.util.function.Consumer)
+     */
+    @Override
+    public void customAuditConsumer(String className, Consumer<String[]> auditDataAcceptor) {
+        if (this.auditTrail != null) {
+            this.auditTrail.setConsumer(className, auditDataAcceptor);
+        }
+    }
+
     @Override
     @Deprecated
     public void addResource(Path resource, String name) {

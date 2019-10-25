@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.3//EN" "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Check Configuration 1.3//EN" "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <!--
     This configuration file was written by the eclipse-cs plugin configuration editor
@@ -18,13 +18,6 @@
       <property name="format" value="\\u00(08|09|0(a|A)|0(c|C)|0(d|D)|22|27|5(C|c))|\\(0(10|11|12|14|15|42|47)|134)"/>
       <property name="message" value="Avoid using corresponding octal or Unicode escape."/>
     </module>
-    <module name="LineLength">
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-      <property name="max" value="150"/>
-    </module>
-    <module name="LineLength">
-      <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@\(\)\?\.\:]|//)"/>
-    </module>
     <module name="EmptyBlock">
       <property name="option" value="TEXT"/>
       <property name="tokens" value="LITERAL_TRY, LITERAL_CATCH, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, LITERAL_SWITCH"/>
@@ -34,7 +27,11 @@
     <module name="RightCurly"/>
     <module name="RightCurly">
       <property name="option" value="alone"/>
-      <property name="tokens" value="CLASS_DEF,METHOD_DEF,CTOR_DEF,LITERAL_FOR,LITERAL_WHILE,STATIC_INIT,INSTANCE_INIT"/>
+      <property name="tokens" value="CLASS_DEF,METHOD_DEF,LITERAL_FOR,LITERAL_WHILE,STATIC_INIT,INSTANCE_INIT"/>
+    </module>
+    <module name="RightCurly">
+      <property name="option" value="alone_or_singleline"/>
+      <property name="tokens" value="CTOR_DEF"/>
     </module>
     <module name="WhitespaceAround">
       <property name="allowEmptyConstructors" value="true"/>
@@ -65,7 +62,6 @@
     </module>
     <module name="LocalVariableName">
       <property name="format" value="^[a-z](([a-z0-9])|([a-z0-9][a-zA-Z0-9]*))?$"/>
-      <property name="tokens" value="VARIABLE_DEF"/>
       <message key="name.invalidPattern" value="Local variable name ''{0}'' must match pattern ''{1}''."/>
     </module>
     <module name="ClassTypeParameterName">
@@ -130,9 +126,7 @@
     </module>
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
-    <module name="TypecastParenPad">
-      <property name="tokens" value="RPAREN,TYPECAST"/>
-    </module>
+    <module name="TypecastParenPad"/>
     <module name="ConstantName">
       <property name="applyToProtected" value="false"/>
       <property name="applyToPackage" value="false"/>
@@ -142,7 +136,19 @@
     <module name="UncommentedMain"/>
     <module name="SuppressionCommentFilter"/>
   </module>
+  <module name="LineLength">
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    <property name="max" value="150"/>
+  </module>
+  <module name="LineLength">
+    <property name="ignorePattern" value="^[ ]*([a-zA-Z0-9\{\}\+\|\&amp;\&quot;@\(\)\?\.\:]|//)"/>
+  </module>
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
+  </module>
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="\*.*&lt;pre&gt;"/>
+    <property name="onCommentFormat" value="\*.*&lt;/pre&gt;"/>
+    <property name="checkFormat" value="LineLength"/>
   </module>
 </module>

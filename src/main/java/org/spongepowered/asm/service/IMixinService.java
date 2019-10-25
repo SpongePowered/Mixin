@@ -88,29 +88,37 @@ public interface IMixinService {
     public abstract ReEntranceLock getReEntranceLock();
     
     /**
-     * Return the class provider for this service
+     * Return the class provider for this service. <b>This component is required
+     * and services must not return <tt>null</tt>.</b>
      */
     public abstract IClassProvider getClassProvider();
     
     /**
-     * Return the class bytecode provider for this service
+     * Return the class bytecode provider for this service. <b>This component is
+     * required and services must not return <tt>null</tt>.</b>
      */
     public abstract IClassBytecodeProvider getBytecodeProvider();
     
     /**
-     * Return the transformer provider for this service. <b>Note that unlike
-     * other service components, this component is allowed to be <tt>null</tt>
-     * for services which do not support transformers, or don't support
-     * interacting with them</b>!
+     * Return the transformer provider for this service. <b>This component is
+     * optional and is allowed to be <tt>null</tt> for services which do not
+     * support transformers, or don't support interacting with them.</b>
      */
     public abstract ITransformerProvider getTransformerProvider();
     
     /**
-     * Return the class tracker for this service. <b>Note that unlike
-     * other service components, this component is allowed to be <tt>null</tt>
-     * for services which do not support this functionality</b>!
+     * Return the class tracker for this service. <b>This component is optional
+     * and is allowed to be <tt>null</tt> for services which do not support this
+     * functionality.</b>
      */
     public abstract IClassTracker getClassTracker();
+    
+    /**
+     * Return the audit trail for this service. <b>This component is optional
+     * and is allowed to be <tt>null</tt> for services which do not support this
+     * functionality.</b>
+     */
+    public abstract IMixinAuditTrail getAuditTrail();
     
     /**
      * Get additional platform agents for this service 

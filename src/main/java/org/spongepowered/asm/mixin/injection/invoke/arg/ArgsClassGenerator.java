@@ -147,6 +147,15 @@ public final class ArgsClassGenerator implements IClassGenerator {
     public ArgsClassGenerator(IConsumer<ISyntheticClassInfo> registry) {
         this.registry = registry;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.ext.IClassGenerator
+     *      #getName()
+     */
+    @Override
+    public String getName() {
+        return "args";
+    }
 
     /**
      * Get (or generate) the class name for the specified descriptor. The class

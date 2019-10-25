@@ -32,6 +32,8 @@ import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
+import org.spongepowered.asm.service.IMixinAuditTrail;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -45,8 +47,20 @@ public class MixinClassGenerator {
      */
     static final Logger logger = LogManager.getLogger("mixin");
 
+    /**
+     * Transformer extensions
+     */
     private final Extensions extensions;
+    
+    /**
+     * Profiler 
+     */
     private final Profiler profiler;
+    
+    /**
+     * Audit trail (if available); 
+     */
+    private final IMixinAuditTrail auditTrail;
 
     /**
      * ctor 
@@ -54,6 +68,7 @@ public class MixinClassGenerator {
     MixinClassGenerator(MixinEnvironment environment, Extensions extensions) {
         this.extensions = extensions;
         this.profiler = MixinEnvironment.getProfiler();
+        this.auditTrail = MixinService.getService().getAuditTrail();
     }
 
     synchronized boolean generateClass(MixinEnvironment environment, String name, ClassNode classNode) {
@@ -67,6 +82,7 @@ public class MixinClassGenerator {
             boolean success = generator.generate(name, classNode);
             genTimer.end();
             if (success) {
+                this.auditTrail.onGenerate(name, generator.getName());
                 this.extensions.export(environment, name.replace('.', '/'), false, classNode);
                 return true;
             }
