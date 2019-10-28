@@ -66,7 +66,7 @@ public class MappingWriterTSrg extends MappingWriterSrg {
 
     @Override
     protected String formatFieldMapping(Pair<MappingField> field) {
-        return String.format("%s %s %s %s", field.from.getOwner(), field.from.getSimpleName(), field.to.getSimpleName());
+        return String.format("%s %s %s", field.from.getOwner(), field.from.getSimpleName(), field.to.getSimpleName());
     }
     
     @Override
