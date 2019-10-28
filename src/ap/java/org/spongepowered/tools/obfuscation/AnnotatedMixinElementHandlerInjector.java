@@ -45,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorExcep
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
+import org.spongepowered.tools.obfuscation.ext.SpecialPackages;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.CompilerEnvironment;
 import org.spongepowered.tools.obfuscation.interfaces.IReferenceManager;
@@ -292,7 +293,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 String desc = member.toCtorDesc();
                 MappingMethod m = new MappingMethod(target, ".", desc != null ? desc : "()V");
                 ObfuscationData<MappingMethod> remapped = this.obf.getDataProvider().getRemappedMethod(m);
-                if (remapped.isEmpty()) {
+                if (remapped.isEmpty() && !SpecialPackages.isExcludedPackage(member.toCtorType())) {
                     this.ap.printMessage(Kind.WARNING, "Cannot find class mapping for " + subject + " '" + target + "'", elem.getElement(),
                             elem.getAnnotation().asMirror(), SuppressedBy.MAPPING);
                     return;
@@ -345,19 +346,21 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             if (targetMember.isField()) {
                 ObfuscationData<MappingField> obfFieldData = this.obf.getDataProvider().getObfFieldRecursive(targetMember);
                 if (obfFieldData.isEmpty()) {
-                    this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
-                            errorsOn, SuppressedBy.MAPPING);
+                    if (targetMember.getOwner() == null || !SpecialPackages.isExcludedPackage(targetMember.getOwner())) {
+                        this.ap.printMessage(Kind.WARNING, "Cannot find field mapping for " + subject + " '" + reference + "'", elem.getElement(),
+                                errorsOn, SuppressedBy.MAPPING);
+                    }
                     return;
                 }
                 this.obf.getReferenceManager().addFieldMapping(this.classRef, reference, targetMember, obfFieldData);
             } else {
                 ObfuscationData<MappingMethod> obfMethodData = this.obf.getDataProvider().getObfMethodRecursive(targetMember);
                 if (obfMethodData.isEmpty()) {
-                    if (targetMember.getOwner() == null || !targetMember.getOwner().startsWith("java/lang/")) {
+                    if (targetMember.getOwner() == null || !SpecialPackages.isExcludedPackage(targetMember.getOwner())) {
                         this.ap.printMessage(Kind.WARNING, "Cannot find method mapping for " + subject + " '" + reference + "'", elem.getElement(),
                                 errorsOn, SuppressedBy.MAPPING);
-                        return;
                     }
+                    return;
                 }
                 this.obf.getReferenceManager().addMethodMapping(this.classRef, reference, targetMember, obfMethodData);
             }
