@@ -107,15 +107,15 @@ dependencies {
     def guava = 'com.google.guava:guava:21.0' // from mc1.12 onwards
     def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     
-    compile guava
-    compile log4j2
+    implementation guava
+    implementation log4j2
     compile 'com.google.code.gson:gson:2.2.4'
     if (Float.parseFloat(asmVersion) < 6) {
         compile "org.ow2.asm:asm-debug-all:$asmVersion"
     }
-    compile "org.ow2.asm:asm-tree:$asmVersion"
-    compile "org.ow2.asm:asm-commons:$asmVersion"
-    compile "org.ow2.asm:asm-util:$asmVersion"
+    implementation "org.ow2.asm:asm-tree:$asmVersion"
+    implementation "org.ow2.asm:asm-commons:$asmVersion"
+    implementation "org.ow2.asm:asm-util:$asmVersion"
 
     thinJar "org.ow2.asm:asm-tree:$asmVersion"
     thinJar "org.ow2.asm:asm-util:$asmVersion"
@@ -131,21 +131,25 @@ dependencies {
     
     // AP extension example
     exampleCompile configurations.compile
+    exampleImplementation configurations.implementation
 
     // Maven FTP
     deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
 
     // Fernflower decompiler
     fernflowerCompile configurations.compile
+    fernflowerImplementation configurations.implementation
     fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 
     // LegacyLauncher service
     launchwrapperCompile configurations.compile
+    launchwrapperImplementation configurations.implementation
     launchwrapperCompile ('net.minecraft:launchwrapper:1.11') {
         exclude module: 'lwjgl'
     }
     
     modlauncherCompile configurations.compile
+    modlauncherImplementation configurations.implementation
     modlauncherCompile 'net.sf.jopt-simple:jopt-simple:5.0.4'
     modlauncherCompile "org.ow2.asm:asm-tree:$modlauncherAsmVersion"
     modlauncherCompile "org.ow2.asm:asm-commons:$modlauncherAsmVersion"
@@ -156,6 +160,7 @@ dependencies {
     
     // agent
     agentCompile configurations.compile
+    agentImplementation configurations.implementation
     
     // asm bridge
     bridgeCompile log4j2
@@ -298,12 +303,12 @@ build.dependsOn(shadowJar)
 if (project.doSignJar) {
     // Define signjar task    
     task signJar() {
-        inputs.files(jar.outputs)
-        outputs.files jar.outputs.files.collect {
+        inputs.files(stagingJar.outputs)
+        outputs.files stagingJar.outputs.files.collect {
             new File(it.parent, it.name.replace('-unsigned', ''))
         }
         doLast {
-            jar.outputs.files.each {
+            stagingJar.outputs.files.each {
                 ant.signjar(
                     alias: project.keyStoreCert,
                     jar: it,
@@ -312,7 +317,8 @@ if (project.doSignJar) {
                     storepass: project.keyStoreSecret,
                     keypass: project.keyStoreSecret,
                     tsaurl: project.timestampAuthority,
-                    preservelastmodified: 'true'
+                    preservelastmodified: 'true',
+                    verbose: true
                 )
             }
         }
@@ -351,25 +357,15 @@ artifacts {
     archives javadocJar
 }
 
-ext.excludePomDeps = [
-    'fernflower',
-    'jarjar',
-    'hamcrest-library',
-    'junit',
-    'mockito-core',
-    'mixin-asm-debug-all',
-    'log4j-core'
-]
-
 uploadArchives {
     repositories {
 
         mavenDeployer {
             configuration = configurations.deployerJars
 
-            if (project.hasProperty("chRepo")) {
-                repository(url: project.chRepo) {
-                    authentication(userName: project.chUsername, password: project.chPassword)
+            if (project.hasProperty("spongeRepo")) {
+                repository(url: project.spongeRepo) {
+                    authentication(userName: project.spongeUsername, password: project.spongePassword)
                 }
             }
 
@@ -402,20 +398,7 @@ uploadArchives {
                         }
                     }
                 }
-                whenConfigured {
-                    dependencies = dependencies.findAll {
-                        !it.artifactId.matches(excludePomDeps.join('|'))
-                    }
-                }
             }
-        }
-    }
-}
-
-install.repositories.mavenInstaller.pom {
-    whenConfigured {
-        dependencies = dependencies.findAll {
-            !it.artifactId.matches(excludePomDeps.join('|'))
         }
     }
 }
