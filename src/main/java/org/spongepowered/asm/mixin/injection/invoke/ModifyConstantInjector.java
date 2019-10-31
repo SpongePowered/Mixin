@@ -77,15 +77,16 @@ public class ModifyConstantInjector extends RedirectInjector {
         }
         
         AbstractInsnNode targetNode = node.getCurrentTarget();
+        if (targetNode instanceof TypeInsnNode) {
+            this.checkTargetModifiers(target, false);
+            this.injectTypeConstantModifier(target, (TypeInsnNode)targetNode);
+            return;
+        }
+        
         if (targetNode instanceof JumpInsnNode) {
             this.checkTargetModifiers(target, false);
             this.injectExpandedConstantModifier(target, (JumpInsnNode)targetNode);
             return;
-        }
-        
-        if (targetNode instanceof TypeInsnNode) {
-            // TODO inject at type constant
-            throw new InvalidInjectionException(this.info, "Inject at TypeInsnNode not implemented");
         }
         
         if (Bytecode.isConstant(targetNode)) {
@@ -94,10 +95,19 @@ public class ModifyConstantInjector extends RedirectInjector {
             return;
         }
         
-        throw new InvalidInjectionException(this.info, this.annotationType + " annotation is targetting an invalid insn in "
-                + target + " in " + this);
+        throw new InvalidInjectionException(this.info, String.format("%s annotation is targetting an invalid insn in %s in %s",
+                this.annotationType, target, this));
     }
     
+    private void injectTypeConstantModifier(Target target, TypeInsnNode typeNode) {
+        int opcode = typeNode.getOpcode();
+        if (opcode != Opcodes.INSTANCEOF) {
+            throw new InvalidInjectionException(this.info, String.format("%s annotation does not support %s insn in %s in %s",
+                    this.annotationType, Bytecode.getOpcodeName(opcode), target, this));
+        }
+        this.injectAtInstanceOf(target, typeNode);
+    }
+
     /**
      * Injects a constant modifier at an implied-zero
      * 
@@ -107,8 +117,8 @@ public class ModifyConstantInjector extends RedirectInjector {
     private void injectExpandedConstantModifier(Target target, JumpInsnNode jumpNode) {
         int opcode = jumpNode.getOpcode();
         if (opcode < Opcodes.IFLT || opcode > Opcodes.IFLE) {
-            throw new InvalidInjectionException(this.info, this.annotationType + " annotation selected an invalid opcode "
-                    + Bytecode.getOpcodeName(opcode) + " in " + target + " in " + this); 
+            throw new InvalidInjectionException(this.info, String.format("%s annotation selected an invalid opcode %s in %s in %s",
+                    this.annotationType, Bytecode.getOpcodeName(opcode), target, this)); 
         }
         
         Extension extraStack = target.extendStack();

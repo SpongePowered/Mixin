@@ -250,6 +250,43 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  *      int dy)</tt>
  * </blockquote>
  * 
+ * <h3><tt>instanceof</tt> Redirect Mode</h3>
+ * 
+ * <p>An <tt>instanceof</tt> check is a boolean operation where an object on the
+ * stack is compared with a class literal compiled directly into the bytecode.
+ * The check can be redirected in one of two ways: logic redirection or class
+ * type redirection. For the following example code:</p>
+ *  
+ * <blockquote><pre>if (reference instanceof Foo) {</pre></blockquote>
+ *
+ * <p>To perform a <em>logic redirection</em>, use a handler with the following
+ * signature returning <tt>boolean</tt>:</p>
+ * 
+ * <blockquote><pre>public boolean onInstanceOf(Object reference, Class clFoo) {
+ *    return reference instanceof ADifferentClass;
+ *}</pre></blockquote>
+ *
+ * <p>Note that the entire check is moved into the redirect method, and the
+ * <tt>boolean</tt> return value is used in place of the previous <tt>instanceof
+ * </tt> check. To perform a <em>class type redirection</em> instead, construct
+ * your handler as follows:</p>
+ *
+ * <blockquote><pre>public Class onInstanceOf(Object reference, Class clFoo) {
+ *    return ADifferentClass.class;
+ *}</pre></blockquote>
+ *
+ * <p>Note that this results in the injected code being less efficient, because
+ * the <tt>instanceof</tt> opcode is replaced with discrete code similar to <tt>
+ * reference != null && yourClass.isAssignableFrom(reference.getClass())</tt> in
+ * the target method body.</p>
+ * 
+ * <p>The arguments to an <tt>instanceof</tt> redirect handler <b>must always be
+ * <tt>Object, Class</tt> even if the variable type is known</b>. This is
+ * because the type of variable on the stack cannot be determined without
+ * relatively expensive analysis, which is redundant given the redirect
+ * handler's role. If you need to cast-down the reference then you should do so
+ * inside your handler method.</p> 
+ *
  * <h3>A note on <tt>static</tt> modifiers for handler methods</h3>
  *
  * <p>In general, when declaring a redirect handler the <tt>static</tt> modifier

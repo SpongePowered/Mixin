@@ -37,6 +37,7 @@ public final class SpecialPackages {
     
     static {
         SpecialPackages.addExcludedPackage("java.");
+        SpecialPackages.addExcludedPackage("javax.");
         SpecialPackages.addExcludedPackage("sun.");
         SpecialPackages.addExcludedPackage("com.sun.");
     }

@@ -31,15 +31,7 @@ import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.*;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
@@ -55,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionExceptio
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.SignaturePrinter;
 
 import com.google.common.collect.ObjectArrays;
 import com.google.common.primitives.Ints;
@@ -95,6 +88,9 @@ import com.google.common.primitives.Ints;
  */
 public class RedirectInjector extends InvokeInjector {
     
+    private static final String GET_CLASS_METHOD = "getClass";
+    private static final String IS_ASSIGNABLE_FROM_METHOD = "isAssignableFrom";
+
     private static final String NPE = "java/lang/NullPointerException";
     
     private static final String KEY_NOMINATORS = "nominators";
@@ -333,13 +329,20 @@ public class RedirectInjector extends InvokeInjector {
             return;
         }
         
-        if (node.getCurrentTarget() instanceof TypeInsnNode && node.getCurrentTarget().getOpcode() == Opcodes.NEW) {
-            if (!this.isStatic && target.isStatic) {
-                throw new InvalidInjectionException(this.info, String.format(
-                        "non-static callback method %s has a static target which is not supported", this));
+        if (node.getCurrentTarget() instanceof TypeInsnNode) {
+            int opcode = node.getCurrentTarget().getOpcode();
+            if (opcode == Opcodes.NEW) {
+                if (!this.isStatic && target.isStatic) {
+                    throw new InvalidInjectionException(this.info, String.format(
+                            "non-static callback method %s has a static target which is not supported", this));
+                }
+                this.injectAtConstructor(target, node);
+                return;
+            } else if (opcode == Opcodes.INSTANCEOF) {
+                this.checkTargetModifiers(target, false);
+                this.injectAtInstanceOf(target, node);
+                return;
             }
-            this.injectAtConstructor(target, node);
-            return;
         }
         
         throw new InvalidInjectionException(this.info, String.format("%s annotation on is targetting an invalid insn in %s in %s",
@@ -652,13 +655,7 @@ public class RedirectInjector extends InvokeInjector {
             // Do a null-check following the redirect to ensure that the handler
             // didn't return null. Since NEW cannot return null, this would break
             // the contract of the target method!
-            LabelNode nullCheckSucceeded = new LabelNode();
-            insns.add(new InsnNode(Opcodes.DUP));
-            insns.add(new JumpInsnNode(Opcodes.IFNONNULL, nullCheckSucceeded));
-            this.throwException(insns, RedirectInjector.NPE, String.format("%s constructor handler %s returned null for %s",
-                    this.annotationType, this, newNode.desc.replace('/', '.')));
-            insns.add(nullCheckSucceeded);
-            extraStack.add();
+            this.doNullCheck(insns, extraStack, "constructor handler", newNode.desc.replace('/', '.'));
         } else {
             // Result is not assigned, so just pop it from the operand stack
             insns.add(new InsnNode(Opcodes.POP));
@@ -669,4 +666,118 @@ public class RedirectInjector extends InvokeInjector {
         meta.injected++;
     }
 
+    protected void injectAtInstanceOf(Target target, InjectionNode node) {
+        this.injectAtInstanceOf(target, (TypeInsnNode)node.getCurrentTarget());
+    }
+
+    protected void injectAtInstanceOf(Target target, TypeInsnNode typeNode) {
+        if (this.returnType.getSort() == Type.BOOLEAN) {
+            this.redirectInstanceOf(target, typeNode, false);
+            return;
+        }
+        
+        if (this.returnType.equals(Type.getType(Constants.CLASS_DESC))) {
+            this.redirectInstanceOf(target, typeNode, true);
+            return;
+        }
+        
+        // This syntax is neat but the inconsistency might be a step too far
+//        if (this.returnType.getSort() >= Type.ARRAY) {
+//            this.modifyInstanceOfType(target, typeNode);
+//            return;
+//        }
+        
+        throw new InvalidInjectionException(this.info, String.format("%s on %s has an invalid signature. Found unexpected return type %s. INSTANCEOF"
+                + " handler expects (Ljava/lang/Object;Ljava/lang/Class;)Z or (Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Class;",
+                this.annotationType, this, SignaturePrinter.getTypeName(this.returnType)));
+    }
+
+    private void redirectInstanceOf(Target target, TypeInsnNode typeNode, boolean dynamic) {
+        Extension extraStack = target.extendStack();
+        final InsnList insns = new InsnList();
+        InjectorData handler = new InjectorData(target, "instanceof handler", false /* do not coerce args */);
+        this.validateParams(handler, this.returnType, Type.getType(Constants.OBJECT_DESC), Type.getType(Constants.CLASS_DESC));
+        
+        if (dynamic) {
+            insns.add(new InsnNode(Opcodes.DUP));
+            extraStack.add();
+        }
+
+        if (!this.isStatic) {
+            insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
+            insns.add(new InsnNode(Opcodes.SWAP));
+            extraStack.add();
+        }
+        
+        // Add the class type from the original instanceof check
+        insns.add(new LdcInsnNode(Type.getObjectType(typeNode.desc)));
+        extraStack.add();
+        
+        if (handler.captureTargetArgs > 0) {
+            this.pushArgs(target.arguments, insns, target.getArgIndices(), 0, handler.captureTargetArgs, extraStack);
+        }
+        
+        AbstractInsnNode champion = this.invokeHandler(insns);
+        
+        if (dynamic) {
+            // First null-check the class value returned by the handler, if it's
+            // null then the rest is going to go badly
+            this.doNullCheck(insns, extraStack, "instanceof handler", "class type");
+            
+            // Now do a null-check on the reference and isAssignableFrom check
+            this.checkIsAssignableFrom(insns, extraStack);
+        }
+        
+        target.replaceNode(typeNode, champion, insns);
+        extraStack.apply();
+    }
+
+    private void checkIsAssignableFrom(final InsnList insns, Extension extraStack) {
+        LabelNode objectIsNull = new LabelNode();
+        LabelNode checkComplete = new LabelNode();
+        
+        // Swap the values (we duped the ref above) and check for null. If
+        // the reference is null, load FALSE per the contract of instanceof
+        insns.add(new InsnNode(Opcodes.SWAP));
+        insns.add(new InsnNode(Opcodes.DUP));
+        extraStack.add();
+        insns.add(new JumpInsnNode(Opcodes.IFNULL, objectIsNull));
+        // If it's not null, call getClass on the reference and then use
+        // isAssignableFrom on the result
+        insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, Constants.OBJECT, RedirectInjector.GET_CLASS_METHOD,
+                "()" + Constants.CLASS_DESC, false));
+        insns.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, Constants.CLASS, RedirectInjector.IS_ASSIGNABLE_FROM_METHOD,
+                "(" + Constants.CLASS_DESC + ")Z", false));
+        insns.add(new JumpInsnNode(Opcodes.GOTO, checkComplete));
+        
+        insns.add(objectIsNull);
+        insns.add(new InsnNode(Opcodes.POP)); // remove ref
+        insns.add(new InsnNode(Opcodes.POP)); // remove class
+        insns.add(new InsnNode(Opcodes.ICONST_0));
+        insns.add(checkComplete);
+        extraStack.add();
+    }
+
+//    private void modifyInstanceOfType(Target target, TypeInsnNode typeNode) {
+//        if (this.methodArgs.length > 0) {
+//            throw new InvalidInjectionException(this.info, String.format("%s on %s has an invalid signature. Found %d unexpected additional method"
+//                    + "arguments, expected 0. INSTANCEOF handler expects ()Lthe/replacement/Type; or (Ljava/lang/Object;Ljava/lang/Class;)Z",
+//                    this.annotationType, this, this.methodArgs.length));
+//        }
+//
+//        // Already know that returnType is an object or array so no need to check again
+//        typeNode.desc = this.returnType.getInternalName();
+//        this.info.addCallbackInvocation(this.methodNode);
+//    }
+
+    private void doNullCheck(InsnList insns, Extension extraStack, String type, String value) {
+        LabelNode nullCheckSucceeded = new LabelNode();
+        insns.add(new InsnNode(Opcodes.DUP));
+        insns.add(new JumpInsnNode(Opcodes.IFNONNULL, nullCheckSucceeded));
+        this.throwException(insns, RedirectInjector.NPE, String.format("%s %s %s returned null for %s",
+                this.annotationType, type, this, value));
+        insns.add(nullCheckSucceeded);
+        extraStack.add();
+    }
+    
 }
