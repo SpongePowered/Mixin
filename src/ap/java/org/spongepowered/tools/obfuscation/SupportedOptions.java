@@ -46,6 +46,7 @@ public final class SupportedOptions {
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
     public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
     public static final String MAPPING_TYPES             = "mappingTypes";
+    public static final String PLUGIN_VERSION            = "pluginVersion";
     
     private SupportedOptions() {}
 
