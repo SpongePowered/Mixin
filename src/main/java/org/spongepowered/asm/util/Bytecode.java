@@ -717,18 +717,18 @@ public final class Bytecode {
      * @param args argument types
      * @return method descriptor without return type
      */
-    public static String getDescriptor(Type[] args) {
+    public static String getDescriptor(Type... args) {
         return "(" + Joiner.on("").join(args) + ")";
     }
     
     /**
      * Generate a method descriptor with the specified types
-     * 
-     * @param args argument types
      * @param returnType return type
+     * @param args argument types
+     * 
      * @return generated method descriptor
      */
-    public static String getDescriptor(Type[] args, Type returnType) {
+    public static String getDescriptor(Type returnType, Type... args) {
         return Bytecode.getDescriptor(args) + returnType.toString();
     }
 

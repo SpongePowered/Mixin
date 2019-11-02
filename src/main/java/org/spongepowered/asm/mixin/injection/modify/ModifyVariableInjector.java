@@ -150,18 +150,15 @@ public class ModifyVariableInjector extends Injector {
             this.printLocals(target, context);
         }
         
-        String handlerDesc = Bytecode.getDescriptor(new Type[] { this.returnType }, this.returnType);
-        if (!handlerDesc.equals(this.methodNode.desc)) {
-            throw new InvalidInjectionException(this.info, "Variable modifier " + this + " has an invalid signature, expected " + handlerDesc
-                    + " but found " + this.methodNode.desc);
-        }
-
+        InjectorData handler = new InjectorData(target, "handler", false);
+        this.validateParams(handler, this.returnType, this.returnType);
+        
         Extension extraStack = target.extendStack();
         
         try {
             int local = this.discriminator.findLocal(context);
             if (local > -1) {
-                this.inject(context, extraStack, local);
+                this.inject(context, handler, extraStack, local);
             }
         } catch (InvalidImplicitDiscriminatorException ex) {
             if (this.discriminator.printLVT()) {
@@ -206,7 +203,7 @@ public class ModifyVariableInjector extends Injector {
      * @param extraStack stack extension
      * @param local local variable to capture
      */
-    private void inject(final Context context, Extension extraStack, final int local) {
+    private void inject(final Context context, InjectorData handler, Extension extraStack, final int local) {
         if (!this.isStatic) {
             context.insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
             extraStack.add();
@@ -214,6 +211,11 @@ public class ModifyVariableInjector extends Injector {
         
         context.insns.add(new VarInsnNode(this.returnType.getOpcode(Opcodes.ILOAD), local));
         extraStack.add();
+
+        if (handler.captureTargetArgs > 0) {
+            this.pushArgs(handler.target.arguments, context.insns, handler.target.getArgIndices(), 0, handler.captureTargetArgs, extraStack);
+        }
+        
         this.invokeHandler(context.insns);
         context.insns.add(new VarInsnNode(this.returnType.getOpcode(Opcodes.ISTORE), local));
     }

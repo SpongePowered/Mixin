@@ -63,6 +63,10 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * type exists in the target LVT, then capture will succeed. However, if more
  * than one variable of the required type is encountered in the LVT then an
  * {@link InvalidInjectionException} is thrown.</p> 
+ * 
+ * <p>Like other injectors, the callback signature can optionally include the
+ * target method arguments by simply appending them to the handler method
+ * signature.</p>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -87,9 +91,7 @@ public @interface ModifyVariable {
 
     /**
      * An {@link At} annotation which describes the {@link InjectionPoint} in
-     * the target method. The specified {@link InjectionPoint} <i>must only</i>
-     * return {@link org.objectweb.asm.tree.MethodInsnNode} instances
-     * and an exception will be thrown if this is not the case.
+     * the target method.
      * 
      * @return {@link At} which identifies the target method invocation
      */
