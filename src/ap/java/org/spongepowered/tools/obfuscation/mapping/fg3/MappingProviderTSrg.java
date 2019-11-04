@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation.mapping.fg3;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -47,7 +48,7 @@ import com.google.common.io.Files;
  */
 public class MappingProviderTSrg extends MappingProvider {
     
-    private List<String> inputMappings = Collections.<String>emptyList();
+    private List<String> inputMappings = new ArrayList<String>();
 
     public MappingProviderTSrg(Messager messager, Filer filer) {
         super(messager, filer);
@@ -62,7 +63,7 @@ public class MappingProviderTSrg extends MappingProvider {
         final BiMap<MappingMethod, MappingMethod> methodMap = this.methodMap;
         
         String fromClass = null, toClass = null;
-        this.inputMappings = Files.readLines(input, Charset.defaultCharset());
+        this.inputMappings.addAll(Files.readLines(input, Charset.defaultCharset()));
         
         for (String line : this.inputMappings) {
             if (Strings.isNullOrEmpty(line) || line.startsWith("#")) {

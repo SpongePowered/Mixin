@@ -41,11 +41,12 @@ import com.google.common.collect.ImmutableSet;
  */
 public class ObfuscationServiceFG3 implements IObfuscationService {
     
-    public static final String SEARGE                = "searge";
+    public static final String SEARGE                 = "searge";
 
-    public static final String REOBF_TSRG_FILE       = "reobfTsrgFile";
-    public static final String OUT_TSRG_SRG_FILE     = "outTsrgFile";
-    public static final String TSRG_OUTPUT_BEHAVIOUR = "mergeBehaviour";
+    public static final String REOBF_TSRG_FILE        = "reobfTsrgFile";
+    public static final String REOBF_EXTRA_TSRG_FILES = "reobfTsrgFiles";
+    public static final String OUT_TSRG_SRG_FILE      = "outTsrgFile";
+    public static final String TSRG_OUTPUT_BEHAVIOUR  = "mergeBehaviour";
     
     @Override
     public Set<String> getSupportedOptions() {
@@ -64,7 +65,7 @@ public class ObfuscationServiceFG3 implements IObfuscationService {
               new ObfuscationTypeDescriptor(
                   ObfuscationServiceFG3.SEARGE,
                   ObfuscationServiceFG3.REOBF_TSRG_FILE,
-                  null,
+                  ObfuscationServiceFG3.REOBF_EXTRA_TSRG_FILES,
                   ObfuscationServiceFG3.OUT_TSRG_SRG_FILE,
                   ObfuscationEnvironmentFG3.class
               )
