@@ -13,12 +13,12 @@ The main documentation for **Mixin** can be found in the [Wiki](../../wiki).
 
 Additional documentation for individual features and annotations can be found in
 the extensive [Javadoc](http://jenkins.liteloader.com/job/Mixin/javadoc/). For
-additional help use the channel `#mixin` on the
-[Sponge Discord Server](https://discord.gg/sponge).
+additional help use the channel [`#mixin` on the
+Sponge Discord Server](https://discord.gg/tBcwxz2).
 
 ### Building Mixin
 **Mixin** uses the [Gradle](http://gradle.org/) build automation system. To
-perform a build, use gradle version 2.11 and execute
+perform a build, use gradle version 4.9 and execute
 
     gradle
 
