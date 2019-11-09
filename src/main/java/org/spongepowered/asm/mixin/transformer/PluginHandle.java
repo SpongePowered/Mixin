@@ -36,6 +36,8 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.throwables.CompanionPluginError;
 import org.spongepowered.asm.service.IMixinService;
 
+import com.google.common.base.Strings;
+
 /**
  * Convenience wrapper for mixin config plugins
  */
@@ -89,12 +91,13 @@ class PluginHandle {
     PluginHandle(MixinConfig parent, IMixinService service, String pluginClassName) {
         IMixinConfigPlugin plugin = null;
         
-        if (pluginClassName != null) {
+        if (!Strings.isNullOrEmpty(pluginClassName)) {
             try {
                 Class<?> pluginClass = service.getClassProvider().findClass(pluginClassName, true);
                 plugin = (IMixinConfigPlugin)pluginClass.newInstance();
             } catch (Throwable th) {
-                th.printStackTrace();
+                PluginHandle.logger.error("Error loading companion plugin class [{}] for mixin config [{}]. The plugin may be out of date: {}:{}",
+                        pluginClassName, parent, th.getClass().getSimpleName(), th.getMessage(), th);
                 plugin = null;
             }
         }
