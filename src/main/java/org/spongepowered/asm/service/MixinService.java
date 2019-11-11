@@ -91,7 +91,7 @@ public final class MixinService {
                 this.bootedServices.add(bootService.getServiceClassName());
             } catch (ServiceInitialisationException ex) {
                 // Expected if service cannot start
-                MixinService.logger.error("Mixin bootstrap service {} is not available: {}", ex.getStackTrace()[0].getClassName(), ex.getMessage());
+                MixinService.logger.debug("Mixin bootstrap service {} is not available: {}", ex.getStackTrace()[0].getClassName(), ex.getMessage());
             } catch (Throwable th) {
                 MixinService.logger.debug("Catching {}:{} initialising service", th.getClass().getName(), th.getMessage(), th);
             }
