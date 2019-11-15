@@ -170,7 +170,7 @@ dependencies {
 }
 
 javadoc {
-    classpath += sourceSets.legacy.output // why?
+    classpath += sourceSets.legacy.output
 }
 
 // Eclipse
@@ -220,7 +220,7 @@ checkstyle {
         "year"        : project.inceptionYear
     ]
     configFile = file("checkstyle.xml")
-    toolVersion = '8.24'
+    toolVersion = '8.25'
 }
 
 // Source compiler configuration
