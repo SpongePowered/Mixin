@@ -82,7 +82,9 @@ public class MixinClassGenerator {
             boolean success = generator.generate(name, classNode);
             genTimer.end();
             if (success) {
-                this.auditTrail.onGenerate(name, generator.getName());
+                if (this.auditTrail != null) {
+                    this.auditTrail.onGenerate(name, generator.getName());
+                }
                 this.extensions.export(environment, name.replace('.', '/'), false, classNode);
                 return true;
             }
