@@ -130,7 +130,8 @@ public final class MixinService {
     private IMixinService initService() {
         this.serviceLoader = ServiceLoader.<IMixinService>load(IMixinService.class, this.getClass().getClassLoader());
         Iterator<IMixinService> iter = this.serviceLoader.iterator();
-        List<String> rejectedServices = new ArrayList<String>();
+        List<String> badServices = new ArrayList<String>();
+        int brokenServiceCount = 0;
         while (iter.hasNext()) {
             try {
                 IMixinService service = iter.next();
@@ -140,14 +141,22 @@ public final class MixinService {
                 if (service.isValid()) {
                     return service;
                 }
-                rejectedServices.add(service.getName());
-            } catch (ServiceConfigurationError serviceError) {
-//                serviceError.printStackTrace();
+                MixinService.logger.debug("MixinService [{}] is not valid", service.getName());
+                badServices.add(String.format("INVALID[%s]", service.getName()));
+            } catch (ServiceConfigurationError sce) {
+//                sce.printStackTrace();
+                brokenServiceCount++;
             } catch (Throwable th) {
+                String faultingClassName = th.getStackTrace()[0].getClassName();
+                MixinService.logger.debug("MixinService [{}] failed initialisation: {}", faultingClassName, th.getMessage());
+                int pos = faultingClassName.lastIndexOf('.');
+                badServices.add(String.format("ERROR[%s]", pos < 0 ? faultingClassName : faultingClassName.substring(pos + 1)));
 //                th.printStackTrace();
             }
         }
-        throw new ServiceNotAvailableError("No mixin host service is available. Rejected services: " + Joiner.on(", ").join(rejectedServices));
+        
+        String brokenServiceNote = brokenServiceCount == 0 ? "" : " and " + brokenServiceCount + " other invalid services.";
+        throw new ServiceNotAvailableError("No mixin host service is available. Services: " + Joiner.on(", ").join(badServices) + brokenServiceNote);
     }
 
     /**
