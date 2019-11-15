@@ -47,6 +47,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
+import org.spongepowered.asm.mixin.throwables.ClassMetadataNotFoundException;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.ActivityStack.Activity;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
@@ -582,7 +583,7 @@ class MixinPreProcessorStandard {
         Activity fieldActivity = this.activities.begin("?");
         for (Iterator<FieldNode> iter = this.classNode.getFields().iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
-            fieldActivity.next(String.format("%s:%s", mixinField.name, mixinField.desc));
+            fieldActivity.next("%s:%s", mixinField.name, mixinField.desc);
             AnnotationNode shadow = Annotations.getVisible(mixinField, Shadow.class);
             boolean isShadow = shadow != null;
             
@@ -732,7 +733,7 @@ class MixinPreProcessorStandard {
         Section metaTimer = this.profiler.begin("meta");
         ClassInfo owner = ClassInfo.forDescriptor(methodNode.owner, TypeLookup.DECLARED_TYPE);
         if (owner == null) {
-            throw new RuntimeException(new ClassNotFoundException(methodNode.owner.replace('/', '.')));
+            throw new ClassMetadataNotFoundException(methodNode.owner.replace('/', '.'));
         }
 
         Method method = owner.findMethodInHierarchy(methodNode, SearchType.ALL_CLASSES, ClassInfo.INCLUDE_PRIVATE);
@@ -749,7 +750,7 @@ class MixinPreProcessorStandard {
         Section metaTimer = this.profiler.begin("meta");
         ClassInfo owner = ClassInfo.forDescriptor(fieldNode.owner, TypeLookup.DECLARED_TYPE);
         if (owner == null) {
-            throw new RuntimeException(new ClassNotFoundException(fieldNode.owner.replace('/', '.')));
+            throw new ClassMetadataNotFoundException(fieldNode.owner.replace('/', '.'));
         }
         
         Field field = owner.findField(fieldNode, ClassInfo.INCLUDE_PRIVATE);

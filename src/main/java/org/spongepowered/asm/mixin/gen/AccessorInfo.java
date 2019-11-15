@@ -455,7 +455,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     public String toString() {
         String typeString = this.type != null ? this.type.toString() : "UNPARSED_ACCESSOR";
         return String.format("%s->@%s[%s]::%s%s", this.mixin, Bytecode.getSimpleName(this.annotation), typeString,
-                this.method.name, this.method.desc);
+                this.methodName, this.method.desc);
     }
 
     /**

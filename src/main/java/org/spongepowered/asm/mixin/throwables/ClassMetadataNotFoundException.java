@@ -22,45 +22,44 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.util.asm;
+package org.spongepowered.asm.mixin.throwables;
 
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.mixin.transformer.ActivityStack;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**
- * MethodNode with some extra convenience functionality
+ * Since it's inconvenient to throw the (checked) {@link ClassNotFoundException}
+ * this exception can be selectively thrown when {@link ClassInfo#forName}
+ * returns <tt>null</tt> (indicating class couldn't be loaded or was not found)
+ * in situations where we actually care about it failing and want to throw
+ * something.
  */
-public class MethodNodeEx extends MethodNode {
-    
-    private final IMixinInfo owner;
+public class ClassMetadataNotFoundException extends MixinException {
 
-    private final String originalName;
-    
-    public MethodNodeEx(int access, String name, String descriptor, String signature, String[] exceptions, IMixinInfo owner) {
-        super(ASM.API_VERSION, access, name, descriptor, signature, exceptions);
-        this.originalName = name;
-        this.owner = owner;
-    }
-    
-    @Override
-    public String toString() {
-        return String.format("%s%s", this.originalName, this.desc);
-    }
-    
-    public String getQualifiedName() {
-        return String.format("%s::%s", this.owner.getName(), this.originalName);
-    }
-    
-    public String getOriginalName() {
-        return this.originalName;
-    }
-    
-    public IMixinInfo getOwner() {
-        return this.owner;
+    private static final long serialVersionUID = 1L;
+
+    public ClassMetadataNotFoundException(String message) {
+        super(message);
     }
 
-    public static String getName(MethodNode method) {
-        return method instanceof MethodNodeEx ? ((MethodNodeEx)method).getOriginalName() : method.name;
+    public ClassMetadataNotFoundException(String message, ActivityStack context) {
+        super(message, context);
+    }
+
+    public ClassMetadataNotFoundException(Throwable cause) {
+        super(cause);
+    }
+
+    public ClassMetadataNotFoundException(Throwable cause, ActivityStack context) {
+        super(cause, context);
+    }
+
+    public ClassMetadataNotFoundException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public ClassMetadataNotFoundException(String message, Throwable cause, ActivityStack context) {
+        super(message, cause, context);
     }
 
 }

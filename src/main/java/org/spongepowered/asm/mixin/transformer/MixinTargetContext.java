@@ -60,6 +60,7 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.struct.MemberRef;
 import org.spongepowered.asm.mixin.struct.SourceMap.File;
+import org.spongepowered.asm.mixin.throwables.ClassMetadataNotFoundException;
 import org.spongepowered.asm.mixin.transformer.ActivityStack.Activity;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
@@ -444,7 +445,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             this.validateMethod(method);
             activity.next("Transform Descriptor");
             this.transformDescriptor(method);
-            activity.next("Transform LVTs");
+            activity.next("Transform LVT");
             this.transformLVT(method);
     
             // Offset line numbers per the stratum
@@ -532,13 +533,16 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             return;
         }
         
+        Activity localVarActivity = this.activities.begin("?");
         for (LocalVariableNode local : method.localVariables) {
             if (local == null || local.desc == null) {
                 continue;
             }
 
+            localVarActivity.next("var=%s", local.name);
             local.desc = this.transformSingleDescriptor(Type.getType(local.desc));
         }
+        localVarActivity.end();
     }
 
     /**
@@ -906,6 +910,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     private String transformSingleDescriptor(String desc, boolean isObject) {
+        Activity descriptorActivity = this.activities.begin("desc=%s", desc);
         String type = desc;
         while (type.startsWith("[") || type.startsWith("L")) {
             if (type.startsWith("[")) {
@@ -915,27 +920,30 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             type = type.substring(1, type.indexOf(";"));
             isObject = true;
         }
-        
         if (!isObject) {
+            descriptorActivity.end();
             return desc;
         }
-        
         String innerClassName = this.innerClasses.get(type);
         if (innerClassName != null) {
+            descriptorActivity.end();
             return desc.replace(type, innerClassName);
         }
-        
         if (this.innerClasses.inverse().containsKey(type)) {
+            descriptorActivity.end();
             return desc;
         }
-        
         ClassInfo typeInfo = ClassInfo.forName(type);
-        
+        if (typeInfo == null) {
+            throw new ClassMetadataNotFoundException(type.replace('/', '.'));
+        }
         if (!typeInfo.isMixin() || typeInfo.isLoadable()) {
+            descriptorActivity.end();
             return desc;
         }
-        
-        return desc.replace(type, this.findRealType(typeInfo).toString());
+        String realDesc = desc.replace(type, this.findRealType(typeInfo).toString());
+        descriptorActivity.end();
+        return realDesc;
     }
     
     private String transformMethodDescriptor(String desc) {
@@ -1165,16 +1173,26 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param targetClass Target class
      */
     void postApply(String transformedName, ClassNode targetClass) {
+        this.activities.clear();
+        
         try {
+            Activity activity = this.activities.begin("Validating Injector Groups");
             this.injectorGroups.validateAll();
+            activity.next("Plugin Post-Application");
+            this.mixin.postApply(transformedName, targetClass);
+            activity.end();
         } catch (InjectionValidationException ex) {
             InjectorGroupInfo group = ex.getGroup();
             throw new InjectionError(
                 String.format("Critical injection failure: Callback group %s in %s failed injection check: %s",
                 group, this.mixin, ex.getMessage()));
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
         }
-        
-        this.mixin.postApply(transformedName, targetClass);
     }
     
     /**
@@ -1206,20 +1224,38 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * injectors
      */
     void prepareInjections() {
-        this.injectors.clear();
+        this.activities.clear();
         
-        for (MethodNode method : this.mergedMethods) {
-            InjectionInfo injectInfo = InjectionInfo.parse(this, method);
-            if (injectInfo == null) {
-                continue;
+        try {
+            this.injectors.clear();
+
+            Activity prepareActivity = this.activities.begin("?");
+            for (MethodNode method : this.mergedMethods) {
+                prepareActivity.next("%s%s", method.name, method.desc);
+                Activity methodActivity = this.activities.begin("Parse");
+                InjectionInfo injectInfo = InjectionInfo.parse(this, method);
+                if (injectInfo == null) {
+                    continue;
+                }
+                
+                methodActivity.next("Validate");
+                if (injectInfo.isValid()) {
+                    methodActivity.next("Prepare");
+                    injectInfo.prepare();
+                    this.injectors.add(injectInfo);
+                }
+                
+                methodActivity.next("Undecorate");
+                method.visibleAnnotations.remove(injectInfo.getAnnotation());
+                methodActivity.end();
             }
-            
-            if (injectInfo.isValid()) {
-                injectInfo.prepare();
-                this.injectors.add(injectInfo);
-            }
-            
-            method.visibleAnnotations.remove(injectInfo.getAnnotation());
+            prepareActivity.end();
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
         }
     }
 
@@ -1227,15 +1263,32 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * Apply injectors discovered in the {@link #prepareInjections()} pass
      */
     void applyInjections() {
-        for (InjectionInfo injectInfo : this.injectors) {
-            injectInfo.inject();
-        }
+        this.activities.clear();
         
-        for (InjectionInfo injectInfo : this.injectors) {
-            injectInfo.postInject();
+        try {
+            Activity applyActivity = this.activities.begin("Inject");
+            Activity injectActivity = this.activities.begin("?");
+            for (InjectionInfo injectInfo : this.injectors) {
+                injectActivity.next(injectInfo.toString());
+                injectInfo.inject();
+            }
+
+            applyActivity.next("PostInject");
+            Activity postInjectActivity = this.activities.begin("?");
+            for (InjectionInfo injectInfo : this.injectors) {
+                postInjectActivity.next(injectInfo.toString());
+                injectInfo.postInject();
+            }
+
+            applyActivity.end();
+            this.injectors.clear();
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
         }
-        
-        this.injectors.clear();
     }
 
     /**
@@ -1243,16 +1296,32 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * method bodies
      */
     List<MethodNode> generateAccessors() {
-        for (AccessorInfo accessor : this.accessors) {
-            accessor.locate();
-        }
-        
+        this.activities.clear();
         List<MethodNode> methods = new ArrayList<MethodNode>();
         
-        for (AccessorInfo accessor : this.accessors) {
-            MethodNode generated = accessor.generate();
-            this.getTarget().addMixinMethod(generated);
-            methods.add(generated);
+        try {
+            Activity accessorActivity = this.activities.begin("Locate");
+            Activity locateActivity = this.activities.begin("?");
+            for (AccessorInfo accessor : this.accessors) {
+                locateActivity.next(accessor.toString());
+                accessor.locate();
+            }
+            
+            accessorActivity.next("Generate"); 
+            Activity generateActivity = this.activities.begin("?");
+            for (AccessorInfo accessor : this.accessors) {
+                generateActivity.next(accessor.toString());
+                MethodNode generated = accessor.generate();
+                this.getTarget().addMixinMethod(generated);
+                methods.add(generated);
+            }
+            accessorActivity.end(); 
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
         }
         
         return methods;

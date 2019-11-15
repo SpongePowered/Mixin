@@ -74,7 +74,7 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
         this.annotation = annotation;
         this.annotationType = this.annotation != null ? "@" + Bytecode.getSimpleName(this.annotation) : "Undecorated injector";
         this.classNode = mixin.getTargetClassNode();
-        this.methodName = method instanceof MethodNodeEx ? ((MethodNodeEx)this.method).getOriginalName() : method.name;
+        this.methodName = MethodNodeEx.getName(method);
     }
     
     /**
