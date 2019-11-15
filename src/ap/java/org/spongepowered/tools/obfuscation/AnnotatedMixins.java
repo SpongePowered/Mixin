@@ -60,6 +60,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.util.ITokenProvider;
 import org.spongepowered.asm.util.VersionNumber;
+import org.spongepowered.asm.util.logging.MessageRouter;
 import org.spongepowered.tools.obfuscation.interfaces.IJavadocProvider;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
@@ -144,9 +145,12 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+        
+        MessageRouter.setMessager(processingEnv.getMessager());
 
-        this.printMessage(Kind.NOTE, "SpongePowered MIXIN Annotation Processor Version=" + MixinBootstrap.VERSION);
-        this.checkPluginVersion(this.getOption(SupportedOptions.PLUGIN_VERSION));
+        String pluginVersion = this.checkPluginVersion(this.getOption(SupportedOptions.PLUGIN_VERSION));
+        String pluginVersionString = pluginVersion != null ? String.format(" (MixinGradle Version=%s)", pluginVersion) : "";
+        this.printMessage(Kind.NOTE, "SpongePowered MIXIN Annotation Processor Version=" + MixinBootstrap.VERSION + pluginVersionString);
 
         this.targets = this.initTargetMap();
         this.obf = new ObfuscationManager(this);
@@ -165,9 +169,9 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * the user if the version of MixinGradle is out of date relative to the
      * Mixin library version
      */
-    private void checkPluginVersion(String version) {
+    private String checkPluginVersion(String version) {
         if (version == null) {
-            return;
+            return null;
         }
         
         VersionNumber pluginVersion = VersionNumber.parse(version);
@@ -176,6 +180,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             this.printMessage(Kind.WARNING, String.format("MixinGradle version %s is out of date. Update to the recommended version %s",
                     pluginVersion, recommendedVersion));
         }
+        return pluginVersion.toString();
     }
 
     protected TargetMap initTargetMap() {

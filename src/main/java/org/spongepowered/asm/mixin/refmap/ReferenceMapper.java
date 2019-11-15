@@ -31,10 +31,11 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import javax.tools.Diagnostic.Kind;
+
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.util.logging.MessageRouter;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -255,7 +256,6 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
      * @return new refmap or {@link #DEFAULT_MAPPER} if reading fails
      */
     public static ReferenceMapper read(String resourcePath) {
-        Logger logger = LogManager.getLogger("mixin");
         Reader reader = null;
         try {
             IMixinService service = MixinService.getService();
@@ -267,9 +267,11 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
                 return mapper;
             }
         } catch (JsonParseException ex) {
-            logger.error("Invalid REFMAP JSON in " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
+            MessageRouter.getMessager().printMessage(Kind.ERROR, String.format("Invalid REFMAP JSON in %s: %s %s",
+                    resourcePath, ex.getClass().getName(), ex.getMessage()));
         } catch (Exception ex) {
-            logger.error("Failed reading REFMAP JSON from " + resourcePath + ": " + ex.getClass().getName() + " " + ex.getMessage());
+            MessageRouter.getMessager().printMessage(Kind.ERROR, String.format("Failed reading REFMAP JSON from %s: %s %s",
+                    resourcePath, ex.getClass().getName(), ex.getMessage()));
         } finally {
             Closeables.closeQuietly(reader);
         }

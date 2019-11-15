@@ -33,8 +33,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import javax.tools.Diagnostic.Kind;
+
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
@@ -67,8 +67,11 @@ import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.asm.ElementNode;
+import org.spongepowered.asm.util.asm.MethodNodeEx;
+import org.spongepowered.asm.util.logging.MessageRouter;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Contructs information about an injection from an {@link Inject} annotation
@@ -637,7 +640,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
-        return String.format("%s->@%s::%s%s", mixin.toString(), Bytecode.getSimpleName(annotation), method.name, method.desc);
+        return String.format("%s->@%s::%s%s", mixin.toString(), Bytecode.getSimpleName(annotation), MethodNodeEx.getName(method), method.desc);
     }
 
     /**
@@ -662,7 +665,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         return sb.toString();
     }
-
+    
     /**
      * Register an injector info class. The supplied class must be decorated
      * with an {@link AnnotationType} annotation for registration purposes.
@@ -675,8 +678,6 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             throw new IllegalArgumentException("Injection info class " + type + " is not annotated with @AnnotationType");
         }
         
-        Logger logger = LogManager.getLogger("mixin");
-        
         InjectorEntry entry;
         try {
             entry = new InjectorEntry(annotationType.value(), type);
@@ -684,11 +685,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             throw new MixinError("InjectionInfo class " + type.getName() + " is missing a valid constructor");
         }
         InjectorEntry existing = InjectionInfo.registry.get(entry.simpleName);
-        if (existing != null && !existing.type.equals(type)) {
-            logger.debug("WARNING: Overriding InjectionInfo for {} with {} (previously {})", annotationType.value().getSimpleName(), type.getName(),
-                    existing.type.getName());
+        if (existing != null) { // && !existing.type.equals(type)) {
+            MessageRouter.getMessager().printMessage(Kind.WARNING, String.format("Overriding InjectionInfo for @%s with %s (previously %s)",
+                    annotationType.value().getSimpleName(), type.getName(), existing.type.getName()));
         } else {
-            logger.debug("Registering new injector for {} with {}", annotationType.value().getSimpleName(), type.getName());
+            MessageRouter.getMessager().printMessage(Kind.OTHER, String.format("Registering new injector for @%s with %s",
+                    annotationType.value().getSimpleName(), type.getName()));
         }
         
         InjectionInfo.registry.put(entry.simpleName, entry);
@@ -698,6 +700,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             annotations.add(injector.annotationType);
         }
         InjectionInfo.registeredAnnotations = annotations.toArray(InjectionInfo.registeredAnnotations);
+    }
+    
+    public static Set<Class<? extends Annotation>> getRegisteredAnnotations() {
+        return ImmutableSet.<Class<? extends Annotation>>copyOf(InjectionInfo.registeredAnnotations);
     }
 
 }

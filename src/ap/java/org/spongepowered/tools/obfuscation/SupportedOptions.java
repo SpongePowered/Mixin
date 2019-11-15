@@ -64,7 +64,8 @@ public final class SupportedOptions {
             SupportedOptions.OVERWRITE_ERROR_LEVEL,
             SupportedOptions.DEFAULT_OBFUSCATION_ENV,
             SupportedOptions.DEPENDENCY_TARGETS_FILE,
-            SupportedOptions.MAPPING_TYPES
+            SupportedOptions.MAPPING_TYPES,
+            SupportedOptions.PLUGIN_VERSION
         );
         options.addAll(
             ObfuscationServices.getInstance().getSupportedOptions()
