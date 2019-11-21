@@ -39,8 +39,8 @@ public class MixinPlatformAgentLiteLoaderLegacy extends MixinPlatformAgentAbstra
     private static final String LITELOADER_TWEAKER_NAME = "com.mumfrey.liteloader.launch.LiteLoaderTweaker";
     
     @Override
-    public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
-        return false;
+    public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
+        return AcceptResult.REJECTED;
     }
 
     /* (non-Javadoc)

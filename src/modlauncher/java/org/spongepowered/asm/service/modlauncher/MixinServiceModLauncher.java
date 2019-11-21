@@ -225,7 +225,8 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public Collection<String> getPlatformAgents() {
         return ImmutableList.<String>of(
-            "org.spongepowered.asm.launch.platform.MixinPlatformAgentMinecraftForge"
+            "org.spongepowered.asm.launch.platform.MixinPlatformAgentMinecraftForge",
+            "org.spongepowered.asm.launch.platform.MixinPlatformAgentFMLLegacy"
         );
     }
     

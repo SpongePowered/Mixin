@@ -53,9 +53,9 @@ public class MixinPlatformAgentMinecraftForge extends MixinPlatformAgentAbstract
      *      org.spongepowered.asm.launch.platform.container.IContainerHandle)
      */
     @Override
-    public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
+    public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
         // No containers plz
-        return false;
+        return AcceptResult.REJECTED;
     }
     
     /* (non-Javadoc)

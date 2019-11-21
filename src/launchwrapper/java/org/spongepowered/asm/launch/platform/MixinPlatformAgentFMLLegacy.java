@@ -139,16 +139,23 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
     private boolean initInjectionState;
 
     @Override
-    public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
-        if (!(handle instanceof ContainerHandleURI) || !super.accept(manager, handle)) {
-            return false;
+    public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
+        try {
+            this.clCoreModManager = MixinPlatformAgentFMLLegacy.getCoreModManagerClass();
+        } catch (ClassNotFoundException ex) {
+            MixinPlatformAgentAbstract.logger.info("FML platform manager could not load class {}. Proceeding without FML support.",
+                    ex.getMessage());
+            return AcceptResult.INVALID;
         }
         
+        if (!(handle instanceof ContainerHandleURI) || super.accept(manager, handle) != AcceptResult.ACCEPTED) {
+            return AcceptResult.REJECTED;
+        }
+
         this.file = ((ContainerHandleURI)handle).getFile();
         this.fileName = this.file.getName();
         this.coreModWrapper = this.initFMLCoreMod();
-
-        return true;
+        return this.coreModWrapper != null ? AcceptResult.ACCEPTED : AcceptResult.REJECTED;
     }
 
     /**
@@ -156,14 +163,6 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
      */
     private ITweaker initFMLCoreMod() {
         try {
-            try {
-                this.clCoreModManager = MixinPlatformAgentFMLLegacy.getCoreModManagerClass();
-            } catch (ClassNotFoundException ex) {
-                MixinPlatformAgentAbstract.logger.info("FML platform manager could not load class {}. Proceeding without FML support.",
-                        ex.getMessage());
-                return null;
-            }
-
             if ("true".equalsIgnoreCase(this.handle.getAttribute(MixinPlatformAgentFMLLegacy.MFATT_FORCELOADASMOD))) {
                 MixinPlatformAgentAbstract.logger.debug("ForceLoadAsMod was specified for {}, attempting force-load", this.fileName);
                 this.loadAsMod();
@@ -424,7 +423,11 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
     public String getSideName() {
         // Using this method first prevents us from accidentally loading FML
         // classes too early when using the tweaker in dev
-        for (ITweaker tweaker : GlobalProperties.<List<ITweaker>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKS)) {
+        List<ITweaker> tweakerList = GlobalProperties.<List<ITweaker>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKS);
+        if (tweakerList == null) {
+            return null;
+        }
+        for (ITweaker tweaker : tweakerList) {
             if (tweaker.getClass().getName().endsWith(MixinPlatformAgentFMLLegacy.SERVER_TWEAKER_TAIL)) {
                 return Constants.SIDE_SERVER;
             } else if (tweaker.getClass().getName().endsWith(MixinPlatformAgentFMLLegacy.CLIENT_TWEAKER_TAIL)) {

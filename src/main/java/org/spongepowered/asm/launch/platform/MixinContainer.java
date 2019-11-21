@@ -26,11 +26,13 @@ package org.spongepowered.asm.launch.platform;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.GlobalProperties;
+import org.spongepowered.asm.launch.platform.IMixinPlatformAgent.AcceptResult;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.service.MixinService;
 
@@ -59,22 +61,25 @@ public class MixinContainer {
     public MixinContainer(MixinPlatformManager manager, IContainerHandle handle) {
         this.handle = handle;
         
-        for (String agentClass : MixinContainer.agentClasses) {
+        for (Iterator<String> iter = MixinContainer.agentClasses.iterator(); iter.hasNext();) {
+            String agentClass = iter.next();
             try {
                 @SuppressWarnings("unchecked")
                 Class<IMixinPlatformAgent> clazz = (Class<IMixinPlatformAgent>)Class.forName(agentClass);
                 String simpleName = clazz.getSimpleName();
-                String acceptAction = "rejected";
                 
                 MixinContainer.logger.debug("Instancing new {} for {}", simpleName, this.handle);
                 IMixinPlatformAgent agent = clazz.newInstance();
                 
-                if (agent.accept(manager, this.handle)) {
+                AcceptResult acceptAction = agent.accept(manager, this.handle);
+                if (acceptAction == AcceptResult.ACCEPTED) {
                     this.agents.add(agent);
-                    acceptAction = "accepted";
+                } else if (acceptAction == AcceptResult.INVALID) {
+                    iter.remove();
+                    continue;
                 }
                 
-                MixinContainer.logger.debug("{} {} container {}", simpleName, acceptAction, this.handle);
+                MixinContainer.logger.debug("{} {} container {}", simpleName, acceptAction.name().toLowerCase(), this.handle);
             } catch (InstantiationException ex) {
                 Throwable cause = ex.getCause();
                 if (cause instanceof RuntimeException) {

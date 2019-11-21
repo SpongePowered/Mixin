@@ -56,10 +56,10 @@ public abstract class MixinPlatformAgentAbstract implements IMixinPlatformAgent 
     }
     
     @Override
-    public boolean accept(MixinPlatformManager manager, IContainerHandle handle) {
+    public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
         this.manager = manager;
         this.handle = handle;
-        return true;
+        return AcceptResult.ACCEPTED;
     }
 
     @Override

@@ -28,6 +28,7 @@ import java.util.Collection;
 
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.IConsumer;
 
 /**
@@ -43,7 +44,10 @@ public interface IMixinPlatformServiceAgent extends IMixinPlatformAgent {
     public abstract void init();
     
     /**
-     * Attempt to determine the side name from the current environment
+     * Attempt to determine the side name from the current environment. Return
+     * <tt>null</tt> if the side name cannot be determined by this agent. Return
+     * side name or {@link Constants#SIDE_UNKNOWN} if the agent is able to
+     * determine the side.
      */
     public abstract String getSideName();
 
