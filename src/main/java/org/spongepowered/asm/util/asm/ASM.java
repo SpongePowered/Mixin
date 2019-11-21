@@ -24,8 +24,9 @@
  */
 package org.spongepowered.asm.util.asm;
 
+import java.lang.reflect.Field;
+
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
 
 /**
  * Utility methods for determining ASM version and other version-specific
@@ -33,15 +34,30 @@ import org.objectweb.asm.tree.ClassNode;
  */
 public final class ASM {
     
-    @SuppressWarnings("deprecation")
-    private static final int[] EXPERIMENTAL_VERSIONS = { Opcodes.ASM7_EXPERIMENTAL }; 
-    private static final int[] SUPPORTED_VERSIONS = { Opcodes.ASM6, Opcodes.ASM5 }; 
+    private static int majorVersion = 5;
+    private static int minorVersion = 0;
+    private static String maxVersion = "FALLBACK";
     
+    /**
+     * The detected ASM API Version
+     */
     public static final int API_VERSION = ASM.detectVersion();
-    
-    private static boolean experimental;
-    
+
     private ASM() {
+    }
+    
+    /**
+     * Get the major API version
+     */
+    public static int getApiVersionMajor() {
+        return ASM.majorVersion;
+    }
+    
+    /**
+     * Get the minor API version
+     */
+    public static int getApiVersionMinor() {
+        return ASM.minorVersion;
     }
     
     /**
@@ -50,40 +66,39 @@ public final class ASM {
      * @return ASM API version as string
      */
     public static String getApiVersionString() {
-        String suffix = "";
-        if (ASM.experimental) {
-            int version = ASM.detectVersion(ASM.SUPPORTED_VERSIONS);
-            suffix = String.format("-EXPERIMENTAL (%d.%d)", ((0xFF0000 & version) >> 16), ((0xFF00 & version) >> 8));
-        }
-        return String.format("ASM %d.%d%s", ((0xFF0000 & ASM.API_VERSION) >> 16), ((0xFF00 & ASM.API_VERSION) >> 8), suffix);
+        return String.format("ASM %d.%d (%s)", ASM.majorVersion, ASM.minorVersion, ASM.maxVersion);
     }
 
     private static int detectVersion() {
-        int expVersion = ASM.detectVersion(ASM.EXPERIMENTAL_VERSIONS);
-        if (expVersion > 0) {
-            ASM.experimental = true;
-            return expVersion;
-        }
+        int apiVersion = Opcodes.ASM4;
         
-        ASM.experimental = false;
-        int version = ASM.detectVersion(ASM.SUPPORTED_VERSIONS);
-        if (version > 0) {
-            return version;
-        }
-
-        return Opcodes.ASM5;
-    }
-
-    private static int detectVersion(int[] versions) {
-        for (int version : versions) {
+        for (Field field : Opcodes.class.getDeclaredFields()) {
+            if (field.getType() != Integer.TYPE || !field.getName().startsWith("ASM")) {
+                continue;
+            }
+            
             try {
-                new ClassNode(version).hashCode();
-                return version;
-            } catch (IllegalArgumentException ex) {
-                // expected, this version is not supported
+                int version = field.getInt(null);
+                
+                // int patch = version & 0xFF;
+                int minor = (version >> 8) & 0xFF;
+                int major = (version >> 16) & 0xFF;
+                boolean experimental = ((version >> 24) & 0xFF) != 0;
+                
+                if (major >= ASM.majorVersion) {
+                    ASM.maxVersion = field.getName();
+                    if (!experimental) {
+                        apiVersion = version;
+                        ASM.majorVersion = major;
+                        ASM.minorVersion = minor;
+                    }
+                }
+            } catch (ReflectiveOperationException ex) {
+                throw new Error(ex);
             }
         }
-        return 0;
+        
+        return apiVersion;
     }
 
 }
