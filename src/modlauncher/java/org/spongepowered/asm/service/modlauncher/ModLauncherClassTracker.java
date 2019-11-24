@@ -91,11 +91,7 @@ public class ModLauncherClassTracker implements IClassProcessor, IClassTracker {
             }
         }
         
-        synchronized (this.loadedClasses) {
-            this.loadedClasses.add(name);
-        }
-        
-        return Phases.NONE;
+        return Phases.AFTER_ONLY;
     }
 
     /* (non-Javadoc)
@@ -106,6 +102,10 @@ public class ModLauncherClassTracker implements IClassProcessor, IClassTracker {
      */
     @Override
     public boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
+        synchronized (this.loadedClasses) {
+            this.loadedClasses.add(classType.getClassName());
+        }
+        
         return false;
     }
         
