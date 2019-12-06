@@ -78,7 +78,7 @@ public final class ClassInfo {
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
 
     /**
-     * Include <tt>private</tt> members when running a member search
+     * Include <tt>static</tt> members when running a member search
      */
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
 
