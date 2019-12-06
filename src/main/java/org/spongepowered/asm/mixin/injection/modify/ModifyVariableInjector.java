@@ -35,6 +35,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -121,16 +122,12 @@ public class ModifyVariableInjector extends Injector {
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
         
-        if (target.isStatic != this.isStatic) {
-            throw new InvalidInjectionException(this.info, "'static' of variable modifier method does not match target in " + this);
-        }
-        
         int ordinal = this.discriminator.getOrdinal();
         if (ordinal < -1) {
             throw new InvalidInjectionException(this.info, "Invalid ordinal " + ordinal + " specified in " + this);
         }
         
-        if (this.discriminator.getIndex() == 0 && !this.isStatic) {
+        if (this.discriminator.getIndex() == 0 && !target.isStatic) {
             throw new InvalidInjectionException(this.info, "Invalid index 0 specified in non-static variable modifier " + this);
         }
     }
@@ -149,6 +146,8 @@ public class ModifyVariableInjector extends Injector {
         if (this.discriminator.printLVT()) {
             this.printLocals(target, context);
         }
+
+        this.checkTargetForNode(target, node, RestrictTargetLevel.ALLOW_ALL);
         
         InjectorData handler = new InjectorData(target, "handler", false);
         this.validateParams(handler, this.returnType, this.returnType);

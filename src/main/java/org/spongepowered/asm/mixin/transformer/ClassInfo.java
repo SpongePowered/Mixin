@@ -72,9 +72,26 @@ import com.google.common.collect.ImmutableSet;
  */
 public final class ClassInfo {
 
+    /**
+     * Include <tt>private</tt> members when running a member search
+     */
     public static final int INCLUDE_PRIVATE = Opcodes.ACC_PRIVATE;
+
+    /**
+     * Include <tt>private</tt> members when running a member search
+     */
     public static final int INCLUDE_STATIC = Opcodes.ACC_STATIC;
+
+    /**
+     * Include <tt>private</tt> <b>and</b> <tt>static</tt> members when running
+     * a member search
+     */
     public static final int INCLUDE_ALL = ClassInfo.INCLUDE_PRIVATE | ClassInfo.INCLUDE_STATIC;
+    
+    /**
+     * Include instance and class initialisers when running a method search 
+     */
+    public static final int INCLUDE_INITIALISERS = 0x40000;
     
     /**
      * Search type for the findInHierarchy methods, replaces a boolean flag
@@ -682,9 +699,14 @@ public final class ClassInfo {
      * Interfaces
      */
     private final Set<String> interfaces;
+    
+    /**
+     * Constructors and initialisers in this class
+     */
+    private final Set<Method> initialisers;
 
     /**
-     * Public and protected methods (instance) methods in this class
+     * Methods in this class
      */
     private final Set<Method> methods;
 
@@ -754,6 +776,9 @@ public final class ClassInfo {
         this.superName = null;
         this.outerName = null;
         this.isProbablyStatic = true;
+        this.initialisers = ImmutableSet.<Method>of(
+            new Method("<init>", "()V")
+        );
         this.methods = ImmutableSet.<Method>of(
             new Method("getClass", "()Ljava/lang/Class;"),
             new Method("hashCode", "()I"),
@@ -787,6 +812,7 @@ public final class ClassInfo {
         try {
             this.name = classNode.name;
             this.superName = classNode.superName != null ? classNode.superName : ClassInfo.JAVA_LANG_OBJECT;
+            this.initialisers = new HashSet<Method>();
             this.methods = new HashSet<Method>();
             this.fields = new HashSet<Field>();
             this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
@@ -839,7 +865,9 @@ public final class ClassInfo {
     }
 
     private void addMethod(MethodNode method, boolean injected) {
-        if (!method.name.startsWith("<")) {
+        if (method.name.startsWith("<")) {
+            this.initialisers.add(new Method(method, injected));
+        } else {
             this.methods.add(new Method(method, injected));
         }
     }
@@ -1739,13 +1767,21 @@ public final class ClassInfo {
      * @param memberType Type of member list to search
      * @return the field object or null if the field could not be resolved
      */
+    @SuppressWarnings("unchecked")
     private <M extends Member> M findMember(String name, String desc, int flags, Type memberType) {
-        @SuppressWarnings("unchecked")
         Set<M> members = (Set<M>)(memberType == Type.METHOD ? this.methods : this.fields);
 
         for (M member : members) {
             if (member.equals(name, desc) && member.matchesFlags(flags)) {
                 return member;
+            }
+        }
+        
+        if (memberType == Type.METHOD && (flags & ClassInfo.INCLUDE_INITIALISERS) != 0) {
+            for (Method ctor : this.initialisers) {
+                if (ctor.equals(name, desc) && ctor.matchesFlags(flags)) {
+                    return (M)ctor;
+                }
             }
         }
 

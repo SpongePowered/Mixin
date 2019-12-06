@@ -142,7 +142,7 @@ public final class Locals {
         if (classInfo == null) {
             throw new LVTGeneratorError("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
         }
-        Method methodInfo = classInfo.findMethod(method);
+        Method methodInfo = classInfo.findMethod(method, method.access | ClassInfo.INCLUDE_INITIALISERS);
         if (methodInfo == null) {
             throw new LVTGeneratorError("Could not locate method metadata for " + method.name + " generating LVT in " + classNode.name);
         }
