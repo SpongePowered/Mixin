@@ -24,16 +24,20 @@
  */
 package org.spongepowered.tools.obfuscation.mirror;
 
+import java.util.List;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 
@@ -45,7 +49,70 @@ import org.spongepowered.asm.util.SignaturePrinter;
  * Convenience functions for mirror types
  */
 public abstract class TypeUtils {
+    
+    /**
+     * Result returned by {@link TypeUtils#isEquivalentType}
+     */
+    public enum Equivalency {
+        
+        /**
+         * Types are not equivalent
+         */
+        NOT_EQUIVALENT,
+        
+        /**
+         * Types are equivalent, but one type is raw 
+         */
+        EQUIVALENT_BUT_RAW,
+        
+        /**
+         * Types are equivalent, but generic type parameters do not match 
+         */
+        BOUNDS_MISMATCH,
+        
+        /**
+         * Types are equivalent, any generic type parameters are also equivalent
+         * or both types are raw
+         */
+        EQUIVALENT
+        
+    }
+    
+    public static class EquivalencyResult {
+        
+        static final EquivalencyResult EQUIVALENT = new EquivalencyResult(Equivalency.EQUIVALENT, "", 0);
+        
+        public final Equivalency type;
+        
+        public final String detail;
+        
+        public final int rawType;
+        
+        EquivalencyResult(Equivalency type, String detail, int rawType) {
+            this.type = type;
+            this.detail = detail;
+            this.rawType = rawType;
+        }
+        
+        @Override
+        public String toString() {
+            return this.detail;
+        }
+        
+        static EquivalencyResult notEquivalent(String format, Object... args) {
+            return new EquivalencyResult(Equivalency.NOT_EQUIVALENT, String.format(format, args), 0);
+        }
 
+        static EquivalencyResult boundsMismatch(String format, Object... args) {
+            return new EquivalencyResult(Equivalency.BOUNDS_MISMATCH, String.format(format, args), 0);
+        }
+        
+        static EquivalencyResult equivalentButRaw(int rawType) {
+            return new EquivalencyResult(Equivalency.EQUIVALENT_BUT_RAW, String.format("Type %d is raw", rawType), rawType);
+        }
+        
+    }
+    
     /**
      * Number of times to recurse into TypeMirrors when trying to determine the
      * upper bound of a TYPEVAR 
@@ -193,7 +260,9 @@ public abstract class TypeUtils {
      * @return type name
      */
     public static String getSimpleName(TypeMirror type) {
-        return Bytecode.getSimpleName(TypeUtils.getTypeName(type));
+        String name = TypeUtils.getTypeName(type);
+        int pos = name.lastIndexOf('.');
+        return pos > 0 ? name.substring(pos + 1) : name;
     }
 
     /**
@@ -372,6 +441,25 @@ public abstract class TypeUtils {
         }
         return null;
     }
+    
+    private static String describeGenericBound(TypeMirror type) {
+        if (type instanceof TypeVariable) {
+            StringBuilder description = new StringBuilder("<");
+            TypeVariable typeVar = (TypeVariable)type;
+            description.append(typeVar.toString());
+            TypeMirror lowerBound = typeVar.getLowerBound();
+            if (lowerBound.getKind() != TypeKind.NULL) {
+                description.append(" super ").append(lowerBound);
+            }
+            TypeMirror upperBound = typeVar.getUpperBound();
+            if (upperBound.getKind() != TypeKind.NULL) {
+                description.append(" extends ").append(upperBound);
+            }
+            return description.append(">").toString();
+        }
+        
+        return type.toString();
+    }
 
     /**
      * Get whether the target type is assignable to the specified superclass
@@ -391,9 +479,76 @@ public abstract class TypeUtils {
         
         return assignable;
     }
+    
+    /**
+     * Get whether the two supplied type mirrors represent the same type. For 
+     * generic types the type arguments must also be equivalent in order to
+     * satisfy the equivalence condition.
+     * 
+     * @param processingEnv processing environment
+     * @param t1 first type for comparison
+     * @param t2 second type for comparison
+     * @return true if the supplied types are equivalent
+     */
+    public static EquivalencyResult isEquivalentType(ProcessingEnvironment processingEnv, TypeMirror t1, TypeMirror t2) {
+        if (t1 == null || t2 == null) {
+            return EquivalencyResult.notEquivalent("Invalid types supplied: %s, %s", t1, t2);
+        }
+        
+        if (processingEnv.getTypeUtils().isSameType(t1, t2)) {
+            return EquivalencyResult.EQUIVALENT;
+        }
+        
+        if (t1 instanceof TypeVariable && t2 instanceof TypeVariable) {
+            t1 = TypeUtils.getUpperBound(t1);
+            t2 = TypeUtils.getUpperBound(t2);
+            if (processingEnv.getTypeUtils().isSameType(t1, t2)) {
+                return EquivalencyResult.EQUIVALENT;
+            }
+        }
+        
+        if (t1 instanceof DeclaredType && t2 instanceof DeclaredType) {
+            DeclaredType dtT1 = (DeclaredType)t1;
+            DeclaredType dtT2 = (DeclaredType)t2;
+            TypeMirror rawT1 = TypeUtils.toRawType(processingEnv, dtT1);
+            TypeMirror rawT2 = TypeUtils.toRawType(processingEnv, dtT2);
+            if (!processingEnv.getTypeUtils().isSameType(rawT1, rawT2)) {
+                return EquivalencyResult.notEquivalent("Base types %s and %s are not compatible", rawT1, rawT2);
+            }
+            List<? extends TypeMirror> argsT1 = dtT1.getTypeArguments();
+            List<? extends TypeMirror> argsT2 = dtT2.getTypeArguments();
+            if (argsT1.size() != argsT2.size()) {
+                if (argsT1.size() == 0) {
+                    return EquivalencyResult.equivalentButRaw(1);
+                }
+                if (argsT2.size() == 0) {
+                    return EquivalencyResult.equivalentButRaw(2);
+                }
+                return EquivalencyResult.notEquivalent("Mismatched generic argument counts %s<[%d]> and %s<[%d]>", rawT1, argsT1.size(), rawT2, argsT2.size());
+            }
+
+            for (int arg = 0; arg < argsT1.size(); arg++) {
+                TypeMirror argT1 = argsT1.get(arg);
+                TypeMirror argT2 = argsT2.get(arg);
+                if (TypeUtils.isEquivalentType(processingEnv, argT1, argT2).type != Equivalency.EQUIVALENT) {
+                    return EquivalencyResult.boundsMismatch("Generic bounds mismatch between %s and %s",
+                            TypeUtils.describeGenericBound(argT1), TypeUtils.describeGenericBound(argT2));
+                }
+            }
+            
+            return EquivalencyResult.EQUIVALENT;
+        }
+        
+        return EquivalencyResult.notEquivalent("%s and %s do not match", t1, t2);
+    }
 
     private static TypeMirror toRawType(ProcessingEnvironment processingEnv, DeclaredType targetType) {
-        return processingEnv.getElementUtils().getTypeElement(((TypeElement)targetType.asElement()).getQualifiedName()).asType();
+        if (targetType.getKind() == TypeKind.INTERSECTION) {
+            return targetType;
+        }
+        Name qualifiedName = ((TypeElement)targetType.asElement()).getQualifiedName();
+        TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(qualifiedName);
+        return typeElement != null ? typeElement.asType() : targetType;
     }
     
     /**

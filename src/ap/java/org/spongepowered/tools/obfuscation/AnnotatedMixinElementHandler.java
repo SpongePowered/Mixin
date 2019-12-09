@@ -42,6 +42,7 @@ import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerSuppressible;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
@@ -97,6 +98,10 @@ abstract class AnnotatedMixinElementHandler {
             messager.printMessage(kind, msg, this.element, this.annotation.asMirror());
         }
 
+        public final void printMessage(IMessagerSuppressible messager, Diagnostic.Kind kind, CharSequence msg, SuppressedBy suppressedBy) {
+            messager.printMessage(kind, msg, this.element, this.annotation.asMirror(), suppressedBy);
+        }
+        
     }
     
     /**

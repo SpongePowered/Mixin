@@ -52,6 +52,8 @@ import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils.Equivalency;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils.EquivalencyResult;
 
 import com.google.common.base.Strings;
 
@@ -349,11 +351,23 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     }
 
     private void registerFactoryForTarget(AnnotatedElementInvoker elem, TypeHandle target) {
-        if (!elem.getReturnType().equals(target.getType())) {
-            throw new RuntimeException("Invalid Factory @Invoker return type, expected " + target.getType());
+        EquivalencyResult equivalency = TypeUtils.isEquivalentType(this.ap.getProcessingEnvironment(), elem.getReturnType(), target.getType());
+        if (equivalency.type != Equivalency.EQUIVALENT) {
+            if (equivalency.type == Equivalency.EQUIVALENT_BUT_RAW && equivalency.rawType == 1) {
+                elem.printMessage(this.ap, Kind.WARNING, "Raw return type for Factory @Invoker", SuppressedBy.RAW_TYPES);
+            } else if (equivalency.type == Equivalency.BOUNDS_MISMATCH) {
+                elem.printMessage(this.ap, Kind.ERROR, "Invalid Factory @Invoker return type, generic type arguments of " + target.getType()
+                        + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
+                return;
+            } else {
+                elem.printMessage(this.ap, Kind.ERROR, "Invalid Factory @Invoker return type, expected " + target.getType() + " but found "
+                        + elem.getReturnType());
+                return;
+            }
         }
         if (!elem.isStatic()) {
-            throw new RuntimeException("Factory @Invoker must be static");
+            elem.printMessage(this.ap, Kind.ERROR, "Factory @Invoker must be static");
+            return;
         }
 
         if (!elem.shouldRemap()) {
