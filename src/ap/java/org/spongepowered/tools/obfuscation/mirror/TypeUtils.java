@@ -51,7 +51,7 @@ import org.spongepowered.asm.util.SignaturePrinter;
 public abstract class TypeUtils {
     
     /**
-     * Result returned by {@link TypeUtils#isEquivalentType}
+     * Result type returned by {@link TypeUtils#isEquivalentType}
      */
     public enum Equivalency {
         
@@ -78,14 +78,35 @@ public abstract class TypeUtils {
         
     }
     
+    /**
+     * Result bundle from a type equivalency check. See
+     * {@link TypeUtils#isEquivalentType} for details
+     */
     public static class EquivalencyResult {
         
+        /**
+         * Singleton for equivalent type results
+         */
         static final EquivalencyResult EQUIVALENT = new EquivalencyResult(Equivalency.EQUIVALENT, "", 0);
         
+        /**
+         * The equivalency result type
+         */
         public final Equivalency type;
         
+        /**
+         * Detail string for use in user-facing error messages describing the
+         * nature of match failures
+         */
         public final String detail;
         
+        /**
+         * For {@link Equivalency#EQUIVALENT_BUT_RAW} indicates which argument
+         * was the raw one. This should only ever have the values 0 (for not
+         * relevant), 1 or 2. It is up to the outer scope (the caller) to
+         * determine whether to warn based on the rawness of the respective
+         * "left" and "right" types.
+         */
         public final int rawType;
         
         EquivalencyResult(Equivalency type, String detail, int rawType) {
@@ -483,7 +504,10 @@ public abstract class TypeUtils {
     /**
      * Get whether the two supplied type mirrors represent the same type. For 
      * generic types the type arguments must also be equivalent in order to
-     * satisfy the equivalence condition.
+     * fully satisfy the equivalence condition. If one of the supplied types is
+     * a raw type then a relevant result indicated by <tt>EQUIVALENT_BUT_RAW
+     * </tt> will be returned and the caller can inspect which argument (t1 or
+     * t2) was raw by querying the <tt>rawType</tt> member.
      * 
      * @param processingEnv processing environment
      * @param t1 first type for comparison
