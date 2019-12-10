@@ -226,7 +226,7 @@ class AnnotatedMixin {
                     this.printMessage(Kind.ERROR, "Mixin target " + softTarget + " could not be found", this);
                     return null;
                 } else if (type.isPublic()) {
-                    SuppressedBy suppressedBy = (type.getPackage().isUnnamed()) ? SuppressedBy.DEFAULT_PACKAGE : null;
+                    SuppressedBy suppressedBy = (type.getPackage().isUnnamed()) ? SuppressedBy.DEFAULT_PACKAGE : SuppressedBy.PUBLIC_TARGET;
                     this.printMessage(Kind.WARNING, "Mixin target " + softTarget + " is public and must be specified in value", this, suppressedBy);
                     return null;
                 }

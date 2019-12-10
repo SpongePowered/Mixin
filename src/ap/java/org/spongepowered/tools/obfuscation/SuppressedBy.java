@@ -65,6 +65,12 @@ public enum SuppressedBy {
     DEFAULT_PACKAGE("default-package"),
     
     /**
+     * Suppress warnings when a mixin target is resolved by the AP as visible
+     * but cannot be referenced with a class literal for some reason 
+     */
+    PUBLIC_TARGET("public-target"),
+    
+    /**
      * The default java "raw types" suppressions
      */
     RAW_TYPES("rawtypes");

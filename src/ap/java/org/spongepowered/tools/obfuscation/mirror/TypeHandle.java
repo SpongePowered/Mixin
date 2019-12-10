@@ -226,7 +226,16 @@ public class TypeHandle {
      * Get whether the element is probably public
      */
     public boolean isPublic() {
-        return this.getTargetElement() != null && this.getTargetElement().getModifiers().contains(Modifier.PUBLIC);
+        TypeElement targetElement = this.getTargetElement();
+        if (targetElement == null || !targetElement.getModifiers().contains(Modifier.PUBLIC)) {
+            return false;
+        }
+        for (Element e = targetElement.getEnclosingElement(); e != null && e.getKind() != ElementKind.PACKAGE; e = e.getEnclosingElement()) {
+            if (!e.getModifiers().contains(Modifier.PUBLIC)) {
+                return false;
+            }
+        }
+        return true;
     }
     
     /**
