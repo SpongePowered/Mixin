@@ -429,10 +429,14 @@ public final class Bytecode {
             out += String.format("[%s] %d", Bytecode.getOpcodeName(node), ((VarInsnNode)node).var);
         } else if (node instanceof MethodInsnNode) {
             MethodInsnNode mth = (MethodInsnNode)node;
-            out += String.format("[%s] %s %s %s", Bytecode.getOpcodeName(node), mth.owner, mth.name, mth.desc);
+            out += String.format("[%s] %s::%s%s", Bytecode.getOpcodeName(node), mth.owner, mth.name, mth.desc);
         } else if (node instanceof FieldInsnNode) {
             FieldInsnNode fld = (FieldInsnNode)node;
-            out += String.format("[%s] %s %s %s", Bytecode.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+            out += String.format("[%s] %s::%s:%s", Bytecode.getOpcodeName(node), fld.owner, fld.name, fld.desc);
+        } else if (node instanceof InvokeDynamicInsnNode) {
+            InvokeDynamicInsnNode idc = (InvokeDynamicInsnNode)node;
+            out += String.format("[%s] %s%s { %s %s::%s%s }", Bytecode.getOpcodeName(node), idc.name, idc.desc,
+                    Bytecode.getOpcodeName(idc.bsm.getTag(), "H_GETFIELD", 1), idc.bsm.getOwner(), idc.bsm.getName(), idc.bsm.getDesc());
         } else if (node instanceof LineNumberNode) {
             LineNumberNode ln = (LineNumberNode)node;
             out += String.format("LINE=[%d] LABEL=[%s]", ln.line, ln.start.getLabel());

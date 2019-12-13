@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -44,6 +45,7 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InnerClassNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Mixin;
@@ -89,6 +91,17 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         
         public MixinMethodNode(int access, String name, String desc, String signature, String[] exceptions) {
             super(access, name, desc, signature, exceptions, MixinInfo.this);
+        }
+        
+        @Override
+        public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
+            // Create a shallow copy of the bootstrap method args because the
+            // base implementation just passes the array by reference. This
+            // causes any changes applied to the cloned classnode to leak into
+            // the "master" ClassNode! 
+            Object[] bsmArgs = new Object[bootstrapMethodArguments.length];
+            System.arraycopy(bootstrapMethodArguments, 0, bsmArgs, 0, bootstrapMethodArguments.length);
+            this.instructions.add(new InvokeDynamicInsnNode(name, descriptor, bootstrapMethodHandle, bsmArgs));
         }
 
         public boolean isInjector() {
