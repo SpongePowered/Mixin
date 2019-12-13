@@ -41,7 +41,6 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.SignaturePrinter;
 

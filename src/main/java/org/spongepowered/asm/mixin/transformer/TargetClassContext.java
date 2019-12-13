@@ -371,13 +371,14 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
      * Process {@link Debug} annotations on the class after application
      */
     void processDebugTasks() {
+        AnnotationNode classDebugAnnotation = Annotations.getVisible(this.classNode, Debug.class);
+        this.forceExport = classDebugAnnotation != null && Boolean.TRUE.equals(Annotations.<Boolean>getValue(classDebugAnnotation, "export"));
+        
         if (!this.env.getOption(Option.DEBUG_VERBOSE)) {
             return;
         }
 
-        AnnotationNode classDebugAnnotation = Annotations.getVisible(this.classNode, Debug.class);
         if (classDebugAnnotation != null) {
-            this.forceExport = Boolean.TRUE.equals(Annotations.<Boolean>getValue(classDebugAnnotation, "export"));
             if (Boolean.TRUE.equals(Annotations.<Boolean>getValue(classDebugAnnotation, "print"))) {
                 Bytecode.textify(this.classNode, System.err);
             }
