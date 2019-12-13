@@ -506,17 +506,18 @@ class MixinPreProcessorStandard {
             return false;
         }
         
-        if (method.isSynthetic()) {
+        boolean synthetic = method.isSynthetic();
+        if (synthetic) {
             context.transformDescriptor(mixinMethod);
             method.remapTo(mixinMethod.desc);
         }
 
         MethodNode target = context.findMethod(mixinMethod, null);
-        if (target == null) {
+        if (target == null && !synthetic) {
             return false;
         }
         
-        String type = method.isSynthetic() ? "synthetic" : "@Unique";
+        String type = synthetic ? "synthetic" : "@Unique";
         
         if (Bytecode.getVisibility(mixinMethod).ordinal() < Visibility.PUBLIC.ordinal()) {
             if (method.isConformed()) {
@@ -530,6 +531,10 @@ class MixinPreProcessorStandard {
             return false;
         }
 
+        if (target == null) {
+            return false;
+        }
+        
         if (this.strictUnique) {
             throw new InvalidMixinException(this.mixin, String.format("Method conflict, %s method %s in %s cannot overwrite %s%s in %s",
                     type, mixinMethod.name, this.mixin, target.name, target.desc, context.getTarget()));

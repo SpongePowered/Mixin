@@ -33,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.GlobalProperties;
@@ -1003,7 +1004,14 @@ public final class MixinEnvironment implements ITokenProvider {
             return "Unknown";
         }
     }
-    
+
+    /**
+     * Get logging level info/debug based on verbose setting
+     */
+    private Level getVerboseLoggingLevel() {
+        return this.getOption(Option.DEBUG_VERBOSE) ? Level.INFO : Level.DEBUG;
+    }
+
     /**
      * Get the phase for this environment
      * 
@@ -1081,7 +1089,7 @@ public final class MixinEnvironment implements ITokenProvider {
         if (provider != null && !this.tokenProviderClasses.contains(provider.getClass().getName())) {
             String providerName = provider.getClass().getName();
             TokenProviderWrapper wrapper = new TokenProviderWrapper(provider, this);
-            MixinEnvironment.logger.info("Adding new token provider {} to {}", providerName, this);
+            MixinEnvironment.logger.log(this.getVerboseLoggingLevel(), "Adding new token provider {} to {}", providerName, this);
             this.tokenProviders.add(wrapper);
             this.tokenProviderClasses.add(providerName);
             Collections.sort(this.tokenProviders);
