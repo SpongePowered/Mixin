@@ -58,9 +58,7 @@ public class AccessorGeneratorObjectFactory extends AccessorGeneratorMethodProxy
         Bytecode.loadArgs(this.argTypes, method.instructions, 0);
         method.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, className, Constants.CTOR, this.targetMethod.desc, false));
         method.instructions.add(new InsnNode(Opcodes.ARETURN));
-        
-        assert 1 == 3;
-        
+
         return method;
     }
 
