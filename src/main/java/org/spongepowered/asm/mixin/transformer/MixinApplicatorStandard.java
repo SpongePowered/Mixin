@@ -464,8 +464,8 @@ class MixinApplicatorStandard {
             if (target != null) {
                 Annotations.merge(shadow, target);
                 
-                // Strip the FINAL flag from @Mutable non-private fields
-                if (entry.getValue().isDecoratedMutable() && !Bytecode.hasFlag(target, Opcodes.ACC_PRIVATE)) {
+                // Strip the FINAL flag from @Mutable fields
+                if (entry.getValue().isDecoratedMutable()) {
                     target.access &= ~Opcodes.ACC_FINAL;
                 }
             }
