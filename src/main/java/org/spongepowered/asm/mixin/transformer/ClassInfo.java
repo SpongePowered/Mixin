@@ -403,7 +403,7 @@ public final class ClassInfo {
             return this.decoratedMutable;
         }
 
-        public void setDecoratedFinal(boolean decoratedFinal, boolean decoratedMutable) {
+        protected void setDecoratedFinal(boolean decoratedFinal, boolean decoratedMutable) {
             this.decoratedFinal = decoratedFinal;
             this.decoratedMutable = decoratedMutable;
         }
@@ -486,11 +486,8 @@ public final class ClassInfo {
             this.frames = member instanceof Method ? ((Method)member).frames : null;
         }
 
-        @SuppressWarnings("unchecked")
         public Method(MethodNode method) {
             this(method, false);
-            this.setUnique(Annotations.getVisible(method, Unique.class) != null);
-            this.isAccessor = Annotations.getSingleVisible(method, Accessor.class, Invoker.class) != null;
         }
 
         @SuppressWarnings("unchecked")
@@ -499,6 +496,9 @@ public final class ClassInfo {
             this.frames = this.gatherFrames(method);
             this.setUnique(Annotations.getVisible(method, Unique.class) != null);
             this.isAccessor = Annotations.getSingleVisible(method, Accessor.class, Invoker.class) != null;
+            boolean decoratedFinal = Annotations.getVisible(method, Final.class) != null;
+            boolean decoratedMutable = Annotations.getVisible(method, Mutable.class) != null;
+            this.setDecoratedFinal(decoratedFinal, decoratedMutable);
         }
 
         public Method(String name, String desc) {
@@ -606,7 +606,7 @@ public final class ClassInfo {
     /**
      * A field
      */
-    class Field extends Member {
+    public class Field extends Member {
 
         public Field(Member member) {
             super(member);

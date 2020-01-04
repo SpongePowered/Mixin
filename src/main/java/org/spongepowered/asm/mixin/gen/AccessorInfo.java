@@ -282,6 +282,12 @@ public class AccessorInfo extends SpecialMethodInfo {
      */
     protected MethodNode targetMethod;
     
+    /**
+     * Generator which will be responsible for actually generating the accessor
+     * method body 
+     */
+    protected AccessorGenerator generator;
+    
     public AccessorInfo(MixinTargetContext mixin, MethodNode method) {
         this(mixin, method, Accessor.class);
     }
@@ -401,6 +407,8 @@ public class AccessorInfo extends SpecialMethodInfo {
         }
         return null;
     }
+    
+    
 
     /**
      * Get the inflected/specified target member for this accessor
@@ -466,6 +474,15 @@ public class AccessorInfo extends SpecialMethodInfo {
     public void locate() {
         this.targetField = this.findTargetField();
     }
+
+    /**
+     * Called immediately after locate, initialises the generator for this
+     * accessor and runs validation. 
+     */
+    public void validate() {
+        this.generator = this.type.getGenerator(this);
+        this.generator.validate();
+    }
     
     /**
      * Second pass, generate the actual accessor method for this accessor. The
@@ -475,7 +492,7 @@ public class AccessorInfo extends SpecialMethodInfo {
      * @return generated accessor method
      */
     public MethodNode generate() {
-        MethodNode generatedAccessor = this.type.getGenerator(this).generate();
+        MethodNode generatedAccessor = this.generator.generate();
         Annotations.merge(this.method, generatedAccessor);
         return generatedAccessor;
     }

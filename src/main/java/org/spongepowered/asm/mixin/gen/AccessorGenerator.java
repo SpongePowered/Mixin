@@ -78,6 +78,14 @@ public abstract class AccessorGenerator {
         accessor.maxStack = maxStack;
         return accessor;
     }
+    
+    /**
+     * Perform pre-flight checks on the accessor, to ensure it can be generated
+     * sanely 
+     */
+    public void validate() {
+        // Stub for subclasses
+    }
 
     /**
      * Generate the accessor method

@@ -42,7 +42,7 @@ import org.spongepowered.asm.util.asm.ElementNode;
  */
 class InvokerInfo extends AccessorInfo {
     
-    public InvokerInfo(MixinTargetContext mixin, MethodNode method) {
+    InvokerInfo(MixinTargetContext mixin, MethodNode method) {
         super(mixin, method, Invoker.class);
     }
 

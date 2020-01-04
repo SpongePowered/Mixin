@@ -29,6 +29,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
@@ -104,6 +105,13 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
      */
     public final ClassNode getClassNode() {
         return this.classNode;
+    }
+    
+    /**
+     * Get the class metadata for the mixin
+     */
+    public final ClassInfo getClassInfo() {
+        return this.mixin.getClassInfo();
     }
 
     /**

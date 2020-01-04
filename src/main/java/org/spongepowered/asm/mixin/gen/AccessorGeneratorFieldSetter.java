@@ -24,19 +24,46 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
+import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.Mutable;
+import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.util.Bytecode;
 
 /**
  * Generator for field setters
  */
 public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
     
+    /**
+     * True if the accessor method is decorated with {@link Mutable} 
+     */
+    private boolean mutable;
+    
     public AccessorGeneratorFieldSetter(AccessorInfo info) {
         super(info);
+    }
+    
+    @Override
+    public void validate() {
+        super.validate();
+        
+        Method method = this.info.getClassInfo().findMethod(this.info.getMethod());
+        this.mutable = method.isDecoratedMutable();
+        if (this.mutable || !Bytecode.hasFlag(this.targetField, Opcodes.ACC_FINAL)) {
+            return;
+        }
+        
+        if (this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+            LogManager.getLogger("mixin").warn("{} for final field {}::{} is not @Mutable", this.info,
+                    ((MixinTargetContext)this.info.getContext()).getTarget(), this.targetField.name);
+        }                    
     }
 
     /* (non-Javadoc)
@@ -44,6 +71,10 @@ public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
      */
     @Override
     public MethodNode generate() {
+        if (this.mutable) {
+            this.targetField.access &= ~Opcodes.ACC_FINAL;
+        }
+        
         int stackSpace = this.targetIsStatic ? 0 : 1; // Stack space for "this"
         int maxLocals = stackSpace + this.targetType.getSize();
         int maxStack = stackSpace + this.targetType.getSize();

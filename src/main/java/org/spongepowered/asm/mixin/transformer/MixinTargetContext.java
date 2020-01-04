@@ -354,7 +354,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return the local class info
      */
     @Override
-    ClassInfo getClassInfo() {
+    public ClassInfo getClassInfo() {
         return this.mixin.getClassInfo();
     }
     
@@ -559,7 +559,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         if (methodRef.getOwner().equals(this.getClassRef())) {
             methodRef.setOwner(this.getTarget().getClassRef());
             Method md = this.getClassInfo().findMethod(methodRef.getName(), methodRef.getDesc(), ClassInfo.INCLUDE_ALL);
-            if (md != null && md.isRenamed() && md.getOriginalName().equals(methodRef.getName()) && md.isSynthetic()) {
+            if (md != null && md.isRenamed() && md.getOriginalName().equals(methodRef.getName()) && (md.isSynthetic() || md.isConformed())) {
                 methodRef.setName(md.getName());
             }
             this.upgradeMethodRef(method, methodRef, md);
@@ -1305,6 +1305,13 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             for (AccessorInfo accessor : this.accessors) {
                 locateActivity.next(accessor.toString());
                 accessor.locate();
+            }
+            
+            accessorActivity.next("Validate"); 
+            Activity validateActivity = this.activities.begin("?");
+            for (AccessorInfo accessor : this.accessors) {
+                validateActivity.next(accessor.toString());
+                accessor.validate();
             }
             
             accessorActivity.next("Generate"); 
