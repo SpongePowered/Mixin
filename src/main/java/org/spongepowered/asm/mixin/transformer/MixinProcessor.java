@@ -30,7 +30,9 @@ import java.util.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -45,17 +47,20 @@ import org.spongepowered.asm.mixin.throwables.MixinApplyError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.throwables.MixinPrepareError;
 import org.spongepowered.asm.mixin.transformer.MixinConfig.IListener;
+import org.spongepowered.asm.mixin.transformer.MixinInfo.Variant;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionClassExporter;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+import org.spongepowered.asm.mixin.transformer.throwables.IllegalClassLoadError;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.mixin.transformer.throwables.ReEntrantTransformerError;
 import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.ReEntranceLock;
 import org.spongepowered.asm.util.perf.Profiler;
@@ -300,11 +305,14 @@ public class MixinProcessor {
             }
 
             SortedSet<MixinInfo> mixins = null;
-            boolean invalidRef = false;
+            MixinConfig packageOwnedByConfig = null;
             
             for (MixinConfig config : this.configs) {
                 if (config.packageMatch(name)) {
-                    invalidRef = true;
+                    int packageLen = packageOwnedByConfig != null ? packageOwnedByConfig.getMixinPackage().length() : 0;
+                    if (config.getMixinPackage().length() > packageLen) {
+                        packageOwnedByConfig = config;
+                    }
                     continue;
                 }
                 
@@ -318,12 +326,11 @@ public class MixinProcessor {
                 }
             }
 
-            if (invalidRef) {
-                throw new NoClassDefFoundError(String.format("%s is a mixin class and cannot be referenced directly", name));
+            if (packageOwnedByConfig != null) {
+                throw new IllegalClassLoadError(this.getInvalidClassError(name, targetClassNode, packageOwnedByConfig));
             }
             
             if (mixins != null) {
-                
                 // Re-entrance is "safe" as long as we don't need to apply any mixins, if there are mixins then we need to panic now
                 if (locked) {
                     ReEntrantTransformerError error = new ReEntrantTransformerError("Re-entrance error.");
@@ -360,6 +367,30 @@ public class MixinProcessor {
             mixinTimer.end();
         }
         return success;
+    }
+
+    private String getInvalidClassError(String name, ClassNode targetClassNode, MixinConfig ownedByConfig) {
+        if (ownedByConfig.getClasses().contains(name)) {
+            return String.format("Illegal classload request for %s. Mixin is defined in %s and cannot be referenced directly", name, ownedByConfig);
+        }
+
+//        AnnotationNode shadow = Annotations.getInvisible(targetClassNode, Shadow.class);
+//        if (shadow != null) {
+//            return String.format("Illegal classload request for UNRESOLVED @Shadow %s. "
+//                    + "The proxy was referenced outside a mixin or the mixin processor encountered an internal error.", name);
+//        }
+        
+        AnnotationNode mixin = Annotations.getInvisible(targetClassNode, Mixin.class);
+        if (mixin != null) {
+            Variant variant = MixinInfo.getVariant(targetClassNode);
+            if (variant == Variant.ACCESSOR) {
+                return String.format("Illegal classload request for accessor mixin %s. The mixin is missing from %s which owns "
+                        + "package %s* and the mixin has not been applied.", name, ownedByConfig, ownedByConfig.getMixinPackage());
+            }
+        }
+
+        return String.format("%s is in a defined mixin package %s* owned by %s and cannot be referenced directly",
+                name, ownedByConfig.getMixinPackage(), ownedByConfig);
     }
     
     /**

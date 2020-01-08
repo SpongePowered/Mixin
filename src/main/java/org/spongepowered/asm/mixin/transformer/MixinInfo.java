@@ -85,6 +85,33 @@ import com.google.common.collect.Lists;
 class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     
     /**
+     * Class variant, used to determine subtype
+     */
+    enum Variant {
+        
+        /**
+         * Standard mixin
+         */
+        STANDARD,
+        
+        /**
+         * Interface mixin
+         */
+        INTERFACE,
+        
+        /**
+         * Accessor mixin (interface mixin containing only accessors)
+         */
+        ACCESSOR,
+        
+        /**
+         * Type proxy
+         */
+        PROXY
+        
+    }
+    
+    /**
      * A MethodNode in a mixin
      */
     class MixinMethodNode extends MethodNodeEx {
@@ -649,22 +676,17 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
 
         static SubType getTypeFor(MixinInfo mixin) {
-            if (!mixin.getClassInfo().isInterface()) {
-                return new SubType.Standard(mixin);
+            Variant variant = MixinInfo.getVariant(mixin.getClassInfo());
+            switch (variant) {
+                case STANDARD:
+                    return new SubType.Standard(mixin);
+                case INTERFACE:
+                    return new SubType.Interface(mixin);
+                case ACCESSOR:
+                    return new SubType.Accessor(mixin);
+                default:
+                    throw new IllegalStateException("Unsupported Mixin variant " + variant + " for " + mixin);
             }
-            
-            boolean containsNonAccessorMethod = false;
-            for (Method method : mixin.getClassInfo().getMethods()) {
-                containsNonAccessorMethod |= !method.isAccessor();
-            }
-            
-            if (containsNonAccessorMethod) {
-                // If the mixin contains any other methods, treat it as a regular interface mixin
-                return new SubType.Interface(mixin);
-            }
-            
-            // The mixin contains no non-accessor methods, so we can treat it as an accessor
-            return new SubType.Accessor(mixin);
         }
 
     }
@@ -853,7 +875,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
             throw new InvalidMixinException(this, ex);
         }
     }
-    
+
     /**
      * Parse the declared targets from the annotation into ClassInfo instances
      * and perform initial validation of each target
@@ -1344,6 +1366,33 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     @Override
     public String toString() {
         return String.format("%s:%s", this.parent.getName(), this.name);
+    }
+    
+    static Variant getVariant(ClassNode classNode) {
+        return MixinInfo.getVariant(ClassInfo.fromClassNode(classNode));
+    }
+    
+    static Variant getVariant(ClassInfo classInfo) {
+//        if (ProxyInfo.isProxy(classInfo)) {
+//            return Variant.PROXY;
+//        }
+        
+        if (!classInfo.isInterface()) {
+            return Variant.STANDARD;
+        }
+        
+        boolean containsNonAccessorMethod = false;
+        for (Method method : classInfo.getMethods()) {
+            containsNonAccessorMethod |= (!method.isAccessor() && !method.isSynthetic());
+        }
+        
+        if (containsNonAccessorMethod) {
+            // If the mixin contains any other methods, treat it as a regular interface mixin
+            return Variant.INTERFACE;
+        }
+        
+        // The mixin contains no non-accessor methods, so we can treat it as an accessor
+        return Variant.ACCESSOR;
     }
     
 }

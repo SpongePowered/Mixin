@@ -55,6 +55,8 @@ import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.VersionNumber;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 
@@ -904,8 +906,17 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Get the list of mixin classes we will be applying
      */
+    @SuppressWarnings("unchecked")
     public List<String> getClasses() {
-        return Collections.<String>unmodifiableList(this.mixinClasses);
+        Builder<String> list = ImmutableList.<String>builder();
+        for (List<String> classes : new List[] { this.mixinClasses, this.mixinClassesClient, this.mixinClassesServer} ) {
+            if (classes != null) {
+                for (String className : classes) {
+                    list.add(this.mixinPackage + className);
+                }
+            }
+        }
+        return list.build();
     }
 
     /**
@@ -975,7 +986,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public boolean packageMatch(String className) {
         return className.startsWith(this.mixinPackage);
     }
-
+    
     /**
      * Check whether this configuration bundle has a mixin for the specified
      * class
