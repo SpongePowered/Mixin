@@ -366,66 +366,70 @@ ext.excludePomDeps = [
     'gson',
 ]
 
-uploadArchives {
-    repositories {
+ext.mavenPom = {
+    groupId = project.group
+    version = project.version
+    artifactId = project.archivesBaseName
+    project {
+        name project.archivesBaseName
+        packaging project.packaging
+        description project.projectName
+        url 'http://www.spongepowered.org/'
 
-        mavenDeployer {
-            configuration = configurations.deployerJars
+        scm {
+            url 'https://github.com/SpongePowered/Mixin'
+            connection 'scm:git:git://github.com/SpongePowered/Mixin.git'
+            developerConnection 'scm:git:git@github.com:SpongePowered/Mixin.git'
+        }
 
-            if (buildType == 'RELEASE' && project.hasProperty("releaseRepo")) {
-                repository(url: project.releaseRepo) {
-                    authentication(userName: project.releaseRepoUsername, password: project.releaseRepoPassword)
-                }
-            } else if (buildType == 'SNAPSHOT' && project.hasProperty("snapshotRepo")) {
-                repository(url: project.snapshotRepo) {
-                    authentication(userName: project.snapshotRepoUsername, password: project.snapshotRepoPassword)
-                }
-            }
+        issueManagement {
+            system 'GitHub Issues'
+            url 'https://github.com/SpongePowered/Mixin/issues'
+        }
 
-            pom {
-                groupId = project.group
-                version = project.version
-                artifactId = project.archivesBaseName
-                project {
-                    name project.archivesBaseName
-                    packaging project.packaging
-                    description project.projectName
-                    url 'http://www.spongepowered.org/'
-
-                    scm {
-                        url 'https://github.com/SpongePowered/Mixin'
-                        connection 'scm:git:git://github.com/SpongePowered/Mixin.git'
-                        developerConnection 'scm:git:git@github.com:SpongePowered/Mixin.git'
-                    }
-
-                    issueManagement {
-                        system 'GitHub Issues'
-                        url 'https://github.com/SpongePowered/Mixin/issues'
-                    }
-
-                    licenses {
-                        license {
-                            name 'MIT license'
-                            url 'http://opensource.org/licenses/MIT'
-                            distribution 'repo'
-                        }
-                    }
-                }
-                whenConfigured {
-                    dependencies = dependencies.findAll {
-                        !it.artifactId.matches(excludePomDeps.join('|'))
-                    }
-                }
+        licenses {
+            license {
+                name 'MIT license'
+                url 'http://opensource.org/licenses/MIT'
+                distribution 'repo'
             }
         }
     }
-}
-
-install.repositories.mavenInstaller.pom {
     whenConfigured {
         dependencies = dependencies.findAll {
             !it.artifactId.matches(excludePomDeps.join('|'))
         }
     }
 }
-    
+
+uploadArchives {
+    repositories {
+        // Push releases to release repo
+        if (buildType == 'RELEASE' && project.hasProperty("releaseRepo")) {
+            mavenDeployer {
+                name = "release"
+                configuration = configurations.deployerJars
+                pom mavenPom
+                repository(url: project.releaseRepo) {
+                    authentication(userName: project.releaseRepoUsername, password: project.releaseRepoPassword)
+                }
+            }
+        }
+            
+        // Push everything to sponge repo
+        if (project.hasProperty("spongeRepo")) {
+            mavenDeployer {
+                name = "sponge"
+                configuration = configurations.deployerJars
+                pom mavenPom
+                repository(url: project.spongeRepo) {
+                    authentication(userName: project.spongeUsername, password: project.spongePassword)
+                }
+            }
+        }
+    }
+}
+
+install.repositories.mavenInstaller {
+    pom mavenPom
+} 
