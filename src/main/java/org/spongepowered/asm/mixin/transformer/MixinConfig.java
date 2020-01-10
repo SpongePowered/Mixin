@@ -906,7 +906,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Get the list of mixin classes we will be applying
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public List<String> getClasses() {
         Builder<String> list = ImmutableList.<String>builder();
         for (List<String> classes : new List[] { this.mixinClasses, this.mixinClassesClient, this.mixinClassesServer} ) {

@@ -107,8 +107,8 @@ dependencies {
     def guava = 'com.google.guava:guava:21.0' // from mc1.12 onwards
     def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     
-    implementation guava
-    implementation log4j2
+    compile guava
+    compile log4j2
     compile 'com.google.code.gson:gson:2.2.4'
     if (Float.parseFloat(asmVersion) < 6) {
         compile "org.ow2.asm:asm-debug-all:$asmVersion"
@@ -357,15 +357,28 @@ artifacts {
     archives javadocJar
 }
 
+ext.excludePomDeps = [
+    'asm-tree',
+    'asm-commons',
+    'asm-util',
+    'log4j-core',
+    'guava',
+    'gson',
+]
+
 uploadArchives {
     repositories {
 
         mavenDeployer {
             configuration = configurations.deployerJars
 
-            if (project.hasProperty("spongeRepo")) {
-                repository(url: project.spongeRepo) {
-                    authentication(userName: project.spongeUsername, password: project.spongePassword)
+            if (buildType == 'RELEASE' && project.hasProperty("releaseRepo")) {
+                repository(url: project.releaseRepo) {
+                    authentication(userName: project.releaseRepoUsername, password: project.releaseRepoPassword)
+                }
+            } else if (buildType == 'SNAPSHOT' && project.hasProperty("snapshotRepo")) {
+                repository(url: project.snapshotRepo) {
+                    authentication(userName: project.snapshotRepoUsername, password: project.snapshotRepoPassword)
                 }
             }
 
@@ -398,7 +411,21 @@ uploadArchives {
                         }
                     }
                 }
+                whenConfigured {
+                    dependencies = dependencies.findAll {
+                        !it.artifactId.matches(excludePomDeps.join('|'))
+                    }
+                }
             }
         }
     }
 }
+
+install.repositories.mavenInstaller.pom {
+    whenConfigured {
+        dependencies = dependencies.findAll {
+            !it.artifactId.matches(excludePomDeps.join('|'))
+        }
+    }
+}
+    
