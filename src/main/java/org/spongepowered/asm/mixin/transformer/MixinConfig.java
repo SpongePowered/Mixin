@@ -287,11 +287,13 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private String refMapperConfig;
 
     /**
-     * The class name for an implementation of {@Link IReferenceMapper}, mixinPackage will be prepended.
-     * This allows for full control over the refmap for cases where you need more fine-grained
-     * control then the default remappers.
+     * The class name for an implementation of {@Link IReferenceMapper},
+     * mixinPackage will be prepended. This allows for full control over the
+     * refmap for cases where you need more fine-grained control then the
+     * default remappers.
      * 
-     * Must have a public constructor that takes {@Link MixinEnvironment} and {@Link IReferenceMapper}
+     * <p>Must have a public constructor that takes {@Link MixinEnvironment} and
+     * {@Link IReferenceMapper}
      */
     @SerializedName("refmapWrapper")
     private String refMapperWrapper;
@@ -665,7 +667,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
 
         if (this.refMapperWrapper != null) {
-        	String wrapperName = this.mixinPackage + this.refMapperWrapper;
+            String wrapperName = this.mixinPackage + this.refMapperWrapper;
             try {
                 @SuppressWarnings("unchecked")
                 Class<IReferenceMapper> wrapperCls = (Class<IReferenceMapper>) Class.forName(wrapperName);
