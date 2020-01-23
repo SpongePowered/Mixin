@@ -34,13 +34,14 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
-import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.Bytecode;
@@ -73,21 +74,22 @@ public class ModifyVariableInjector extends Injector {
     /**
      * Specialised injection point which uses a target-aware search pattern
      */
-    abstract static class ContextualInjectionPoint extends InjectionPoint {
+    abstract static class LocalVariableInjectionPoint extends InjectionPoint {
         
-        protected final IMixinContext context;
-
-        ContextualInjectionPoint(IMixinContext context) {
-            this.context = context;
+        protected final IMixinContext mixin;
+        
+        LocalVariableInjectionPoint(InjectionPointData data) {
+            super(data);
+            this.mixin = data.getContext();
         }
 
         @Override
         public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
-            throw new InvalidInjectionException(this.context, this.getAtCode() + " injection point must be used in conjunction with @ModifyVariable");
+            throw new InvalidInjectionException(this.mixin, this.getAtCode() + " injection point must be used in conjunction with @ModifyVariable");
         }
-
-        abstract boolean find(Target target, Collection<AbstractInsnNode> nodes);
         
+        abstract boolean find(InjectionInfo info, Target target, Collection<AbstractInsnNode> nodes);
+
     }
     
     /**
@@ -106,9 +108,9 @@ public class ModifyVariableInjector extends Injector {
     
     @Override
     protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
-        if (injectionPoint instanceof ContextualInjectionPoint) {
+        if (injectionPoint instanceof LocalVariableInjectionPoint) {
             Target target = this.info.getContext().getTargetMethod(into);
-            return ((ContextualInjectionPoint)injectionPoint).find(target, nodes);
+            return ((LocalVariableInjectionPoint)injectionPoint).find(this.info, target, nodes);
         }
         return injectionPoint.find(into.desc, insns, nodes);
     }
@@ -178,6 +180,11 @@ public class ModifyVariableInjector extends Injector {
         SignaturePrinter handlerSig = new SignaturePrinter(this.info.getMethodName(), this.returnType, this.methodArgs, new String[] { "var" });
         handlerSig.setModifiers(this.methodNode);
 
+        String matchMode = "EXPLICIT (match by criteria)";
+        if (this.discriminator.isImplicit(context)) {
+            int candidateCount = context.getCandidateCount();
+            matchMode = "IMPLICIT (match single) - " + (candidateCount == 1 ? "VALID (exactly 1 match)" : "INVALID (" + candidateCount + " matches)");
+        }
         new PrettyPrinter()
             .kvWidth(20)
             .kv("Target Class", this.classNode.name.replace('/', '.'))
@@ -186,7 +193,7 @@ public class ModifyVariableInjector extends Injector {
             .kv("Capture Type", SignaturePrinter.getTypeName(this.returnType, false))
             .kv("Instruction", "[%d] %s %s", target.insns.indexOf(context.node), context.node.getClass().getSimpleName(),
                     Bytecode.getOpcodeName(context.node.getOpcode())).hr()
-            .kv("Match mode", this.discriminator.isImplicit(context) ? "IMPLICIT (match single)" : "EXPLICIT (match by criteria)")
+            .kv("Match mode", matchMode)
             .kv("Match ordinal", this.discriminator.getOrdinal() < 0 ? "any" : this.discriminator.getOrdinal())
             .kv("Match index", this.discriminator.getIndex() < context.baseArgIndex ? "any" : this.discriminator.getIndex())
             .kv("Match name(s)", this.discriminator.hasNames() ? this.discriminator.getNames() : "any")

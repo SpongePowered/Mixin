@@ -167,6 +167,16 @@ public class LocalVariableDiscriminator {
                 }
             }
         }
+        
+        public int getCandidateCount() {
+            int candidateCount = 0;
+            for (int l = this.baseArgIndex; l < this.locals.length; l++) {
+                if (this.locals[l] != null && this.returnType.equals(this.locals[l].type)) {
+                    candidateCount++;
+                }
+            }
+            return candidateCount;
+        }
 
         @Override
         public void print(PrettyPrinter printer) {
@@ -272,6 +282,19 @@ public class LocalVariableDiscriminator {
     public boolean printLVT() {
         return this.print;
     }
+    
+    @Override
+    public String toString() {
+        return String.format("ordinal=%d index=%d", this.ordinal, this.index);
+    }
+    
+    public String toString(Context context) {
+        String typeName = SignaturePrinter.getTypeName(context.returnType, false, false);
+        if (this.isImplicit(context)) {
+            return "implicit " + typeName;
+        }
+        return String.format("explicit %s at ordinal=%d index=%d", typeName, this.ordinal, this.index);
+    }
 
     /**
      * If the user specifies no values for <tt>ordinal</tt>, <tt>index</tt> or 
@@ -286,23 +309,6 @@ public class LocalVariableDiscriminator {
         return this.ordinal < 0 && this.index < context.baseArgIndex && this.names.isEmpty();
     }
 
-    /**
-     * Find a matching local variable in the specified target 
-     * 
-     * @param returnType variable tyoe
-     * @param argsOnly only match in the method args
-     * @param target target method
-     * @param node current instruction
-     * @return index of local or -1 if not matched
-     */
-    public int findLocal(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
-        try {
-            return this.findLocal(new Context(returnType, argsOnly, target, node));
-        } catch (InvalidImplicitDiscriminatorException ex) {
-            return -2;
-        }
-    }
-    
     /**
      * Find a local variable for the specified context
      * 

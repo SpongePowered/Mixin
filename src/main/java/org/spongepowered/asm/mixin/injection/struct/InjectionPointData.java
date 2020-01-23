@@ -34,6 +34,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
@@ -41,6 +42,7 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.IMessageSink;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -62,19 +64,9 @@ public class InjectionPointData {
     private final Map<String, String> args = new HashMap<String, String>();
     
     /**
-     * Mixin 
+     * Injection point context (annotated method) 
      */
-    private final IMixinContext context;
-    
-    /**
-     * Injector callback
-     */
-    private final MethodNode method;
-
-    /**
-     * Parent annotation
-     */
-    private final AnnotationNode parent;
+    private final IInjectionPointContext context;
 
     /**
      * At arg 
@@ -116,11 +108,9 @@ public class InjectionPointData {
      */
     private final String id;
     
-    public InjectionPointData(IMixinContext context, MethodNode method, AnnotationNode parent, String at, List<String> args, String target,
+    public InjectionPointData(IInjectionPointContext context, String at, List<String> args, String target,
             String slice, int ordinal, int opcode, String id) {
         this.context = context;
-        this.method = method;
-        this.parent = parent;
         this.at = at;
         this.target = target;
         this.slice = Strings.nullToEmpty(slice);
@@ -154,6 +144,13 @@ public class InjectionPointData {
             }
         }
     }
+    
+    /**
+     * Get the message sink for this injection point
+     */
+    public IMessageSink getMessageSink() {
+        return this.context;
+    }
 
     /**
      * Get the <tt>at</tt> value on the injector
@@ -180,28 +177,28 @@ public class InjectionPointData {
      * Get the context
      */
     public IMixinContext getContext() {
-        return this.context;
+        return this.context.getContext();
     }
     
     /**
      * Get the annotated method
      */
     public MethodNode getMethod() {
-        return this.method;
+        return this.context.getMethod();
     }
     
     /**
      * Get the return type of the annotated method
      */
     public Type getMethodReturnType() {
-        return Type.getReturnType(this.method.desc);
+        return Type.getReturnType(this.getMethod().desc);
     }
     
     /**
      * Get the root annotation (eg. {@link Inject})
      */
     public AnnotationNode getParent() {
-        return this.parent;
+        return this.context.getAnnotation();
     }
     
     /**
@@ -212,7 +209,7 @@ public class InjectionPointData {
     }
     
     public LocalVariableDiscriminator getLocalVariableDiscriminator() {
-        return LocalVariableDiscriminator.parse(this.parent);
+        return LocalVariableDiscriminator.parse(this.getParent());
     }
 
     /**
@@ -261,9 +258,9 @@ public class InjectionPointData {
      */
     public ITargetSelector get(String key) {
         try {
-            return TargetSelector.parseAndValidate(this.get(key, ""), this.context);
+            return TargetSelector.parseAndValidate(this.get(key, ""), this.getContext());
         } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
+            throw new InvalidInjectionPointException(this.getContext(), "Failed parsing @At(\"%s\").%s descriptor \"%s\" on %s",
                     this.at, key, this.target, this.getDescription());
         }
     }
@@ -273,9 +270,9 @@ public class InjectionPointData {
      */
     public ITargetSelector getTarget() {
         try {
-            return TargetSelector.parseAndValidate(this.target, this.context);
+            return TargetSelector.parseAndValidate(this.target, this.getContext());
         } catch (InvalidMemberDescriptorException ex) {
-            throw new InvalidInjectionPointException(this.context, "Failed parsing @At(\"%s\").target descriptor \"%s\" on %s",
+            throw new InvalidInjectionPointException(this.getContext(), "Failed parsing @At(\"%s\").target descriptor \"%s\" on %s",
                     this.at, this.target, this.getDescription());
         }
     }
@@ -284,7 +281,7 @@ public class InjectionPointData {
      * Get a description of this injector for use in error messages
      */
     public String getDescription() {
-        return InjectionInfo.describeInjector(this.context, this.parent, this.method);
+        return InjectionInfo.describeInjector(this.getContext(), this.getParent(), this.getMethod());
     }
 
     /**

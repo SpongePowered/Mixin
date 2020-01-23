@@ -70,6 +70,7 @@ import org.spongepowered.asm.util.asm.ElementNode;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
@@ -176,7 +177,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         InjectionInfo.register(ModifyVariableInjectionInfo.class);  // @ModifyVariable
         InjectionInfo.register(ModifyConstantInjectionInfo.class);  // @ModifyConstant
     }
-    
+
     /**
      * Annotated method is static 
      */
@@ -249,6 +250,13 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     private int injectedCallbackCount = 0;
     
     /**
+     * Injection messages which are not severe enough to log when they occur,
+     * but may be of interest if a <tt>require</tt> clause fails in order to
+     * diagnose why no injections were performed.
+     */
+    private List<String> messages;
+    
+    /**
      * ctor
      * 
      * @param mixin Mixin data
@@ -319,7 +327,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected void parseInjectionPoints(List<AnnotationNode> ats) {
-        this.injectionPoints.addAll(InjectionPoint.parse(this.mixin, this.method, this.annotation, ats));
+        this.injectionPoints.addAll(InjectionPoint.parse(this, ats));
     }
 
     protected void parseRequirements() {
@@ -389,21 +397,21 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         String description = this.getDescription();
         String refMapStatus = this.mixin.getReferenceMapper().getStatus();
-        String dynamicInfo = this.getDynamicInfo();
-        if ((this.mixin.getEnvironment().getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
+        String extraInfo = this.getDynamicInfo() + this.getMessages();
+        if ((this.mixin.getOption(Option.DEBUG_INJECTORS) && this.injectedCallbackCount < this.expectedCallbackCount)) {
             throw new InvalidInjectionException(this,
                     String.format("Injection validation failed: %s %s%s in %s expected %d invocation(s) but %d succeeded. Scanned %d target(s). %s%s",
                             description, this.methodName, this.method.desc, this.mixin, this.expectedCallbackCount, this.injectedCallbackCount,
-                            this.targetCount, refMapStatus, dynamicInfo));
+                            this.targetCount, refMapStatus, extraInfo));
         } else if (this.injectedCallbackCount < this.requiredCallbackCount) {
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, (%d/%d) succeeded. Scanned %d target(s). %s%s",
                             description, this.methodName, this.method.desc, this.mixin, this.injectedCallbackCount, this.requiredCallbackCount,
-                            this.targetCount, refMapStatus, dynamicInfo));
+                            this.targetCount, refMapStatus, extraInfo));
         } else if (this.injectedCallbackCount > this.maxCallbackCount) {
             throw new InjectionError(
                     String.format("Critical injection failure: %s %s%s in %s failed injection check, %d succeeded of %d allowed.%s",
-                    description, this.methodName, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount, dynamicInfo));
+                    description, this.methodName, this.method.desc, this.mixin, this.injectedCallbackCount, this.maxCallbackCount, extraInfo));
         }
     }
     
@@ -417,7 +425,6 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
 //        this.targets.remove(target.method);
     }
 
-    
     protected String getDescription() {
         return "Callback method";
     }
@@ -490,6 +497,28 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
     
     /**
+     * Notify method, called by injector or injection point when a notable but
+     * non-fatal failures occur, for example allows injection points to add
+     * notes when they return no results.
+     * 
+     * @param format Message format
+     * @param args Format args
+     */
+    @Override
+    public void addMessage(String format, Object... args) {
+        super.addMessage(format, args);
+        if (this.messages == null) {
+            this.messages = new ArrayList<String>();
+        }
+        String message = String.format(format, args);
+        this.messages.add(message);
+    }
+    
+    protected String getMessages() {
+        return this.messages != null ? " Messages: { " + Joiner.on(" ").join(this.messages) + "}" : "";
+    }
+    
+    /**
      * Finds methods in the target class which match searchFor
      * 
      * @param selectors members to search for
@@ -501,7 +530,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         // environment. In certain circumstances including the descriptor for
         // the method may actually fail, so we will do a second pass without the
         // descriptor if this happens.
-        int passes = this.mixin.getEnvironment().getOption(Option.REFMAP_REMAP) ? 2 : 1;
+        int passes = this.mixin.getOption(Option.REFMAP_REMAP) ? 2 : 1;
         
         for (ITargetSelector selector : selectors) {
             int matchCount = selector.getMatchCount();
@@ -533,7 +562,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             return;
         }
         
-        if ((this.mixin.getEnvironment().getOption(Option.DEBUG_INJECTORS) && this.expectedCallbackCount > 0)) {
+        if ((this.mixin.getOption(Option.DEBUG_INJECTORS) && this.expectedCallbackCount > 0)) {
             throw new InvalidInjectionException(this,
                     String.format("Injection validation failed: %s annotation on %s could not find any targets matching %s in %s. %s%s", 
                             this.annotationType, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
@@ -571,7 +600,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if (upstream != null) {
             description = String.format("{%s} %s", upstream.getClassName(), description).trim();
         }
-        return description.length() > 0 ? String.format(" Method is @Dynamic(%s)", description) : "";
+        return description.length() > 0 ? String.format(" Method is @Dynamic(%s).", description) : "";
     }
     
     /**

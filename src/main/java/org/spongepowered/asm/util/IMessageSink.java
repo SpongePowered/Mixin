@@ -22,32 +22,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection;
-
-import org.objectweb.asm.tree.AnnotationNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.util.IMessageSink;
+package org.spongepowered.asm.util;
 
 /**
- * Context for an injection point, used to access the mixin as well as the owner
- * method and annotation for the injection point
+ * Interface for generic message consumers
  */
-public interface IInjectionPointContext extends IMessageSink {
+public interface IMessageSink {
 
     /**
-     * Get the mixin context for this injection
+     * Add a new message
+     * 
+     * @param format Message format
+     * @param args Message args
      */
-    public abstract IMixinContext getContext();
-
-    /**
-     * Get the injection handler method
-     */
-    public abstract MethodNode getMethod();
-
-    /**
-     * Get the parent annotation (eg. the &#064;Inject annotation)
-     */
-    public abstract AnnotationNode getAnnotation();
+    public abstract void addMessage(String format, Object... args);
 
 }

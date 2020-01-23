@@ -33,7 +33,9 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector.ContextualInjectionPoint;
+import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator.Context;
+import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector.LocalVariableInjectionPoint;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 
@@ -73,27 +75,24 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
  * </blockquote>
  */
 @AtCode("LOAD")
-public class BeforeLoadLocal extends ContextualInjectionPoint {
+public class BeforeLoadLocal extends LocalVariableInjectionPoint {
     
     /**
      * Keeps track of state within {@link #find}
      */
-    static class SearchState {
+    class SearchState {
+        
+        private static final int INVALID_IMPLICIT = -2;
         
         /**
          * Print LVT search, be permissive 
          */
         private final boolean print;
-        
-        /**
-         * The target ordinal from the injection point 
-         */
-        private final int targetOrdinal;
-        
+
         /**
          * The current ordinal 
          */
-        private int ordinal = 0;
+        private int currentOrdinal = 0;
         
         /**
          * Flag to defer a {@link check} to the next opcode, to honour the after
@@ -111,9 +110,8 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
          */
         private VarInsnNode varNode;
         
-        SearchState(int targetOrdinal, boolean print) {
-            this.targetOrdinal = targetOrdinal;
-            this.print = print;
+        SearchState() {
+            this.print = BeforeLoadLocal.this.discriminator.printLVT();
         }
 
         boolean success() {
@@ -132,18 +130,29 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
             this.varNode = node;
         }
         
-        void check(Collection<AbstractInsnNode> nodes, AbstractInsnNode insn, int local) {
+        void check(Target target, Collection<AbstractInsnNode> nodes, AbstractInsnNode insn) {
+            Context context = new Context(BeforeLoadLocal.this.returnType, BeforeLoadLocal.this.discriminator.isArgsOnly(), target, insn);
+            int local = SearchState.INVALID_IMPLICIT;
+            
+            try {
+                local = BeforeLoadLocal.this.discriminator.findLocal(context);
+            } catch (InvalidImplicitDiscriminatorException ex) {
+                BeforeLoadLocal.this.addMessage("%s has invalid IMPLICIT discriminator for opcode %d in %s: %s",
+                        BeforeLoadLocal.this.toString(context), target.indexOf(insn), target, ex.getMessage());
+            }
+            
             this.pendingCheck = false;
-            if (local != this.varNode.var && (local > -2 || !this.print)) {
+            if (local != this.varNode.var && (local > SearchState.INVALID_IMPLICIT || !this.print)) {
+                this.varNode = null;
                 return;
             }
             
-            if (this.targetOrdinal == -1 || this.targetOrdinal == this.ordinal) {
+            if (BeforeLoadLocal.this.ordinal == -1 || BeforeLoadLocal.this.ordinal == this.currentOrdinal) {
                 nodes.add(insn);
                 this.found = true;
             }
 
-            this.ordinal++;
+            this.currentOrdinal++;
             this.varNode = null;
         }
         
@@ -153,22 +162,22 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
      * Return type of the handler, also the type of the local variable we're
      * interested in
      */
-    private final Type returnType;
+    protected final Type returnType;
     
     /**
      * Discriminator, parsed from parent annotation
      */
-    private final LocalVariableDiscriminator discriminator;
+    protected final LocalVariableDiscriminator discriminator;
     
     /**
      * Target opcode, inflected from return type
      */
-    private final int opcode;
+    protected final int opcode;
     
     /**
      * Target ordinal 
      */
-    private final int ordinal;
+    protected final int ordinal;
     
     /**
      * True if this injection point should capture the opcode after a matching
@@ -179,10 +188,9 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
     protected BeforeLoadLocal(InjectionPointData data) {
         this(data, Opcodes.ILOAD, false);
     }
-    
-    protected BeforeLoadLocal(InjectionPointData data,
-            int opcode, boolean opcodeAfter) {
-        super(data.getContext());
+
+    protected BeforeLoadLocal(InjectionPointData data, int opcode, boolean opcodeAfter) {
+        super(data);
         this.returnType = data.getMethodReturnType();
         this.discriminator = data.getLocalVariableDiscriminator();
         this.opcode = data.getOpcode(this.returnType.getOpcode(opcode));
@@ -191,27 +199,40 @@ public class BeforeLoadLocal extends ContextualInjectionPoint {
     }
 
     @Override
-    boolean find(Target target, Collection<AbstractInsnNode> nodes) {
-        SearchState state = new SearchState(this.ordinal, this.discriminator.printLVT());
+    boolean find(InjectionInfo info, Target target, Collection<AbstractInsnNode> nodes) {
+        SearchState state = new SearchState();
 
         ListIterator<AbstractInsnNode> iter = target.method.instructions.iterator();
         while (iter.hasNext()) {
             AbstractInsnNode insn = iter.next();
             if (state.isPendingCheck()) {
-                int local = this.discriminator.findLocal(this.returnType, this.discriminator.isArgsOnly(), target, insn);
-                state.check(nodes, insn, local);
+                state.check(target, nodes, insn);
             } else  if (insn instanceof VarInsnNode && insn.getOpcode() == this.opcode && (this.ordinal == -1 || !state.success())) {
                 state.register((VarInsnNode)insn);
                 if (this.opcodeAfter) {
                     state.setPendingCheck();
                 } else {
-                    int local = this.discriminator.findLocal(this.returnType, this.discriminator.isArgsOnly(), target, insn);
-                    state.check(nodes, insn, local);
+                    state.check(target, nodes, insn);
                 }
             }
         }
 
         return state.success();
+    }
+
+    // No synthetic
+    @Override
+    protected void addMessage(String format, Object... args) {
+        super.addMessage(format, args);
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("@At(\"%s\" %s)", this.getAtCode(), this.discriminator.toString());
+    }
+    
+    public String toString(Context context) {
+        return String.format("@At(\"%s\" %s)", this.getAtCode(), this.discriminator.toString(context));
     }
     
 }

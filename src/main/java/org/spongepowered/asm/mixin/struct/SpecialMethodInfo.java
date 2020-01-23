@@ -27,8 +27,6 @@ package org.spongepowered.asm.mixin.struct;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.Bytecode;
@@ -37,12 +35,7 @@ import org.spongepowered.asm.util.asm.MethodNodeEx;
 /**
  * Information about a special mixin method such as an injector or accessor
  */
-public abstract class SpecialMethodInfo implements IInjectionPointContext {
-
-    /**
-     * Annotation on the method
-     */
-    protected final AnnotationNode annotation;
+public class SpecialMethodInfo extends AnnotatedMethodInfo {
     
     /**
      * Human-readable annotation type 
@@ -55,11 +48,6 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
     protected final ClassNode classNode;
     
     /**
-     * Annotated method
-     */
-    protected final MethodNode method;
-    
-    /**
      * Original name of the method, if available 
      */
     protected final String methodName;
@@ -70,32 +58,11 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
     protected final MixinTargetContext mixin;
     
     public SpecialMethodInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
+        super(mixin, method, annotation);
         this.mixin = mixin;
-        this.method = method;
-        this.annotation = annotation;
         this.annotationType = this.annotation != null ? "@" + Bytecode.getSimpleName(this.annotation) : "Undecorated injector";
         this.classNode = mixin.getTargetClassNode();
         this.methodName = MethodNodeEx.getName(method);
-    }
-    
-    /**
-     * Get the mixin target context for this injection
-     * 
-     * @return the target context
-     */
-    @Override
-    public final IMixinContext getContext() {
-        return this.mixin;
-    }
-    
-    /**
-     * Get the annotation which this InjectionInfo was created from
-     *  
-     * @return The annotation which this InjectionInfo was created from 
-     */
-    @Override
-    public final AnnotationNode getAnnotation() {
-        return this.annotation;
     }
 
     /**
@@ -112,16 +79,6 @@ public abstract class SpecialMethodInfo implements IInjectionPointContext {
      */
     public final ClassInfo getClassInfo() {
         return this.mixin.getClassInfo();
-    }
-
-    /**
-     * Get method being called
-     * 
-     * @return injector method
-     */
-    @Override
-    public final MethodNode getMethod() {
-        return this.method;
     }
     
     /**
