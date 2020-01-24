@@ -911,18 +911,29 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     
     private String transformSingleDescriptor(String desc, boolean isObject) {
         Activity descriptorActivity = this.activities.begin("desc=%s", desc);
+        boolean isArray = false;
         String type = desc;
         while (type.startsWith("[") || type.startsWith("L")) {
             if (type.startsWith("[")) {
                 type = type.substring(1);
+                isArray = true;
                 continue;
             }
             type = type.substring(1, type.indexOf(";"));
             isObject = true;
         }
+        // Primitive types don't need to be transformed
         if (!isObject) {
             descriptorActivity.end();
             return desc;
+        }
+        // Primitive arrays are basically Object and don't need to be transformed either
+        if (isArray && type.length() == 1) {
+            Type parsedType = Type.getType(type);
+            if (parsedType.getSort() <= Type.DOUBLE) {
+                descriptorActivity.end();
+                return desc;
+            }
         }
         String innerClassName = this.innerClasses.get(type);
         if (innerClassName != null) {
