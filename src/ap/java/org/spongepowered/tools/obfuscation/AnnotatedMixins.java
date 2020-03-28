@@ -55,7 +55,7 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.launch.MixinBootstrap;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.util.ITokenProvider;
@@ -427,20 +427,20 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     }
 
     /**
-     * Register an {@link org.spongepowered.asm.mixin.Overwrite} method
+     * Register an {@link Nuke} method
      *
      * @param mixinType Mixin class
-     * @param method Overwrite method
+     * @param method Nuke method
      */
-    public void registerOverwrite(TypeElement mixinType, ExecutableElement method) {
+    public void registerNuke(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Overwrite annotation on a non-mixin method", method);
+            this.printMessage(Kind.ERROR, "Found @Nuke annotation on a non-mixin method", method);
             return;
         }
 
-        AnnotationHandle overwrite = AnnotationHandle.of(method, Overwrite.class);
-        mixinClass.registerOverwrite(method, overwrite, AnnotatedMixins.shouldRemap(mixinClass, overwrite));
+        AnnotationHandle nuke = AnnotationHandle.of(method, Nuke.class);
+        mixinClass.registerNuke(method, nuke, AnnotatedMixins.shouldRemap(mixinClass, nuke));
     }
 
     /**

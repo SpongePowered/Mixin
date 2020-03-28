@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -97,19 +97,19 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
     
     /**
-     * Wrapper for overwrite options
+     * Wrapper for nuke options
      */
-    static class OverwriteOptions {
+    static class NukeOptions {
         
         @SerializedName("conformVisibility")
         boolean conformAccessModifiers;
         
         @SerializedName("requireAnnotations")
-        boolean requireOverwriteAnnotations;
+        boolean requireNukeAnnotations;
         
-        void mergeFrom(OverwriteOptions parent) {
+        void mergeFrom(NukeOptions parent) {
             this.conformAccessModifiers |= parent.conformAccessModifiers;
-            this.requireOverwriteAnnotations |= parent.requireOverwriteAnnotations;
+            this.requireNukeAnnotations |= parent.requireNukeAnnotations;
         }
         
     }
@@ -320,10 +320,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private InjectorOptions injectorOptions;
     
     /**
-     * Overwrite options 
+     * Nuke options
      */
-    @SerializedName("overwrites")
-    private OverwriteOptions overwriteOptions;
+    @SerializedName("nukes")
+    private NukeOptions nukeOptions;
     
     /**
      * Config plugin, if supplied
@@ -383,8 +383,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.injectorOptions = new InjectorOptions();
         }
         
-        if (this.overwriteOptions == null) {
-            this.overwriteOptions = new OverwriteOptions();
+        if (this.nukeOptions == null) {
+            this.nukeOptions = new NukeOptions();
         }
         
         return this.postInit();
@@ -430,10 +430,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             this.injectorOptions.mergeFrom(this.parent.injectorOptions);
         }
         
-        if (this.overwriteOptions == null) {
-            this.overwriteOptions = this.parent.overwriteOptions;
+        if (this.nukeOptions == null) {
+            this.nukeOptions = this.parent.nukeOptions;
         } else {
-            this.overwriteOptions.mergeFrom(this.parent.overwriteOptions);
+            this.nukeOptions.mergeFrom(this.parent.nukeOptions);
         }
         
         this.setSourceFile |= this.parent.setSourceFile;
@@ -843,23 +843,23 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
     
     /**
-     * Get whether visibility levelfor overwritten methods should be conformed
+     * Get whether visibility levelfor nuked methods should be conformed
      * to the target class
      * 
      * @return true if conform is enabled
      */
-    public boolean conformOverwriteVisibility() {
-        return this.overwriteOptions.conformAccessModifiers;
+    public boolean conformNukeVisibility() {
+        return this.nukeOptions.conformAccessModifiers;
     }
     
     /**
-     * Get whether {@link Overwrite} annotations are required to enable
-     * overwrite behaviour for mixins in this config
+     * Get whether {@link Nuke} annotations are required to enable
+     * nuke behaviour for mixins in this config
      * 
-     * @return true to require overwriting methods to be annotated
+     * @return true to require nuking methods to be annotated
      */
-    public boolean requireOverwriteAnnotations() {
-        return this.overwriteOptions.requireOverwriteAnnotations;
+    public boolean requireNukeAnnotations() {
+        return this.nukeOptions.requireNukeAnnotations;
     }
     
     /**

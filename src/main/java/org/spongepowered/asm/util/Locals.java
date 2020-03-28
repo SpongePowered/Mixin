@@ -108,15 +108,15 @@ public final class Locals {
      * method looking for stack frames and STORE opcodes. When either of these
      * is encountered, an attempt is made to cross-reference the values in the
      * stack map or STORE opcode with the value in the local variable table
-     * which covers the code range. Stack map frames overwrite the entire
+     * which covers the code range. Stack map frames nuke the entire
      * simulated local variable table with their own value types, STORE opcodes
-     * overwrite only the local slot to which they pertain. Values in the
+     * nuke only the local slot to which they pertain. Values in the
      * simulated locals array are spaced according to their size (unlike the
      * representation in FrameNode) and this TOP, NULL and UNINTITIALIZED_THIS
      * opcodes will be represented as null values in the simulated frame.</p>
      * 
      * <p>This code does not currently simulate the prescribed JVM behaviour
-     * where overwriting the second slot of a DOUBLE or LONG actually
+     * where nuking the second slot of a DOUBLE or LONG actually
      * invalidates the DOUBLE or LONG stored in the previous location, so we
      * have to hope (for now) that this behaviour isn't emitted by the compiler
      * or any upstream transformers. I may have to re-think this strategy if

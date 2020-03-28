@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  * children.</p>
  * 
  * <p>Decoration annotation used by the mixin applicator to mark methods in a
- * class which have been added or overwritten by a mixin.</p>
+ * class which have been added or nuked by a mixin.</p>
  */
 @Target({ /* No targets allowed */ })
 @Retention(RetentionPolicy.RUNTIME)
@@ -48,7 +48,7 @@ public @interface MixinMerged {
     
     /**
      * Prioriy of the mixin which merged this method, used to allow mixins with
-     * higher priority to overwrite methods already overwritten by those with a
+     * higher priority to nuke methods already nuked by those with a
      * lower priority.
      * 
      * @return mixin priority

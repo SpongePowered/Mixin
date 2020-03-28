@@ -396,7 +396,7 @@ abstract class AnnotatedMixinElementHandler {
      * warnings where appropriate
      */
     protected final void validateTargetMethod(ExecutableElement method, AnnotationHandle annotation, AliasedElementName name, String type,
-            boolean overwrite, boolean merge) {
+            boolean nuke, boolean merge) {
         String signature = TypeUtils.getJavaSignature(method);
 
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -422,7 +422,7 @@ abstract class AnnotatedMixinElementHandler {
             }
             
             if (targetMethod != null) {
-                if (overwrite) {
+                if (nuke) {
                     this.validateMethodVisibility(method, annotation, type, target, targetMethod);
                 }
             } else if (!merge) {

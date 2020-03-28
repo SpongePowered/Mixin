@@ -40,7 +40,7 @@ import java.lang.annotation.Target;
  * 
  * <ol>
  *   <li>Aids mixin maintainers by providing context for seemingly-pointless
- *     injections. An injector or overwrite whose target does not appear to
+ *     injections. An injector or nuking whose target does not appear to
  *     exist can be given context by decorating it with this annotation.</li>
  *   <li>Allowing mixin tooling such as IDE plugins to gain awareness that a
  *     particular target can be allowed to fail validation from static analysis.

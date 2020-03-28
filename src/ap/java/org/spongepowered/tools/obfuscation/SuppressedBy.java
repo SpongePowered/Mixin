@@ -37,7 +37,7 @@ public enum SuppressedBy {
     CONSTRAINTS("constraints"),
     
     /**
-     * Suppress warnings about overwrite visibility upgrading/downgrading target
+     * Suppress warnings about nuke visibility upgrading/downgrading target
      * visibility 
      */
     VISIBILITY("visibility"),
@@ -53,10 +53,10 @@ public enum SuppressedBy {
     MAPPING("mapping"),
     
     /**
-     * Suppress warnings for when an <tt>&#064;Overwrite</tt> method is missing
+     * Suppress warnings for when an <tt>&#064;Nuke</tt> method is missing
      * javadoc, or author or reason tags
      */
-    OVERWRITE("overwrite"),
+    NUKE("nuke"),
     
     /**
      * Suppress warnings when a mixin target specified by name is located in the

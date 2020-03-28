@@ -37,18 +37,18 @@ import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
- * A module for {@link AnnotatedMixin} which handles method overwrites
+ * A module for {@link AnnotatedMixin} which handles method nukes
  */
-class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerNuke extends AnnotatedMixinElementHandler {
     
     /**
-     * Overwrite element
+     * Nuke element
      */
-    static class AnnotatedElementOverwrite extends AnnotatedElement<ExecutableElement> {
+    static class AnnotatedElementNuke extends AnnotatedElement<ExecutableElement> {
         
         private final boolean shouldRemap;
         
-        public AnnotatedElementOverwrite(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
+        public AnnotatedElementNuke(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
             super(element, annotation);
             this.shouldRemap = shouldRemap;
         }
@@ -59,48 +59,48 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
 
     }
     
-    AnnotatedMixinElementHandlerOverwrite(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
+    AnnotatedMixinElementHandlerNuke(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
 
     public void registerMerge(ExecutableElement method) {
-        this.validateTargetMethod(method, null, new AliasedElementName(method, AnnotationHandle.MISSING), "overwrite", true, true);
+        this.validateTargetMethod(method, null, new AliasedElementName(method, AnnotationHandle.MISSING), "nuke", true, true);
     }
 
-    public void registerOverwrite(AnnotatedElementOverwrite elem) {
+    public void registerNuke(AnnotatedElementNuke elem) {
         AliasedElementName name = new AliasedElementName(elem.getElement(), elem.getAnnotation());
-        this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Overwrite", true, false);
+        this.validateTargetMethod(elem.getElement(), elem.getAnnotation(), name, "@Nuke", true, false);
         this.checkConstraints(elem.getElement(), elem.getAnnotation());
         
         if (elem.shouldRemap()) {
             for (TypeHandle target : this.mixin.getTargets()) {
-                if (!this.registerOverwriteForTarget(elem, target)) {
+                if (!this.registerNukeForTarget(elem, target)) {
                     return;
                 }
             }
         }
         
-        if (!"true".equalsIgnoreCase(this.ap.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
-            Kind overwriteErrorKind = "error".equalsIgnoreCase(this.ap.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))
+        if (!"true".equalsIgnoreCase(this.ap.getOption(SupportedOptions.DISABLE_NUKE_CHECKER))) {
+            Kind nukeErrorKind = "error".equalsIgnoreCase(this.ap.getOption(SupportedOptions.NUKE_ERROR_LEVEL))
                     ? Kind.ERROR : Kind.WARNING;
             
             String javadoc = this.ap.getJavadocProvider().getJavadoc(elem.getElement());
             if (javadoc == null) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(nukeErrorKind, "@Nuke is missing javadoc comment", elem.getElement(), SuppressedBy.NUKE);
                 return;
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@author")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(nukeErrorKind, "@Nuke is missing an @author tag", elem.getElement(), SuppressedBy.NUKE);
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@reason")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(nukeErrorKind, "@Nuke is missing an @reason tag", elem.getElement(), SuppressedBy.NUKE);
             }
         }
     }
 
-    private boolean registerOverwriteForTarget(AnnotatedElementOverwrite elem, TypeHandle target) {
+    private boolean registerNukeForTarget(AnnotatedElementNuke elem, TypeHandle target) {
         MappingMethod targetMethod = target.getMappingMethod(elem.getSimpleName(), elem.getDesc());
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         
@@ -117,14 +117,14 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
                 // well, we tried
             }
             
-            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", elem.getElement());
+            this.ap.printMessage(error, "No obfuscation mapping for @Nuke method", elem.getElement());
             return false;
         }
 
         try {
             this.addMethodMappings(elem.getSimpleName(), elem.getDesc(), obfData);
         } catch (MappingConflictException ex) {
-            elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Overwrite method: " + ex.getNew().getSimpleName() + " for target " + target 
+            elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Nuke method: " + ex.getNew().getSimpleName() + " for target " + target
                     + " conflicts with existing mapping " + ex.getOld().getSimpleName());
             return false;
         }

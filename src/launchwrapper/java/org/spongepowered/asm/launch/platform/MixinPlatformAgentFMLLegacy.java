@@ -539,7 +539,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
 
             // Only reset the log level if it's still ALL. If something
             // else changed the log level after we did, we don't want
-            // overwrite that change. No null check is needed here
+            // nuke that change. No null check is needed here
             // because the appender will not be injected if the log is
             // null
             if (MixinPlatformAgentFMLLegacy.log.getLevel() == Level.ALL) {

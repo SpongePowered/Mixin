@@ -30,10 +30,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * This annotation allows fine-tuning of the overwrite policy for a
+ * This annotation allows fine-tuning of the nuke policy for a
  * soft-implemented interface member method.
  * 
- * <p>By default, all members within a mixin will overwrite (completely replace)
+ * <p>By default, all members within a mixin will nuke (completely replace)
  * matching methods in the target class without prejudice. However this can be
  * a problem when soft-implementing an interface to deal with a method conflict
  * because it may be desirable to only override the method <b>if it does not
@@ -92,7 +92,7 @@ import java.lang.annotation.Target;
  * }</pre></blockquote>
  * 
  * <p>Then we still have the original problem that the method becomes re-entrant
- * without specifying the additional Overwrite. We can solve this with the
+ * without specifying the additional Nuke. We can solve this with the
  * second {@link Intrinsic} behaviour, and set the {@link #displace} argument to
  * <code>true</code>. Setting <code>displace</code> instructs the mixin
  * transformer to <em>proxy</em> the method call <em>if</em> the target already
@@ -100,12 +100,12 @@ import java.lang.annotation.Target;
  * accessor to call the original method in all circumstances.</p>
  * 
  * <p>When <code>displace</code> is enabled, if the target method exists then
- * instead of being overwritten it is instead <em>renamed</em> with a temporary
+ * instead of being nuke it is instead <em>renamed</em> with a temporary
  * name and all references to the original method <em>within the Intrinsic
  * method</em> are updated to call the renamed method. This means that all
  * external code will still reference the Intrinsic accessor (just as it would
- * have done with a regular overwrite) but code <em>within</em> the Intrinsic
- * accessor will call the overwritten method.</p>
+ * have done with a regular nuke) but code <em>within</em> the Intrinsic
+ * accessor will call the nuked method.</p>
  * 
  * <blockquote><pre>&#064;Shadow public int getSomething();
  * 
@@ -123,7 +123,7 @@ public @interface Intrinsic {
      * If set to true, this intrinsic method will replace any existing method in
      * the target class by renaming it and updating internal references inside
      * the method to reference the displaced method. If false or omitted,
-     * instructs this intrinsic method to <b>not</b> overwrite the target method
+     * instructs this intrinsic method to <b>not</b> nuke the target method
      * if it exists, contrary to the normal behaviour for mixins
      * 
      * @return true if this intrinsic method should displace matching targets

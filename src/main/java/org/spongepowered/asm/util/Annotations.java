@@ -42,7 +42,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -57,7 +57,7 @@ public final class Annotations {
      * Annotations which are eligible for merge via {@link #mergeAnnotations}
      */
     private static final Class<?>[] MERGEABLE_MIXIN_ANNOTATIONS = new Class<?>[] {
-        Overwrite.class,
+        Nuke.class,
         Intrinsic.class,
         Final.class,
         Debug.class

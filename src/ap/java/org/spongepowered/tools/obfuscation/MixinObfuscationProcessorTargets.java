@@ -36,7 +36,7 @@ import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Implements;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -44,13 +44,13 @@ import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
 /**
- * Annotation processor which finds {@link Shadow} and {@link Overwrite}
+ * Annotation processor which finds {@link Shadow} and {@link Nuke}
  * annotations in mixin classes and generates new obfuscation mappings
  */
 @SupportedAnnotationTypes({
     "org.spongepowered.asm.mixin.Mixin",
     "org.spongepowered.asm.mixin.Shadow",
-    "org.spongepowered.asm.mixin.Overwrite",
+    "org.spongepowered.asm.mixin.Nuke",
     "org.spongepowered.asm.mixin.gen.Accessor",
     "org.spongepowered.asm.mixin.Implements"
 })
@@ -70,7 +70,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         
         this.processMixins(roundEnv);
         this.processShadows(roundEnv);
-        this.processOverwrites(roundEnv);
+        this.processNukings(roundEnv);
         this.processAccessors(roundEnv);
         this.processInvokers(roundEnv);
         this.processImplements(roundEnv);
@@ -116,11 +116,11 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
     }
 
     /**
-     * Searches for {@link Overwrite} annotations and registers them with their
+     * Searches for {@link Nuke} annotations and registers them with their
      * parent mixins
      */
-    private void processOverwrites(RoundEnvironment roundEnv) {
-        for (Element elem : roundEnv.getElementsAnnotatedWith(Overwrite.class)) {
+    private void processNukings(RoundEnvironment roundEnv) {
+        for (Element elem : roundEnv.getElementsAnnotatedWith(Nuke.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
                 this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
@@ -128,7 +128,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
             }
             
             if (elem.getKind() == ElementKind.METHOD) {
-                this.mixins.registerOverwrite((TypeElement)parent, (ExecutableElement)elem);
+                this.mixins.registerNuke((TypeElement)parent, (ExecutableElement)elem);
             } else {
                 this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
             }

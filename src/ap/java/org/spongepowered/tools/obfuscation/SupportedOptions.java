@@ -41,8 +41,8 @@ public final class SupportedOptions {
     public static final String OUT_REFMAP_FILE           = "outRefMapFile";
     public static final String DISABLE_TARGET_VALIDATOR  = "disableTargetValidator";
     public static final String DISABLE_TARGET_EXPORT     = "disableTargetExport";
-    public static final String DISABLE_OVERWRITE_CHECKER = "disableOverwriteChecker";
-    public static final String OVERWRITE_ERROR_LEVEL     = "overwriteErrorLevel";
+    public static final String DISABLE_NUKE_CHECKER      = "disableNukeChecker";
+    public static final String NUKE_ERROR_LEVEL          = "nukeErrorLevel";
     public static final String DEFAULT_OBFUSCATION_ENV   = "defaultObfuscationEnv";
     public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
     public static final String MAPPING_TYPES             = "mappingTypes";
@@ -60,8 +60,8 @@ public final class SupportedOptions {
             SupportedOptions.OUT_REFMAP_FILE,
             SupportedOptions.DISABLE_TARGET_VALIDATOR,
             SupportedOptions.DISABLE_TARGET_EXPORT,
-            SupportedOptions.DISABLE_OVERWRITE_CHECKER,
-            SupportedOptions.OVERWRITE_ERROR_LEVEL,
+            SupportedOptions.DISABLE_NUKE_CHECKER,
+            SupportedOptions.NUKE_ERROR_LEVEL,
             SupportedOptions.DEFAULT_OBFUSCATION_ENV,
             SupportedOptions.DEPENDENCY_TARGETS_FILE,
             SupportedOptions.MAPPING_TYPES,

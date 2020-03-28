@@ -67,7 +67,7 @@ public class ObfuscationData<T> implements Iterable<ObfuscationType> {
     }
     
     /**
-     * Add an entry to the map, overwrites any previous entries. Since this
+     * Add an entry to the map, nukes any previous entries. Since this
      * method name poorly communicates its purpose, it is deprecated in favour
      * of {@link #put}.  
      * 

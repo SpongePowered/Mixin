@@ -42,7 +42,7 @@ import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementInvoker;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjectionPoint;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjector;
-import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerOverwrite.AnnotatedElementOverwrite;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerNuke.AnnotatedElementNuke;
 import org.spongepowered.tools.obfuscation.interfaces.IMessagerSuppressible;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
@@ -129,9 +129,9 @@ class AnnotatedMixin {
     private final boolean virtual;
 
     /**
-     * Overwrite handler
+     * Nuke handler
      */
-    private final AnnotatedMixinElementHandlerOverwrite overwrites;
+    private final AnnotatedMixinElementHandlerNuke nukings;
 
     /**
      * Shadow handler
@@ -172,7 +172,7 @@ class AnnotatedMixin {
         this.primaryTarget = this.initTargets();
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
 
-        this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
+        this.nukings = new AnnotatedMixinElementHandlerNuke(ap, this);
         this.shadows = new AnnotatedMixinElementHandlerShadow(ap, this);
         this.injectors = new AnnotatedMixinElementHandlerInjector(ap, this);
         this.accessors = new AnnotatedMixinElementHandlerAccessor(ap, this);
@@ -345,13 +345,13 @@ class AnnotatedMixin {
 
     private void runFinalValidation() {
         for (ExecutableElement method : this.methods) {
-            this.overwrites.registerMerge(method);
+            this.nukings.registerMerge(method);
         }
     }
 
-    public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite, boolean shouldRemap) {
+    public void registerNuke(ExecutableElement method, AnnotationHandle nuke, boolean shouldRemap) {
         this.methods.remove(method);
-        this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite, shouldRemap));
+        this.nukings.registerNuke(new AnnotatedElementNuke(method, nuke, shouldRemap));
     }
 
     public void registerShadow(VariableElement field, AnnotationHandle shadow, boolean shouldRemap) {

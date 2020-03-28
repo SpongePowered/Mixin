@@ -31,14 +31,14 @@ import java.lang.annotation.Target;
 
 /**
  * This annotation, when applied to a member method or field in a mixin,
- * indicates that the member <b>should never</b> overwrite a matching member in
+ * indicates that the member <b>should never</b> nuke a matching member in
  * the target class. This indicates that the member differs from the normal
  * "overlay-like" behaviour of mixins in general, and should only ever be
  * <em>added</em> to the target. For public fields, the annotation has no
  * effect.
  * 
  * <p>Typical usage of this annotation would be to decorate a utility method in
- * a mixin, or mark an interface-implementing method which must not overwrite a
+ * a mixin, or mark an interface-implementing method which must not nuke a
  * target if it exists (consider appropriate use of {@link Intrinsic} in these
  * situations).</p>
  *

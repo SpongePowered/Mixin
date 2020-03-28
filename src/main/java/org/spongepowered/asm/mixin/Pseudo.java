@@ -44,7 +44,7 @@ import java.lang.annotation.Target;
  * <tt>initGui</tt> to be resolved in the superclass hierarchy (this is not the
  * case for normal mixins).</p>
  * 
- * <p>{@link Overwrite} methods which are <b>not</b> inherited from a superclass
+ * <p>{@link Nuke} methods which are <b>not</b> inherited from a superclass
  * (if the target is obfuscated) <b>must</b> be decorated manually with aliases.
  * </p>
  */

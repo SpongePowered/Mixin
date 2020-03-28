@@ -54,7 +54,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel.LanguageFeature;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -372,9 +372,9 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
                 
                 for (MethodNode method : this.validationClassNode.methods) {
                     this.validateRemappable(Shadow.class, method.name, Annotations.getVisible(method, Shadow.class));
-                    AnnotationNode overwrite = Annotations.getVisible(method, Overwrite.class);
-                    if (overwrite != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
-                        throw new InvalidMixinException(MixinInfo.this, "Found @Overwrite annotation on " + method.name + " in " + MixinInfo.this);
+                    AnnotationNode nuke = Annotations.getVisible(method, Nuke.class);
+                    if (nuke != null && ((method.access & Opcodes.ACC_STATIC) == 0 || (method.access & Opcodes.ACC_PUBLIC) == 0)) {
+                        throw new InvalidMixinException(MixinInfo.this, "Found @Nuke annotation on " + method.name + " in " + MixinInfo.this);
                     }
                 }
             }

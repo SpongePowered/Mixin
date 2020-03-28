@@ -47,7 +47,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
  *     {@link InvalidMixinException} is thrown.
  *   </li>
  *   <li>
- *     On an {@link Inject injector} or {@link Overwrite overwritten} method,
+ *     On an {@link Inject injector} or {@link Nuke nuke} method,
  *     it is equivalent to setting the priority of the containing mixin to
  *     {@link Integer#MAX_VALUE} but applies only to the annotated method. This
  *     allows methods to mark themselves as effectively final, preventing their

@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -81,7 +81,7 @@ class MixinApplicatorStandard {
      * Annotations which can have constraints
      */
     protected static final List<Class<? extends Annotation>> CONSTRAINED_ANNOTATIONS = ImmutableList.<Class<? extends Annotation>>of(
-        Overwrite.class,
+        Nuke.class,
         Inject.class,
         ModifyArg.class,
         ModifyArgs.class,
@@ -541,31 +541,31 @@ class MixinApplicatorStandard {
      * @param method Method to merge
      */
     protected void mergeMethod(MixinTargetContext mixin, MethodNode method) {
-        boolean isOverwrite = Annotations.getVisible(method, Overwrite.class) != null;
+        boolean isNuke = Annotations.getVisible(method, Nuke.class) != null;
         MethodNode target = this.findTargetMethod(method);
         
         if (target != null) {
-            if (this.isAlreadyMerged(mixin, method, isOverwrite, target)) {
+            if (this.isAlreadyMerged(mixin, method, isNuke, target)) {
                 return;
             }
             
             AnnotationNode intrinsic = Annotations.getInvisible(method, Intrinsic.class);
             if (intrinsic != null) {
-                if (this.mergeIntrinsic(mixin, method, isOverwrite, target, intrinsic)) {
+                if (this.mergeIntrinsic(mixin, method, isNuke, target, intrinsic)) {
                     mixin.getTarget().methodMerged(method);
                     return;
                 }
             } else {
-                if (mixin.requireOverwriteAnnotations() && !isOverwrite) {
+                if (mixin.requireNukeAnnotations() && !isNuke) {
                     throw new InvalidMixinException(mixin,
-                            String.format("%s%s in %s cannot overwrite method in %s because @Overwrite is required by the parent configuration",
+                            String.format("%s%s in %s cannot nuke method in %s because @Nuke is required by the parent configuration",
                             method.name, method.desc, mixin, mixin.getTarget().getClassName()));
                 }
                 
                 this.targetClass.methods.remove(target);
             }
-        } else if (isOverwrite) {
-            throw new InvalidMixinException(mixin, String.format("Overwrite target \"%s\" was not located in target class %s",
+        } else if (isNuke) {
+            throw new InvalidMixinException(mixin, String.format("Nuking nuke \"%s\" was not located in target class %s",
                     method.name, mixin.getTargetClassRef()));
         }
         
@@ -590,16 +590,16 @@ class MixinApplicatorStandard {
      * 
      * @param mixin Mixin context
      * @param method Method being merged
-     * @param isOverwrite True if the incoming method is tagged with Override
+     * @param isNuke True if the incoming method is tagged with Override
      * @param target target method being checked
      * @return true if the target was already merged and should be skipped
      */
     @SuppressWarnings("unchecked")
-    protected boolean isAlreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isOverwrite, MethodNode target) {
+    protected boolean isAlreadyMerged(MixinTargetContext mixin, MethodNode method, boolean isNuke, MethodNode target) {
         AnnotationNode merged = Annotations.getVisible(target, MixinMerged.class);
         if (merged == null) {
             if (Annotations.getVisible(target, Final.class) != null) {
-                this.logger.warn("Overwrite prohibited for @Final method {} in {}. Skipping method.", method.name, mixin);
+                this.logger.warn("Nuking prohibited for @Final method {} in {}. Skipping method.", method.name, mixin);
                 return true;
             }
             return false;
@@ -641,12 +641,12 @@ class MixinApplicatorStandard {
         }
 
         if (priority >= mixin.getPriority() && !owner.equals(mixin.getClassName())) {
-            this.logger.warn("Method overwrite conflict for {} in {}, previously written by {}. Skipping method.", method.name, mixin, owner);
+            this.logger.warn("Method nuke conflict for {} in {}, previously written by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
         
         if (Annotations.getVisible(target, Final.class) != null) {
-            this.logger.warn("Method overwrite conflict for @Final method {} in {} declared by {}. Skipping method.", method.name, mixin, owner);
+            this.logger.warn("Method nuke conflict for @Final method {} in {} declared by {}. Skipping method.", method.name, mixin, owner);
             return true;
         }
 
@@ -660,17 +660,17 @@ class MixinApplicatorStandard {
      * 
      * @param mixin Mixin context
      * @param method Method being merged
-     * @param isOverwrite True if the incoming method is tagged with Override
+     * @param isNuke True if the incoming method is tagged with Override
      * @param target target method being checked
      * @param intrinsic {@link Intrinsic} annotation
      * @return true if the intrinsic method was skipped (short-circuit further
      *      merge operations)
      */
-    protected boolean mergeIntrinsic(MixinTargetContext mixin, MethodNode method, boolean isOverwrite,
+    protected boolean mergeIntrinsic(MixinTargetContext mixin, MethodNode method, boolean isNuke,
             MethodNode target, AnnotationNode intrinsic) {
         
-        if (isOverwrite) {
-            throw new InvalidMixinException(mixin, "@Intrinsic is not compatible with @Overwrite, remove one of these annotations on "
+        if (isNuke) {
+            throw new InvalidMixinException(mixin, "@Intrinsic is not compatible with @Nuke, remove one of these annotations on "
                     + method.name + " in " + mixin);
         }
         
@@ -1066,7 +1066,7 @@ class MixinApplicatorStandard {
         if (Bytecode.hasFlag(mixinMethod, Opcodes.ACC_STATIC)
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PRIVATE)
                 && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)
-                && Annotations.getVisible(mixinMethod, Overwrite.class) == null) {
+                && Annotations.getVisible(mixinMethod, Nuke.class) == null) {
             throw new InvalidMixinException(mixin, 
                     String.format("Mixin %s contains non-private static method %s", mixin, mixinMethod));
         }

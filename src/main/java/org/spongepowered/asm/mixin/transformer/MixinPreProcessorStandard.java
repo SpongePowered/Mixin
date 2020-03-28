@@ -41,7 +41,7 @@ import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -98,27 +98,27 @@ class MixinPreProcessorStandard {
     enum SpecialMethod {
         
         MERGE(true),
-        OVERWRITE(true, Overwrite.class),
+        NUKE(true, Nuke.class),
         SHADOW(false, Shadow.class),
         ACCESSOR(false, Accessor.class),
         INVOKER(false, Invoker.class);
         
-        final boolean isOverwrite;
+        final boolean isNuke;
         
         final Class<? extends Annotation> annotation;
         
         final String description;
 
-        private SpecialMethod(boolean isOverwrite, Class<? extends Annotation> type) {
-            this.isOverwrite = isOverwrite;
+        private SpecialMethod(boolean isNuke, Class<? extends Annotation> type) {
+            this.isNuke = isNuke;
             this.annotation = type;
             this.description = "@" + Bytecode.getSimpleName(type);
         }
         
-        private SpecialMethod(boolean isOverwrite) {
-            this.isOverwrite = isOverwrite;
+        private SpecialMethod(boolean isNuke) {
+            this.isNuke = isNuke;
             this.annotation = null;
-            this.description = "overwrite";
+            this.description = "nuke";
         }
         
         @Override
@@ -333,7 +333,7 @@ class MixinPreProcessorStandard {
                 continue;
             }
 
-            if (this.attachOverwriteMethod(context, mixinMethod)) {
+            if (this.attachNukeMethod(context, mixinMethod)) {
                 context.addMixinMethod(mixinMethod);
                 continue;
             }
@@ -402,8 +402,8 @@ class MixinPreProcessorStandard {
         return this.attachSpecialMethod(context, mixinMethod, SpecialMethod.SHADOW);
     }
     
-    protected boolean attachOverwriteMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
-        return this.attachSpecialMethod(context, mixinMethod, SpecialMethod.OVERWRITE);
+    protected boolean attachNukeMethod(MixinTargetContext context, MixinMethodNode mixinMethod) {
+        return this.attachSpecialMethod(context, mixinMethod, SpecialMethod.NUKE);
     }
     
     protected boolean attachSpecialMethod(MixinTargetContext context, MixinMethodNode mixinMethod, SpecialMethod type) {
@@ -413,14 +413,14 @@ class MixinPreProcessorStandard {
             return false;
         }
         
-        if (type.isOverwrite) {
+        if (type.isNuke) {
             this.checkMixinNotUnique(mixinMethod, type);
         }
         
         Method method = this.getSpecialMethod(mixinMethod, type);
         MethodNode target = context.findMethod(mixinMethod, annotation);
         if (target == null) {
-            if (type.isOverwrite) {
+            if (type.isNuke) {
                 return false;
             }
             target = context.findRemappedMethod(mixinMethod);
@@ -445,7 +445,7 @@ class MixinPreProcessorStandard {
         this.conformVisibility(context, mixinMethod, type, target);
         
         if (!target.name.equals(mixinMethod.name)) {
-            if (type.isOverwrite && (target.access & Opcodes.ACC_PRIVATE) == 0) {
+            if (type.isNuke && (target.access & Opcodes.ACC_PRIVATE) == 0) {
                 throw new InvalidMixinException(this.mixin, "Non-private method cannot be aliased. Found " + target.name);
             }
             
@@ -468,12 +468,12 @@ class MixinPreProcessorStandard {
         String message = String.format("%s %s method %s in %s cannot reduce visibiliy of %s target method", visMethod, type, mixinMethod.name,
                 this.mixin, visTarget);
         
-        if (type.isOverwrite && !this.mixin.getParent().conformOverwriteVisibility()) {
+        if (type.isNuke && !this.mixin.getParent().conformNukeVisibility()) {
             throw new InvalidMixinException(this.mixin, message);
         }
         
         if (visMethod == Visibility.PRIVATE) {
-            if (type.isOverwrite) {
+            if (type.isNuke) {
                 MixinPreProcessorStandard.logger.warn("Static binding violation: {}, visibility will be upgraded.", message);
             }
             context.addUpgradedMethod(mixinMethod);
@@ -536,7 +536,7 @@ class MixinPreProcessorStandard {
         }
         
         if (this.strictUnique) {
-            throw new InvalidMixinException(this.mixin, String.format("Method conflict, %s method %s in %s cannot overwrite %s%s in %s",
+            throw new InvalidMixinException(this.mixin, String.format("Method conflict, %s method %s in %s cannot nuke %s%s in %s",
                     type, mixinMethod.name, this.mixin, target.name, target.desc, context.getTarget()));
         }
         
@@ -635,7 +635,7 @@ class MixinPreProcessorStandard {
                 }
 
                 if (this.strictUnique) {
-                    throw new InvalidMixinException(this.mixin, String.format("Field conflict, @Unique field %s in %s cannot overwrite %s%s in %s",
+                    throw new InvalidMixinException(this.mixin, String.format("Field conflict, @Unique field %s in %s cannot nuke %s%s in %s",
                             mixinField.name, this.mixin, target.name, target.desc, context.getTarget()));
                 }
                 

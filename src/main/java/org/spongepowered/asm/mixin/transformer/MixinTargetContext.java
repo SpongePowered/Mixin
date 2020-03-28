@@ -46,7 +46,7 @@ import org.objectweb.asm.tree.*;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Nuke;
 import org.spongepowered.asm.mixin.SoftOverride;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
@@ -421,12 +421,12 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     }
     
     /**
-     * Get whether overwrite annotations are required for methods in this mixin
+     * Get whether nuke annotations are required for methods in this mixin
      * 
-     * @return true if overwrite methods must be annoated with {@link Overwrite}
+     * @return true if nuke methods must be annoated with {@link Nuke}
      */
-    public boolean requireOverwriteAnnotations() {
-        return this.mixin.getParent().requireOverwriteAnnotations();
+    public boolean requireNukeAnnotations() {
+        return this.mixin.getParent().requireNukeAnnotations();
     }
     
     /**
