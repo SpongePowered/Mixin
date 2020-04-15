@@ -355,6 +355,7 @@ artifacts {
     archives thinJar
     archives sourceJar
     archives javadocJar
+    archives shadowJar
 }
 
 ext.excludePomDeps = [
