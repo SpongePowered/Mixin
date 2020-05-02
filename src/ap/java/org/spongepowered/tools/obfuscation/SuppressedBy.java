@@ -71,6 +71,13 @@ public enum SuppressedBy {
     PUBLIC_TARGET("public-target"),
     
     /**
+     *  Suppress warning when a mixin target is resolved by the AP as imaginary
+     *  (unresolvable via Mirror at compile time). For example for anonymous
+     *  inner classes or other synthetic member classes.
+     */
+    UNRESOLVABLE_TARGET("unresolvable-target"),
+    
+    /**
      * The default java "raw types" suppressions
      */
     RAW_TYPES("rawtypes");

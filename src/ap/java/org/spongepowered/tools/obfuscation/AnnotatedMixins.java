@@ -624,7 +624,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         name = name.replace('/', '.');
 
         Elements elements = this.processingEnv.getElementUtils();
-        TypeElement element = elements.getTypeElement(name);
+        TypeElement element = this.getTypeElement(name, elements);
         if (element != null) {
             try {
                 return new TypeHandle(element);
@@ -643,6 +643,66 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         return null;
+    }
+
+    /**
+     * Get a TypeElement representing another type in the current processing
+     * environment. This method attempts substitution of '$' symbols appearing
+     * in the class name when requesting TypeElements from the processing env.
+     */
+    public TypeElement getTypeElement(String name) {
+        return this.getTypeElement(name.replace('/', '.'), this.processingEnv.getElementUtils());
+    }
+
+    private TypeElement getTypeElement(String name, Elements elements) {
+        // Try fetching directly first
+        TypeElement element = elements.getTypeElement(name);
+        if (element != null || name.indexOf('$') < 0) {
+            return element;
+        }
+
+        int lastDotPos = name.lastIndexOf('.');
+        String pkg = lastDotPos > -1 ? name.substring(0, lastDotPos) : "";
+        name = name.substring(pkg.length());
+        
+        // Name has '$' in it, try naive replacement first, this will work for
+        // most cases where there is a single '$' symbol
+        element = elements.getTypeElement(pkg + name.replace('$', '.'));
+        if (element != null) {
+            return element;
+        }
+        
+        char[] source = name.toCharArray();
+        char[] dest = new char[source.length];
+        int occurs = 0;
+
+        for (int offset = 0; offset < source.length; offset++) {
+            if (source[offset] == '$') {
+                occurs++;
+            }
+        }
+        
+        // Ok someone is trolling if there are more than 10 '$' symbols in a
+        // name! 10 is an arbitary number, we could do more but the loop below
+        // is expensive and something horrible is probably happening if there
+        // are that many '$' signs. We can also skip here if occurs < 2 because
+        // we already tested that case above when we replaced "all"
+        if (occurs > 10 || occurs < 2) {
+            return null;
+        }
+        
+        // Try all possible combinations of replacing '$' with '.' starting at
+        // the end of the string. Not really ideal but if we haven't resolved
+        // the class name by replacing all '$' with '.' then this is our only
+        // remaining approach.
+        for (int mask = 1; mask < 1 << occurs && element == null; mask++) {
+            for (int offset = source.length - 1, index = 0; offset >= 0; offset--) {
+                dest[offset] = (source[offset] == '$' && (mask & (1 << index++)) != 0) ? '.' : source[offset];
+            }
+            element = elements.getTypeElement(pkg + new String(dest));
+        }
+        
+        return element;
     }
 
     /**

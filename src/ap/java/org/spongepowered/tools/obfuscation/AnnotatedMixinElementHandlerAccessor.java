@@ -105,12 +105,12 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
             return TypeUtils.getTypeName(this.getTargetType());
         }
 
-        public String getAccessorDesc() {
+        public String getTargetDesc() {
             return TypeUtils.getInternalName(this.getTargetType());
         }
 
         public ITargetSelectorRemappable getContext() {
-            return new MemberInfo(this.getTargetName(), null, this.getAccessorDesc());
+            return new MemberInfo(this.getTargetName(), null, this.getTargetDesc());
         }
 
         public AccessorType getAccessorType() {
@@ -186,8 +186,8 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         }
 
         @Override
-        public String getAccessorDesc() {
-            return TypeUtils.getDescriptor(this.getElement());
+        public String getTargetDesc() {
+            return this.getDesc();
         }
 
         @Override
@@ -294,7 +294,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
                 return;
             }
             
-            targetField = new FieldHandle(target.getName(), elem.getTargetName(), elem.getDesc());
+            targetField = new FieldHandle(target.getName(), elem.getTargetName(), elem.getTargetDesc());
         }
 
         if (!elem.shouldRemap()) {
@@ -326,7 +326,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
                 return;
             }
             
-            targetMethod = new MethodHandle(target, elem.getTargetName(), elem.getDesc());
+            targetMethod = new MethodHandle(target, elem.getTargetName(), elem.getTargetDesc());
         }
 
         if (!elem.shouldRemap()) {

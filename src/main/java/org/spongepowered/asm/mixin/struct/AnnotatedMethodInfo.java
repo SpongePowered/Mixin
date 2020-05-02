@@ -24,23 +24,19 @@
  */
 package org.spongepowered.asm.mixin.struct;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import javax.tools.Diagnostic.Kind;
+
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.logging.MessageRouter;
 
 /**
  * Data bundle for an annotated method in a mixin
  */
 public class AnnotatedMethodInfo implements IInjectionPointContext {
-
-    /**
-     * Log more things
-     */
-    protected static final Logger logger = LogManager.getLogger("mixin");
 
     /**
      * Mixin context
@@ -100,7 +96,7 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
     @Override
     public void addMessage(String format, Object... args) {
         if (this.context.getOption(Option.DEBUG_VERBOSE)) {
-            AnnotatedMethodInfo.logger.warn(String.format(format, args));
+            MessageRouter.getMessager().printMessage(Kind.WARNING, String.format(format, args));
         }
     }
 
