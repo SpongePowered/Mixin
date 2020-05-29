@@ -913,7 +913,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         Activity descriptorActivity = this.activities.begin("desc=%s", desc);
         boolean isArray = false;
         String type = desc;
-        while (type.startsWith("[") || type.startsWith("L")) {
+        while (type.startsWith("[") || (type.startsWith("L") && type.endsWith(";"))) {
             if (type.startsWith("[")) {
                 type = type.substring(1);
                 isArray = true;
