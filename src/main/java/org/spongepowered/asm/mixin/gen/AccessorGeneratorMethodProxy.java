@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.gen;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -38,9 +39,14 @@ import org.spongepowered.asm.util.Bytecode;
 public class AccessorGeneratorMethodProxy extends AccessorGenerator {
     
     /**
-     * The target field, identified by the accessor info
+     * The target method, identified by the accessor info
      */
     protected final MethodNode targetMethod;
+
+    /**
+     * Where original method was located
+     */
+    protected final ClassNode methodLocation;
     
     /**
      * Accessor method argument types (raw, from method)
@@ -55,6 +61,7 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
     public AccessorGeneratorMethodProxy(AccessorInfo info) {
         super(info, Bytecode.isStatic(info.getTargetMethod()));
         this.targetMethod = info.getTargetMethod();
+        this.methodLocation = info.getClassNode();
         this.argTypes = info.getArgTypes();
         this.returnType = info.getReturnType();
         this.checkModifiers();
@@ -63,6 +70,7 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
     protected AccessorGeneratorMethodProxy(AccessorInfo info, boolean isStatic) {
         super(info, isStatic);
         this.targetMethod = info.getTargetMethod();
+        this.methodLocation = info.getClassNode();
         this.argTypes = info.getArgTypes();
         this.returnType = info.getReturnType();
     }
@@ -76,7 +84,8 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
         }
         Bytecode.loadArgs(this.argTypes, method.instructions, this.targetIsStatic ? 0 : 1);
         boolean isPrivate = Bytecode.hasFlag(this.targetMethod, Opcodes.ACC_PRIVATE);
-        int opcode = this.targetIsStatic ? Opcodes.INVOKESTATIC : (isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL);
+        boolean isInterface = Bytecode.hasFlag(this.methodLocation, Opcodes.ACC_INTERFACE);
+        int opcode = this.targetIsStatic ? Opcodes.INVOKESTATIC : (isPrivate ? Opcodes.INVOKESPECIAL : (isInterface ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL));
         method.instructions.add(new MethodInsnNode(opcode, this.info.getClassNode().name, this.targetMethod.name, this.targetMethod.desc, false));
         method.instructions.add(new InsnNode(this.returnType.getOpcode(Opcodes.IRETURN)));
         return method;
