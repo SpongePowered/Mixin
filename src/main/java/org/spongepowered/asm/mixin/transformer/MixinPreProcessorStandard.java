@@ -375,13 +375,15 @@ class MixinPreProcessorStandard {
                 throw new InvalidAccessorException(context, description + " in multi-target mixin is invalid. Mixin must have exactly 1 target.");
             }
             
-            if (method.isConformed()) {
-                mixinMethod.name = method.getName();
-            } else {
-                String uniqueName = context.getUniqueName(mixinMethod, true);
-                MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @{} method {}{} to {} in {}",
-                        Bytecode.getSimpleName(annotation), mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
-                mixinMethod.name = method.conform(uniqueName);
+            if (Bytecode.getVisibility(mixinMethod).ordinal() < Visibility.PUBLIC.ordinal()) {
+                if (method.isConformed()) {
+                    mixinMethod.name = method.getName();
+                } else {
+                    String uniqueName = context.getUniqueName(mixinMethod, true);
+                    MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @{} method {}{} to {} in {}",
+                            Bytecode.getSimpleName(annotation), mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+                    mixinMethod.name = method.conform(uniqueName);
+                }
             }
 
         } else {
