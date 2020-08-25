@@ -534,8 +534,9 @@ public class CallbackInjector extends Injector {
         if (expected.equals(found)) {
             return String.format("Invalid descriptor on %s! Expected %s but found %s", this.info, callback.getDescriptor(), this.methodNode.desc);
         }
-        return String.format("LVT in %s has incompatible changes at opcode %d in callback %s.\nExpected: %s\n   Found: %s",
-                callback.target, position, this, expected, found);
+        String mixinConfigName = this.info.getContext().getMixin().getConfig().getName();
+        return String.format("LVT in %s has incompatible changes at opcode %d in callback %s provided by '%s'.\nExpected: %s\n   Found: %s",
+                callback.target, position, this, mixinConfigName, expected, found);
     }
 
     /**
