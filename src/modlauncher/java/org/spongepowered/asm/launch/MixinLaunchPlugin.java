@@ -169,8 +169,7 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
     }
 
     @Override
-    @Deprecated
-    public void addResource(Path resource, String name) {
+    public void offerResource(Path resource, String name) {
         this.service.getPrimaryContainer().addResource(name, resource);
     }
 
