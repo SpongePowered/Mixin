@@ -154,7 +154,7 @@ dependencies {
     modlauncherCompile "org.ow2.asm:asm-tree:$modlauncherAsmVersion"
     modlauncherCompile "org.ow2.asm:asm-commons:$modlauncherAsmVersion"
     modlauncherCompile "org.ow2.asm:asm-util:$modlauncherAsmVersion"
-    modlauncherCompile ('cpw.mods:modlauncher:4.2.0') {
+    modlauncherCompile ('cpw.mods:modlauncher:6.1.1') {
         exclude module: 'log4j-core'
     }
     
