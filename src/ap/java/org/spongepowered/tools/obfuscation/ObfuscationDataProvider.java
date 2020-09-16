@@ -24,7 +24,9 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
@@ -64,40 +66,70 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
      */
     @Override
     public <T> ObfuscationData<T> getObfEntryRecursive(final ITargetSelectorRemappable targetMember) {
-        ITargetSelectorRemappable currentTarget = targetMember;
-        ObfuscationData<String> obfTargetNames = this.getObfClass(currentTarget.getOwner());
-        ObfuscationData<T> obfData = this.getObfEntry(currentTarget);
+        ObfuscationData<String> obfTargetNames = this.getObfClass(targetMember.getOwner());
+        ObfuscationData<T> obfData = this.getObfEntry(targetMember);
         try {
-            while (obfData.isEmpty()) {
-                TypeHandle targetType = this.ap.getTypeProvider().getTypeHandle(currentTarget.getOwner());
-                if (targetType == null) {
-                    return obfData;
-                }
-                
-                TypeHandle superClass = targetType.getSuperclass();
-                obfData = this.<T>getObfEntryUsing(currentTarget, superClass);
-                if (!obfData.isEmpty()) {
-                    return ObfuscationDataProvider.applyParents(obfTargetNames, obfData);
-                }
-                
-                for (TypeHandle iface : targetType.getInterfaces()) {
-                    obfData = this.<T>getObfEntryUsing(currentTarget, iface);
-                    if (!obfData.isEmpty()) {
-                        return ObfuscationDataProvider.applyParents(obfTargetNames, obfData);
-                    }
-                }
-                
-                if (superClass == null) {
-                    break;
-                }
-                
-                currentTarget = currentTarget.move(superClass.getName());
+            if (obfData.isEmpty()) {
+                obfData = this.<T>getObfEntryRecursive(targetMember, new HashSet<String>());
             }
+            
+            if (!obfData.isEmpty()) {
+                return ObfuscationDataProvider.applyParents(obfTargetNames, obfData);
+            }
+
         } catch (Exception ex) {
             ex.printStackTrace();
             return this.getObfEntry(targetMember);
         }
         return obfData;
+    }
+
+    /**
+     * Depending on the structure of the available obfuscation data, mappings
+     * for inherited members may only be available on the specific superclass or
+     * interface in which the member is declared. To resolve these entries we
+     * recursively evaluate superclasses and interfaces in order to locate
+     * potential mappings
+     * 
+     * @param targetMember The member being resolved
+     * @param visited Set of visited types, to avoid re-entrance or unnecessary
+     *      revisiting of interfaces which are implemented at multiple levels of
+     *      the hierarchy
+     * @return resolved obfuscation mappings if available 
+     */
+    private <T> ObfuscationData<T> getObfEntryRecursive(ITargetSelectorRemappable targetMember, Set<String> visited) {
+        TypeHandle targetType = this.ap.getTypeProvider().getTypeHandle(targetMember.getOwner());
+        if (targetType == null || !visited.add(targetType.toString())) {
+            // Safe to return an empty collection here because if we are revisiting
+            // a type then we already failed to find a matching entry last time
+            return new ObfuscationData<T>();
+        }
+        
+        ObfuscationData<T> obfData;
+        TypeHandle superClass = targetType.getSuperclass();
+        for (TypeHandle iface : targetType.getInterfaces()) {
+            obfData = this.<T>getObfEntryUsing(targetMember, iface);
+            if (!obfData.isEmpty()) {
+                return obfData;
+            }
+            
+            obfData = this.getObfEntryRecursive(targetMember.move(iface.getName()), visited);
+            if (!obfData.isEmpty()) {
+                return obfData;
+            }
+        }
+        
+        if (superClass != null) {
+            obfData = this.<T>getObfEntryUsing(targetMember, superClass);
+            if (!obfData.isEmpty()) {
+                return obfData;
+            }
+            
+            this.getObfEntryRecursive(targetMember.move(superClass.getName()), visited);
+            return this.getObfEntryRecursive(targetMember.move(superClass.getName()), visited);
+        }
+        
+        return new ObfuscationData<T>();
     }
 
     /**
