@@ -34,6 +34,7 @@ import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.Phases;
 import org.spongepowered.asm.service.IClassTracker;
 
+import cpw.mods.modlauncher.api.ITransformerActivity;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService.Phase;
 
 /**
@@ -102,8 +103,11 @@ public class ModLauncherClassTracker implements IClassProcessor, IClassTracker {
      */
     @Override
     public boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
-        synchronized (this.loadedClasses) {
-            this.loadedClasses.add(classType.getClassName());
+        // Only track the classload if the reason is actually classloading
+        if (ITransformerActivity.CLASSLOADING_REASON.equals(reason)) {
+            synchronized (this.loadedClasses) {
+                this.loadedClasses.add(classType.getClassName());
+            }
         }
         
         return false;

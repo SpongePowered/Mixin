@@ -179,6 +179,23 @@ class MixinTransformer extends TreeTransformer implements IMixinTransformer {
     }
 
     /**
+     * Called when the transformation reason is computing_frames. The only
+     * operation we care about here is adding interfaces to target classes but
+     * at the moment we don't have sufficient scaffolding to determine that
+     * without triggering re-entrance. Currently just a no-op in order to not
+     * cause a re-entrance crash under ModLauncher 7.0+.
+     * 
+     * @param environment Current environment
+     * @param name Class transformed name
+     * @param classNode Class tree
+     * @return true if the class was transformed
+     */
+    public boolean computeFramesForClass(MixinEnvironment environment, String name, ClassNode classNode) {
+        // TODO compute added interfaces
+        return false;
+    }
+    
+    /**
      * Apply mixins and postprocessors to the supplied class
      * 
      * @param environment Current environment

@@ -124,10 +124,6 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
      */
     @Override
     public boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason) {
-        if (MixinLaunchPlugin.NAME.equals(reason)) {
-            return false;
-        }
-
         boolean processed = false;
         
         synchronized (this.processors) {
@@ -168,9 +164,15 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
         }
     }
 
-    @Override
+    // @Override ModLauncher 4.0
     @Deprecated
     public void addResource(Path resource, String name) {
+        this.service.getPrimaryContainer().addResource(name, resource);
+    }
+    
+    // ModLauncher 7.0+
+    @Override
+    public void offerResource(Path resource, String name) {
         this.service.getPrimaryContainer().addResource(name, resource);
     }
 

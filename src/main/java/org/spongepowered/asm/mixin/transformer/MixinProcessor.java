@@ -359,7 +359,6 @@ public class MixinProcessor {
         } catch (MixinTransformerError er) {
             throw er;
         } catch (Throwable th) {
-            th.printStackTrace();
             this.dumpClassOnFailure(name, targetClassNode, environment);
             throw new MixinTransformerError("An unexpected critical error was encountered", th);
         } finally {
@@ -374,9 +373,9 @@ public class MixinProcessor {
             return String.format("Illegal classload request for %s. Mixin is defined in %s and cannot be referenced directly", name, ownedByConfig);
         }
 
-//        AnnotationNode shadow = Annotations.getInvisible(targetClassNode, Shadow.class);
-//        if (shadow != null) {
-//            return String.format("Illegal classload request for UNRESOLVED @Shadow %s. "
+//        AnnotationNode proxy = Annotations.getInvisible(targetClassNode, Proxy.class);
+//        if (proxy != null) {
+//            return String.format("Illegal classload request for UNRESOLVED @Proxy %s. "
 //                    + "The proxy was referenced outside a mixin or the mixin processor encountered an internal error.", name);
 //        }
         
