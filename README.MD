@@ -67,8 +67,19 @@ plugin developed by [DemonWav](https://github.com/demonwav).
   </thead>
   <tbody>
     <tr>
+      <td valign="top"><b>0.8.1</b></td>
+      <td valign="top">September 2020</td>
+      <td valign="top">
+        <ul>
+          <li><b>Hotfix for supporting ModLauncher 7.0</b></li>
+          <li>Fix critical issue with resolving obfuscated members in inherited
+            interfaces</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
       <td valign="top"><b>0.8</b></td>
-      <td valign="top">August 2019</td>
+      <td valign="top">January 2020</td>
       <td valign="top">
         <ul>
           <li><b>Updated to ASM 6.2</b></li>
