@@ -108,6 +108,7 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
         ObfuscationData<T> obfData;
         TypeHandle superClass = targetType.getSuperclass();
         for (TypeHandle iface : targetType.getInterfaces()) {
+            
             obfData = this.<T>getObfEntryUsing(targetMember, iface);
             if (!obfData.isEmpty()) {
                 return obfData;
@@ -125,7 +126,6 @@ public class ObfuscationDataProvider implements IObfuscationDataProvider {
                 return obfData;
             }
             
-            this.getObfEntryRecursive(targetMember.move(superClass.getName()), visited);
             return this.getObfEntryRecursive(targetMember.move(superClass.getName()), visited);
         }
         
