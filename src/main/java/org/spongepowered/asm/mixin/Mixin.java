@@ -57,7 +57,8 @@ public @interface Mixin {
 
     /**
      * Priority for the mixin, relative to other mixins targetting the same
-     * classes
+     * classes. Mixins with a lower priority are applied <i>before</i> mixins
+     * with a higher priority.
      * 
      * @return the mixin priority (relative to other mixins targetting the same
      *      class)
