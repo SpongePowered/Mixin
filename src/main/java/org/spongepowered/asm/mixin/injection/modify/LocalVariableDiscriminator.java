@@ -145,13 +145,16 @@ public class LocalVariableDiscriminator {
                 }
             }
             
-            Local[] lvt = new Local[this.baseArgIndex + target.arguments.length];
+            Local[] lvt = new Local[this.baseArgIndex + Bytecode.getArgsSize(target.arguments)];
             if (!this.isStatic) {
                 lvt[0] = new Local("this", Type.getObjectType(target.classNode.name));
             }
-            for (int local = this.baseArgIndex; local < lvt.length; local++) {
-                Type arg = target.arguments[local - this.baseArgIndex];
-                lvt[local] = new Local("arg" + local, arg);
+            for (int local = this.baseArgIndex, arg = 0; local < lvt.length; local++) {
+                Type argType = target.arguments[arg++];
+                lvt[local] = new Local("arg" + local, argType);
+                if (argType.getSize() == 2) {
+                    lvt[++local] = null;
+                }
             }
             return lvt;
         }

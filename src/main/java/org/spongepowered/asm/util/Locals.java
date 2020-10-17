@@ -137,7 +137,7 @@ public final class Locals {
         for (int i = 0; i < 3 && (node instanceof LabelNode || node instanceof LineNumberNode); i++) {
             node = Locals.nextNode(method.instructions, node);
         }
-            
+        
         ClassInfo classInfo = ClassInfo.forName(classNode.name);
         if (classInfo == null) {
             throw new LVTGeneratorError("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
@@ -195,7 +195,7 @@ public final class Locals {
                     frameSize = Locals.getAdjustedFrameSize(frameSize, frameNode);
                 }
                 
-                if (frameNode.type == Opcodes.F_CHOP) {
+                if (frameNode.type == Opcodes.F_CHOP || frameNode.type == Opcodes.F_NEW) {
                     for (int framePos = frameSize; framePos < frame.length; framePos++) {
                         frame[framePos] = null; 
                     }
@@ -223,7 +223,7 @@ public final class Locals {
                             frame[framePos] = null;
                         } else if (is32bitValue || is64bitValue) {
                             frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
-                            
+
                             if (is64bitValue) {
                                 framePos++;
                                 frame[framePos] = null; // TOP
@@ -435,7 +435,7 @@ public final class Locals {
                         labels[i] = label = new LabelNode();
                     }
                 }
-
+                
                 if (local == null && locals[j] != null) {
                     localVariables.add(localNodes[j]);
                     localNodes[j].end = label;
@@ -447,7 +447,12 @@ public final class Locals {
                         localNodes[j] = null;
                     }
 
-                    String desc = (local.getType() != null) ? local.getType().getDescriptor() : lastKnownType[j];
+                    String desc = lastKnownType[j];
+                    Type localType = local.getType();
+                    if (localType != null) {
+                        desc = "null".equals(localType.getInternalName()) ? Constants.OBJECT_DESC : localType.getDescriptor();
+                    }
+                    
                     localNodes[j] = new LocalVariableNode("var" + j, desc, null, label, null, j);
                     if (desc != null) {
                         lastKnownType[j] = desc;
@@ -497,7 +502,7 @@ public final class Locals {
         }
         return insn;
     }
-
+    
     /**
      * Compute a new frame size based on the supplied frame type and the size of
      * locals contained in the frame (this may differ from the number of actual
