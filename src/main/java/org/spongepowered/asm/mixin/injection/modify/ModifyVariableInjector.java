@@ -37,9 +37,10 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
-import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
+import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
@@ -88,7 +89,7 @@ public class ModifyVariableInjector extends Injector {
             throw new InvalidInjectionException(this.mixin, this.getAtCode() + " injection point must be used in conjunction with @ModifyVariable");
         }
         
-        abstract boolean find(InjectionInfo info, Target target, Collection<AbstractInsnNode> nodes);
+        abstract boolean find(InjectionInfo info, InsnList insns, Collection<AbstractInsnNode> nodes, Target target);
 
     }
     
@@ -107,12 +108,13 @@ public class ModifyVariableInjector extends Injector {
     }
     
     @Override
-    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
+    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InjectorTarget injectorTarget,
+            Collection<AbstractInsnNode> nodes) {
         if (injectionPoint instanceof LocalVariableInjectionPoint) {
-            Target target = this.info.getContext().getTargetMethod(into);
-            return ((LocalVariableInjectionPoint)injectionPoint).find(this.info, target, nodes);
+            return ((LocalVariableInjectionPoint)injectionPoint).find(this.info, injectorTarget.getSlice(injectionPoint), nodes,
+                    injectorTarget.getTarget());
         }
-        return injectionPoint.find(into.desc, insns, nodes);
+        return injectionPoint.find(into.desc, injectorTarget.getSlice(injectionPoint), nodes);
     }
 
     /* (non-Javadoc)

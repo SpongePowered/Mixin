@@ -295,7 +295,7 @@ public abstract class Injector {
                         injectorTarget, injectorTarget.getMergedBy(), injectorTarget.getMergedPriority()));
             }
 
-            if (this.findTargetNodes(method, injectionPoint, injectorTarget.getSlice(injectionPoint), nodes)) {
+            if (this.findTargetNodes(method, injectionPoint, injectorTarget, nodes)) {
                 for (AbstractInsnNode insn : nodes) {
                     Integer key = method.instructions.indexOf(insn);
                     TargetNode targetNode = targetNodes.get(key);
@@ -311,8 +311,9 @@ public abstract class Injector {
         return targetNodes.values();
     }
 
-    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InsnList insns, Collection<AbstractInsnNode> nodes) {
-        return injectionPoint.find(into.desc, insns, nodes);
+    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InjectorTarget injectorTarget,
+            Collection<AbstractInsnNode> nodes) {
+        return injectionPoint.find(into.desc, injectorTarget.getSlice(injectionPoint), nodes);
     }
 
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
