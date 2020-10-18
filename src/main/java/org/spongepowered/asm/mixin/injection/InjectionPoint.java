@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -454,9 +455,23 @@ public abstract class InjectionPoint {
             List<AbstractInsnNode> list = (nodes instanceof List) ? (List<AbstractInsnNode>) nodes : new ArrayList<AbstractInsnNode>(nodes);
 
             this.input.find(desc, insns, nodes);
-
-            for (int i = 0; i < list.size(); i++) {
-                list.set(i, insns.get(insns.indexOf(list.get(i)) + this.shift));
+            
+            for (ListIterator<AbstractInsnNode> iter = list.listIterator(); iter.hasNext();) {
+                int sourceIndex = insns.indexOf(iter.next());
+                int newIndex = sourceIndex + this.shift;
+                if (newIndex >= 0 && newIndex < insns.size()) {
+                    iter.set(insns.get(newIndex));
+                } else {
+                    // Shifted beyond the start or end of the insnlist, into the dark void
+                    iter.remove();
+                    
+                    // Decorate the injector with the info in case it fails
+                    int absShift = Math.abs(this.shift);
+                    char operator = absShift != this.shift ? '-' : '+';
+                    this.input.addMessage(
+                            "@At.shift offset outside the target bounds: Index (index(%d) %s offset(%d) = %d) is outside the allowed range (0-%d)",
+                            sourceIndex, operator, absShift, newIndex, insns.size());
+                }
             }
 
             if (nodes != list) {
