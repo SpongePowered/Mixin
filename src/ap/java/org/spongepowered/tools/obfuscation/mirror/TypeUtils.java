@@ -24,6 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation.mirror;
 
+import java.util.Collection;
 import java.util.List;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -349,6 +350,23 @@ public abstract class TypeUtils {
         
         String returnType = TypeUtils.getInternalName(method.getReturnType());
         return String.format("(%s)%s", signature, returnType);
+    }
+
+    /**
+     * Get a bytecode-style descriptor for the specified return type and arguments 
+     * 
+     * @param ret Return type
+     * @param args Argument types
+     * @return descriptor
+     */
+    public static String getDescriptor(TypeMirror ret, Collection<TypeMirror> args) {
+    	StringBuilder signature = new StringBuilder();
+    	signature.append('(');
+    	for (TypeMirror arg : args)
+    		signature.append(TypeUtils.getInternalName(arg));
+    	signature.append(')');
+    	signature.append(TypeUtils.getInternalName(ret));
+    	return signature.toString();
     }
     
     /**

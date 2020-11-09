@@ -24,13 +24,18 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
@@ -42,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
+import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
@@ -51,6 +57,7 @@ import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.
 import org.spongepowered.tools.obfuscation.interfaces.IReferenceManager;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
 
 /**
@@ -147,8 +154,11 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
     
     }
     
+    private final TypeMirror VOID_TYPE;
+    
     AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
+        VOID_TYPE = this.ap.getProcessingEnvironment().getTypeUtils().getNoType(TypeKind.VOID);
     }
 
     public void registerInjector(AnnotatedElementInjector elem) {
@@ -156,8 +166,31 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
+        List<String> references = new ArrayList<String>();
+        List<ITargetSelector> selectors = new ArrayList<ITargetSelector>();
+        
         for (String reference : elem.getAnnotation().<String>getList("method")) {
-            ITargetSelector targetSelector = TargetSelector.parse(reference);
+        	references.add(reference);
+        	selectors.add(TargetSelector.parse(reference));
+        }
+        
+        for (AnnotationHandle target : elem.getAnnotation().getAnnotationList("target")) {
+        	TypeMirror ownerType = target.<TypeMirror>getValue("owner", VOID_TYPE);
+        	String owner = null;
+        	if (ownerType.getKind() == TypeKind.VOID)
+        		owner = TypeUtils.getInternalName((DeclaredType)this.mixin.getTargets().get(0).getType());
+        	else
+        		owner = TypeUtils.getInternalName((DeclaredType)ownerType);
+        	String name = target.<String>getValue();
+        	String desc = TypeUtils.getDescriptor(target.<TypeMirror>getValue("ret", VOID_TYPE), target.<TypeMirror>getList("args"));
+        	references.add(owner + '/' + name + desc);
+        	selectors.add(new MemberInfo(name, owner, desc));
+            //this.ap.printMessage(Kind.ERROR, "Annotated Descriptor: " + owner + '/' + name + desc, elem.getElement(), target.asMirror());
+        }
+        
+        for (int x = 0; x < references.size(); x++) {
+            String reference = references.get(x);
+            ITargetSelector targetSelector = selectors.get(x);
             
             try {
                 targetSelector.validate();

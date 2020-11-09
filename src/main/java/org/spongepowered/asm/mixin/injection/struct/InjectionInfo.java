@@ -69,7 +69,6 @@ import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.asm.ElementNode;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
 import org.spongepowered.asm.util.logging.MessageRouter;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -291,19 +290,39 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected Set<ITargetSelector> parseTargets() {
-        List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
-        if (methods == null) {
+
+        List<String> references = new ArrayList<String>();
+        List<ITargetSelector> targets = new ArrayList<ITargetSelector>();
+        
+        for (String reference : Annotations.<String>getValue(this.annotation, "method", true)) {
+        	references.add(reference);
+        	targets.add(TargetSelector.parse(reference, this.mixin));
+        }
+
+        for (AnnotationNode target : Annotations.<AnnotationNode>getValue(this.annotation, "target", true)) {
+        	Type ownerType = Annotations.<Type>getValue(target, "owner");
+        	Type retType = Annotations.<Type>getValue(target, "ret");
+        	List<Type> argTypes = Annotations.<Type>getValue(target, "args", true);
+        	String owner = ownerType != null ? ownerType.getInternalName() : this.mixin.getTargetClassRef();
+        	String name = Annotations.<String>getValue(target);
+        	String desc = Type.getMethodDescriptor(retType != null ? retType : Type.VOID_TYPE, argTypes.toArray(new Type[argTypes.size()]));
+        	references.add(owner + '/' + name + desc);
+        	targets.add(new MemberInfo(name, owner, desc));
+        }
+        
+        if (references.isEmpty()) {
             throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name",
                     this.annotationType, this.methodName));
         }
-        
+
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
-        for (String method : methods) {
+        for (int x = 0; x < references.size(); x++) {
+            String reference = references.get(x);
             try {
-                selectors.add(TargetSelector.parseAndValidate(method, this.mixin).attach(this.mixin));
+                selectors.add(targets.get(x).validate().attach(this.mixin));
             } catch (InvalidMemberDescriptorException ex) {
                 throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s",
-                        this.annotationType, this.methodName, method, this.mixin.getReferenceMapper().getStatus()));
+                        this.annotationType, this.methodName, reference, this.mixin.getReferenceMapper().getStatus()));
             } catch (TargetNotSupportedException ex) {
                 throw new InvalidInjectionException(this,
                         String.format("%s annotation on %s specifies a target class '%s', which is not supported",

@@ -122,7 +122,16 @@ public @interface Inject {
      * 
      * @return target method(s) for this injector
      */
-    public String[] method();
+    public String[] method() default {};
+    
+    /**
+     * Object reference to one or more
+     * {@link ITargetSelector target selectors} which identify the target
+     * methods.
+     * 
+     * @return target method(s) for this injector
+     */
+    public Desc[] target() default {};
     
     /**
      * Array of {@link Slice} annotations which describe the method bisections
