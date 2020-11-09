@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -276,6 +277,16 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @SerializedName("refmap")
     private String refMapperConfig;
+
+    /**
+     * The class name for an implementation of {@Link IReferenceMapper}, mixinPackage will be prepended.
+     * This allows for full control over the refmap for cases where you need more fine-grained
+     * control then the default remappers.
+     * 
+     * Must have a public constructor that takes {@Link MixinEnvironment} and {@Link IReferenceMapper}
+     */
+    @SerializedName("refmapWrapper")
+    private String refMapperWrapper;
     
     /**
      * True to output "mixing in" messages at INFO level rather than DEBUG 
@@ -621,6 +632,22 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         if (this.env.getOption(Option.REFMAP_REMAP)) {
             this.refMapper = RemappingReferenceMapper.of(this.env, this.refMapper);
+        }
+
+        if (this.refMapperWrapper != null) {
+        	String wrapperName = this.mixinPackage + this.refMapperWrapper;
+            try {
+                @SuppressWarnings("unchecked")
+                Class<IReferenceMapper> wrapperCls = (Class<IReferenceMapper>) Class.forName(wrapperName);
+                Constructor<IReferenceMapper> ctr = wrapperCls.getConstructor(MixinEnvironment.class, IReferenceMapper.class);
+                this.refMapper = ctr.newInstance(this.env, this.refMapper);
+            } catch (ClassNotFoundException e) {
+                this.logger.error("Reference map wrapper '{}' could not be found: ", wrapperName, e);
+            } catch (ReflectiveOperationException e) {
+                this.logger.error("Reference map wrapper '{}' could not be created: ", wrapperName, e);
+            } catch (SecurityException e) {
+                this.logger.error("Reference map wrapper '{}' could not be created: ", wrapperName, e);
+            }
         }
     }
 
