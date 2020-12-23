@@ -117,19 +117,19 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         final Class<? extends Annotation> annotationType;
         
-        final Class<? extends InjectionInfo> type;
+        final Class<? extends InjectionInfo> injectorType;
         
         final Constructor<? extends InjectionInfo> ctor;
         
-        final String simpleName;
+        final String annotationDesc;
         
         final String prefix;
 
         InjectorEntry(Class<? extends Annotation> annotationType, Class<? extends InjectionInfo> type) throws NoSuchMethodException {
             this.annotationType = annotationType;
-            this.type = type;
+            this.injectorType = type;
             this.ctor = type.getDeclaredConstructor(MixinTargetContext.class, MethodNode.class, AnnotationNode.class);
-            this.simpleName = annotationType.getSimpleName() + ";";
+            this.annotationDesc = Type.getDescriptor(annotationType);
             
             HandlerPrefix handlerPrefix = type.<HandlerPrefix>getAnnotation(HandlerPrefix.class);
             this.prefix = handlerPrefix != null ? handlerPrefix.value() : InjectionInfo.DEFAULT_PREFIX;
@@ -144,9 +144,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                     throw (MixinException)cause;
                 }
                 Throwable ex = cause != null ? cause : itex;
-                throw new MixinError("Error initialising injector metaclass [" + this.type + "] for annotation " + annotation.desc, ex);
+                throw new MixinError("Error initialising injector metaclass [" + this.injectorType + "] for annotation " + annotation.desc, ex);
             } catch (ReflectiveOperationException ex) {
-                throw new MixinError("Failed to instantiate injector metaclass [" + this.type + "] for annotation " + annotation.desc, ex);
+                throw new MixinError("Failed to instantiate injector metaclass [" + this.injectorType + "] for annotation " + annotation.desc, ex);
             }
         }
     }
@@ -620,7 +620,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         
         for (InjectorEntry injector : InjectionInfo.registry.values()) {
-            if (annotation.desc.endsWith(injector.simpleName)) {
+            if (annotation.desc.equals(injector.annotationDesc)) {
                 return injector.create(mixin, method, annotation);
             }
         }
@@ -660,7 +660,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         
         for (InjectorEntry injector : InjectionInfo.registry.values()) {
-            if (annotation.desc.endsWith(injector.simpleName)) {
+            if (annotation.desc.endsWith(injector.annotationDesc)) {
                 return injector.prefix;
             }
         }
@@ -713,16 +713,16 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         } catch (NoSuchMethodException ex) {
             throw new MixinError("InjectionInfo class " + type.getName() + " is missing a valid constructor");
         }
-        InjectorEntry existing = InjectionInfo.registry.get(entry.simpleName);
+        InjectorEntry existing = InjectionInfo.registry.get(entry.annotationDesc);
         if (existing != null) { // && !existing.type.equals(type)) {
             MessageRouter.getMessager().printMessage(Kind.WARNING, String.format("Overriding InjectionInfo for @%s with %s (previously %s)",
-                    annotationType.value().getSimpleName(), type.getName(), existing.type.getName()));
+                    annotationType.value().getSimpleName(), type.getName(), existing.injectorType.getName()));
         } else {
             MessageRouter.getMessager().printMessage(Kind.OTHER, String.format("Registering new injector for @%s with %s",
                     annotationType.value().getSimpleName(), type.getName()));
         }
         
-        InjectionInfo.registry.put(entry.simpleName, entry);
+        InjectionInfo.registry.put(entry.annotationDesc, entry);
         
         ArrayList<Class<? extends Annotation>> annotations = new ArrayList<Class<? extends Annotation>>();
         for (InjectorEntry injector : InjectionInfo.registry.values()) {
