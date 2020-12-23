@@ -574,12 +574,13 @@ public abstract class Injector {
      *      if coercion is required for the argument
      */
     protected final boolean checkCoerce(int index, Type toType, String description, boolean allowCoercion) {
-        Type fromType = index < 0 ? this.returnType : this.methodArgs[index];
         if (index >= this.methodArgs.length) {
             throw new InvalidInjectionException(this.info, String.format(
                     "%s has an invalid signature. Not enough arguments: expected argument type %s at index %d",
                     description, SignaturePrinter.getTypeName(toType), index));
         }
+
+        Type fromType = index < 0 ? this.returnType : this.methodArgs[index];
         
         AnnotationNode coerce = Annotations.getInvisibleParameter(this.methodNode, Coerce.class, index);
         boolean isReturn = index < 0;
