@@ -302,6 +302,7 @@ public class AccessorInfo extends SpecialMethodInfo {
         this.type = this.initType();
         this.targetFieldType = this.initTargetFieldType();
         this.target = this.initTarget();
+        this.annotation.visit("target", this.target.toString());
     }
 
     protected AccessorType initType() {
@@ -331,9 +332,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     }
 
     protected ITargetSelector initTarget() {
-        MemberInfo target = new MemberInfo(this.getTargetName(this.specifiedName), null, this.targetFieldType.getDescriptor());
-        this.annotation.visit("target", target.toString());
-        return target;
+        return new MemberInfo(this.getTargetName(this.specifiedName), null, this.targetFieldType.getDescriptor());
     }
 
     protected String getTargetName(String name) {
