@@ -89,11 +89,15 @@ class InvokerInfo extends AccessorInfo {
     
     @Override
     protected ITargetSelector initTarget() {
+        MemberInfo target;
         if (this.type == AccessorType.OBJECT_FACTORY) {
-            return new MemberInfo(Constants.CTOR, null, Bytecode.changeDescriptorReturnType(this.method.desc, "V"));
+            target = new MemberInfo(Constants.CTOR, null, Bytecode.changeDescriptorReturnType(this.method.desc, "V"));
+        } else {
+            target = new MemberInfo(this.getTargetName(this.specifiedName), null, this.method.desc);
         }
         
-        return new MemberInfo(this.getTargetName(this.specifiedName), null, this.method.desc);
+        this.annotation.visit("target", target.toString());
+        return target;
     }
 
     @Override
