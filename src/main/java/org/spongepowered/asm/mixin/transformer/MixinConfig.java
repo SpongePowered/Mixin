@@ -46,6 +46,8 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.RemappingReferenceMapper;
@@ -76,8 +78,14 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         @SerializedName("defaultGroup")
         String defaultGroup = "default";
         
+        @SerializedName("namespace")
+        String namespace;
+        
         @SerializedName("injectionPoints")
         List<String> injectionPoints;
+        
+        @SerializedName("dynamicSelectors")
+        List<String> dynamicSelectors;
         
         @SerializedName("maxShiftBy")
         int maxShiftBy = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
@@ -459,7 +467,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         this.initialised = true;
         this.initCompatibilityLevel();
-        this.initInjectionPoints();
+        this.initExtensions();
         return this.checkVersion();
     }
     
@@ -514,44 +522,66 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return fallbackEnvironment;
     }
     
-    private void initInjectionPoints() {
-        if (this.injectorOptions.injectionPoints == null) {
-            return;
+    private void initExtensions() {
+        if (this.injectorOptions.injectionPoints != null) {
+            for (String injectionPointClassName : this.injectorOptions.injectionPoints) {
+                this.initInjectionPoint(injectionPointClassName, this.injectorOptions.namespace);
+            }
         }
         
-        for (String injectionPointClassName : this.injectorOptions.injectionPoints) {
-            this.initInjectionPoint(injectionPointClassName);
+        if (this.injectorOptions.dynamicSelectors != null) {
+            for (String dynamicSelectorClassName : this.injectorOptions.dynamicSelectors) {
+                this.initDynamicSelector(dynamicSelectorClassName, this.injectorOptions.namespace);
+            }
         }
     }
 
     @SuppressWarnings("unchecked")
-    public void initInjectionPoint(String className) {
+    private void initInjectionPoint(String className, String namespace) {
         try {
-            Class<?> injectionPointClass = null;
-            try {
-                injectionPointClass = this.service.getClassProvider().findClass(className, true);
-            } catch (ClassNotFoundException cnfe) {
-                this.logger.error("Unable to register injection point {} for {}, the specified class was not found", className, this, cnfe);
-                return;
+            Class<?> injectionPointClass = this.findExtensionClass(className, InjectionPoint.class, "injection point");
+            if (injectionPointClass != null) {
+                try {
+                    injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
+                } catch (NoSuchMethodException cnfe) {
+                    this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
+                            className, this, cnfe);
+                    return;
+                }
+    
+                InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass, namespace);
             }
-            
-            if (!InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
-                this.logger.error("Unable to register injection point {} for {}, class must extend InjectionPoint", className, this);
-                return;
-            }
-            
-            try {
-                injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
-            } catch (NoSuchMethodException cnfe) {
-                this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
-                        className, this, cnfe);
-                return;
-            }
-
-            InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
         } catch (Throwable th) {
             this.logger.catching(th);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initDynamicSelector(String className, String namespace) {
+        try {
+            Class<?> dynamicSelectorClass = this.findExtensionClass(className, ITargetSelectorDynamic.class, "dynamic selector");
+            if (dynamicSelectorClass != null) {
+                TargetSelector.register((Class<? extends ITargetSelectorDynamic>)dynamicSelectorClass, namespace);
+            }
+        } catch (Throwable th) {
+            this.logger.catching(th);
+        }
+    }
+    
+    private Class<?> findExtensionClass(String className, Class<?> superType, String extensionType) {
+        Class<?> extensionClass = null;
+        try {
+            extensionClass = this.service.getClassProvider().findClass(className, true);
+        } catch (ClassNotFoundException cnfe) {
+            this.logger.error("Unable to register {} {} for {}, the specified class was not found", extensionType, className, this, cnfe);
+            return null;
+        }
+        
+        if (!superType.isAssignableFrom(extensionClass)) {
+            this.logger.error("Unable to register {} {} for {}, class is not assignable to {}", extensionType, className, this, superType);
+            return null;
+        }
+        return extensionClass;
     }
 
     private boolean checkVersion() throws MixinInitialisationError {

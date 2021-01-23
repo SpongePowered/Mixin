@@ -50,12 +50,12 @@ public class InvalidInjectionException extends InvalidMixinException {
     }
 
     public InvalidInjectionException(InjectionInfo info, String message) {
-        super(info.getContext(), message);
+        super(info.getMixin(), message);
         this.info = info;
     }
 
     public InvalidInjectionException(InjectionInfo info, String message, ActivityStack activityContext) {
-        super(info.getContext(), message, activityContext);
+        super(info.getMixin(), message, activityContext);
         this.info = info;
     }
 
@@ -70,12 +70,12 @@ public class InvalidInjectionException extends InvalidMixinException {
     }
 
     public InvalidInjectionException(InjectionInfo info, Throwable cause) {
-        super(info.getContext(), cause);
+        super(info.getMixin(), cause);
         this.info = info;
     }
 
     public InvalidInjectionException(InjectionInfo info, Throwable cause, ActivityStack activityContext) {
-        super(info.getContext(), cause, activityContext);
+        super(info.getMixin(), cause, activityContext);
         this.info = info;
     }
 
@@ -90,12 +90,12 @@ public class InvalidInjectionException extends InvalidMixinException {
     }
 
     public InvalidInjectionException(InjectionInfo info, String message, Throwable cause) {
-        super(info.getContext(), message, cause);
+        super(info.getMixin(), message, cause);
         this.info = info;
     }
     
     public InvalidInjectionException(InjectionInfo info, String message, Throwable cause, ActivityStack activityContext) {
-        super(info.getContext(), message, cause, activityContext);
+        super(info.getMixin(), message, cause, activityContext);
         this.info = info;
     }
     

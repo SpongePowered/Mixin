@@ -28,14 +28,13 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorConstructor;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 import org.spongepowered.asm.mixin.injection.selectors.MatchResult;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
@@ -630,8 +629,8 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      *      #attach(org.spongepowered.asm.mixin.refmap.IMixinContext)
      */
     @Override
-    public ITargetSelector attach(IMixinContext context) throws InvalidSelectorException {
-        if (this.owner != null && !this.owner.equals(context.getTargetClassRef())) {
+    public ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException {
+        if (this.owner != null && !this.owner.equals(context.getMixin().getTargetClassRef())) {
             throw new TargetNotSupportedException(this.owner);
         }
         return this;
@@ -679,17 +678,16 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * Parse a MemberInfo from a string
      * 
      * @param input String to parse MemberInfo from
-     * @param refMapper Reference mapper to use
-     * @param className Class context to use for remapping
+     * @param context Selector context for this parse request
      * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String input, IReferenceMapper refMapper, String className) {
+    public static MemberInfo parse(String input, ISelectorContext context) {
         String desc = null;
         String owner = null;
         String name = Strings.nullToEmpty(input).replaceAll("\\s", "");
 
-        if (refMapper != null) {
-            name = refMapper.remap(className, name);
+        if (context != null) {
+            name = context.remap(name);
         }
         
         int lastDotPos = name.lastIndexOf('.');

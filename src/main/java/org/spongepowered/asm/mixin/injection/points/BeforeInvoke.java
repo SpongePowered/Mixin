@@ -127,7 +127,7 @@ public class BeforeInvoke extends InjectionPoint {
         this.ordinal = data.getOrdinal();
         this.log = data.get("log", false);
         this.className = this.getClassName();
-        this.context = data.getContext();
+        this.context = data.getMixin();
         this.allowPermissive = this.context.getOption(Option.REFMAP_REMAP) && this.context.getOption(Option.REFMAP_REMAP_ALLOW_PERMISSIVE)
                 && !this.context.getReferenceMapper().isDefault();
     }

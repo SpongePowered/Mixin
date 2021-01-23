@@ -26,28 +26,31 @@ package org.spongepowered.asm.mixin.injection;
 
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.util.IMessageSink;
 
 /**
  * Context for an injection point, used to access the mixin as well as the owner
  * method and annotation for the injection point
  */
-public interface IInjectionPointContext extends IMessageSink {
-
-    /**
-     * Get the mixin context for this injection
-     */
-    public abstract IMixinContext getContext();
+public interface IInjectionPointContext extends IMessageSink, ISelectorContext {
 
     /**
      * Get the injection handler method
      */
+    @Override
     public abstract MethodNode getMethod();
 
     /**
      * Get the parent annotation (eg. the &#064;Inject annotation)
      */
+    @Override
     public abstract AnnotationNode getAnnotation();
-
+    
+    /**
+     * Get the selector annotation (eg. the &#064;At annotation)
+     */
+    @Override
+    public abstract AnnotationNode getSelectorAnnotation();
+    
 }

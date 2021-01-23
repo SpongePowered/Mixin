@@ -171,7 +171,11 @@ public final class Locals {
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (storeInsn != null) {
-                frame[storeInsn.var] = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
+                LocalVariableNode storedLocal = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
+                frame[storeInsn.var] = storedLocal;
+                if (storedLocal != null && storeInsn.var < method.maxLocals - 1 && Type.getType(storedLocal.desc).getSize() == 2) {
+                    frame[storeInsn.var + 1] = null; // TOP
+                }
                 storeInsn = null;
             }
             

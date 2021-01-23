@@ -53,7 +53,7 @@ public class ModifyArgsInjector extends InvokeInjector {
     public ModifyArgsInjector(InjectionInfo info) {
         super(info, "@ModifyArgs");
         
-        this.argsClassGenerator = info.getContext().getExtensions().<ArgsClassGenerator>getGenerator(ArgsClassGenerator.class);
+        this.argsClassGenerator = info.getMixin().getExtensions().<ArgsClassGenerator>getGenerator(ArgsClassGenerator.class);
     }
     
     /* (non-Javadoc)
@@ -84,7 +84,7 @@ public class ModifyArgsInjector extends InvokeInjector {
                     + targetMethod.name + targetMethod.desc + " with no arguments!");
         }
         
-        String clArgs = this.argsClassGenerator.getArgsClass(targetMethod.desc, this.info.getContext().getMixin()).getName();
+        String clArgs = this.argsClassGenerator.getArgsClass(targetMethod.desc, this.info.getMixin().getMixin()).getName();
         boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();

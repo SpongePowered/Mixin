@@ -133,7 +133,7 @@ public class ModifyConstantInjector extends RedirectInjector {
     private void injectConstantModifier(Target target, AbstractInsnNode constNode) {
         final Type constantType = Bytecode.getConstantType(constNode);
         
-        if (constantType.getSort() <= Type.INT && this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+        if (constantType.getSort() <= Type.INT && this.info.getMixin().getOption(Option.DEBUG_VERBOSE)) {
             this.checkNarrowing(target, constNode, constantType);
         }
         

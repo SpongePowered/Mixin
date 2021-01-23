@@ -67,7 +67,7 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
         
         // Derp?
         if (interfaces.size() < 1) {
-            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixin(), implementsAnnotation.asMirror());
+            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixinElement(), implementsAnnotation.asMirror());
             return;
         }
         
@@ -82,8 +82,8 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
                 String prefix = interfaceAnnotation.<String>getValue("prefix");
                 this.processSoftImplements(remap, iface, prefix);
             } catch (Exception ex) {
-                this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(), this.mixin.getMixin(),
-                        interfaceAnnotation.asMirror());
+                this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(),
+                        this.mixin.getMixinElement(), interfaceAnnotation.asMirror());
             }
         }
     }

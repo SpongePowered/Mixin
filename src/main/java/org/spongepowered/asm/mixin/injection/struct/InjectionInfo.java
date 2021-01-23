@@ -300,7 +300,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
         for (String method : methods) {
             try {
-                selectors.add(TargetSelector.parseAndValidate(method, this.mixin).attach(this.mixin));
+                selectors.add(TargetSelector.parseAndValidate(method, this).attach(this));
             } catch (InvalidMemberDescriptorException ex) {
                 throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: \"%s\". %s",
                         this.annotationType, this.methodName, method, this.mixin.getReferenceMapper().getStatus()));

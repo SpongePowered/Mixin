@@ -43,7 +43,7 @@ public class InvalidAccessorException extends InvalidMixinException {
     }
 
     public InvalidAccessorException(AccessorInfo info, String message) {
-        super(info.getContext(), message);
+        super(info.getMixin(), message);
         this.info = info;
     }
 
@@ -53,7 +53,7 @@ public class InvalidAccessorException extends InvalidMixinException {
     }
 
     public InvalidAccessorException(AccessorInfo info, Throwable cause) {
-        super(info.getContext(), cause);
+        super(info.getMixin(), cause);
         this.info = info;
     }
 
@@ -63,7 +63,7 @@ public class InvalidAccessorException extends InvalidMixinException {
     }
 
     public InvalidAccessorException(AccessorInfo info, String message, Throwable cause) {
-        super(info.getContext(), message, cause);
+        super(info.getMixin(), message, cause);
         this.info = info;
     }
 

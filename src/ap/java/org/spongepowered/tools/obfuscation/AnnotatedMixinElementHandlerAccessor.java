@@ -30,18 +30,12 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
-import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.mixin.MixinEnvironment.Option;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorName;
 import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorType;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
-import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
-import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
@@ -60,21 +54,21 @@ import com.google.common.base.Strings;
 /**
  * A module for {@link AnnotatedMixin} which handles accessors
  */
-public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler implements IMixinContext {
+public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler {
 
     /**
      * Accessor element
      */
-    static class AnnotatedElementAccessor extends AnnotatedElement<ExecutableElement> {
+    static class AnnotatedElementAccessor extends AnnotatedElementExecutable {
 
         protected final boolean shouldRemap;
-
+        
         protected final TypeMirror returnType;
 
         protected String targetName;
 
-        public AnnotatedElementAccessor(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
-            super(element, annotation);
+        public AnnotatedElementAccessor(ExecutableElement element, AnnotationHandle annotation, IMixinContext context, boolean shouldRemap) {
+            super(element, annotation, context, "value");
             this.shouldRemap = shouldRemap;
             this.returnType = this.getElement().getReturnType();
         }
@@ -147,8 +141,8 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         
         private AccessorType type = AccessorType.METHOD_PROXY;
 
-        public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation, boolean shouldRemap) {
-            super(element, annotation, shouldRemap);
+        public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation, IMixinContext context, boolean shouldRemap) {
+            super(element, annotation, context, shouldRemap);
         }
         
         @Override
@@ -201,54 +195,9 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
         }
 
     }
-
+    
     public AnnotatedMixinElementHandlerAccessor(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
-    }
-
-    @Override
-    public ReferenceMapper getReferenceMapper() {
-        return null;
-    }
-    
-    @Override
-    public String getClassName() {
-        return this.mixin.getClassRef().replace('/', '.');
-    }
-
-    @Override
-    public String getClassRef() {
-        return this.mixin.getClassRef();
-    }
-    
-    @Override
-    public String getTargetClassRef() {
-        throw new UnsupportedOperationException("Target class not available at compile time");
-    }
-
-    @Override
-    public IMixinInfo getMixin() {
-        throw new UnsupportedOperationException("MixinInfo not available at compile time");
-    }
-    
-    @Override
-    public Extensions getExtensions() {
-        throw new UnsupportedOperationException("Mixin Extensions not available at compile time");
-    }
-
-    @Override
-    public boolean getOption(Option option) {
-        throw new UnsupportedOperationException("Options not available at compile time");
-    }
-
-    @Override
-    public int getPriority() {
-        throw new UnsupportedOperationException("Priority not available at compile time");
-    }
-
-    @Override
-    public Target getTargetMethod(MethodNode into) {
-        throw new UnsupportedOperationException("Target not available at compile time");
     }
 
     /**
@@ -387,7 +336,7 @@ public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementH
     }
 
     private String inflectAccessorTarget(AnnotatedElementAccessor elem) {
-        return AccessorInfo.inflectTarget(elem.getSimpleName(), elem.getAccessorType(), "", this, false);
+        return AccessorInfo.inflectTarget(elem.getSimpleName(), elem.getAccessorType(), "", elem, false);
     }
 
 }

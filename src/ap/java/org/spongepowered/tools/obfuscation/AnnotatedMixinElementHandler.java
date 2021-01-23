@@ -33,8 +33,10 @@ import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -104,6 +106,50 @@ abstract class AnnotatedMixinElementHandler {
         
     }
     
+    abstract static class AnnotatedElementExecutable extends AnnotatedElement<ExecutableElement> implements ISelectorContext {
+        
+        private final IMixinContext context;
+        
+        private final String selectorCoordinate;
+
+        public AnnotatedElementExecutable(ExecutableElement element, AnnotationHandle annotation, IMixinContext context, String selectorCoordinate) {
+            super(element, annotation);
+            this.context = context;
+            this.selectorCoordinate = selectorCoordinate;
+        }
+        
+        @Override
+        public ISelectorContext getParent() {
+            return null;
+        }
+        
+        @Override
+        public IMixinContext getMixin() {
+            return this.context;
+        }
+
+        @Override
+        public Object getMethod() {
+            return this.getElement();
+        }
+        
+        @Override
+        public Object getSelectorAnnotation() {
+            return this.getAnnotation();
+        }
+        
+        @Override
+        public String getSelectorCoordinate() {
+            return this.selectorCoordinate;
+        }
+
+        @Override
+        public String remap(String reference) {
+            return reference;
+        }
+        
+    }
+
     /**
      * A name of an element which may have aliases
      */

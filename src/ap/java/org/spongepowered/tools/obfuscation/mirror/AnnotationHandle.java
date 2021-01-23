@@ -36,13 +36,15 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
+
 import com.google.common.collect.ImmutableList;
 
 /**
  * A wrapper for {@link AnnotationMirror} which provides a more convenient way
  * to access annotation values.
  */
-public final class AnnotationHandle {
+public final class AnnotationHandle implements IAnnotationHandle {
     
     public static final AnnotationHandle MISSING = new AnnotationHandle(null);
     
@@ -77,6 +79,17 @@ public final class AnnotationHandle {
      */
     public boolean exists() {
         return this.annotation != null;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.util.asm.IAnnotationHandle#getDesc()
+     */
+    @Override
+    public String getDesc() {
+        if (this.annotation == null) {
+            return "java/lang/Annotation";
+        }
+        return TypeUtils.getInternalName(this.annotation.getAnnotationType());
     }
     
     @Override

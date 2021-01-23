@@ -41,7 +41,7 @@ public class AccessorGeneratorObjectFactory extends AccessorGeneratorMethodProxy
     public AccessorGeneratorObjectFactory(AccessorInfo info) {
         super(info, true);
         if (!info.isStatic()) {
-            throw new InvalidInjectionException(info.getContext(), String.format("%s is invalid. Factory method must be static.", this.info));
+            throw new InvalidInjectionException(info.getMixin(), String.format("%s is invalid. Factory method must be static.", this.info));
         }
     }
 

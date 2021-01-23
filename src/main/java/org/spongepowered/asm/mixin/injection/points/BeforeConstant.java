@@ -182,9 +182,9 @@ public class BeforeConstant extends InjectionPoint {
         String strClassValue = data.get("classValue", null);
         this.typeValue = strClassValue != null ? Type.getObjectType(strClassValue.replace('.', '/')) : null;
         
-        this.matchByType = this.validateDiscriminator(data.getContext(), "V", empty, "in @At(\"CONSTANT\") args");
+        this.matchByType = this.validateDiscriminator(data.getMixin(), "V", empty, "in @At(\"CONSTANT\") args");
         if ("V".equals(this.matchByType)) {
-            throw new InvalidInjectionException(data.getContext(), "No constant discriminator could be parsed in @At(\"CONSTANT\") args");
+            throw new InvalidInjectionException(data.getMixin(), "No constant discriminator could be parsed in @At(\"CONSTANT\") args");
         }
         
         List<Condition> conditions = new ArrayList<Condition>();

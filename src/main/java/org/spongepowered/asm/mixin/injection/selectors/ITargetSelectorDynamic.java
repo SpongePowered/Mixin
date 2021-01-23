@@ -22,41 +22,41 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.throwables;
+package org.spongepowered.asm.mixin.injection.selectors;
 
-import org.spongepowered.asm.mixin.injection.code.ISliceContext;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * Thrown when an injector slice fails a state check, for example if a slice
- * selector fails or a slice is negative in size
+ * Decoration interface for dynamic target selectors
  */
-public class InvalidSliceException extends InvalidInjectionException {
-
-    private static final long serialVersionUID = 1L;
+public interface ITargetSelectorDynamic extends ITargetSelector {
     
-    public InvalidSliceException(IMixinContext context, String message) {
-        super(context, message);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message) {
-        super(owner.getMixin(), message);
-    }
-
-    public InvalidSliceException(IMixinContext context, Throwable cause) {
-        super(context, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, Throwable cause) {
-        super(owner.getMixin(), cause);
-    }
-
-    public InvalidSliceException(IMixinContext context, String message, Throwable cause) {
-        super(context, message, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message, Throwable cause) {
-        super(owner.getMixin(), message, cause);
+    /**
+     * Decoration for subclasses which indicates id used for a specific selector
+     * when specified, for example <tt>@MyNamespace:MySelector(argshere)</tt>
+     * would specify "MySelector"
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(ElementType.TYPE)
+    public @interface SelectorId {
+        
+        /**
+         * Namespace for this code. Final selectors will be specified as
+         * <tt>&lt;namespace&gt;:&lt;id&gt;</tt> in order to avoid overlaps
+         * between consumer-provided selectors. If left blank defaults to the 
+         * namespace specified in the configuration.
+         */
+        public String namespace() default "";
+        
+        /**
+         * The string code used to specify the selector selector strings,
+         * prefixed with namespace from the annotation or from the declaring
+         * configuration.
+         */
+        public String value();
+        
     }
 
 }
