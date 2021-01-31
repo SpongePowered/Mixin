@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic.SelectorId;
+import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.injection.struct.MemberMatcher;
@@ -140,6 +141,7 @@ public final class TargetSelector {
                     throw (MixinException)cause;
                 }
                 Throwable ex = cause != null ? cause : itex;
+                ex.printStackTrace();
                 throw new MixinError("Error parsing dynamic target selector [" + this.type.getName() + "] for " + context, ex);
             }
         }
@@ -154,6 +156,10 @@ public final class TargetSelector {
      * Registered dynamic selectors
      */
     private static Map<String, DynamicSelectorEntry> dynamicSelectors = new LinkedHashMap<String, DynamicSelectorEntry>();
+    
+    static {
+        TargetSelector.registerBuiltIn(DynamicSelectorDesc.class);
+    }
     
     private TargetSelector() {
     }
@@ -265,7 +271,7 @@ public final class TargetSelector {
         }
         
         try {
-            return TargetSelector.dynamicSelectors.get(selectorId).parse(Strings.nullToEmpty(dynamic.group(4)), context);
+            return TargetSelector.dynamicSelectors.get(selectorId).parse(Strings.nullToEmpty(dynamic.group(4)).trim(), context);
         } catch (ReflectiveOperationException ex) {
             return new InvalidSelector(ex.getCause(), string);
         } catch (Exception ex) {

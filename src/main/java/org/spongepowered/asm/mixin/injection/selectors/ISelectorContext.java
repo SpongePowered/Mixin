@@ -66,8 +66,11 @@ public interface ISelectorContext {
      * Get the coordinate for this selector. This is the local coordinate of the
      * selector without any parent parts. Parent parts are prepended by
      * consumers during the resolve process. 
+     * 
+     * @param leaf True if getting the coordinate when this element is a leaf,
+     *      false if getting the coordinate when it is a parent
      */
-    public abstract String getSelectorCoordinate();
+    public abstract String getSelectorCoordinate(boolean leaf);
 
     /**
      * Remap a reference in the context of this selector, usually via the local

@@ -24,6 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +48,8 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
+import org.spongepowered.asm.util.asm.IAnnotatedElement;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementAccessor;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementInvoker;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjectionPoint;
@@ -70,7 +73,7 @@ import com.google.common.base.Strings;
 /**
  * Information about a mixin stored during processing
  */
-class AnnotatedMixin implements IMixinContext {
+class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
 
     /**
      * Mixin annotation
@@ -386,13 +389,13 @@ class AnnotatedMixin implements IMixinContext {
         AnnotatedElementInjector injectorElement = new AnnotatedElementInjector(method, inject, this, remap);
         this.injectors.registerInjector(injectorElement);
 
-        List<AnnotationHandle> ats = inject.getAnnotationList("at");
-        for (AnnotationHandle at : ats) {
-            this.registerInjectionPoint(method, inject, "at", at, remap, "@At(%s)");
+        List<IAnnotationHandle> ats = inject.getAnnotationList("at");
+        for (IAnnotationHandle at : ats) {
+            this.registerInjectionPoint(method, inject, "at", (AnnotationHandle)at, remap, "@At(%s)");
         }
 
-        List<AnnotationHandle> slices = inject.getAnnotationList("slice");
-        for (AnnotationHandle slice : slices) {
+        List<IAnnotationHandle> slices = inject.getAnnotationList("slice");
+        for (IAnnotationHandle slice : slices) {
             String id = slice.<String>getValue("id", "");
             String coord = "slice";
             if (!Strings.isNullOrEmpty(id)) {
@@ -400,14 +403,15 @@ class AnnotatedMixin implements IMixinContext {
             }
             SelectorAnnotationContext sliceContext = new SelectorAnnotationContext(injectorElement, slice, coord);
 
-            AnnotationHandle from = slice.getAnnotation("from");
+            IAnnotationHandle from = slice.getAnnotation("from");
             if (from != null) {
-                this.registerSliceInjectionPoint(method, inject, "from", from, remap, "@Slice[" + id + "](from=@At(%s))", sliceContext);
+                this.registerSliceInjectionPoint(method, inject, "from", (AnnotationHandle)from, remap, "@Slice[" + id + "](from=@At(%s))",
+                        sliceContext);
             }
 
-            AnnotationHandle to = slice.getAnnotation("to");
+            IAnnotationHandle to = slice.getAnnotation("to");
             if (to != null) {
-                this.registerSliceInjectionPoint(method, inject, "to", to, remap, "@Slice[" + id + "](to=@At(%s))", sliceContext);
+                this.registerSliceInjectionPoint(method, inject, "to", (AnnotationHandle)to, remap, "@Slice[" + id + "](to=@At(%s))", sliceContext);
             }
         }
     }
@@ -449,7 +453,7 @@ class AnnotatedMixin implements IMixinContext {
 
     @Override
     public String getTargetClassRef() {
-        throw new UnsupportedOperationException("Target class not available at compile time");
+        return this.primaryTarget.getName();
     }
 
     @Override
@@ -475,6 +479,11 @@ class AnnotatedMixin implements IMixinContext {
     @Override
     public Target getTargetMethod(MethodNode into) {
         throw new UnsupportedOperationException("Target not available at compile time");
+    }
+    
+    @Override
+    public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+        return AnnotationHandle.of(this.mixin, annotationClass);
     }
 
 }

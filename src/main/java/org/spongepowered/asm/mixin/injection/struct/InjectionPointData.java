@@ -41,8 +41,10 @@ import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.IMessageSink;
 
 import com.google.common.base.Joiner;
@@ -278,6 +280,15 @@ public class InjectionPointData {
      */
     public ITargetSelector getTarget() {
         try {
+            if (Strings.isNullOrEmpty(this.target)) {
+                AnnotationNode desc = Annotations.<AnnotationNode>getValue(this.context.getSelectorAnnotation(), "desc");
+                if (desc != null) {
+                    String id = Annotations.<String>getValue(desc, "id", "at");
+                    if ("at".equalsIgnoreCase(id)) {
+                        return DynamicSelectorDesc.of(this.context, Annotations.handleOf(desc));
+                    }
+                }
+            }
             return TargetSelector.parseAndValidate(this.target, this.context);
         } catch (InvalidSelectorException ex) {
             throw new InvalidInjectionPointException(this.getMixin(), ex, "Failed parsing @At(\"%s\").target \"%s\" on %s",

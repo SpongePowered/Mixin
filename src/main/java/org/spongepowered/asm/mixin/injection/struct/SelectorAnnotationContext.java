@@ -114,7 +114,7 @@ public class SelectorAnnotationContext implements ISelectorContext {
      *      #getSelectorCoordinate()
      */
     @Override
-    public String getSelectorCoordinate() {
+    public String getSelectorCoordinate(boolean leaf) {
         return this.selectorCoordinate;
     }
 

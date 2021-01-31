@@ -24,6 +24,7 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 
 import javax.annotation.processing.Messager;
@@ -42,6 +43,8 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
+import org.spongepowered.asm.util.asm.IAnnotatedElement;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
 import org.spongepowered.asm.util.throwables.InvalidConstraintException;
 import org.spongepowered.tools.obfuscation.interfaces.IMessagerSuppressible;
@@ -66,7 +69,7 @@ abstract class AnnotatedMixinElementHandler {
      * 
      * @param <E> type of inner element
      */
-    abstract static class AnnotatedElement<E extends Element> {
+    abstract static class AnnotatedElement<E extends Element> implements IAnnotatedElement {
         
         protected final E element;
         
@@ -104,6 +107,11 @@ abstract class AnnotatedMixinElementHandler {
             messager.printMessage(kind, msg, this.element, this.annotation.asMirror(), suppressedBy);
         }
         
+        @Override
+        public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+            return AnnotationHandle.of(this.element, annotationClass);
+        }
+        
     }
     
     abstract static class AnnotatedElementExecutable extends AnnotatedElement<ExecutableElement> implements ISelectorContext {
@@ -130,7 +138,12 @@ abstract class AnnotatedMixinElementHandler {
 
         @Override
         public Object getMethod() {
-            return this.getElement();
+            return new IAnnotatedElement() {
+                @Override
+                public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+                    return AnnotationHandle.of(AnnotatedElementExecutable.this.getElement(), annotationClass);
+                }
+            };
         }
         
         @Override
@@ -139,8 +152,8 @@ abstract class AnnotatedMixinElementHandler {
         }
         
         @Override
-        public String getSelectorCoordinate() {
-            return this.selectorCoordinate;
+        public String getSelectorCoordinate(boolean leaf) {
+            return leaf ? this.selectorCoordinate : TypeUtils.getName(this.element);
         }
 
         @Override

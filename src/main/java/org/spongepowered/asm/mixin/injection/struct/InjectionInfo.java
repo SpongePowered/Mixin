@@ -53,6 +53,7 @@ import org.spongepowered.asm.mixin.injection.code.MethodSlices;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
@@ -291,14 +292,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     protected Set<ITargetSelector> parseTargets() {
-        List<String> methods = Annotations.<String>getValue(this.annotation, "method", false);
-        if (methods == null) {
-            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing method name",
-                    this.annotationType, this.methodName));
-        }
-        
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
-        for (String method : methods) {
+
+        for (String method : Annotations.<String>getValue(this.annotation, "method", false)) {
             try {
                 selectors.add(TargetSelector.parseAndValidate(method, this).attach(this));
             } catch (InvalidMemberDescriptorException ex) {
@@ -313,6 +309,21 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                         String.format("%s annotation on %s is decorated with an invalid selector: %s", this.annotationType, this.methodName,
                         ex.getMessage()));
             }
+        }
+        
+        for (AnnotationNode target : Annotations.<AnnotationNode>getValue(this.annotation, "target", false)) {
+            try {
+                selectors.add(DynamicSelectorDesc.of(this.mixin, Annotations.handleOf(target)).validate());
+            } catch (InvalidSelectorException ex) {
+                throw new InvalidInjectionException(this,
+                        String.format("%s annotation on %s is decorated with an invalid selector: %s", this.annotationType, this.methodName,
+                        ex.getMessage()));
+            }
+        }
+        
+        if (selectors.size() == 0) {
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing 'method' or 'desc' to specify targets",
+                    this.annotationType, this.methodName));
         }
         return selectors;
     }

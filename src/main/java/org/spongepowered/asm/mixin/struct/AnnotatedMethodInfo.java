@@ -98,6 +98,13 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
     public final MethodNode getMethod() {
         return this.method;
     }
+    
+    /**
+     * Get the original name of the method, if available
+     */
+    public String getMethodName() {
+        return this.method.name;
+    }
 
     /**
      * Get the primary annotation which makes this method special
@@ -126,8 +133,8 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      * @return The selector context annotation
      */
     @Override
-    public String getSelectorCoordinate() {
-        return "method";
+    public String getSelectorCoordinate(boolean leaf) {
+        return leaf ? "method" : this.getMethodName().toLowerCase();
     }
     
     /* (non-Javadoc)

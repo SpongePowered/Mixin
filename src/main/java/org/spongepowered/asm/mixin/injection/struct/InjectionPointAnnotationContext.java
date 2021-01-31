@@ -82,7 +82,8 @@ public class InjectionPointAnnotationContext extends SelectorAnnotationContext i
     
     @Override
     public String toString() {
-        return String.format("%s->@%s(%s)", this.parentContext, Bytecode.getSimpleName(this.getSelectorAnnotation()), this.getSelectorCoordinate());
+        return String.format("%s->@%s(%s)", this.parentContext, Bytecode.getSimpleName(this.getSelectorAnnotation()), 
+                this.getSelectorCoordinate(false));
     }
 
 }
