@@ -113,7 +113,7 @@ public class BeforeNew extends InjectionPoint {
         String target = Strings.emptyToNull(data.get("class", data.get("target", "")).replace('.', '/'));
         ITargetSelector member = TargetSelector.parseAndValidate(target, data.getContext());
         if (!(member instanceof ITargetSelectorConstructor)) {
-            throw new InvalidInjectionPointException(data.getContext(), "Failed parsing @At(\"NEW\") target descriptor \"%s\" on %s",
+            throw new InvalidInjectionPointException(data.getMixin(), "Failed parsing @At(\"NEW\") target descriptor \"%s\" on %s",
                     target, data.getDescription());
         }
         ITargetSelectorConstructor targetSelector = (ITargetSelectorConstructor)member;

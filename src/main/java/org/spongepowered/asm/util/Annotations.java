@@ -43,6 +43,7 @@ import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -52,6 +53,73 @@ import com.google.common.collect.Lists;
  * Utility class for working with ASM annotations
  */
 public final class Annotations {
+    
+    /**
+     * Wrapper for AnnotationNode to support access via IAnnotationHandle
+     */
+    public static class Handle implements IAnnotationHandle {
+        
+        private final AnnotationNode annotation;
+        
+        public Handle(AnnotationNode annotation) {
+            Preconditions.checkNotNull(annotation, "annotation");
+            this.annotation = annotation;
+        }
+
+        @Override
+        public String getDesc() {
+            return this.annotation.desc;
+        }
+
+        @Override
+        public List<IAnnotationHandle> getAnnotationList(String key) {
+            List<AnnotationNode> value = Annotations.<AnnotationNode>getValue(this.annotation, key, false);
+            List<IAnnotationHandle> list = new ArrayList<IAnnotationHandle>();
+            if (value != null) {
+                for (AnnotationNode node : value) {
+                    list.add(new Handle(node));
+                }
+            }
+            return list;
+        }
+        
+        @Override
+        public List<Type> getTypeList(String key) {
+            return this.<Type>getList(key);
+        }
+
+        @Override
+        public IAnnotationHandle getAnnotation(String key) {
+            AnnotationNode value = Annotations.<AnnotationNode>getValue(this.annotation, key);
+            return value != null ? new Handle(value) : null;
+        }
+
+        @Override
+        public <T> T getValue(String key, T defaultValue) {
+            return Annotations.<T>getValue(this.annotation, key, defaultValue);
+        }
+
+        @Override
+        public <T> T getValue() {
+            return this.getValue("value", null);
+        }
+        
+        @Override
+        public <T> T getValue(String key) {
+            return this.getValue(key, null);
+        }
+        
+        @Override
+        public <T> List<T> getList(String key) {
+            return Annotations.<T>getValue(this.annotation, key, false);
+        }
+        
+        @Override
+        public String toString() {
+            return "@" + Bytecode.getSimpleName(this.annotation);
+        }
+
+    }
     
     /**
      * Annotations which are eligible for merge via {@link #mergeAnnotations}
@@ -69,6 +137,24 @@ public final class Annotations {
     
     private Annotations() {
         // Utility class
+    }
+    
+    /**
+     * Get the supplied annotation object as an annotation handle 
+     * 
+     * @param annotation Annotation to return
+     * @return Wrapped or cast annotation
+     */
+    public static IAnnotationHandle handleOf(Object annotation) {
+        if (annotation instanceof IAnnotationHandle) {
+            return (IAnnotationHandle)annotation;
+        } else if (annotation instanceof AnnotationNode) {
+            return new Annotations.Handle((AnnotationNode)annotation);
+        } else if (annotation == null) {
+            return null;
+        } else {
+            throw new IllegalArgumentException("Unsupported annotation type: " + annotation.getClass().getName());
+        }
     }
 
     /**

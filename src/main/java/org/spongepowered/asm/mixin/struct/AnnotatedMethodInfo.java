@@ -30,7 +30,9 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
 /**
@@ -58,6 +60,24 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
         this.method = method;
         this.annotation = annotation;
     }
+    
+    @Override
+    public String remap(String reference) {
+        if (this.context != null) {
+            IReferenceMapper referenceMapper = this.context.getReferenceMapper();
+            return referenceMapper != null ? referenceMapper.remap(this.context.getClassName(), reference) : reference;
+        }
+        return reference;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ISelectorContext
+     *      #getParent()
+     */
+    @Override
+    public ISelectorContext getParent() {
+        return null;
+    }
 
     /**
      * Get the mixin target context for this annotated method
@@ -65,7 +85,7 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      * @return the target context
      */
     @Override
-    public final IMixinContext getContext() {
+    public final IMixinContext getMixin() {
         return this.context;
     }
 
@@ -78,15 +98,43 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
     public final MethodNode getMethod() {
         return this.method;
     }
+    
+    /**
+     * Get the original name of the method, if available
+     */
+    public String getMethodName() {
+        return this.method.name;
+    }
 
     /**
-     * Get the annotation which this InjectionInfo was created from
+     * Get the primary annotation which makes this method special
      *  
-     * @return The annotation which this InjectionInfo was created from 
+     * @return The primary method annotation
      */
     @Override
     public final AnnotationNode getAnnotation() {
         return this.annotation;
+    }
+    
+    /**
+     * Get the annotation context for selectors operating in the context of this
+     * method.
+     *  
+     * @return The selector context annotation
+     */
+    @Override
+    public AnnotationNode getSelectorAnnotation() {
+        return this.annotation;
+    }
+    
+    /**
+     * Get the selector coordinate for this method
+     *  
+     * @return The selector context annotation
+     */
+    @Override
+    public String getSelectorCoordinate(boolean leaf) {
+        return leaf ? "method" : this.getMethodName().toLowerCase();
     }
     
     /* (non-Javadoc)

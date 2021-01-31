@@ -60,9 +60,9 @@ public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
             return;
         }
         
-        if (this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+        if (this.info.getMixin().getOption(Option.DEBUG_VERBOSE)) {
             LogManager.getLogger("mixin").warn("{} for final field {}::{} is not @Mutable", this.info,
-                    ((MixinTargetContext)this.info.getContext()).getTarget(), this.targetField.name);
+                    ((MixinTargetContext)this.info.getMixin()).getTarget(), this.targetField.name);
         }                    
     }
 

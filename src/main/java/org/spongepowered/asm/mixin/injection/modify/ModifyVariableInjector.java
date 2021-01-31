@@ -81,7 +81,7 @@ public class ModifyVariableInjector extends Injector {
         
         LocalVariableInjectionPoint(InjectionPointData data) {
             super(data);
-            this.mixin = data.getContext();
+            this.mixin = data.getMixin();
         }
 
         @Override

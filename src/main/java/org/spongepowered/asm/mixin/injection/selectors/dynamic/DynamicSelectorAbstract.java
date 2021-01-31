@@ -22,41 +22,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.throwables;
+package org.spongepowered.asm.mixin.injection.selectors.dynamic;
 
-import org.spongepowered.asm.mixin.injection.code.ISliceContext;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic;
+import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 
 /**
- * Thrown when an injector slice fails a state check, for example if a slice
- * selector fails or a slice is negative in size
+ * Base class for dynamic selectors, just to reduce some boilerplate
  */
-public class InvalidSliceException extends InvalidInjectionException {
+public abstract class DynamicSelectorAbstract implements ITargetSelectorDynamic {
 
-    private static final long serialVersionUID = 1L;
-    
-    public InvalidSliceException(IMixinContext context, String message) {
-        super(context, message);
+    @Override
+    public ITargetSelector configure(String... args) {
+        return this;
     }
 
-    public InvalidSliceException(ISliceContext owner, String message) {
-        super(owner.getMixin(), message);
+    @Override
+    public ITargetSelector validate() throws InvalidSelectorException {
+        return this;
     }
 
-    public InvalidSliceException(IMixinContext context, Throwable cause) {
-        super(context, cause);
+    @Override
+    public ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException {
+        return this;
     }
 
-    public InvalidSliceException(ISliceContext owner, Throwable cause) {
-        super(owner.getMixin(), cause);
-    }
-
-    public InvalidSliceException(IMixinContext context, String message, Throwable cause) {
-        super(context, message, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message, Throwable cause) {
-        super(owner.getMixin(), message, cause);
+    @Override
+    public int getMatchCount() {
+        return Integer.MAX_VALUE;
     }
 
 }

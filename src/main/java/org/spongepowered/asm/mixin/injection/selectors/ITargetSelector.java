@@ -26,7 +26,7 @@ package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.mixin.injection.struct.MemberMatcher;
 import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
@@ -40,13 +40,49 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * <p><b>Explicit</b> Target Selectors are handled internally using
  * {@link MemberInfo} structs, see the javadoc for {@link MemberInfo} for the
  * supported variants and examples.</p>
+ * 
+ * <h3>Pattern Target Selectors (Regex Selectors)</h3>
+ * 
+ * <p><b>Pattern</b> Target Selectors are handled internally using
+ * {@link MemberMatcher}, see the javadoc for {@link MemberMatcher} for the
+ * supported variants and examples. Pattern Selectors always end with a forward
+ * slash character.</p>
+ * 
+ * <h3>Dynamic Target Selectors</h3>
+ * 
+ * <p><b>Dynamic</b> Target Selectors can be built-in or user-supplied types
+ * with their own specialised syntax or behaviour. Dynamic selectors are
+ * specified in the following format, and can be recognised by the fact that
+ * the selector string starts with "<tt>&#064;</tt>":</p>
+ * 
+ * <blockquote><pre>
+ *   // Built-in dynamic selector without argument string
+ *   &#064;SelectorId
+ *   
+ *   // Built-in dynamic selector with empty argument string
+ *   &#064;SelectorId()
+ *   
+ *   // Built-in dynamic selector with argument
+ *   &#064;SelectorId(custom,argument,string,in,any,format)
+ *   
+ *   // User-provided dynamic selector with argument. Note that user-provided
+ *   // dynamic selectors are namespaced to avoid conflicts.
+ *   &#064;Namespace:SelectorId(some arguments)</pre>
+ * </blockquote>
+ * 
+ * <p>The exact format of the argument string is specified by the dynamic
+ * selector itself, consult the documentation for the dynamic selector you are
+ * using for details on the required format.</p>
+ * 
  */
 public interface ITargetSelector {
     
     /**
      * Get the next target selector in this path (or <tt>null</tt> if this
      * selector is the last selector in the chain. Called at recurse points in
-     * the subject in order to match against the child subject.  
+     * the subject in order to match against the child subject.
+     * 
+     * <p>Can return null</p>
      */
     public abstract ITargetSelector next();
     
@@ -60,6 +96,8 @@ public interface ITargetSelector {
      * <p>In other words, calling <tt>configure("foo")</tt> when this object is
      * <i>already</i> configured according to "foo" may simply return this
      * object, or might return an identically-configured copy.</p>
+     * 
+     * <p>Must not return null</p>
      * 
      * @param args Configuration arguments
      * @return Configured selector, may return this selector if the specified
@@ -86,7 +124,7 @@ public interface ITargetSelector {
      * @param context Context to attach to
      * @return Attached selector
      */
-    public abstract ITargetSelector attach(IMixinContext context) throws InvalidSelectorException;
+    public abstract ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException;
     
     /**
      * Number of candidates which this selector should match

@@ -166,6 +166,12 @@ public @interface At {
     public String target() default "";
     
     /**
+     * Target descriptor used in place of string-based descriptors for
+     * {@link #target}
+     */
+    public Desc desc() default @Desc("");
+    
+    /**
      * Ordinal offset. Many InjectionPoints will return every opcode matching
      * their criteria, specifying <em>ordinal</em> allows a particular opcode to
      * be identified from the returned list. The default value of -1 does not

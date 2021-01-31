@@ -256,7 +256,7 @@ public abstract class Injector {
     public final void inject(Target target, List<InjectionNode> nodes) {
         for (InjectionNode node : nodes) {
             if (node.isRemoved()) {
-                if (this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+                if (this.info.getMixin().getOption(Option.DEBUG_VERBOSE)) {
                     Injector.logger.warn("Target node for {} was removed by a previous injector in {}", this.info, target);
                 }
                 continue;
@@ -279,7 +279,7 @@ public abstract class Injector {
      * @return Target insn nodes in the target method
      */
     private Collection<TargetNode> findTargetNodes(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
-        IMixinContext mixin = this.info.getContext();
+        IMixinContext mixin = this.info.getMixin();
         MethodNode method = injectorTarget.getMethod();
         Map<Integer, TargetNode> targetNodes = new TreeMap<Integer, TargetNode>();
         Collection<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
@@ -522,7 +522,7 @@ public abstract class Injector {
      * @param args Array of handler args, must not be null
      */
     protected final void validateParams(InjectorData injector, Type returnType, Type... args) {
-        String description = String.format("%s %s method %s from %s", this.annotationType, injector, this, this.info.getContext());
+        String description = String.format("%s %s method %s from %s", this.annotationType, injector, this, this.info.getMixin());
         int argIndex = 0;
         try {
             injector.coerceReturnType = this.checkCoerce(-1, returnType, description, injector.allowCoerceArgs);
@@ -588,7 +588,7 @@ public abstract class Injector {
         Object argIndex = isReturn ? "" : " at index " + index;
         
         if (fromType.equals(toType)) {
-            if (coerce != null && this.info.getContext().getOption(Option.DEBUG_VERBOSE)) {
+            if (coerce != null && this.info.getMixin().getOption(Option.DEBUG_VERBOSE)) {
                 Injector.logger.info("Possibly-redundant @Coerce on {} {} type{}, {} is identical to {}", description, argType, argIndex,
                         SignaturePrinter.getTypeName(toType), SignaturePrinter.getTypeName(fromType));
             }

@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,6 +47,8 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.RemappingReferenceMapper;
@@ -76,8 +79,14 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         @SerializedName("defaultGroup")
         String defaultGroup = "default";
         
+        @SerializedName("namespace")
+        String namespace;
+        
         @SerializedName("injectionPoints")
         List<String> injectionPoints;
+        
+        @SerializedName("dynamicSelectors")
+        List<String> dynamicSelectors;
         
         @SerializedName("maxShiftBy")
         int maxShiftBy = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
@@ -276,6 +285,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @SerializedName("refmap")
     private String refMapperConfig;
+
+    /**
+     * The class name for an implementation of {@Link IReferenceMapper},
+     * mixinPackage will be prepended. This allows for full control over the
+     * refmap for cases where you need more fine-grained control then the
+     * default remappers.
+     * 
+     * <p>Must have a public constructor that takes {@Link MixinEnvironment} and
+     * {@Link IReferenceMapper}
+     */
+    @SerializedName("refmapWrapper")
+    private String refMapperWrapper;
     
     /**
      * True to output "mixing in" messages at INFO level rather than DEBUG 
@@ -459,7 +480,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         this.initialised = true;
         this.initCompatibilityLevel();
-        this.initInjectionPoints();
+        this.initExtensions();
         return this.checkVersion();
     }
     
@@ -514,44 +535,66 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return fallbackEnvironment;
     }
     
-    private void initInjectionPoints() {
-        if (this.injectorOptions.injectionPoints == null) {
-            return;
+    private void initExtensions() {
+        if (this.injectorOptions.injectionPoints != null) {
+            for (String injectionPointClassName : this.injectorOptions.injectionPoints) {
+                this.initInjectionPoint(injectionPointClassName, this.injectorOptions.namespace);
+            }
         }
         
-        for (String injectionPointClassName : this.injectorOptions.injectionPoints) {
-            this.initInjectionPoint(injectionPointClassName);
+        if (this.injectorOptions.dynamicSelectors != null) {
+            for (String dynamicSelectorClassName : this.injectorOptions.dynamicSelectors) {
+                this.initDynamicSelector(dynamicSelectorClassName, this.injectorOptions.namespace);
+            }
         }
     }
 
     @SuppressWarnings("unchecked")
-    public void initInjectionPoint(String className) {
+    private void initInjectionPoint(String className, String namespace) {
         try {
-            Class<?> injectionPointClass = null;
-            try {
-                injectionPointClass = this.service.getClassProvider().findClass(className, true);
-            } catch (ClassNotFoundException cnfe) {
-                this.logger.error("Unable to register injection point {} for {}, the specified class was not found", className, this, cnfe);
-                return;
+            Class<?> injectionPointClass = this.findExtensionClass(className, InjectionPoint.class, "injection point");
+            if (injectionPointClass != null) {
+                try {
+                    injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
+                } catch (NoSuchMethodException cnfe) {
+                    this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
+                            className, this, cnfe);
+                    return;
+                }
+    
+                InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass, namespace);
             }
-            
-            if (!InjectionPoint.class.isAssignableFrom(injectionPointClass)) {
-                this.logger.error("Unable to register injection point {} for {}, class must extend InjectionPoint", className, this);
-                return;
-            }
-            
-            try {
-                injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
-            } catch (NoSuchMethodException cnfe) {
-                this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
-                        className, this, cnfe);
-                return;
-            }
-
-            InjectionPoint.register((Class<? extends InjectionPoint>)injectionPointClass);
         } catch (Throwable th) {
             this.logger.catching(th);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initDynamicSelector(String className, String namespace) {
+        try {
+            Class<?> dynamicSelectorClass = this.findExtensionClass(className, ITargetSelectorDynamic.class, "dynamic selector");
+            if (dynamicSelectorClass != null) {
+                TargetSelector.register((Class<? extends ITargetSelectorDynamic>)dynamicSelectorClass, namespace);
+            }
+        } catch (Throwable th) {
+            this.logger.catching(th);
+        }
+    }
+    
+    private Class<?> findExtensionClass(String className, Class<?> superType, String extensionType) {
+        Class<?> extensionClass = null;
+        try {
+            extensionClass = this.service.getClassProvider().findClass(className, true);
+        } catch (ClassNotFoundException cnfe) {
+            this.logger.error("Unable to register {} {} for {}, the specified class was not found", extensionType, className, this, cnfe);
+            return null;
+        }
+        
+        if (!superType.isAssignableFrom(extensionClass)) {
+            this.logger.error("Unable to register {} {} for {}, class is not assignable to {}", extensionType, className, this, superType);
+            return null;
+        }
+        return extensionClass;
     }
 
     private boolean checkVersion() throws MixinInitialisationError {
@@ -621,6 +664,22 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         
         if (this.env.getOption(Option.REFMAP_REMAP)) {
             this.refMapper = RemappingReferenceMapper.of(this.env, this.refMapper);
+        }
+
+        if (this.refMapperWrapper != null) {
+            String wrapperName = this.mixinPackage + this.refMapperWrapper;
+            try {
+                @SuppressWarnings("unchecked")
+                Class<IReferenceMapper> wrapperCls = (Class<IReferenceMapper>) Class.forName(wrapperName);
+                Constructor<IReferenceMapper> ctr = wrapperCls.getConstructor(MixinEnvironment.class, IReferenceMapper.class);
+                this.refMapper = ctr.newInstance(this.env, this.refMapper);
+            } catch (ClassNotFoundException e) {
+                this.logger.error("Reference map wrapper '{}' could not be found: ", wrapperName, e);
+            } catch (ReflectiveOperationException e) {
+                this.logger.error("Reference map wrapper '{}' could not be created: ", wrapperName, e);
+            } catch (SecurityException e) {
+                this.logger.error("Reference map wrapper '{}' could not be created: ", wrapperName, e);
+            }
         }
     }
 

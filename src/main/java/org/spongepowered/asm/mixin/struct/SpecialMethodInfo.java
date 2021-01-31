@@ -84,6 +84,7 @@ public class SpecialMethodInfo extends AnnotatedMethodInfo {
     /**
      * Get the original name of the method, if available
      */
+    @Override
     public String getMethodName() {
         return this.methodName;
     }

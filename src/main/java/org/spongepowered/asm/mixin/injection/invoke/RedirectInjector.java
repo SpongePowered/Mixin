@@ -234,7 +234,7 @@ public class RedirectInjector extends InvokeInjector {
     protected RedirectInjector(InjectionInfo info, String annotationType) {
         super(info, annotationType);
         
-        int priority = info.getContext().getPriority();
+        int priority = info.getMixin().getPriority();
         boolean isFinal = Annotations.getVisible(this.methodNode, Final.class) != null;
         this.meta = new Meta(priority, isFinal, this.info.toString(), this.methodNode.desc);
     }
@@ -463,7 +463,7 @@ public class RedirectInjector extends InvokeInjector {
         Type elementType = field.type.getElementType();
         int valueArgIndex = field.getTotalDimensions();
         if (this.checkCoerce(valueArgIndex, elementType, String.format("%s array setter method %s from %s",
-                this.annotationType, this, this.info.getContext()), true)) {
+                this.annotationType, this, this.info.getMixin()), true)) {
             elementType = this.methodArgs[valueArgIndex];
         }
         

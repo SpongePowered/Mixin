@@ -22,41 +22,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.throwables;
+package org.spongepowered.asm.mixin.injection;
 
-import org.spongepowered.asm.mixin.injection.code.ISliceContext;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * Thrown when an injector slice fails a state check, for example if a slice
- * selector fails or a slice is negative in size
+ * TODO Javadoc
  */
-public class InvalidSliceException extends InvalidInjectionException {
-
-    private static final long serialVersionUID = 1L;
+@Target({ ElementType.TYPE, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(Descriptors.class)
+public @interface Desc {
     
-    public InvalidSliceException(IMixinContext context, String message) {
-        super(context, message);
-    }
+    public String id() default "";
 
-    public InvalidSliceException(ISliceContext owner, String message) {
-        super(owner.getMixin(), message);
-    }
-
-    public InvalidSliceException(IMixinContext context, Throwable cause) {
-        super(context, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, Throwable cause) {
-        super(owner.getMixin(), cause);
-    }
-
-    public InvalidSliceException(IMixinContext context, String message, Throwable cause) {
-        super(context, message, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message, Throwable cause) {
-        super(owner.getMixin(), message, cause);
-    }
-
+    public Class<?> owner() default Void.class;
+    
+    public String value();
+    
+    public Class<?> ret() default Void.class;
+    
+    public Class<?>[] args() default { };
+    
 }

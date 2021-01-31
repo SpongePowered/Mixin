@@ -70,7 +70,7 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
         Type returnType = Type.getReturnType(this.method.desc);
         
         for (AnnotationNode at : ats) {
-            this.injectionPoints.add(new BeforeConstant(this.getContext(), at, returnType.getDescriptor()));
+            this.injectionPoints.add(new BeforeConstant(this.getMixin(), at, returnType.getDescriptor()));
         }
     }
     

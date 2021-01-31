@@ -22,41 +22,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.throwables;
+package org.spongepowered.asm.util.asm;
 
-import org.spongepowered.asm.mixin.injection.code.ISliceContext;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import java.lang.annotation.Annotation;
 
 /**
- * Thrown when an injector slice fails a state check, for example if a slice
- * selector fails or a slice is negative in size
+ * Interface for objects which can be annotated since main classes may need to
+ * read info from mirror annotations in the AP
  */
-public class InvalidSliceException extends InvalidInjectionException {
+public interface IAnnotatedElement {
 
-    private static final long serialVersionUID = 1L;
-    
-    public InvalidSliceException(IMixinContext context, String message) {
-        super(context, message);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message) {
-        super(owner.getMixin(), message);
-    }
-
-    public InvalidSliceException(IMixinContext context, Throwable cause) {
-        super(context, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, Throwable cause) {
-        super(owner.getMixin(), cause);
-    }
-
-    public InvalidSliceException(IMixinContext context, String message, Throwable cause) {
-        super(context, message, cause);
-    }
-
-    public InvalidSliceException(ISliceContext owner, String message, Throwable cause) {
-        super(owner.getMixin(), message, cause);
-    }
+    /**
+     * Get annotation from element
+     * 
+     * @param annotationClass Annotation class to retrieve
+     * @return annotation handle
+     */
+    public abstract IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass);
 
 }

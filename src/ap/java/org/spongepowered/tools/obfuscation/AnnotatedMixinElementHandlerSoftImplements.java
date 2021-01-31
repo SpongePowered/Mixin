@@ -33,6 +33,7 @@ import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Interface.Remap;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
@@ -63,15 +64,15 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
             return;
         }
         
-        List<AnnotationHandle> interfaces = implementsAnnotation.getAnnotationList("value");
+        List<IAnnotationHandle> interfaces = implementsAnnotation.getAnnotationList("value");
         
         // Derp?
         if (interfaces.size() < 1) {
-            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixin(), implementsAnnotation.asMirror());
+            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixinElement(), implementsAnnotation.asMirror());
             return;
         }
         
-        for (AnnotationHandle interfaceAnnotation : interfaces) {
+        for (IAnnotationHandle interfaceAnnotation : interfaces) {
             Remap remap = interfaceAnnotation.<Remap>getValue("remap", Remap.ALL);
             if (remap == Remap.NONE) {
                 continue;
@@ -82,8 +83,8 @@ public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinEl
                 String prefix = interfaceAnnotation.<String>getValue("prefix");
                 this.processSoftImplements(remap, iface, prefix);
             } catch (Exception ex) {
-                this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(), this.mixin.getMixin(),
-                        interfaceAnnotation.asMirror());
+                this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(),
+                        this.mixin.getMixinElement(), ((AnnotationHandle)interfaceAnnotation).asMirror());
             }
         }
     }

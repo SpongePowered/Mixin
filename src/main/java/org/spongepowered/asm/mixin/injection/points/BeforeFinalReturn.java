@@ -64,7 +64,7 @@ public class BeforeFinalReturn extends InjectionPoint {
     public BeforeFinalReturn(InjectionPointData data) {
         super(data);
         
-        this.context = data.getContext();
+        this.context = data.getMixin();
     }
     
     @Override

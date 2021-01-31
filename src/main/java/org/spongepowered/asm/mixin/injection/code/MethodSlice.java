@@ -40,10 +40,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
 import org.spongepowered.asm.mixin.injection.Slice;
+import org.spongepowered.asm.mixin.injection.struct.InjectionPointAnnotationContext;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 
 import com.google.common.base.Strings;
 
@@ -406,7 +407,7 @@ public final class MethodSlice {
         }
         
         if (!result) {
-            if (this.owner.getContext().getOption(Option.DEBUG_VERBOSE)) {
+            if (this.owner.getMixin().getOption(Option.DEBUG_VERBOSE)) {
                 MethodSlice.logger.warn("{} did not match any instructions", this.describe(description));
             }
             return failValue;
@@ -434,7 +435,7 @@ public final class MethodSlice {
     private static String describeSlice(String description, ISliceContext owner) {
         String annotation = Bytecode.getSimpleName(owner.getAnnotation());
         MethodNode method = owner.getMethod();
-        return String.format("%s->%s(%s)::%s%s", owner.getContext(), annotation, description, method.name, method.desc);
+        return String.format("%s->%s(%s)::%s%s", owner.getMixin(), annotation, description, method.name, method.desc);
     }
 
     private static String getSliceName(String id) {
@@ -469,12 +470,17 @@ public final class MethodSlice {
      */
     public static MethodSlice parse(ISliceContext info, AnnotationNode node) {
         String id = Annotations.<String>getValue(node, "id");
+        String coord = "slice";
+        if (!Strings.isNullOrEmpty(id)) {
+            coord += "." + id;
+        }
+        InjectionPointAnnotationContext sliceContext = new InjectionPointAnnotationContext(info, node, coord);
         
         AnnotationNode from = Annotations.<AnnotationNode>getValue(node, "from");
         AnnotationNode to = Annotations.<AnnotationNode>getValue(node, "to");
         
-        InjectionPoint fromPoint = from != null ? InjectionPoint.parse(info, from) : null;
-        InjectionPoint toPoint = to != null ? InjectionPoint.parse(info, to) : null;
+        InjectionPoint fromPoint = from != null ? InjectionPoint.parse(new InjectionPointAnnotationContext(sliceContext, from, "from"), from) : null;
+        InjectionPoint toPoint = to != null ? InjectionPoint.parse(new InjectionPointAnnotationContext(sliceContext, to, "to"), to) : null;
         
         return new MethodSlice(info, id, fromPoint, toPoint);
     }

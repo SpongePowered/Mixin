@@ -35,6 +35,7 @@ import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.Coerce;
+import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorConstructor;
@@ -42,6 +43,7 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
@@ -61,12 +63,12 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
     /**
      * Injector element
      */
-    static class AnnotatedElementInjector extends AnnotatedElement<ExecutableElement> {
+    static class AnnotatedElementInjector extends AnnotatedElementExecutable {
         
         private final InjectorRemap state;
 
-        public AnnotatedElementInjector(ExecutableElement element, AnnotationHandle annotation, InjectorRemap shouldRemap) {
-            super(element, annotation);
+        public AnnotatedElementInjector(ExecutableElement element, AnnotationHandle annotation, IMixinContext context, InjectorRemap shouldRemap) {
+            super(element, annotation, context, "method");
             this.state = shouldRemap;
         }
         
@@ -100,7 +102,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
     /**
      * Injection point element
      */
-    static class AnnotatedElementInjectionPoint extends AnnotatedElement<ExecutableElement> {
+    static class AnnotatedElementInjectionPoint extends AnnotatedElementExecutable {
         
         private final AnnotationHandle at;
         
@@ -108,8 +110,9 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         private final InjectorRemap state;
 
-        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, AnnotationHandle at, InjectorRemap state) {
-            super(element, inject);
+        public AnnotatedElementInjectionPoint(ExecutableElement element, AnnotationHandle inject, IMixinContext context, String selectorCoordinate,
+                AnnotationHandle at, InjectorRemap state) {
+            super(element, inject, context, selectorCoordinate);
             this.at = at;
             this.state = state;
         }
@@ -120,6 +123,11 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         
         public AnnotationHandle getAt() {
             return this.at;
+        }
+        
+        @Override
+        public Object getSelectorAnnotation() {
+            return this.getAt();
         }
         
         public String getAtArg(String key) {
@@ -147,6 +155,23 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
     
     }
     
+    static class AnnotatedElementSliceInjectionPoint extends AnnotatedElementInjectionPoint {
+        
+        private final ISelectorContext parentContext;
+
+        public AnnotatedElementSliceInjectionPoint(ExecutableElement element, AnnotationHandle inject, IMixinContext context,
+                String selectorCoordinate, AnnotationHandle at, InjectorRemap state, ISelectorContext parentContext) {
+            super(element, inject, context, selectorCoordinate, at, state);
+            this.parentContext = parentContext;
+        }
+
+        @Override
+        public ISelectorContext getParent() {
+            return this.parentContext;
+        }
+
+    }
+    
     AnnotatedMixinElementHandlerInjector(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);
     }
@@ -157,7 +182,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         }
         
         for (String reference : elem.getAnnotation().<String>getList("method")) {
-            ITargetSelector targetSelector = TargetSelector.parse(reference);
+            ITargetSelector targetSelector = TargetSelector.parse(reference, elem);
             
             try {
                 targetSelector.validate();
@@ -231,8 +256,8 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             String conflictType = this.mixin.isMultiTarget() ? "Multi-target" : "Target";
             
             if (elem.hasCoerceArgument() && targetMember.getOwner() == null && targetMember.getDesc() == null) {
-                ITargetSelector oldMember = TargetSelector.parse(ex.getOld());
-                ITargetSelector newMember = TargetSelector.parse(ex.getNew());
+                ITargetSelector oldMember = TargetSelector.parse(ex.getOld(), elem);
+                ITargetSelector newMember = TargetSelector.parse(ex.getNew(), elem);
                 String oldName = oldMember instanceof ITargetSelectorByName ? ((ITargetSelectorByName)oldMember).getName() : oldMember.toString();
                 String newName = newMember instanceof ITargetSelectorByName ? ((ITargetSelectorByName)newMember).getName() : newMember.toString();
                 if (oldName != null && oldName.equals(newName)) {
@@ -284,7 +309,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             return;
         }
 
-        ITargetSelector selector = TargetSelector.parse(reference);
+        ITargetSelector selector = TargetSelector.parse(reference, elem);
         if (selector instanceof ITargetSelectorConstructor) {
             ITargetSelectorConstructor member = (ITargetSelectorConstructor)selector;
             String target = member.toCtorType();
@@ -321,7 +346,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             return;
         }
 
-        ITargetSelector targetSelector = TargetSelector.parse(reference);
+        ITargetSelector targetSelector = TargetSelector.parse(reference, elem);
         if (!(targetSelector instanceof ITargetSelectorRemappable)) {
             return;
         }

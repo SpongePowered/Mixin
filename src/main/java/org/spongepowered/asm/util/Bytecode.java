@@ -647,6 +647,20 @@ public final class Bytecode {
     }
     
     /**
+     * Get an array of Types from an array of classes.
+     * 
+     * @param classes Array of classes to convert
+     * @return Array of types
+     */
+    public static Type[] getTypes(Class<?>... classes) {
+        Type[] types = new Type[classes.length];
+        for (int index = 0; index < classes.length; index++) {
+            types[index] = Type.getType(classes[index]);
+        }
+        return types;
+    }
+    
+    /**
      * Clones all of the labels in the source instruction list and returns the
      * clones in a map of old label -&gt; new label. This is used to facilitate
      * the use of {@link AbstractInsnNode#clone}.
