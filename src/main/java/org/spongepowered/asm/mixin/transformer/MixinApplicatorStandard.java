@@ -636,7 +636,7 @@ class MixinApplicatorStandard {
                     return true;
                 }
                 throw new InvalidMixinException(mixin, String.format("Incompatible @%s %s (for %s) in %s previously written by %s (for %s)",
-                        Bytecode.getSimpleName(accMethod), method.name, myTarget, mixin, owner, trTarget));
+                        Annotations.getSimpleName(accMethod), method.name, myTarget, mixin, owner, trTarget));
             }
         }
 

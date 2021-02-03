@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 /**
  * Context passed to a {@link ITargetSelector Target Selector} in order to
@@ -55,12 +56,12 @@ public interface ISelectorContext {
      * Get the root annotation for the selector, for example the injector or
      * accessor annotation
      */
-    public abstract Object getAnnotation();
+    public abstract IAnnotationHandle getAnnotation();
 
     /**
      * Get the annotation for this selector, for example the &#064;At annotation
      */
-    public abstract Object getSelectorAnnotation();
+    public abstract IAnnotationHandle getSelectorAnnotation();
     
     /**
      * Get the coordinate for this selector. This is the local coordinate of the

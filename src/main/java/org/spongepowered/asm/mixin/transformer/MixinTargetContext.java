@@ -1257,7 +1257,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
                 }
                 
                 methodActivity.next("Undecorate");
-                method.visibleAnnotations.remove(injectInfo.getAnnotation());
+                method.visibleAnnotations.remove(injectInfo.getAnnotationNode());
                 methodActivity.end();
             }
             prepareActivity.end();

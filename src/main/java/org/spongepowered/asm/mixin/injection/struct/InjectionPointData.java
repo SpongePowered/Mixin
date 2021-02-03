@@ -45,7 +45,9 @@ import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDe
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Annotations.Handle;
 import org.spongepowered.asm.util.IMessageSink;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -208,7 +210,7 @@ public class InjectionPointData {
      * Get the root annotation (eg. {@link Inject})
      */
     public AnnotationNode getParent() {
-        return this.context.getAnnotation();
+        return this.context.getAnnotationNode();
     }
     
     /**
@@ -281,7 +283,8 @@ public class InjectionPointData {
     public ITargetSelector getTarget() {
         try {
             if (Strings.isNullOrEmpty(this.target)) {
-                AnnotationNode desc = Annotations.<AnnotationNode>getValue(this.context.getSelectorAnnotation(), "desc");
+                IAnnotationHandle selectorAnnotation = this.context.getSelectorAnnotation();
+                AnnotationNode desc = Annotations.<AnnotationNode>getValue(((Handle)selectorAnnotation).getNode(), "desc");
                 if (desc != null) {
                     String id = Annotations.<String>getValue(desc, "id", "at");
                     if ("at".equalsIgnoreCase(id)) {
@@ -291,7 +294,7 @@ public class InjectionPointData {
             }
             return TargetSelector.parseAndValidate(this.target, this.context);
         } catch (InvalidSelectorException ex) {
-            throw new InvalidInjectionPointException(this.getMixin(), ex, "Failed parsing @At(\"%s\").target \"%s\" on %s",
+            throw new InvalidInjectionPointException(this.getMixin(), ex, "Failed validating @At(\"%s\").target \"%s\" on %s",
                     this.at, this.target, this.getDescription());
         }
     }
@@ -300,7 +303,7 @@ public class InjectionPointData {
      * Get a description of this injector for use in error messages
      */
     public String getDescription() {
-        return InjectionInfo.describeInjector(this.context.getMixin(), this.context.getAnnotation(), this.context.getMethod());
+        return InjectionInfo.describeInjector(this.context.getMixin(), this.context.getAnnotationNode(), this.context.getMethod());
     }
 
     /**

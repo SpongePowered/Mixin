@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.struct;
 
+import java.util.Locale;
+
 import javax.tools.Diagnostic.Kind;
 
 import org.objectweb.asm.tree.AnnotationNode;
@@ -33,6 +35,8 @@ import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
+import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
 /**
@@ -105,6 +109,14 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
     public String getMethodName() {
         return this.method.name;
     }
+    
+    /**
+     * Get the primary annotation which makes this method special 
+     */
+    @Override
+    public AnnotationNode getAnnotationNode() {
+        return this.annotation;
+    }
 
     /**
      * Get the primary annotation which makes this method special
@@ -112,8 +124,8 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      * @return The primary method annotation
      */
     @Override
-    public final AnnotationNode getAnnotation() {
-        return this.annotation;
+    public final IAnnotationHandle getAnnotation() {
+        return Annotations.handleOf(this.annotation);
     }
     
     /**
@@ -123,8 +135,8 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      * @return The selector context annotation
      */
     @Override
-    public AnnotationNode getSelectorAnnotation() {
-        return this.annotation;
+    public IAnnotationHandle getSelectorAnnotation() {
+        return Annotations.handleOf(this.annotation);
     }
     
     /**
@@ -134,7 +146,7 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      */
     @Override
     public String getSelectorCoordinate(boolean leaf) {
-        return leaf ? "method" : this.getMethodName().toLowerCase();
+        return leaf ? "method" : this.getMethodName().toLowerCase(Locale.ROOT);
     }
     
     /* (non-Javadoc)

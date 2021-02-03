@@ -313,7 +313,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         for (AnnotationNode target : Annotations.<AnnotationNode>getValue(this.annotation, "target", false)) {
             try {
-                selectors.add(DynamicSelectorDesc.of(this.mixin, Annotations.handleOf(target)).validate());
+                selectors.add(DynamicSelectorDesc.of(this, Annotations.handleOf(target)).validate());
             } catch (InvalidSelectorException ex) {
                 throw new InvalidInjectionException(this,
                         String.format("%s annotation on %s is decorated with an invalid selector: %s", this.annotationType, this.methodName,
@@ -322,7 +322,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         
         if (selectors.size() == 0) {
-            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing 'method' or 'desc' to specify targets",
+            throw new InvalidInjectionException(this, String.format("%s annotation on %s is missing 'method' or 'target' to specify targets",
                     this.annotationType, this.methodName));
         }
         return selectors;
@@ -680,7 +680,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
 
     static String describeInjector(IMixinContext mixin, AnnotationNode annotation, MethodNode method) {
-        return String.format("%s->@%s::%s%s", mixin.toString(), Bytecode.getSimpleName(annotation), MethodNodeEx.getName(method), method.desc);
+        return String.format("%s->@%s::%s%s", mixin.toString(), Annotations.getSimpleName(annotation), MethodNodeEx.getName(method), method.desc);
     }
 
     /**

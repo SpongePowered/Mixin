@@ -29,7 +29,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
 
 /**
@@ -60,7 +60,7 @@ public class SpecialMethodInfo extends AnnotatedMethodInfo {
     public SpecialMethodInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
         this.mixin = mixin;
-        this.annotationType = this.annotation != null ? "@" + Bytecode.getSimpleName(this.annotation) : "Undecorated injector";
+        this.annotationType = this.annotation != null ? "@" + Annotations.getSimpleName(this.annotation) : "Undecorated injector";
         this.classNode = mixin.getTargetClassNode();
         this.methodName = MethodNodeEx.getName(method);
     }

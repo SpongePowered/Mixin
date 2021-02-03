@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection.selectors;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,10 +31,6 @@ import java.util.regex.PatternSyntaxException;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
-import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
-import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
-import org.spongepowered.asm.mixin.injection.selectors.MatchResult;
 import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
@@ -56,20 +52,20 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * 
  * <p>Some examples:</p>
  * <blockquote><pre>
- *   // Matches candidates starting with "foo"
+ *   <del>// Matches candidates starting with "foo"</del>
  *   /^foo/
  *   
- *   // Matches candidates ending with "Bar" and which take a single integer
- *   /bar$/ desc=/^\\(I\\)/
+ *   <del>// Matches candidates ending with "Bar" and which take a single int
+ *</del>   /bar$/ desc=/^\\(I\\)/
  *   
- *   // The same example but with "name" explicitly specified (optional)
- *   name=/bar$/ desc=/^\\(I\\)/
+ *   <del>// The same example but with "name" explicitly specified (optional)
+ *</del>   name=/bar$/ desc=/^\\(I\\)/
  *   
- *   // Matches candidates whose name contains "Entity"
+ *   <del>// Matches candidates whose name contains "Entity"</del>
  *   /Entity/
  *   
- *   // Matches candidates whose owner contains "/google/", note the escaping of
- *   // the forward slash symbols
+ *   <del>// Matches candidates whose owner contains "/google/", note the
+ *   // escaping of the forward slash symbols</del>
  *   owner=/\\/google\\//</pre>
  * </blockquote>
  * 

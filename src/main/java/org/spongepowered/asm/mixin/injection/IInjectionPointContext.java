@@ -44,13 +44,6 @@ public interface IInjectionPointContext extends IMessageSink, ISelectorContext {
     /**
      * Get the parent annotation (eg. the &#064;Inject annotation)
      */
-    @Override
-    public abstract AnnotationNode getAnnotation();
-    
-    /**
-     * Get the selector annotation (eg. the &#064;At annotation)
-     */
-    @Override
-    public abstract AnnotationNode getSelectorAnnotation();
+    public abstract AnnotationNode getAnnotationNode();
     
 }

@@ -41,7 +41,6 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic.Se
 import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.MemberMatcher;
 import org.spongepowered.asm.mixin.throwables.MixinError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.util.asm.ElementNode;
@@ -141,16 +140,20 @@ public final class TargetSelector {
                     throw (MixinException)cause;
                 }
                 Throwable ex = cause != null ? cause : itex;
-                ex.printStackTrace();
                 throw new MixinError("Error parsing dynamic target selector [" + this.type.getName() + "] for " + context, ex);
             }
         }
     }
     
     /**
+     * Regex for dynamic selector ids
+     */
+    private static final String DYNAMIC_SELECTOR_ID = "[a-z]+(:[a-z]+)?";
+    
+    /**
      * Pattern for matching dynamic selectors
      */
-    private static final Pattern PATTERN_DYNAMIC = Pattern.compile("^\\x40([a-z]+(:[a-z]+)?)(\\((.*)\\))?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PATTERN_DYNAMIC = Pattern.compile("(?i)^\\x40(" + TargetSelector.DYNAMIC_SELECTOR_ID + ")(\\((.*)\\))?$");
     
      /**
      * Registered dynamic selectors
@@ -190,20 +193,27 @@ public final class TargetSelector {
 
         DynamicSelectorEntry entry;
         try {
-            entry = new DynamicSelectorEntry(namespace, selectorId.value().toLowerCase(Locale.ROOT), type);
+            entry = new DynamicSelectorEntry(namespace.toLowerCase(Locale.ROOT), selectorId.value().toLowerCase(Locale.ROOT), type);
         } catch (NoSuchMethodException ex) {
             throw new MixinError("Dynamic target selector class " + type.getName() + " does not contain a valid parse method");
         }
-        DynamicSelectorEntry existing = TargetSelector.dynamicSelectors.get(entry.id);
-        if (existing != null) { // && !existing.type.equals(type)) {
-            MessageRouter.getMessager().printMessage(Kind.WARNING, String.format("Overriding target selector for @%s with %s (previously %s)",
-                    entry.id, type.getName(), existing.type.getName()));
-        } else {
-            MessageRouter.getMessager().printMessage(Kind.OTHER, String.format("Registering new target selector for @%s with %s",
-                    entry.id, type.getName()));
+        
+        String code = entry.getCode();
+        if (!Pattern.matches(TargetSelector.DYNAMIC_SELECTOR_ID, code)) {
+            throw new IllegalArgumentException("Dynamic target selector class " + type
+                    + " has an invalid id. Only alpha characters can be used in selector ids and namespaces");
         }
         
-        TargetSelector.dynamicSelectors.put(entry.getCode(), entry);
+        DynamicSelectorEntry existing = TargetSelector.dynamicSelectors.get(code);
+        if (existing != null) { // && !existing.type.equals(type)) {
+            MessageRouter.getMessager().printMessage(Kind.WARNING, String.format("Overriding target selector for @%s with %s (previously %s)",
+                    code, type.getName(), existing.type.getName()));
+        } else {
+            MessageRouter.getMessager().printMessage(Kind.OTHER, String.format("Registering new target selector for @%s with %s",
+                    code, type.getName()));
+        }
+        
+        TargetSelector.dynamicSelectors.put(code, entry);
     }
     
     /**
@@ -220,7 +230,8 @@ public final class TargetSelector {
         } catch (NoSuchMethodException ex) {
             throw new MixinError("Dynamic target selector class " + type.getName() + " does not contain a valid parse method");
         }
-        TargetSelector.dynamicSelectors.put(entry.getCode(), entry);
+        TargetSelector.dynamicSelectors.put(entry.id, entry);
+        TargetSelector.dynamicSelectors.put("mixin:" + entry.id, entry);
     }
     
     /**

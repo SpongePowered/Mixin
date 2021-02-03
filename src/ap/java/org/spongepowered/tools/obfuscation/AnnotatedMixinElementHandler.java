@@ -147,7 +147,7 @@ abstract class AnnotatedMixinElementHandler {
         }
         
         @Override
-        public Object getSelectorAnnotation() {
+        public IAnnotationHandle getSelectorAnnotation() {
             return this.getAnnotation();
         }
         

@@ -26,6 +26,7 @@ package org.spongepowered.asm.mixin.injection.struct;
 
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 /**
  * Narrowed context for selectors in annotations which are themselves inside
@@ -42,7 +43,7 @@ public class SelectorAnnotationContext implements ISelectorContext {
     /**
      * The annotation for this selector
      */
-    private final Object selectorAnnotation;
+    private final IAnnotationHandle selectorAnnotation;
     
     /**
      * The coordinate for this selector
@@ -57,7 +58,7 @@ public class SelectorAnnotationContext implements ISelectorContext {
      * @param selectorAnnotation Annotation for this selector, eg. &#064;At
      * @param selectorCoordinate Coordinate for this selector
      */
-    public SelectorAnnotationContext(ISelectorContext parent, Object selectorAnnotation, String selectorCoordinate) {
+    public SelectorAnnotationContext(ISelectorContext parent, IAnnotationHandle selectorAnnotation, String selectorCoordinate) {
         this.parent = parent;
         this.selectorAnnotation = selectorAnnotation;
         this.selectorCoordinate = selectorCoordinate;
@@ -96,7 +97,7 @@ public class SelectorAnnotationContext implements ISelectorContext {
      *      #getAnnotation()
      */
     @Override
-    public Object getAnnotation() {
+    public IAnnotationHandle getAnnotation() {
         return this.parent.getAnnotation();
     }
 
@@ -105,7 +106,7 @@ public class SelectorAnnotationContext implements ISelectorContext {
      *      #getSelectorAnnotation()
      */
     @Override
-    public Object getSelectorAnnotation() {
+    public IAnnotationHandle getSelectorAnnotation() {
         return this.selectorAnnotation;
     }
 

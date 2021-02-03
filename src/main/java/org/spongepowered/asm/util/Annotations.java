@@ -61,11 +61,15 @@ public final class Annotations {
         
         private final AnnotationNode annotation;
         
-        public Handle(AnnotationNode annotation) {
+        Handle(AnnotationNode annotation) {
             Preconditions.checkNotNull(annotation, "annotation");
             this.annotation = annotation;
         }
-
+        
+        public AnnotationNode getNode() {
+            return this.annotation;
+        }
+        
         @Override
         public String getDesc() {
             return this.annotation.desc;
@@ -116,7 +120,7 @@ public final class Annotations {
         
         @Override
         public String toString() {
-            return "@" + Bytecode.getSimpleName(this.annotation);
+            return "@" + Annotations.getSimpleName(this.annotation);
         }
 
     }
@@ -155,6 +159,28 @@ public final class Annotations {
         } else {
             throw new IllegalArgumentException("Unsupported annotation type: " + annotation.getClass().getName());
         }
+    }
+
+    /**
+     * Returns the simple name of an annotation, mainly used for printing
+     * annotation names in error messages/user-facing strings
+     * 
+     * @param annotationType annotation
+     * @return annotation's simple name
+     */
+    public static String getSimpleName(Class<? extends Annotation> annotationType) {
+        return annotationType.getSimpleName();
+    }
+    
+    /**
+     * Returns the simple name of an annotation, mainly used for printing
+     * annotation names in error messages/user-facing strings
+     * 
+     * @param annotation annotation node
+     * @return annotation's simple name
+     */
+    public static String getSimpleName(AnnotationNode annotation) {
+        return Bytecode.getSimpleName(annotation.desc);
     }
 
     /**

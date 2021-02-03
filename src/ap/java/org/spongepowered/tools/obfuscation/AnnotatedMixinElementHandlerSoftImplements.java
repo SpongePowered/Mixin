@@ -43,7 +43,7 @@ import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 /**
  * A module for {@link AnnotatedMixin} whic handles soft-implements clauses
  */
-public class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHandler {
     
     AnnotatedMixinElementHandlerSoftImplements(IMixinAnnotationProcessor ap, AnnotatedMixin mixin) {
         super(ap, mixin);

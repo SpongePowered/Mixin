@@ -44,7 +44,6 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointAnnotationCont
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
 import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.Bytecode;
 
 import com.google.common.base.Strings;
 
@@ -433,7 +432,7 @@ public final class MethodSlice {
     }
 
     private static String describeSlice(String description, ISliceContext owner) {
-        String annotation = Bytecode.getSimpleName(owner.getAnnotation());
+        String annotation = Annotations.getSimpleName(owner.getAnnotationNode());
         MethodNode method = owner.getMethod();
         return String.format("%s->%s(%s)::%s%s", owner.getMixin(), annotation, description, method.name, method.desc);
     }

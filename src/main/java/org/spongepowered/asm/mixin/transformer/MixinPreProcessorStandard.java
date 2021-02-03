@@ -112,7 +112,7 @@ class MixinPreProcessorStandard {
         private SpecialMethod(boolean isOverwrite, Class<? extends Annotation> type) {
             this.isOverwrite = isOverwrite;
             this.annotation = type;
-            this.description = "@" + Bytecode.getSimpleName(type);
+            this.description = "@" + Annotations.getSimpleName(type);
         }
         
         private SpecialMethod(boolean isOverwrite) {
@@ -380,7 +380,7 @@ class MixinPreProcessorStandard {
             } else {
                 String uniqueName = context.getUniqueName(mixinMethod, true);
                 MixinPreProcessorStandard.logger.log(this.mixin.getLoggingLevel(), "Renaming @{} method {}{} to {} in {}",
-                        Bytecode.getSimpleName(annotation), mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
+                        Annotations.getSimpleName(annotation), mixinMethod.name, mixinMethod.desc, uniqueName, this.mixin);
                 mixinMethod.name = method.conform(uniqueName);
             }
 

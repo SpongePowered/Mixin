@@ -99,7 +99,7 @@ public final class MethodSlices {
     public static MethodSlices parse(InjectionInfo info) {
         MethodSlices slices = new MethodSlices(info);
         
-        AnnotationNode annotation = info.getAnnotation();
+        AnnotationNode annotation = info.getAnnotationNode();
         if (annotation != null) {
             for (AnnotationNode node : Annotations.<AnnotationNode>getValue(annotation, "slice", true)) {
                 MethodSlice slice = MethodSlice.parse(info, node);

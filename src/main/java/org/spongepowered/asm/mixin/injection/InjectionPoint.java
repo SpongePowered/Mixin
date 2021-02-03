@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -58,7 +59,6 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.AnnotatedMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.IMessageSink;
 
 import com.google.common.base.Joiner;
@@ -715,7 +715,7 @@ public abstract class InjectionPoint {
     @SuppressWarnings("unchecked")
     private static Class<? extends InjectionPoint> findClass(IMixinContext context, InjectionPointData data) {
         String type = data.getType();
-        Class<? extends InjectionPoint> ipClass = InjectionPoint.types.get(type);
+        Class<? extends InjectionPoint> ipClass = InjectionPoint.types.get(type.toUpperCase(Locale.ROOT));
         if (ipClass == null) {
             if (type.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
                 try {
@@ -761,7 +761,7 @@ public abstract class InjectionPoint {
             } else if (shift == At.Shift.AFTER) {
                 return InjectionPoint.after(point);
             } else if (shift == At.Shift.BY) {
-                InjectionPoint.validateByValue(context.getMixin(), context.getMethod(), context.getAnnotation(), point, by);
+                InjectionPoint.validateByValue(context.getMixin(), context.getMethod(), context.getAnnotationNode(), point, by);
                 return InjectionPoint.shift(point, by);
             }
         }
@@ -793,7 +793,7 @@ public abstract class InjectionPoint {
             allowed = InjectionPoint.MAX_ALLOWED_SHIFT_BY; 
         }
         
-        String message = String.format("@%s(%s) Shift.BY=%d on %s::%s exceeds %s%d. %s", Bytecode.getSimpleName(parent), point,
+        String message = String.format("@%s(%s) Shift.BY=%d on %s::%s exceeds %s%d. %s", Annotations.getSimpleName(parent), point,
                 by, context, method.name, limitBreached, allowed, advice);
         
         if (err == ShiftByViolationBehaviour.WARN && allowed < InjectionPoint.MAX_ALLOWED_SHIFT_BY) {
@@ -806,7 +806,7 @@ public abstract class InjectionPoint {
     
     protected String getAtCode() {
         AtCode code = this.getClass().<AtCode>getAnnotation(AtCode.class);
-        return code == null ? this.getClass().getName() : code.value(); 
+        return code == null ? this.getClass().getName() : code.value().toUpperCase(); 
     }
 
     /**
@@ -846,9 +846,9 @@ public abstract class InjectionPoint {
                     code.value(), type.getName());
         }
         
-        String id = code.value();
+        String id = code.value().toUpperCase(Locale.ROOT);
         if (!Strings.isNullOrEmpty(namespace)) {
-            id = namespace + ":" + code.value();
+            id = namespace.toUpperCase(Locale.ROOT) + ":" + id;
         }
         
         InjectionPoint.types.put(id, type);
@@ -861,7 +861,9 @@ public abstract class InjectionPoint {
      * @param type injection point type to register
      */
     private static void registerBuiltIn(Class<? extends InjectionPoint> type) {
-        InjectionPoint.types.put(type.<AtCode>getAnnotation(AtCode.class).value(), type);
+        String code = type.<AtCode>getAnnotation(AtCode.class).value().toUpperCase(Locale.ROOT);
+        InjectionPoint.types.put(code, type);
+        InjectionPoint.types.put("MIXIN:" + code, type);
     }
 
 }

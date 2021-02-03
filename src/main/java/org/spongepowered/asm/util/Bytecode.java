@@ -26,7 +26,6 @@ package org.spongepowered.asm.util;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -767,17 +766,6 @@ public final class Bytecode {
     }
 
     /**
-     * Returns the simple name of an annotation, mainly used for printing
-     * annotation names in error messages/user-facing strings
-     * 
-     * @param annotationType annotation
-     * @return annotation's simple name
-     */
-    public static String getSimpleName(Class<? extends Annotation> annotationType) {
-        return annotationType.getSimpleName();
-    }
-
-    /**
      * Returns the simple name of a type representing a class
      * 
      * @param type type
@@ -785,17 +773,6 @@ public final class Bytecode {
      */
     public static String getSimpleName(Type type) {
         return type.getSort() < Type.ARRAY ? type.getDescriptor() : Bytecode.getSimpleName(type.getClassName());
-    }
-    
-    /**
-     * Returns the simple name of an annotation, mainly used for printing
-     * annotation names in error messages/user-facing strings
-     * 
-     * @param annotation annotation node
-     * @return annotation's simple name
-     */
-    public static String getSimpleName(AnnotationNode annotation) {
-        return Bytecode.getSimpleName(annotation.desc);
     }
 
     /**

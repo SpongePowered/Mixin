@@ -26,7 +26,6 @@ package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.mixin.injection.struct.MemberMatcher;
 import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
@@ -56,17 +55,17 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * the selector string starts with "<tt>&#064;</tt>":</p>
  * 
  * <blockquote><pre>
- *   // Built-in dynamic selector without argument string
+ *   <del>// Built-in dynamic selector without argument string</del>
  *   &#064;SelectorId
  *   
- *   // Built-in dynamic selector with empty argument string
+ *   <del>// Built-in dynamic selector with empty argument string</del>
  *   &#064;SelectorId()
  *   
- *   // Built-in dynamic selector with argument
+ *   <del>// Built-in dynamic selector with argument</del>
  *   &#064;SelectorId(custom,argument,string,in,any,format)
  *   
- *   // User-provided dynamic selector with argument. Note that user-provided
- *   // dynamic selectors are namespaced to avoid conflicts.
+ *   <del>// User-provided dynamic selector with argument. Note that
+ *   // user-provided dynamic selectors are namespaced to avoid conflicts.</del>
  *   &#064;Namespace:SelectorId(some arguments)</pre>
  * </blockquote>
  * 

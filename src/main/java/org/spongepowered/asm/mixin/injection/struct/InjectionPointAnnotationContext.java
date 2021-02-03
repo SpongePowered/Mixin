@@ -27,7 +27,8 @@ package org.spongepowered.asm.mixin.injection.struct;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
-import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 /**
  * Specialised SelectorAnnotationContext for injection points
@@ -39,11 +40,16 @@ public class InjectionPointAnnotationContext extends SelectorAnnotationContext i
      */
     private IInjectionPointContext parentContext;
 
-    public InjectionPointAnnotationContext(IInjectionPointContext parent, Object selectorAnnotation, String selectorCoordinate) {
+    public InjectionPointAnnotationContext(IInjectionPointContext parent, IAnnotationHandle selectorAnnotation, String selectorCoordinate) {
         super(parent, selectorAnnotation, selectorCoordinate);
         this.parentContext = parent;
     }
 
+    public InjectionPointAnnotationContext(IInjectionPointContext parent, AnnotationNode selectorAnnotation, String selectorCoordinate) {
+        super(parent, Annotations.handleOf(selectorAnnotation), selectorCoordinate);
+        this.parentContext = parent;
+    }
+    
     /* (non-Javadoc)
      * @see org.spongepowered.asm.util.IMessageSink
      *      #addMessage(java.lang.String, java.lang.Object[])
@@ -63,26 +69,26 @@ public class InjectionPointAnnotationContext extends SelectorAnnotationContext i
     }
 
     /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.IInjectionPointContext
+     *      #getAnnotationNode()
+     */
+    @Override
+    public AnnotationNode getAnnotationNode() {
+        return this.parentContext.getAnnotationNode();
+    }
+    
+    /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.struct
      *      .SelectorAnnotationContext#getAnnotation()
      */
     @Override
-    public AnnotationNode getAnnotation() {
+    public IAnnotationHandle getAnnotation() {
         return this.parentContext.getAnnotation();
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.struct
-     *      .SelectorAnnotationContext#getSelectorAnnotation()
-     */
-    @Override
-    public AnnotationNode getSelectorAnnotation() {
-        return (AnnotationNode)super.getSelectorAnnotation();
     }
     
     @Override
     public String toString() {
-        return String.format("%s->@%s(%s)", this.parentContext, Bytecode.getSimpleName(this.getSelectorAnnotation()), 
+        return String.format("%s->%s(%s)", this.parentContext, this.getSelectorAnnotation(), 
                 this.getSelectorCoordinate(false));
     }
 

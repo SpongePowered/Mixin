@@ -54,7 +54,7 @@ import com.google.common.base.Strings;
 /**
  * A module for {@link AnnotatedMixin} which handles accessors
  */
-public class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler {
+class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler {
 
     /**
      * Accessor element

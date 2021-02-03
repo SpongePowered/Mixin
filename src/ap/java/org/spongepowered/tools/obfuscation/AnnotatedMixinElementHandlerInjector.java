@@ -46,6 +46,7 @@ import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorExcep
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
 import org.spongepowered.tools.obfuscation.ext.SpecialPackages;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
@@ -126,7 +127,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         }
         
         @Override
-        public Object getSelectorAnnotation() {
+        public IAnnotationHandle getSelectorAnnotation() {
             return this.getAt();
         }
         

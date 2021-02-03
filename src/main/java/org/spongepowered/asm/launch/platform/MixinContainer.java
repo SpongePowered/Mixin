@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,7 +80,7 @@ public class MixinContainer {
                     continue;
                 }
                 
-                MixinContainer.logger.debug("{} {} container {}", simpleName, acceptAction.name().toLowerCase(), this.handle);
+                MixinContainer.logger.debug("{} {} container {}", simpleName, acceptAction.name().toLowerCase(Locale.ROOT), this.handle);
             } catch (InstantiationException ex) {
                 Throwable cause = ex.getCause();
                 if (cause instanceof RuntimeException) {

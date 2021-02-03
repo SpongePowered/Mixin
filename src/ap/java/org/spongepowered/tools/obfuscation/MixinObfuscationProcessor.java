@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.Mixin;
 /**
  * Base class for mixin annotation processor modules
  */
-public abstract class MixinObfuscationProcessor extends AbstractProcessor {
+abstract class MixinObfuscationProcessor extends AbstractProcessor {
     
     /**
      * Mixin info manager 
