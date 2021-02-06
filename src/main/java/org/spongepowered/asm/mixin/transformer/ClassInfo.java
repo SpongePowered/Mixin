@@ -112,9 +112,9 @@ public final class ClassInfo {
     }
     
     /**
-     * When using {@link ClassInfo#forType}, determines whether an array type
-     * should be returned as declared (eg. as <tt>Object</tt>) or whether the
-     * element type should be returned instead.
+     * When using {@link ClassInfo#forType ClassInfo.forType}, determines
+     * whether an array type should be returned as declared (eg. as <tt>Object
+     * </tt>) or whether the element type should be returned instead.
      */
     public static enum TypeLookup {
         
@@ -974,7 +974,7 @@ public final class ClassInfo {
         return this.name;
     }
     
-    public MethodMapper getMethodMapper() {
+    MethodMapper getMethodMapper() {
         return this.methodMapper;
     }
 

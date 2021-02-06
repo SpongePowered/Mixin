@@ -46,10 +46,10 @@ import java.lang.annotation.Target;
  * <p>Consider the following code:</p>
  * 
  * <blockquote><pre>&#064;Shadow public int getSomething();
- * 
- * public int soft$getSomething() {
- *     return this.getSomething();
- * }</pre></blockquote>
+ *
+ *public int soft$getSomething() {
+ *    return this.getSomething();
+ *}</pre></blockquote>
  * 
  * <p>This type of accessor is common when an interface conflict occurs, but has
  * the problem that the injected accessor will be effectively self-referential
@@ -61,9 +61,9 @@ import java.lang.annotation.Target;
  * 
  * <blockquote><pre>&#064;Shadow private int something;
  * 
- * public int soft$getSomething() {
- *     return this.something;
- * }</pre></blockquote>
+ *public int soft$getSomething() {
+ *    return this.something;
+ *}</pre></blockquote>
  * 
  * <p>But this has the drawback of forcing the mixin to re-implement the target
  * method, and thus forces ongoing maintenance of the mixin to include updating
@@ -75,21 +75,21 @@ import java.lang.annotation.Target;
  * accessor with {@link Intrinsic &#064;Intrinsic}:</p>
  * 
  * <blockquote><pre>&#064;Shadow public int getSomething();
- * 
- * &#064;Intrinsic // don't merge the method if the target already exists
- * public int soft$getSomething() {
- *     return this.getSomething();
- * }</pre></blockquote>
+ *
+ *&#064;Intrinsic <del>// don't merge the method if the target already exists
+ *</del>public int soft$getSomething() {
+ *    return this.getSomething();
+ *}</pre></blockquote>
  * 
  * <p>This is ideal if the accessor is simply providing a proxy through to an
  * underlying obfuscated method, as in the example above. However, if the new
  * method contains additional code, such as in this example:</p>
  * 
  * <blockquote><pre>&#064;Shadow public int getSomething();
- * 
- * public int soft$getSomething() {
- *     return this.someCondition ? this.someOtherValue : this.getSomething();
- * }</pre></blockquote>
+ *
+ *public int soft$getSomething() {
+ *    return this.someCondition ? this.someOtherValue : this.getSomething();
+ *}</pre></blockquote>
  * 
  * <p>Then we still have the original problem that the method becomes re-entrant
  * without specifying the additional Overwrite. We can solve this with the
@@ -108,11 +108,11 @@ import java.lang.annotation.Target;
  * accessor will call the overwritten method.</p>
  * 
  * <blockquote><pre>&#064;Shadow public int getSomething();
- * 
- * &#064;Intrinsic(displace = true) // if the target already exists, displace it
- * public int soft$getSomething() {
- *     return this.someCondition ? this.someOtherValue : this.getSomething();
- * }</pre></blockquote>
+ *
+ *&#064;Intrinsic(displace = true) // if the target already exists, displace it
+ *public int soft$getSomething() {
+ *    return this.someCondition ? this.someOtherValue : this.getSomething();
+ *}</pre></blockquote>
  * 
  */
 @Target({ ElementType.METHOD })

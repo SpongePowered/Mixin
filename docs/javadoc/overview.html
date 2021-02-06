@@ -1,0 +1,37 @@
+<body>
+    <p class="summary">
+        <b>Mixin</b> is a trait/mixin framework for Java using
+        <a target="_top" href="http://asm.ow2.org/">ASM</a> and hooking into
+        the runtime class-loading process via Mojang's
+        <a target="_top" href="https://github.com/Mojang/LegacyLauncher">
+        LegacyLauncher</a> system. The main documentation for <b>Mixin</b> can
+        be found in the
+        <a target="_top" href="https://github.com/SpongePowered/Mixin/wiki">
+        Wiki</a>.
+    </p>
+
+    <p id="description">
+        This Javadoc contains documentation for individual features and
+        annotations. For additional help use the channel
+        <a target="_blank" href="https://discord.gg/tBcwxz2"><code>#mixin</code>
+        on the Sponge Discord Server</a>.
+    </p>
+
+    <script type="text/javascript">
+        // Insert mixin logo
+        let titleNode = document.querySelector('h1.title');
+        let logoImg = document.createElement('IMG');
+        logoImg.src = 'logo.png';
+        logoImg.title = 'SpongePowered MIXIN';
+        titleNode.parentElement.insertBefore(logoImg, titleNode);
+        
+        // Make sure we get the correct block
+        let summaryBlock = document.querySelector(".contentContainer .block .summary").parentElement;
+        let headerBlock = document.querySelector(".subTitle .block");
+        headerBlock.innerHTML = summaryBlock.innerHTML;
+        document.querySelector(".subTitle").nextElementSibling.remove();
+        summaryBlock.remove();
+        
+        titleNode.classList.add('overviewTitle');
+    </script>
+</body>

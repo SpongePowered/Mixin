@@ -69,7 +69,7 @@ import org.spongepowered.asm.util.perf.Profiler.Section;
 /**
  * Heart of the Mixin pipeline 
  */
-public class MixinProcessor {
+class MixinProcessor {
 
     /**
      * Phase during which an error occurred, delegates to functionality in

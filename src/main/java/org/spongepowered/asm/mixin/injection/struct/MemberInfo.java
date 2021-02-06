@@ -48,43 +48,51 @@ import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 /**
- * <p>Target selector, also used as a general-purpose information bundle about a
- * member (method or field) parsed from a String token in another annotation,
- * this is used where target members need to be specified as Strings in order to
- * parse the String representation to something useful. See
- * {@link ITargetSelector} for other supported selector types.</p>
+ * <p>Struct which defines an <b>Explcit Target selector</b>,  See
+ * {@link ITargetSelector} for other supported selector types. This struct is
+ * also used as a general-purpose information bundle about a member (method or
+ * field) parsed from a String token in another annotation, this is used where
+ * target members need to be specified as Strings in order to parse the String
+ * representation to something useful.</p>
  * 
  * <p>Some examples:</p>
  * <blockquote><pre>
- *   // references a method or field called func_1234_a, if there are multiple
- *   // members with the same signature, matches the first occurrence
- *   func_1234_a
+ *   <del>// references a method or field called func_1234_a, if there are
+ *   // multiple members with the same signature, matches the first occurrence
+ *</del>   func_1234_a
  *   
- *   // references a method or field called func_1234_a, if there are multiple
- *   // members with the same signature, matches all occurrences
+ *   <del>// references a method or field called func_1234_a, if there are
+ *   // multiple members with matching name, matches all occurrences</del>
  *   func_1234_a*
  *   
- *   // references a method called func_1234_a which takes 3 ints and returns
- *   // a bool
+ *   <del>// references all methods which take 3 ints and return a bool</del>
+ *   *(III)Z
+ *   
+ *   <del>// references a method called func_1234_a which takes 3 ints and
+ *   // returns a bool</del>
  *   func_1234_a(III)Z
  *   
- *   // references a field called field_5678_z which is a String
+ *   <del>// references a field called field_5678_z which is a String</del>
  *   field_5678_z:Ljava/lang/String;
  *   
- *   // references a ctor which takes a single String argument 
+ *   <del>// references a ctor which takes a single String argument</del> 
  *   &lt;init&gt;(Ljava/lang/String;)V
  *   
- *   // references a method called func_1234_a in class foo.bar.Baz
+ *   <del>// references a method called func_1234_a in class foo.bar.Baz</del>
  *   Lfoo/bar/Baz;func_1234_a
  *  
- *   // references a field called field_5678_z in class com.example.Dave
- *   Lcom/example/Dave;field_5678_z
+ *   <del>// references a field called field_5678_z in class com.example.Dave
+ *</del>   Lcom/example/Dave;field_5678_z
  *  
- *   // references a method called func_1234_a in class foo.bar.Baz which takes
- *   // three doubles and returns void
+ *   <del>// references a field called field_5678_z in class com.example.Dave
+ *   // which is of type String</del>
+ *   Lcom/example/Dave;field_5678_z:Ljava/lang/String;
+ *  
+ *   <del>// references a method called func_1234_a in class foo.bar.Baz which
+ *   // takes three doubles and returns void</del>
  *   Lfoo/bar/Baz;func_1234_a(DDD)V
  *   
- *   // alternate syntax for the same
+ *   <del>// alternate syntax for the same</del>
  *   foo.bar.Baz.func_1234_a(DDD)V</pre>
  * </blockquote>
  */

@@ -37,20 +37,27 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 
 /**
  * Specifies that this mixin method should inject a variable modifier callback
- * to itself in the target method(s) identified by {@link #method}.
+ * to itself in the target method(s) identified by {@link #method}. The variable
+ * modifier can modify a single local variable in the target method frame.
+ * 
+ * <p>If the variable being modified is a method argument, specifying the
+ * <tt>{@link #argsOnly argsOnly=true}</tt> reduces the overhead of calculating
+ * the local variable table for the method.</p>
  * 
  * <p><tt>ModifyVariable</tt> callbacks should always take one argument of the
  * type to capture and return the same type. For example a <tt>ModifyVariable
- * </tt> for a local of type {@link String} should have the signature:</p>
+ * </tt> for a local of type <ins>{@link String}</ins> should have the
+ * signature:</p>
  * 
- * <code>private String methodName(String variable) { ...</code>
+ * <blockquote><code>private <ins>String</ins> myHandlerMethod(<ins>String</ins>
+ * variable) {<br />&nbsp; &nbsp; ...</code></blockquote>
  * 
  * <p>The callback receives the current value of the local variable, and should
  * return the new value.</p>
  * 
  * <p>The injector has two operating modes, <em>explicit</em> and <em>implicit
- * </em>, and can operate either on the entire LVT or on the method arguments
- * only</p>.
+ * </em>, and can operate either on the entire LVT or on the {@link #argsOnly 
+ * ethod arguments only}.</p>
  * 
  * <p>In <em>explicit</em> mode, the variable to capture can be specified by
  * specifying values for the discriminator arguments {@link #ordinal},

@@ -49,21 +49,33 @@ import org.spongepowered.asm.util.Bytecode;
  * <dl>
  *   <dt>target</dt>
  *   <dd>A {@link ITargetSelector Target Selector} which identifies the target
- *   field.</dd>
+ *     field.</dd>
  *   <dt>opcode</dt>
  *   <dd>The {@link Opcodes opcode} of the field access, must be one of
- *   GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.</dd>
+ *     GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.</dd>
  *   <dt>ordinal</dt>
  *   <dd>The ordinal position of the field access to match. For example if the
- *   field is referenced 3 times and you want to match the 3rd then you can
- *   specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The
- *   default value is <b>-1</b> which supresses ordinal matching</dd>
+ *     field is referenced 3 times and you want to match the 3rd then you can
+ *     specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The
+ *     default value is <b>-1</b> which supresses ordinal matching</dd>
+ *   <dt><i>named argument:</i> array</dt>
+ *   <dd>For matching accesses to an array field element following a GETFIELD or
+ *     GETSTATIC. Specify <tt>get</tt>, <tt>set</tt> or <tt>length</tt> to match
+ *     the desired operation.</dd>
+ *   <dt><i>named argument:</i> fuzz</dt>
+ *   <dd>When matching array operations using <tt>array</tt> the injection point
+ *     will by default search up to 8 instructions after the matched field insn.
+ *     However in some cases the array operation may be further from the matched
+ *     GETFIELD or GETSTATIC and the amount to search (the "fuzz factor" can be
+ *     specified using this argument. Likewise to optimise the search against
+ *     false positives, this value can be specified as a lower value if desired.
+ *     Has no effect if <tt>array</tt> is not specified.</dd>
  * </dl>
  * 
  * <p>Example:</p>
- * <blockquote><pre>
+ * <blockquote><code>
  *   &#064;At(value = "FIELD", target="field_59_z:I", opcode = Opcodes.GETFIELD)
- * </pre>
+ * </code>
  * </blockquote>
  * 
  * <p>Matching array access:</p>
@@ -72,9 +84,10 @@ import org.spongepowered.asm.util.Bytecode;
  * operation. To enable this behaviour specify the <tt>array</tt> named-argument
  * with the desired operation:</p> 
  * 
- * <blockquote><pre>
- *   &#064;At(value = "FIELD", target="myIntArray:[I", args = "array=get")
- * </pre>
+ * <blockquote><code>
+ *   &#064;At(value = "FIELD", target="myIntArray:[I", opcode
+ *   = Opcodes.GETFIELD, args = "array=get")
+ * </code>
  * </blockquote>
  * 
  * <p>See {@link Redirect} for information on array element redirection.</p>

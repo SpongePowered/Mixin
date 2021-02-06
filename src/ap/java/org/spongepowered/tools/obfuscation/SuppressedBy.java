@@ -24,6 +24,8 @@
  */
 package org.spongepowered.tools.obfuscation;
 
+import org.spongepowered.asm.mixin.Overwrite;
+
 /**
  * A centralised list of tokens supported by the AP for use in
  * {@link SuppressWarnings} annotations. Collected here mainly for
@@ -33,52 +35,79 @@ public enum SuppressedBy {
     
     /**
      * Suppress warnings for constraint violations
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'constraints'</i>)</b></code>
+     * </div>
      */
     CONSTRAINTS("constraints"),
     
     /**
      * Suppress warnings about overwrite visibility upgrading/downgrading target
      * visibility 
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'visibility'</i>)</b></code>
+     * </div>
      */
     VISIBILITY("visibility"),
     
     /**
      * Suppress warnings when an injector target cannot be found
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'target'</i>)</b></code>
+     * </div>
      */
     TARGET("target"),
     
     /**
      * Suppress warnings when a class, method or field mapping cannot be located
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'mapping'</i>)</b></code>
+     * </div>
      */
     MAPPING("mapping"),
     
     /**
-     * Suppress warnings for when an <tt>&#064;Overwrite</tt> method is missing
-     * javadoc, or author or reason tags
+     * Suppress warnings for when an {@link Overwrite &#064;Overwrite} method is
+     * missing javadoc, or author or reason tags
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'overwrite'</i>)</b></code>
+     * </div>
      */
     OVERWRITE("overwrite"),
     
     /**
      * Suppress warnings when a mixin target specified by name is located in the
      * default package
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'default-package'</i>)</b></code>
+     * </div>
      */
     DEFAULT_PACKAGE("default-package"),
     
     /**
      * Suppress warnings when a mixin target is resolved by the AP as visible
      * but cannot be referenced with a class literal for some reason 
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'public-target'</i>)</b></code>
+     * </div>
      */
     PUBLIC_TARGET("public-target"),
     
     /**
-     *  Suppress warning when a mixin target is resolved by the AP as imaginary
-     *  (unresolvable via Mirror at compile time). For example for anonymous
-     *  inner classes or other synthetic member classes.
+     * Suppress warning when a mixin target is resolved by the AP as imaginary
+     * (unresolvable via Mirror at compile time), for example for anonymous
+     * inner classes or other synthetic member classes
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'unresolvable-target'</i>)</b></code>
+     * </div>
      */
     UNRESOLVABLE_TARGET("unresolvable-target"),
     
     /**
      * The default java "raw types" suppressions
+     * <div class="example">Usage:
+     * <code><b>&#64;SuppressWarnings(<i>'rawtypes'</i>)</b></code>
+     * </div>
      */
     RAW_TYPES("rawtypes");
     

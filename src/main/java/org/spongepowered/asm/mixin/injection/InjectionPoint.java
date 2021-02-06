@@ -69,22 +69,23 @@ import com.google.common.collect.ImmutableList.Builder;
 /**
  * <p>Base class for injection point discovery classes. Each subclass describes
  * a strategy for locating code injection points within an instruction list,
- * with the {@link #find} method populating a collection with insn nodes from
- * the supplied list which satisfy its strategy.</p>
+ * with the {@link #find find} method populating a collection with insn nodes
+ * from the supplied list which satisfy its strategy.</p>
  * 
  * <p>This base class also contains composite strategy factory methods such as
- * {@link #and} and {@link #or} which allow strategies to be combined using
- * intersection (and) or union (or) relationships to allow multiple strategies
- * to be easily combined.</p>
+ * {@link #and and} and {@link #or or} which allow strategies to be combined
+ * using intersection (and) or union (or) relationships to allow multiple
+ * strategies to be easily combined.</p>
  * 
  * <p>You are free to create your own injection point subclasses, but take note
  * that it <b>is allowed</b> for a single InjectionPoint instance to be used for
  * multiple injections and thus implementing classes MUST NOT cache the insn
- * list, event, or nodes instance passed to the {@link #find} method, as each
- * call to {@link #find} must be considered a separate functional contract and
- * the InjectionPoint's lifespan is not linked to the discovery lifespan,
- * therefore it is important that the InjectionPoint implementation is fully
- * <b>stateless</b>.</p>
+ * list, event, or nodes instance passed to the {@link #find find} method, as
+ * each call to {@link #find find} must be considered a separate functional
+ * contract and the InjectionPoint's lifespan is not linked to the discovery
+ * lifespan, therefore it is important that the InjectionPoint implementation is
+ * fully <b>stateless</b> and that calls to {@link #find find} are idempotent.
+ * </p>
  */
 public abstract class InjectionPoint {
     

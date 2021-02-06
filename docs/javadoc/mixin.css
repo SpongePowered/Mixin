@@ -1,0 +1,273 @@
+@import url('jdk8_stylesheet.css');
+
+/* Montserrat font, for sponge style */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900');
+
+span.summary {
+    clear: both;
+    display: block;
+}
+
+span.summary.p {
+    padding: 12px 0;
+}
+
+span.summary hr {
+    color: transparent;
+    margin: 8px;
+}
+
+.subTitle .block .summary {
+    margin-block-start: 0;
+}
+
+.tableSubHeadingColor {
+    background-color:#EEEEFF;
+}
+.altColor, .rowColor {
+    background-color:#FFFFFF;
+}
+
+/* altColor and rowColor get screwed up by hidden classes so just use css */
+tr.altColor:nth-child(even), tr.rowColor:nth-child(even) {
+    background: #EEE;
+}
+
+sup {
+    font-size:8px;
+}
+
+tt {
+    color: #6c4e0b;
+}
+
+code i, dt i {
+    color: #996c0c;
+}
+
+a:link, a:visited, code b {
+    color: #c79015;
+}
+
+a:hover, a:focus, a:active, code em {
+    color: #e8aa21;
+}
+
+code b, code em, code i, dt i {
+    font-style: normal;
+    font-weight: normal;
+} 
+
+ins {
+    background-color: #ffd26d;
+    text-decoration: none;
+}
+
+del {
+    color: #AAA;
+    text-decoration: none;
+}
+
+table.infoTable {
+    border-collapse: collapse;
+}
+
+table.infoTable td, table.infoTable th, table.cellTable td, table.cellTable th {
+    padding: 6px 8px;
+    background-color: #F0F0F0;
+}
+
+table.cellTable th, table.cellTable td {
+    text-align: center;
+}
+
+table.infoTable th, table.cellTable th, table.infoTable td.th, table.cellTable td.th {
+    background-color: #CCC;
+    font-weight: bold;
+}
+
+a[name] {
+    color: #353833;
+}
+
+a[name]:hover {
+    text-decoration:none;
+    color: #353833;
+}
+
+body {
+    background-color: #FFF;
+}
+
+body, div.block {
+    font-family: Tahoma, sans-serif, sans;
+    font-size: 15px;
+}
+
+.indexContainer,
+td.colFirst, th.colFirst, td.colLast, th.colLast, td.colOne, th.colOne,
+.indexHeader h1, .header ul li, .footer ul li {
+    font-size: 16px;
+}
+
+.indexHeader span {
+    font-size: 24px;
+}
+
+.indexHeader h1 {
+    font-size:13px;
+}
+
+.indexContainer h2 {
+    font-size: 17px;
+}
+
+.bar a, .bar a:link, .bar a:visited, .bar a:active {
+    color:#FFFFFF;
+}
+
+.bar {
+    font-size: 17px;
+}
+
+.tab {
+    color: #FFFFFF;
+}
+
+.topNav, .bottomNav, .bar {
+    color: #FFFFFF;
+    background-color: #666;
+}
+
+.topNav, .bottomNav {
+    font-size: 16px;
+}
+
+.topNav a:link, .topNav a:active, .topNav a:visited, .bottomNav a:link, .bottomNav a:active, .bottomNav a:visited {
+    color:#FFFFFF;
+}
+
+.subNav {
+    background-color: #CCC;
+    font-size: 15px;
+}
+
+.navBarCell1Rev {
+    background-color: #e8aa21;
+    color: #000;
+}
+
+.header ul li, .footer ul li {
+    font-size:13px;
+}
+.overviewSummary caption span, .memberSummary caption span, .typeSummary caption span,
+.useSummary caption span, .constantsSummary caption span, .deprecatedSummary caption span {
+    background-color: #e8aa21;
+    padding: 6px 12px;
+    height: auto;
+    font-family: Montserrat;
+    text-transform: uppercase;
+}
+
+.memberSummary caption span.activeTableTab span {
+    background-color: #e8aa21;
+    padding: 6px 12px;
+    height: auto;
+    border-bottom: 2px solid #e8aa21;
+}
+
+.memberSummary caption span.tableTab span {
+    background-color: #666;
+    padding: 6px 12px;
+    height: auto;
+    border-bottom: 2px solid white;
+}
+
+.overviewSummary, .memberSummary, .typeSummary, .useSummary, .constantsSummary, .deprecatedSummary {
+    border-width: 2px;
+}
+
+.title, h1, h2, h3, h4, h5, h6, .h1 {
+    font-family: 'Montserrat';
+}
+
+.title {
+    font-weight: 700;
+    color: #666;
+}
+
+h1.overviewTitle, .header img {
+    margin: 32px 0 0 0;
+}
+
+h1, .h1 {
+    font-weight: bold;
+    font-size: 45px;
+}
+
+h2 {
+    font-size: 32px;
+}
+
+h3 {
+    font-style: normal;
+}
+
+h1.title, .summary.h1 {
+    text-transform: uppercase;
+}
+
+pre, code, tt, dt code, table tr td dt code {
+    font-family: 'Consolas', monospace;
+    font-size: 16px;
+}
+
+.contentContainer .description dl dt, .contentContainer .details dl dt, .serializedFormContainer dl dt {
+    font-size: 15px;
+}
+
+.contentContainer .description .block dl dt {
+    background: #CCC;
+    display: inline-block;
+    padding: 6px 12px;
+    margin-left: 20px;
+}
+
+.contentContainer .description dl dd, .contentContainer .details dl dd, .serializedFormContainer dl dd {
+    font-family: Tahoma, sans-serif, sans;
+    font-size: 15px;
+}
+
+.contentContainer .description .block dl dd {
+    background: #F0F0F0;
+    margin: -6px 0 0 40px;
+    padding: 12px;
+}
+
+div.details ul.blockList ul.blockList ul.blockList li.blockList h4, div.details ul.blockList ul.blockList ul.blockListLast li.blockList h4, ul.blockList ul.blockList ul.blockList li.blockList h3 {
+    background-color: #CCC;
+    border: 0;
+    margin: 0 0 6px -8px;
+    padding: 9px 12px;
+}
+
+th.colFirst, th.colLast, th.colOne, .constantsSummary th {
+    background: #CCC;
+    padding: 8px;
+}
+
+blockquote {
+    background-color: #F5F5F5;
+    padding: 12px 40px;
+    margin: 12px 0;
+}
+
+blockquote pre {
+    margin: 0;
+}
+
+ul.blockList ul.blockList li.blockList, ul.blockList ul.blockListLast li.blockList {
+    padding-top: 1px;
+    border: 0;
+    background-color: #F5F5F5;
+}

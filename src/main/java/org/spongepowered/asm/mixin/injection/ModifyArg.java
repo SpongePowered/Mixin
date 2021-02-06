@@ -38,24 +38,35 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
 /**
  * Specifies that this mixin method should inject an argument modifier to itself
  * in the target method(s) identified by {@link #method}. This type of injection
- * provides a lightweight mechanism for changing a single argument of a target
- * method invocation. To affect multiple arguments at once, use {@link
- * ModifyArgs} instead. 
+ * provides a lightweight mechanism for changing a single argument of a selected
+ * method invocation within the target method(s). To affect multiple arguments
+ * of an invocation all at once, use {@link ModifyArgs} instead.
  * 
- * <p>Consider the following method call:</p>
+ * <p>Use this injector when a method contains an method invocation and you wish
+ * to change a single value being <em>passed to</em> that method. If you need to
+ * alter an argument <em>received by</em> a target method, use {@link
+ * ModifyVariable} instead.</p>
  * 
- * <blockquote><pre>// x, y and z are of type float
- *someObject.setLocation(x, y, z, true);</pre></blockquote>
+ * <p>Consider the following method:</p>
  * 
- * <p>Let us assume that we wish to modify the <tt>y</tt> value in the method
- * call. We know that the arguments are <tt>float</tt>s and that the <tt>y</tt>
- * value is the <em>second</em> (index = 1) <tt>float</tt> argument. Thus our
- * injector requires the following signature:
+ * <blockquote><pre><code>private void targetMethod() {
+ *    Entity someEntity = this.obtainEntity();
+ *    float x = 1.0F, y = 3.0F, z = 0.1F;
+ *    someEntity.<ins>setLocation</ins>(x, <ins>y</ins>, z, true);
+ *}</code></pre>
+ *</blockquote>
+ * 
+ * <p>Let us assume that we wish to modify the <ins><tt>y</tt></ins> value when
+ * calling the <ins><tt>setLocation</tt></ins> method. We know that the
+ * arguments are <tt>float</tt>s and that the <tt>y</tt> value is the <em>second
+ * </em> (index = 1) <tt>float</tt> argument. Thus our injector requires the
+ * following signature:
  *  
- * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
- *private float adjustYCoord(float y) {
- *    return y + 64.0F;
- *}</pre></blockquote>
+ * <blockquote><code>&#064;ModifyArg(method = "targetMethod", at = &#64;At(value
+ * = "INVOKE", target = "<ins>setLocation(FFFZ)V</ins>"), index = 1)<br />
+ * private float adjustYCoord(float y) {<br />
+ * &nbsp; &nbsp; return y + 64.0F;<br />
+ * }</code></blockquote>
  * 
  * <p>The callback consumes the original value of <tt>y</tt> and returns the
  * adjusted value.</p>
@@ -64,10 +75,11 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * arguments if required, to provide additional context for the callback. In
  * this case the arguments of the callback should match the target method:</p> 
  *  
- * <blockquote><pre>&#064;ModifyArg(method = "...", at = ..., index = 1)
- *private float adjustYCoord(float x, float y, float z, boolean interpolate) {
- *    return (x == 0 && y == 0) ? 0 : y;
- *}</pre></blockquote>
+ * <blockquote><code>&#064;ModifyArg(method = "targetMethod", at = &#64;At(value
+ * = "INVOKE", target = "<ins>setLocation(FFFZ)V</ins>"), index = 1)<br />
+ * private float adjustYCoord(float x, float y, float z, boolean interpolate) {
+ * <br />&nbsp; &nbsp; return (x == 0 &amp;&amp; y == 0) ? 0 : y;<br />
+ * }</code></blockquote>
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

@@ -64,7 +64,7 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
  *   the method is invoked 3 times and you want to match the 3rd then you can
  *   specify an <em>ordinal</em> of <b>2</b> (ordinals are zero-indexed). The
  *   default value is <b>-1</b> which supresses ordinal matching</dd>
- *   <dt><em>named argument</em> ldc</dt>
+ *   <dt><i>named argument:</i> ldc</dt>
  *   <dd>The value of the LDC node to look for prior to the method invocation
  *   </dd>
  * </dl>

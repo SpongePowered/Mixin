@@ -42,7 +42,7 @@ import org.spongepowered.asm.util.Annotations;
  * Information about an interface being runtime-patched onto a mixin target
  * class, see {@link org.spongepowered.asm.mixin.Implements Implements}
  */
-public final class InterfaceInfo {
+final class InterfaceInfo {
     
     /**
      * Parent mixin 

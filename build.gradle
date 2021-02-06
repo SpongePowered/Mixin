@@ -94,6 +94,8 @@ sourceSets {
     }
     launchwrapper {
         compileClasspath += main.output
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
     }
     modlauncher {
         compileClasspath += main.output
@@ -170,7 +172,23 @@ dependencies {
 }
 
 javadoc {
+    exclude '**/throwables'
     classpath += sourceSets.legacy.output
+    source sourceSets.ap.allJava
+    exclude {
+        it.relativePath.file && it.relativePath.pathString =~ 'tools' && !(it.name =~ /SuppressedBy|package-info/) }
+    options {
+        docTitle 'Welcome to the Mixin Javadoc'
+        overview 'docs/javadoc/overview.html'
+        stylesheetFile file('docs/javadoc/mixin.css')
+        addBooleanOption '-allow-script-in-comments', true
+    }
+    doLast {
+        copy {
+            from 'docs/javadoc/resources'
+            into outputDirectory
+        }
+    }
 }
 
 // Eclipse

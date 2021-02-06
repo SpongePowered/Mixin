@@ -85,7 +85,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
  *         thing.<b>processStuff</b>();
  *     }
  *     
- *     // A new call to processStuff, which now has the ordinal 1
+ *     <del>// A new call to processStuff, which now has the ordinal 1</del>
  *     bar.getActiveThing().<b>processStuff</b>();
  *     
  *     Thing specialThing = bar.getSpecialThing();

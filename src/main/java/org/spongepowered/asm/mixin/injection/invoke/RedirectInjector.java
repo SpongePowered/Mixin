@@ -65,7 +65,7 @@ import com.google.common.primitives.Ints;
  *   int def = 1;
  *   Foo someObject = new Foo();
  *   
- *   // Hooking this method
+ *   <del>// Hooking this method</del>
  *   boolean xyz = someObject.bar(abc, def);</pre>
  * </blockquote>
  * 

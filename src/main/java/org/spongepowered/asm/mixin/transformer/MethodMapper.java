@@ -44,7 +44,7 @@ import com.google.common.base.Strings;
 /**
  * Maintains method remaps for a target class
  */
-public class MethodMapper {
+class MethodMapper {
 
     /**
      * Logger
