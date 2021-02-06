@@ -92,9 +92,7 @@
       <metadata name="net.sf.eclipsecs.core.comment" value="Package members"/>
       <property name="scope" value="package"/>
       <property name="allowMissingParamTags" value="true"/>
-      <property name="allowMissingThrowsTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
-      <property name="suppressLoadErrors" value="true"/>
       <property name="tokens" value="METHOD_DEF"/>
     </module>
     <module name="JavadocTagContinuationIndentation">
@@ -104,9 +102,7 @@
       <metadata name="net.sf.eclipsecs.core.comment" value="Public members"/>
       <property name="scope" value="public"/>
       <property name="excludeScope" value="package"/>
-      <property name="allowMissingThrowsTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
-      <property name="suppressLoadErrors" value="true"/>
       <property name="tokens" value="METHOD_DEF"/>
     </module>
     <module name="NonEmptyAtclauseDescription"/>
