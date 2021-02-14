@@ -42,6 +42,7 @@ import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector.Configure;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector.Result;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
@@ -509,7 +510,7 @@ public class AccessorInfo extends SpecialMethodInfo {
      * @return best match
      */
     protected <TNode> TNode findTarget(List<ElementNode<TNode>> nodes) {
-        Result<TNode> result = TargetSelector.<TNode>run(this.target.configure("orphan"), nodes);
+        Result<TNode> result = TargetSelector.<TNode>run(this.target.configure(Configure.ORPHAN), nodes);
 
         try {
             return result.getSingleResult(true);

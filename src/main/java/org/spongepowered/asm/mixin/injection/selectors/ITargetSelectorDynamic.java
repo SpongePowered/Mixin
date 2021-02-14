@@ -24,6 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -56,6 +57,21 @@ public interface ITargetSelectorDynamic extends ITargetSelector {
          * configuration.
          */
         public String value();
+        
+    }
+    
+    /**
+     * Decoration for subclasses which indicates an annotation type from which
+     * the selector can be parsed.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(ElementType.TYPE)
+    public @interface SelectorAnnotation {
+        
+        /**
+         * Annotation type for the selector
+         */
+        public Class<? extends Annotation> value();
         
     }
 

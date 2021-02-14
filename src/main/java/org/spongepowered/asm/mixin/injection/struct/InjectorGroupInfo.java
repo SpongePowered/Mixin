@@ -264,7 +264,8 @@ public class InjectorGroupInfo {
         int min = this.getMinRequired();
         int max = this.getMaxAllowed();
         if (total < min) {
-            throw new InjectionValidationException(this, String.format("expected %d invocation(s) but only %d succeeded", min, total));
+            String only = total > 0 ? "only " : "";
+            throw new InjectionValidationException(this, String.format("expected %d invocation(s) but %s%d succeeded", min, only, total));
         } else if (total > max) {
             throw new InjectionValidationException(this, String.format("maximum of %d invocation(s) allowed but %d succeeded", max, total));
         }

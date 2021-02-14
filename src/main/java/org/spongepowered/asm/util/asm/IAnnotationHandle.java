@@ -27,12 +27,22 @@ package org.spongepowered.asm.util.asm;
 import java.util.List;
 
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
 
 /**
- * Interface for annotation handle since main classes may need to read info from
- * mirror annotations in the AP
+ * Interface for annotation handle since some classes may need to read info from
+ * both ASM {@link AnnotationNode}s at runtime and mirror annotations in the AP
+ * at compile time.
  */
 public interface IAnnotationHandle {
+    
+    /**
+     * Get whether the annotation inside the handle actually exists, if the
+     * contained element is null, returns false.
+     * 
+     * @return true if the annotation exists
+     */
+    public abstract boolean exists();
 
     /**
      * Get the annotation descriptor
@@ -48,7 +58,23 @@ public interface IAnnotationHandle {
     public abstract List<IAnnotationHandle> getAnnotationList(String key);
     
     /**
-     * Retrieve an annotation key as a list of annotation Types
+     * Get an annotation value as an ASM {@link Type}. This is special-cased
+     * because the different APIs return class literals in different ways. Under
+     * ASM we will receieve {@link Type} instances, but at compile time we will
+     * get {@link TypeMirror}s instead. This overload is provided so that
+     * subclasses have to marshal everything into {@link Type} for consistency.
+     * 
+     * @param key key to fetch
+     * @return value
+     */
+    public abstract Type getTypeValue(String key);
+
+    /**
+     * Retrieve an annotation key as a list of Types. This is special-cased
+     * because the different APIs return class literals in different ways. Under
+     * ASM we will receieve {@link Type} instances, but at compile time we will
+     * get {@link TypeMirror}s instead. This overload is provided so that
+     * subclasses have to marshal everything into {@link Type} for consistency.
      * 
      * @param key key to fetch
      * @return list of types

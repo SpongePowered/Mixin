@@ -41,6 +41,7 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.SignaturePrinter;
 import org.spongepowered.asm.util.asm.ElementNode;
 
@@ -55,46 +56,163 @@ import com.google.common.base.Strings;
  * target members need to be specified as Strings in order to parse the String
  * representation to something useful.</p>
  * 
- * <p>Some examples:</p>
- * <blockquote><pre>
- *   <del>// references a method or field called func_1234_a, if there are
- *   // multiple members with the same signature, matches the first occurrence
- *</del>   func_1234_a
- *   
- *   <del>// references a method or field called func_1234_a, if there are
- *   // multiple members with matching name, matches all occurrences</del>
- *   func_1234_a*
- *   
- *   <del>// references all methods which take 3 ints and return a bool</del>
- *   *(III)Z
- *   
- *   <del>// references a method called func_1234_a which takes 3 ints and
- *   // returns a bool</del>
- *   func_1234_a(III)Z
- *   
- *   <del>// references a field called field_5678_z which is a String</del>
- *   field_5678_z:Ljava/lang/String;
- *   
- *   <del>// references a ctor which takes a single String argument</del> 
- *   &lt;init&gt;(Ljava/lang/String;)V
- *   
- *   <del>// references a method called func_1234_a in class foo.bar.Baz</del>
- *   Lfoo/bar/Baz;func_1234_a
- *  
- *   <del>// references a field called field_5678_z in class com.example.Dave
- *</del>   Lcom/example/Dave;field_5678_z
- *  
- *   <del>// references a field called field_5678_z in class com.example.Dave
- *   // which is of type String</del>
- *   Lcom/example/Dave;field_5678_z:Ljava/lang/String;
- *  
- *   <del>// references a method called func_1234_a in class foo.bar.Baz which
- *   // takes three doubles and returns void</del>
- *   Lfoo/bar/Baz;func_1234_a(DDD)V
- *   
- *   <del>// alternate syntax for the same</del>
- *   foo.bar.Baz.func_1234_a(DDD)V</pre>
- * </blockquote>
+ * <p>In general a <tt>MemberInfo</tt> consists of 4 parts, <span class="ownr">
+ * owner</span>, <span class="name">name</span>, <span class="quan">quantifier
+ * </span> and <span class="desc">descriptor</span>, all of which are optional:
+ * </p>
+ * 
+ * <table class="selectorTable">
+ *   <thead>
+ *     <tr>
+ *       <th>&nbsp;</th>
+ *       <th class="ownr">Owner</th>
+ *       <th class="name">Name</th>
+ *       <th class="quan">Quantifier</th>
+ *       <th>&nbsp;</th>
+ *       <th class="desc">Descriptor</th>
+ *       <th>Resulting selector string</th>
+ *     </tr>
+ *   </thead>
+ *   <tbody>
+ *     <tr>
+ *       <td class="th">Method</td>
+ *       <td class="ownr">Lfully/qualified/OwnerClass;</td>
+ *       <td class="name">methodName</td>
+ *       <td class="quan">{1,3}</td>
+ *       <td>&nbsp;</td>
+ *       <td class="desc">(III)V</td>
+ *       <td><span class="ownr">Lfully/qualified/OwnerClass;</span><span
+ *          class="name">methodName</span><span class="quan">{1,3}</span><span
+ *          class="desc">(III)V</span></td>
+ *     </tr>
+ *     <tr>
+ *       <td class="th">Field</td>
+ *       <td class="ownr">Lfully/qualified/OwnerClass;</td>
+ *       <td class="name">fieldName</td>
+ *       <td class="quan">*</td>
+ *       <td>:</td>
+ *       <td class="desc">Ljava/lang/String;</td>
+ *       <td><span class="ownr">Lfully/qualified/OwnerClass;</span><span
+ *          class="name">fieldName</span><span class="quan">*</span>:<span
+ *          class="desc">Ljava/lang/String;</span></td>
+ *     </tr>
+ *   </tbody>
+ * </table>
+ * 
+ * <p>Any part of the selector can be omitted, though they must appear in the
+ * correct order. Some examples:</p>
+ * 
+ * <blockquote><code>
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with the same signature, matches the first occurrence<br /></del>
+ * <span class="name">func_1234_a</span><br />
+ * <br />
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with matching name, matches all occurrences</del><br />
+ * <span class="name">func_1234_a</span><span class="quan">*</span><br />
+ * <br />
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with matching name, matches all occurrences, matching less than 1
+ * <br />
+ * // occurrence is an error condition</del><br />
+ * <span class="name">func_1234_a</span><span class="quan">+</span><br />
+ * <br />
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with matching name, matches up to 3 occurrences</del><br />
+ * <span class="name">func_1234_a</span><span class="quan">{,3}</span><br />
+ * <br />
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with matching name, matches exactly 3 occurrences, matching fewer
+ * <br />
+ * // than 3 occurrences is an error condition</del><br />
+ * <span class="name">func_1234_a</span><span class="quan">{3}</span><br />
+ * <br />
+ * <del>// selects a method or field called func_1234_a, if there are multiple
+ * <br />
+ * // members with matching name, matches at least 3 occurrences, matching fewer
+ * <br />
+ * // than 3 occurrences is an error condition</del><br />
+ * <span class="name">func_1234_a</span><span class="quan">{3,}</span><br />
+ * <br />
+ * <del>// selects all members of any type and descriptor</del><br />
+ * <span class="quan">*</span><br />
+ * <br />
+ * <del>// selects the first member of any type and descriptor</del><br />
+ * <span class="quan">{1}</span><br />
+ * <br />
+ * <del>// selects all methods which take 3 ints and return a bool</del><br />
+ * <span class="quan">*</span><span class="desc">(III)Z</span><br />
+ * <br />
+ * <del>// selects the first 2 methods which take a bool and return void</del>
+ * <br />
+ * <span class="quan">{2}</span><span class="desc">(Z)V</span><br />
+ * <br />
+ * <del>// selects a method called func_1234_a which takes 3 ints and returns a
+ * bool</del><br />
+ * <span class="name">func_1234_a</span><span class="desc">(III)Z</span><br />
+ * <br />
+ * <del>// selects a field called field_5678_z which is a String</del><br />
+ * <span class="name">field_5678_z</span>:<span class="desc">Ljava/lang/String;
+ * </span><br />
+ * <br />
+ * <del>// selects a ctor which takes a single String argument</del><br /> 
+ * <span class="name">&lt;init&gt;</span><span
+ *      class="desc">(Ljava/lang/String;)V</span><br />
+ * <br />
+ * <del>// selects a method called func_1234_a in class foo.bar.Baz</del><br />
+ * <span class="ownr">Lfoo/bar/Baz;</span><span class="name">func_1234_a</span>
+ * <br />
+ * <br />
+ * <del>// selects a field called field_5678_z in class com.example.Dave</del>
+ * <br />
+ * <span class="ownr">Lcom/example/Dave;</span><span class="name">field_5678_z
+ * </span><br />
+ * <br />
+ * <del>// selects a field called field_5678_z in class com.example.Dave<br />
+ * // which is of type String</del><br />
+ * <span class="ownr">Lcom/example/Dave;</span><span
+ *      class="name">field_5678_z</span>:<span class="desc">Ljava/lang/String;
+ *      </span><br />
+ * <br />
+ * <del>// selects a method called func_1234_a in class foo.bar.Baz which<br />
+ * // takes three doubles and returns void</del><br />
+ * <span class="ownr">Lfoo/bar/Baz;</span><span
+ *      class="name">func_1234_a</span><span class="desc">(DDD)V</span><br />
+ * <br />
+ * <del>// alternate syntax for the same</del><br />
+ * <span class="ownr">foo.bar.Baz</span>.<span
+ *      class="name">func_1234_a</span><span class="desc">(DDD)V</span>
+ * </code></blockquote>
+ * 
+ * <h4>Notes</h4>
+ * 
+ * <ul>
+ *   <li>All whitespace in the selector string is stripped before the selector
+ *     is parsed.</li>
+ *   <li><span class="quan">Quantifiers</span> for selectors can be used as a
+ *     form of early validation (prior to injector <tt>require</tt> directives)
+ *     that an injection point has matched a required number of targets or to
+ *     limit the number of matches it can return.</li>
+ *   <li>The syntax for <span class="quan">quantifiers</span> is based on the 
+ *     syntax for <a href="https://www.regular-expressions.info/refrepeat.html"
+ *     target="_top">quantifiers in regular expressions</a>, though more
+ *     limited. In particular:
+ *     <ul>
+ *       <li><b>No quantifer</b> is equivalent to the regex <tt>?</tt>
+ *         quantifier, in that undecorated selectors can match <tt>{0,1}</tt>,
+ *         this is for backward compatibility reasons. Likewise <tt>?</tt> is
+ *         not supported since it's implied. To require exactly one match use
+ *         <tt>{1}</tt>.</li>
+ *       <li>The quantifiers <tt>*</tt> and <tt>+</tt> work the same as their
+ *         regex counterparts.</li>
+ *     </ul>
+ *   </li>
+ * </ul>
  */
 public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelectorConstructor {
     
@@ -114,9 +232,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     private final String desc;
     
     /**
-     * True to match all matching members, not just the first
+     * Required matches
      */
-    private final boolean matchAll;
+    private final Quantifier matches;
     
     /**
      * Force this member to report as a field
@@ -126,17 +244,27 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     /**
      * The actual String value passed into the {@link #parse} method 
      */
-    private final String unparsed;
+    private final String input;
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param matches Quantifier specifying the number of matches required
+     */
+    public MemberInfo(String name, Quantifier matches) {
+        this(name, null, null, matches, null);
+    }
 
     /**
      * ctor
      * 
      * @param name Member name, must not be null
-     * @param matchAll true if this info should match all matching references,
-     *      or only the first
+     * @param minMatches Min number of matches required
+     * @param maxMatches Max number of matches allowed
      */
-    public MemberInfo(String name, boolean matchAll) {
-        this(name, null, null, matchAll);
+    public MemberInfo(String name, int minMatches, int maxMatches) {
+        this(name, null, null, new Quantifier(minMatches, maxMatches), null);
     }
     
     /**
@@ -145,11 +273,23 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param name Member name, must not be null
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
-     * @param matchAll true if this info should match all matching references,
-     *      or only the first
+     * @param matches Quantifier specifying the number of matches required
      */
-    public MemberInfo(String name, String owner, boolean matchAll) {
-        this(name, owner, null, matchAll);
+    public MemberInfo(String name, String owner, Quantifier matches) {
+        this(name, owner, null, matches, null);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param minMatches Min number of matches required
+     * @param maxMatches Max number of matches allowed
+     */
+    public MemberInfo(String name, String owner, int minMatches, int maxMatches) {
+        this(name, owner, null, new Quantifier(minMatches, maxMatches), null);
     }
     
     /**
@@ -161,7 +301,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param desc Member descriptor, can be null
      */
     public MemberInfo(String name, String owner, String desc) {
-        this(name, owner, desc, false);
+        this(name, owner, desc, Quantifier.DEFAULT, null);
     }
     
     /**
@@ -171,10 +311,10 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
      * @param desc Member descriptor, can be null
-     * @param matchAll True to match all matching members, not just the first
+     * @param matches Quantifier specifying the number of matches required
      */
-    public MemberInfo(String name, String owner, String desc, boolean matchAll) {
-        this(name, owner, desc, matchAll, null);
+    public MemberInfo(String name, String owner, String desc, Quantifier matches) {
+        this(name, owner, desc, matches, null);
     }
     
     /**
@@ -184,9 +324,37 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param owner Member owner, can be null otherwise must be in internal form
      *      without L;
      * @param desc Member descriptor, can be null
-     * @param matchAll True to match all matching members, not just the first
+     * @param minMatches Min number of matches required
+     * @param maxMatches Max number of matches allowed
      */
-    public MemberInfo(String name, String owner, String desc, boolean matchAll, String unparsed) {
+    public MemberInfo(String name, String owner, String desc, int minMatches, int maxMatches) {
+        this(name, owner, desc, new Quantifier(minMatches, maxMatches), null);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param desc Member descriptor, can be null
+     * @param minMatches Min number of matches required
+     * @param maxMatches Max number of matches allowed
+     */
+    public MemberInfo(String name, String owner, String desc, int minMatches, int maxMatches, String input) {
+        this(name, owner, desc, new Quantifier(minMatches, maxMatches), input);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param desc Member descriptor, can be null
+     * @param matches Quantifier specifying the number of matches required
+     */
+    public MemberInfo(String name, String owner, String desc, Quantifier matches, String input) {
         if (owner != null && owner.contains(".")) {
             throw new IllegalArgumentException("Attempt to instance a MemberInfo with an invalid owner format");
         }
@@ -194,9 +362,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.owner = owner;
         this.name = name;
         this.desc = desc;
-        this.matchAll = matchAll;
+        this.matches = matches;
         this.forceField = false;
-        this.unparsed = unparsed;
+        this.input = input;
     }
     
     /**
@@ -206,9 +374,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param insn instruction node to copy values from
      */
     public MemberInfo(AbstractInsnNode insn) {
-        this.matchAll = false;
+        this.matches = Quantifier.DEFAULT;
         this.forceField = false;
-        this.unparsed = null;
+        this.input = null;
         
         if (insn instanceof MethodInsnNode) {
             MethodInsnNode methodNode = (MethodInsnNode) insn;
@@ -234,9 +402,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.owner = mapping.getOwner();
         this.name = mapping.getSimpleName();
         this.desc = mapping.getDesc();
-        this.matchAll = false;
+        this.matches = Quantifier.SINGLE;
         this.forceField = mapping.getType() == IMapping.Type.FIELD;
-        this.unparsed = null;
+        this.input = null;
     }
     
     /**
@@ -248,9 +416,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.owner = setOwner ? method.getOwner() : remapped.owner;
         this.name = method.getSimpleName();
         this.desc = method.getDesc();
-        this.matchAll = remapped.matchAll;
+        this.matches = remapped.matches;
         this.forceField = false;
-        this.unparsed = null;
+        this.input = null;
     }
 
     /**
@@ -263,9 +431,9 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.owner = owner;
         this.name = original.name;
         this.desc = original.desc;
-        this.matchAll = original.matchAll;
+        this.matches = original.matches;
         this.forceField = original.forceField;
-        this.unparsed = null;
+        this.input = null;
     }
     
     @Override
@@ -289,8 +457,13 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     }
     
     @Override
-    public int getMatchCount() {
-        return this.matchAll ? Integer.MAX_VALUE : 1;
+    public int getMinMatchCount() {
+        return this.matches.getClampedMin();
+    }
+    
+    @Override
+    public int getMaxMatchCount() {
+        return this.matches.getClampedMax();
     }
     
     /* (non-Javadoc)
@@ -300,12 +473,12 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     public String toString() {
         String owner = this.owner != null ? "L" + this.owner + ";" : "";
         String name = this.name != null ? this.name : "";
-        String qualifier = this.matchAll ? "*" : "";
+        String quantifier = this.matches.toString();
         String desc = this.desc != null ? this.desc : "";
         String separator = desc.startsWith("(") ? "" : (this.desc != null ? ":" : "");
-        return owner + name + qualifier + separator + desc;
+        return owner + name + quantifier + separator + desc;
     }
-    
+
     /**
      * Return this MemberInfo as an SRG mapping
      * 
@@ -342,7 +515,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      */
     @Override
     public String toCtorType() {
-        if (this.unparsed == null) {
+        if (this.input == null) {
             return null;
         }
         
@@ -359,7 +532,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
             return this.name;
         }
 
-        return this.desc != null ? this.desc : this.unparsed;
+        return this.desc != null ? this.desc : this.input;
     }
     
     /**
@@ -478,52 +651,60 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * 
      * @return fluent
      * 
-     * @throws InvalidMemberDescriptorException if any validation check fails
+     * @throws InvalidSelectorException if any validation check fails
      */
     @Override
-    public MemberInfo validate() throws InvalidMemberDescriptorException {
+    public MemberInfo validate() throws InvalidSelectorException {
+        // Parse emits a match count of 0 if the quantifier is incorrectly specified
+        if (this.getMaxMatchCount() == 0) {
+            throw new InvalidMemberDescriptorException(this.input, "Malformed quantifier in selector: " + this.input);
+        }
+        
         // Extremely naive class name validation, just to spot really egregious errors
         if (this.owner != null) {
             if (!this.owner.matches("(?i)^[\\w\\p{Sc}/]+$")) {
-                throw new InvalidMemberDescriptorException("Invalid owner: " + this.owner);
+                throw new InvalidMemberDescriptorException(this.input, "Invalid owner: " + this.owner);
             }
             // We can't detect this situation 100% reliably, but we can take a
             // decent stab at it in order to detect really obvious cases where
             // the user types a dot instead of a semicolon
-            if (this.unparsed != null && this.unparsed.lastIndexOf('.') > 0 && this.owner.startsWith("L")) {
-                throw new InvalidMemberDescriptorException("Malformed owner: " + this.owner + " If you are seeing this message unexpectedly and the"
-                        + " owner appears to be correct, replace the owner descriptor with formal type L" + this.owner + "; to suppress this error");
+            if (this.input != null && this.input.lastIndexOf('.') > 0 && this.owner.startsWith("L")) {
+                throw new InvalidMemberDescriptorException(this.input, "Malformed owner: " + this.owner + " If you are seeing this message"
+                        + "unexpectedly and the owner appears to be correct, replace the owner descriptor with formal type L" + this.owner
+                        + "; to suppress this error");
             }
         }
         
         // Also naive validation, we're looking for stupid errors here
         if (this.name != null && !this.name.matches("(?i)^<?[\\w\\p{Sc}]+>?$")) {
-            throw new InvalidMemberDescriptorException("Invalid name: " + this.name);
+            throw new InvalidMemberDescriptorException(this.input, "Invalid name: " + this.name);
         }
         
         if (this.desc != null) {
             if (!this.desc.matches("^(\\([\\w\\p{Sc}\\[/;]*\\))?\\[*[\\w\\p{Sc}/;]+$")) {
-                throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+                throw new InvalidMemberDescriptorException(this.input, "Invalid descriptor: " + this.desc);
             }
             if (this.isField()) {
                 if (!this.desc.equals(Type.getType(this.desc).getDescriptor())) {
-                    throw new InvalidMemberDescriptorException("Invalid field type in descriptor: " + this.desc);
+                    throw new InvalidMemberDescriptorException(this.input, "Invalid field type in descriptor: " + this.desc);
                 }
             } else {
                 try {
                     Type.getArgumentTypes(this.desc);
                 } catch (Exception ex) {
-                    throw new InvalidMemberDescriptorException("Invalid descriptor: " + this.desc);
+                    throw new InvalidMemberDescriptorException(this.input, "Invalid descriptor: " + this.desc);
                 }
     
                 String retString = this.desc.substring(this.desc.indexOf(')') + 1);
                 try {
                     Type retType = Type.getType(retString);
                     if (!retString.equals(retType.getDescriptor())) {
-                        throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                        throw new InvalidMemberDescriptorException(this.input, "Invalid return type \"" + retString + "\" in descriptor: "
+                                + this.desc);
                     }
                 } catch (Exception ex) {
-                    throw new InvalidMemberDescriptorException("Invalid return type \"" + retString + "\" in descriptor: " + this.desc);
+                    throw new InvalidMemberDescriptorException(this.input, "Invalid return type \"" + retString + "\" in descriptor: "
+                            + this.desc);
                 }
             }
         }
@@ -590,46 +771,68 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         }
         
         ITargetSelectorByName other = (ITargetSelectorByName)obj;
-        boolean otherForceField = other instanceof MemberInfo ? ((MemberInfo)other).forceField : other.isField();
-        boolean otherMatchAll = other.getMatchCount() == Integer.MAX_VALUE;
+        boolean otherForceField = other instanceof MemberInfo ? ((MemberInfo)other).forceField
+                : other instanceof ITargetSelectorRemappable ? ((ITargetSelectorRemappable)other).isField() : false;
         
-        return this.matchAll == otherMatchAll && this.forceField == otherForceField
+        return this.compareMatches(other) && this.forceField == otherForceField
                 && Objects.equal(this.owner, other.getOwner())
                 && Objects.equal(this.name, other.getName())
                 && Objects.equal(this.desc, other.getDesc());
     }
     
+    /**
+     * Compare local match count with match count of other selector
+     */
+    private boolean compareMatches(ITargetSelectorByName other) {
+        if (other instanceof MemberInfo) {
+            return ((MemberInfo)other).matches.equals(this.matches);
+        }
+        return this.getMinMatchCount() == other.getMinMatchCount() && this.getMaxMatchCount() == other.getMaxMatchCount();
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#hashCode()
      */
     @Override
     public int hashCode() {
-        return Objects.hashCode(this.matchAll, this.owner, this.name, this.desc);
+        return Objects.hashCode(this.matches, this.owner, this.name, this.desc);
     }
     
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #configure(java.lang.String[])
+     *      #mutate(java.lang.String[])
      */
     @Override
-    public ITargetSelector configure(String... args) {
-        ITargetSelectorRemappable configured = this;
-        for (String arg : args) {
-            if (arg == null) {
-                continue;
-            }
-            
-            if (arg.startsWith("move:")) {
-                configured = configured.move(Strings.emptyToNull(arg.substring(5)));
-            } else if (arg.startsWith("transform:")) {
-                configured = configured.transform(Strings.emptyToNull(arg.substring(10)));
-            } else if ("permissive".equals(arg)) {
-                configured = configured.transform(null);
-            } else if ("orphan".equals(arg)) {
-                configured = configured.move(null);
-            }
+    public ITargetSelector configure(Configure request, String... args) {
+        request.checkArgs(args);
+        switch (request) {
+            case SELECT_MEMBER:
+                if (this.matches.isDefault()) {
+                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.SINGLE);
+                }
+                break;
+            case SELECT_INSTRUCTION:
+                if (this.matches.isDefault()) {
+                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.ANY);
+                }
+                break;
+            case MOVE:
+                return this.move(Strings.emptyToNull(args[0]));
+            case ORPHAN:
+                return this.move(null);
+            case TRANSFORM:
+                return this.transform(Strings.emptyToNull(args[0]));
+            case PERMISSIVE:
+                return this.transform(null);
+            case CLEAR_LIMITS:
+                if (this.matches.getMin() != 0 || this.matches.getMax() < Integer.MAX_VALUE) {
+                    return new MemberInfo(this.name, this.owner, this.desc, 0, Integer.MAX_VALUE);
+                }
+                break;
+            default:
+                break;
         }
-        return configured;
+        return this;
     }
     
     /* (non-Javadoc)
@@ -667,7 +870,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         if ((newDesc == null && this.desc == null) || (newDesc != null && newDesc.equals(this.desc))) {
             return this;
         }
-        return new MemberInfo(this.name, this.owner, newDesc, this.matchAll); 
+        return new MemberInfo(this.name, this.owner, newDesc, this.matches); 
     }
     
     /**
@@ -689,7 +892,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param context Selector context for this parse request
      * @return parsed MemberInfo
      */
-    public static MemberInfo parse(String input, ISelectorContext context) {
+    public static MemberInfo parse(final String input, final ISelectorContext context) {
         String desc = null;
         String owner = null;
         String name = Strings.nullToEmpty(input).replaceAll("\\s", "");
@@ -723,16 +926,40 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
             name = "";
         }
         
-        boolean matchAll = name.endsWith("*");
-        if (matchAll) {
+        // Use default quantifier with negative max value. Used to indicate that
+        // an explicit quantifier was not parsed from the selector string, this
+        // allows us to provide backward-compatible behaviour for injection
+        // points vs. selecting target members which have different default
+        // semantics when omitting the quantifier. This is handled by consumers
+        // calling configure() with SELECT_MEMBER or SELECT_INSTRUCTION to
+        // promote the default case to a concrete case.
+        Quantifier quantifier = Quantifier.DEFAULT;
+        if (name.endsWith("*")) {
+            quantifier = Quantifier.ANY;
             name = name.substring(0, name.length() - 1);
+        } else if (name.endsWith("+")) {
+            quantifier = Quantifier.PLUS;
+            name = name.substring(0, name.length() - 1);
+        } else if (name.endsWith("}")) {
+            quantifier = Quantifier.NONE; // Assume invalid until quantifier is parsed
+            int bracePos = name.indexOf("{");
+            if (bracePos >= 0) {
+                try {
+                    quantifier = Quantifier.parse(name.substring(bracePos, name.length()));
+                    name = name.substring(0, bracePos);
+                } catch (Exception ex) {
+                    // Handled later in validate since matchCount will be 0
+                }
+            }
+        } else if (name.indexOf("{") >= 0) {
+            quantifier = Quantifier.NONE; // Probably incomplete quantifier
         }
         
         if (name.isEmpty()) {
             name = null;
         }
         
-        return new MemberInfo(name, owner, desc, matchAll, input);
+        return new MemberInfo(name, owner, desc, quantifier, input);
     }
 
     /**

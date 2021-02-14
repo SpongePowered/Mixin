@@ -54,8 +54,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
-import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
+import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.struct.MemberRef;
@@ -1194,9 +1194,9 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             activity.end();
         } catch (InjectionValidationException ex) {
             InjectorGroupInfo group = ex.getGroup();
-            throw new InjectionError(
+            throw new InvalidInjectionException(group.getMembers().iterator().next().getMixin(),
                 String.format("Critical injection failure: Callback group %s in %s failed injection check: %s",
-                group, this.mixin, ex.getMessage()));
+                group, this.mixin, ex.getMessage()), ex);
         } catch (InvalidMixinException ex) {
             ex.prepend(this.activities);
             throw ex;

@@ -28,6 +28,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector.Configure;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector.Result;
@@ -102,7 +103,8 @@ class InvokerInfo extends AccessorInfo {
     }
 
     private MethodNode findTargetMethod() {
-        Result<MethodNode> result = TargetSelector.<MethodNode>run(this.target.configure("orphan"), ElementNode.methodList(this.classNode));
+        Result<MethodNode> result = TargetSelector.<MethodNode>run(this.target.configure(Configure.ORPHAN),
+                ElementNode.methodList(this.classNode));
 
         try {
             return result.getSingleResult(true);

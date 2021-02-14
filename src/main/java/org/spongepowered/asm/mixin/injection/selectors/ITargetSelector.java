@@ -25,6 +25,8 @@
 package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.spongepowered.asm.mixin.injection.Desc;
+import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.util.asm.ElementNode;
 
@@ -40,6 +42,11 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * {@link MemberInfo} structs, see the javadoc for {@link MemberInfo} for the
  * supported variants and examples.</p>
  * 
+ * <blockquote><code>
+ * <del>// An example explicit target selector</del><br />
+ * Lfully/qualified/OwnerClass;methodName*(III)V
+ * </code></blockquote>
+ * 
  * <h3>Pattern Target Selectors (Regex Selectors)</h3>
  * 
  * <p><b>Pattern</b> Target Selectors are handled internally using
@@ -47,26 +54,48 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * supported variants and examples. Pattern Selectors always end with a forward
  * slash character.</p>
  * 
+ * <blockquote><code>
+ * <del>// Matches candidates ending with "Bar" and which take a single int
+ * <br /></del>
+ * /bar$/ desc=/^\\(I\\)/<br />
+ * <br />
+ * <del>// The same example but with "name" explicitly specified (optional)
+ * <br /></del>
+ * name=/bar$/ desc=/^\\(I\\)/<br />
+ * <br />
+ * <del>// Matches candidates whose name contains "Entity"</del><br />
+ * /Entity/
+ * </code></blockquote>
+ * 
  * <h3>Dynamic Target Selectors</h3>
  * 
  * <p><b>Dynamic</b> Target Selectors can be built-in or user-supplied types
- * with their own specialised syntax or behaviour. Dynamic selectors are
- * specified in the following format, and can be recognised by the fact that
- * the selector string starts with "<tt>&#064;</tt>":</p>
+ * with their own specialised syntax or behaviour.</p>
+ * 
+ * <h4>Built-in dynamic selectors:</h4>
+ * 
+ * <ul>
+ *   <li>{@link DynamicSelectorDesc &#64;Desc Selector}: Selector which uses
+ *     descriptors defined in {@link Desc &#64;Desc} annotations</li>
+ * </ul>
+ *  
+ * <p>Dynamic selectors are specified in the following format, and can be
+ * recognised by the fact that the selector string starts with "<tt>&#64;</tt>":
+ * </p>
  * 
  * <blockquote><pre>
- *   <del>// Built-in dynamic selector without argument string</del>
- *   &#064;SelectorId
+ * <del>// Built-in dynamic selector without argument string</del>
+ * &#064;SelectorId
  *   
- *   <del>// Built-in dynamic selector with empty argument string</del>
- *   &#064;SelectorId()
+ * <del>// Built-in dynamic selector with empty argument string</del>
+ * &#064;SelectorId()
  *   
- *   <del>// Built-in dynamic selector with argument</del>
- *   &#064;SelectorId(custom,argument,string,in,any,format)
+ * <del>// Built-in dynamic selector with argument</del>
+ * &#064;SelectorId(custom,argument,string,in,any,format)
  *   
- *   <del>// User-provided dynamic selector with argument. Note that
- *   // user-provided dynamic selectors are namespaced to avoid conflicts.</del>
- *   &#064;Namespace:SelectorId(some arguments)</pre>
+ * <del>// User-provided dynamic selector with argument. Note that
+ * // user-provided dynamic selectors are namespaced to avoid conflicts.</del>
+ * &#064;Namespace:SelectorId(some arguments)</pre>
  * </blockquote>
  * 
  * <p>The exact format of the argument string is specified by the dynamic
@@ -75,6 +104,67 @@ import org.spongepowered.asm.util.asm.ElementNode;
  * 
  */
 public interface ITargetSelector {
+    
+    /**
+     * Available selector reconfigurations
+     */
+    public enum Configure {
+        
+        /**
+         * Configure this selector for matching members in a class. Usually used
+         * to set defaults for match limits based on role. 
+         */
+        SELECT_MEMBER(0),
+        
+        /**
+         * Configure this selector for matching field and method instructions in
+         * a method body. Usually used to set defaults for match limits. 
+         */
+        SELECT_INSTRUCTION(0),
+        
+        /**
+         * Where supported, changes the owner selection to the specified value.
+         */
+        MOVE(1),
+        
+        /**
+         * Where supported, changes the owner selection to match all owners,
+         * retaining other properties.
+         */
+        ORPHAN(0),
+        
+        /**
+         * Where supported, changes the descriptor to the specified value.
+         */
+        TRANSFORM(1),
+        
+        /**
+         * Where supported, changes the descriptor to match all target
+         * descriptors, retaining other properties
+         */
+        PERMISSIVE(0),
+        
+        /**
+         * Where supported, removes the min and max limits for the selector,
+         * allowing it to return as many or as few matches as required.
+         */
+        CLEAR_LIMITS(0);
+        
+        private int requiredArgs;
+
+        private Configure(int requiredArgs) {
+            this.requiredArgs = requiredArgs;
+        }
+        
+        public void checkArgs(String... args) throws IllegalArgumentException {
+            int argc = args == null ? 0 : args.length;
+            if (argc < this.requiredArgs) {
+                throw new IllegalArgumentException("Insufficient arguments for " + this.name() + " mutation. Required " + this.requiredArgs
+                        + " but received " + argc);
+            }
+        }
+        
+    }
     
     /**
      * Get the next target selector in this path (or <tt>null</tt> if this
@@ -90,19 +180,22 @@ public interface ITargetSelector {
      * supplied arguments. Results from this method should be idempotent in
      * terms of the configuration of the returned object, but do not have to
      * necessarily return the same object if the callee already matches the
-     * supplied configuration, though this is generally the case.
+     * supplied configuration, or if the requested mutation is not supported by
+     * the selector, though this is generally the case.
      * 
-     * <p>In other words, calling <tt>configure("foo")</tt> when this object is
-     * <i>already</i> configured according to "foo" may simply return this
-     * object, or might return an identically-configured copy.</p>
+     * <p>In other words, calling <tt>configure(Configure.ORPHAN)</tt> when this
+     * object is <i>already</i> an orphan or does not support orphaning, may
+     * simply return this object, or might return an identically-configured
+     * copy.</p>
      * 
-     * <p>Must not return null</p>
+     * <p>Must not return null, defaults to returning unmodified selector.</p>
      * 
+     * @param request Requested operation
      * @param args Configuration arguments
      * @return Configured selector, may return this selector if the specified
      *      condition is already satisfied
      */
-    public abstract ITargetSelector configure(String... args);
+    public abstract ITargetSelector configure(Configure request, String... args);
     
     /**
      * Perform basic sanity-check validation of the selector, checks that the
@@ -126,9 +219,14 @@ public interface ITargetSelector {
     public abstract ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException;
     
     /**
-     * Number of candidates which this selector should match
+     * Minimum number of candidates this selector must match 
      */
-    public abstract int getMatchCount();
+    public abstract int getMinMatchCount();
+    
+    /**
+     * Maximum number of candidates this selector can match
+     */
+    public abstract int getMaxMatchCount();
     
     /**
      * Test whether this selector matches the supplied element node

@@ -1009,23 +1009,23 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
             if (this.isVirtual()) {
                 this.logger.debug("Skipping virtual target {} for {}", target.name, this);
             } else {
-                this.handleTargetError(String.format("@Mixin target %s was not found %s", target.name, this));
+                this.handleTargetError(String.format("@Mixin target %s was not found %s", target.name, this), false);
             }
             return null;
         }
         this.type.validateTarget(target.name, targetInfo);
         if (target.isPrivate && targetInfo.isPublic() && !this.isVirtual()) {
-            this.handleTargetError(String.format("@Mixin target %s is public in %s and should be specified in value", target.name, this));
+            this.handleTargetError(String.format("@Mixin target %s is public in %s and should be specified in value", target.name, this), true);
         }
         return targetInfo;
     }
 
-    private void handleTargetError(String message) {
+    private void handleTargetError(String message, boolean verboseOnly) {
         if (this.strict) {
             this.logger.error(message);
             throw new InvalidMixinException(this, message);
         }
-        this.logger.warn(message);
+        this.logger.log(verboseOnly && !this.parent.isVerboseLogging() ? Level.DEBUG : Level.WARN, message);
     }
 
     /**

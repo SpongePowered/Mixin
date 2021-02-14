@@ -58,6 +58,7 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionExceptio
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.struct.AnnotatedMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.IMessageSink;
 
@@ -720,7 +721,7 @@ public abstract class InjectionPoint {
         if (ipClass == null) {
             if (type.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
                 try {
-                    ipClass = (Class<? extends InjectionPoint>)Class.forName(type);
+                    ipClass = (Class<? extends InjectionPoint>)MixinService.getService().getClassProvider().findClass(type);
                     InjectionPoint.types.put(type, ipClass);
                 } catch (Exception ex) {
                     throw new InvalidInjectionException(context, data + " could not be loaded or is not a valid InjectionPoint", ex);

@@ -72,7 +72,7 @@ table.infoTable {
     border-collapse: collapse;
 }
 
-table.infoTable td, table.infoTable th, table.cellTable td, table.cellTable th {
+table.infoTable td, table.infoTable th, table.cellTable td, table.cellTable th, table.selectorTable td, table.selectorTable th {
     padding: 6px 8px;
     background-color: #F0F0F0;
 }
@@ -81,10 +81,43 @@ table.cellTable th, table.cellTable td {
     text-align: center;
 }
 
-table.infoTable th, table.cellTable th, table.infoTable td.th, table.cellTable td.th {
+table.infoTable th, table.cellTable th, table.infoTable td.th, table.cellTable td.th, table.selectorTable th, table.selectorTable td.th {
     background-color: #CCC;
     font-weight: bold;
 }
+
+table.selectorTable tbody td, table.selectorTable thead th {
+    border-left: 6px solid #FFF;
+}
+    
+table.selectorTable tbody td {
+    font-family: 'Consolas', monospace;
+}
+
+table.selectorTable th, table.selectorTable td.th {
+    background: transparent;
+    font-family: inherit;
+}
+
+table.selectorTable thead th.ownr { background-color: #CFC }
+table.selectorTable thead th.name { background-color: #CCF }
+table.selectorTable thead th.quan { background-color: #FFC }
+table.selectorTable thead th.desc { background-color: #FCC }
+
+table.selectorTable tbody td.ownr { background-color: #F0FFF0 }
+table.selectorTable tbody td.name { background-color: #F0F0FF }
+table.selectorTable tbody td.quan { background-color: #FFFFF0 }
+table.selectorTable tbody td.desc { background-color: #FFF0F0 }
+
+span.aownr { background-color: #DFD }
+span.aname { background-color: #DDF }
+span.aquan { background-color: #FFD }
+span.adesc { background-color: #FDD }
+
+span.ownr {color: #090 }
+span.name {color: #009 }
+span.quan {color: #990 }
+span.desc {color: #900 }
 
 a[name] {
     color: #353833;

@@ -1000,6 +1000,17 @@ public final class Bytecode {
     }
     
     /**
+     * Set the visibility of the specified class, leaving other access flags
+     * unchanged
+     * 
+     * @param classNode class to change
+     * @param visibility new visibility
+     */
+    public static void setVisibility(ClassNode classNode, Visibility visibility) {
+        classNode.access = Bytecode.setVisibility(classNode.access, visibility.access);
+    }
+    
+    /**
      * Set the visibility of the specified member, leaving other access flags
      * unchanged
      * 
@@ -1019,6 +1030,17 @@ public final class Bytecode {
      */
     public static void setVisibility(FieldNode field, Visibility visibility) {
         field.access = Bytecode.setVisibility(field.access, visibility.access);
+    }
+    
+    /**
+     * Set the visibility of the specified class, leaving other access flags
+     * unchanged
+     * 
+     * @param classNode class to change
+     * @param access new visibility
+     */
+    public static void setVisibility(ClassNode classNode, int access) {
+        classNode.access = Bytecode.setVisibility(classNode.access, access);
     }
     
     /**

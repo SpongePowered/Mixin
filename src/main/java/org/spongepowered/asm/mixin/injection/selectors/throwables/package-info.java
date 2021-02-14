@@ -22,36 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.selectors.dynamic;
-
-import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
-import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
-import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic;
-import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 
 /**
- * Base class for dynamic selectors, just to reduce some boilerplate
+ * Exceptions for selectors.
  */
-public abstract class DynamicSelectorAbstract implements ITargetSelectorDynamic {
-
-    @Override
-    public ITargetSelector configure(String... args) {
-        return this;
-    }
-
-    @Override
-    public ITargetSelector validate() throws InvalidSelectorException {
-        return this;
-    }
-
-    @Override
-    public ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException {
-        return this;
-    }
-
-    @Override
-    public int getMatchCount() {
-        return Integer.MAX_VALUE;
-    }
-
-}
+package org.spongepowered.asm.mixin.injection.selectors.throwables;

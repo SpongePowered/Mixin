@@ -39,6 +39,7 @@ import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.PrettyPrinter;
+import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.asm.IAnnotatedElement;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
@@ -64,19 +65,19 @@ public final class DescriptorResolver {
         private final Set<String> searched;
         
         /**
-         * Selector context
-         */
-        private final ISelectorContext context;
-        
-        /**
          * The resolved descriptor
          */
         private final IAnnotationHandle desc;
+        
+        /**
+         * Selector context
+         */
+        private final ISelectorContext context;
 
-        Descriptor(Set<String> searched, ISelectorContext context, IAnnotationHandle desc) {
+        Descriptor(Set<String> searched, IAnnotationHandle desc, ISelectorContext context) {
             this.searched = searched;
-            this.context = context;
             this.desc = desc;
+            this.context = context;
         }
         
         /**
@@ -119,7 +120,7 @@ public final class DescriptorResolver {
             if (this.desc == null) {
                 return Type.VOID_TYPE;
             }
-            Type ownerClass = this.desc.<Type>getValue("owner", Type.VOID_TYPE);
+            Type ownerClass = this.desc.getTypeValue("owner");
             return ownerClass == Type.VOID_TYPE ? Type.getObjectType(this.context.getMixin().getTargetClassRef()) : ownerClass;
         }
 
@@ -149,7 +150,18 @@ public final class DescriptorResolver {
             if (this.desc == null) {
                 return Type.VOID_TYPE;
             }
-            return this.desc.<Type>getValue("ret", Type.VOID_TYPE);
+            return this.desc.getTypeValue("ret");
+        }
+        
+        @Override
+        public Quantifier getMatches() {
+            if (this.desc == null) {
+                return Quantifier.DEFAULT;
+            }
+            
+            int min = Math.max(0, this.desc != null ? this.desc.<Integer>getValue("min", 0) : 0);
+            Integer max = this.desc != null ? this.desc.<Integer>getValue("max", null) : null;
+            return new Quantifier(min, max != null ? (max > 0 ? max : Integer.MAX_VALUE) : -1);
         }
         
     }
@@ -244,8 +256,8 @@ public final class DescriptorResolver {
     private DescriptorResolver() {
     }
     
-    public static IResolvedDescriptor resolve(ISelectorContext context, IAnnotationHandle desc) {
-        return new Descriptor(Collections.emptySet(), context, desc);
+    public static IResolvedDescriptor resolve(IAnnotationHandle desc, ISelectorContext context) {
+        return new Descriptor(Collections.emptySet(), desc, context);
     }
 
     /**
@@ -268,14 +280,13 @@ public final class DescriptorResolver {
         
         IAnnotationHandle desc = DescriptorResolver.resolve(id, context, observer, context.getSelectorCoordinate(true));
         observer.postResolve();
-        return new Descriptor(observer.getSearched(), context, desc);
+        return new Descriptor(observer.getSearched(), desc, context);
     }
     
     /**
      * Recursive function which checks an element and then recurses to parent
      */
     private static IAnnotationHandle resolve(String id, ISelectorContext context, IResolverObserver observer, String coordinate) {
-        
         IAnnotationHandle annotation = Annotations.handleOf(context.getSelectorAnnotation());
         observer.visit(coordinate, annotation, annotation.toString() + ".desc");
         
@@ -293,7 +304,8 @@ public final class DescriptorResolver {
 
         ISelectorContext root = DescriptorResolver.getRoot(context);
         String rootCoordinate = root.getSelectorCoordinate(false);
-        String mixinCoordinate = root != context && !rootCoordinate.equals(coordinate) ? rootCoordinate + "." + coordinate : coordinate;
+        String mixinCoordinate = (root != context || !coordinate.contains(".")) && !rootCoordinate.equals(coordinate)
+                ? rootCoordinate + "." + coordinate : coordinate;
 
         // Next check with the current coordinates on the mixin
         resolved = DescriptorResolver.resolve(id, context, observer, mixinCoordinate, context.getMixin(), "mixin");
@@ -386,7 +398,8 @@ public final class DescriptorResolver {
         } else if (element instanceof MixinTargetContext) {
             return Annotations.handleOf(Annotations.getVisible(((MixinTargetContext)element).getClassNode(), annotationClass));
         } else if (element instanceof IAnnotatedElement) {
-            return ((IAnnotatedElement)element).getAnnotation(annotationClass);
+            IAnnotationHandle annotation = ((IAnnotatedElement)element).getAnnotation(annotationClass);
+            return annotation != null && annotation.exists() ? annotation : null;
         } else if (element == null) {
             return null;
         }

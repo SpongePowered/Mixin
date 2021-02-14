@@ -143,6 +143,11 @@ abstract class AnnotatedMixinElementHandler {
                 public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
                     return AnnotationHandle.of(AnnotatedElementExecutable.this.getElement(), annotationClass);
                 }
+                
+                @Override
+                public String toString() {
+                    return AnnotatedElementExecutable.this.getElement().getSimpleName().toString();
+                }
             };
         }
         
@@ -159,6 +164,11 @@ abstract class AnnotatedMixinElementHandler {
         @Override
         public String remap(String reference) {
             return reference;
+        }
+        
+        @Override
+        public String toString() {
+            return TypeUtils.getName(this.element);
         }
         
     }
@@ -545,12 +555,12 @@ abstract class AnnotatedMixinElementHandler {
      * Checks whether the referenced method exists in all targets and raises
      * warnings where appropriate
      */
-    protected final void validateReferencedTarget(ExecutableElement method, AnnotationHandle inject, ITargetSelector reference, String type) {
-        if (!(reference instanceof ITargetSelectorByName)) {
+    protected final void validateReferencedTarget(AnnotatedElementExecutable elem, String reference, ITargetSelector targetSelector, String subject) {
+        if (!(targetSelector instanceof ITargetSelectorByName)) {
             return;
         }
         
-        ITargetSelectorByName nameRef = (ITargetSelectorByName)reference;
+        ITargetSelectorByName nameRef = (ITargetSelectorByName)targetSelector;
         String signature = nameRef.toDescriptor();
         
         for (TypeHandle target : this.mixin.getTargets()) {
@@ -560,8 +570,8 @@ abstract class AnnotatedMixinElementHandler {
             
             MethodHandle targetMethod = target.findMethod(nameRef.getName(), signature);
             if (targetMethod == null) {
-                this.ap.printMessage(Kind.WARNING, "Cannot find target method for " + type + " in " + target, method, inject.asMirror(),
-                        SuppressedBy.TARGET);
+                this.ap.printMessage(Kind.WARNING, "Cannot find target method \"" + nameRef.getName() + nameRef.getDesc() + "\" for " + subject
+                        + " in " + target, elem.getElement(), elem.getAnnotation().asMirror(), SuppressedBy.TARGET);
             }
         }            
     }

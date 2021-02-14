@@ -121,7 +121,7 @@ public final class MemberMatcher implements ITargetSelector {
      * @param context selector context
      * @return parsed MemberMatcher
      */
-    public static MemberMatcher parse(String input, ISelectorContext context) {
+    public static MemberMatcher parse(final String input, ISelectorContext context) {
         Matcher matcher = MemberMatcher.PATTERN.matcher(input);
         Pattern[] patterns = new Pattern[3];
         Exception parseException = null;
@@ -173,6 +173,11 @@ public final class MemberMatcher implements ITargetSelector {
         return this;
     }
     
+    @Override
+    public String toString() {
+        return this.input;
+    }
+    
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
      *      #next()
@@ -187,7 +192,8 @@ public final class MemberMatcher implements ITargetSelector {
      *      #configure(java.lang.String[])
      */
     @Override
-    public ITargetSelector configure(String... args) {
+    public ITargetSelector configure(Configure request, String... args) {
+        request.checkArgs(args);
         return this;
     }
 
@@ -200,13 +206,22 @@ public final class MemberMatcher implements ITargetSelector {
     public ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException {
         return this;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #getMinMatchCount()
+     */
+    @Override
+    public int getMinMatchCount() {
+        return 0;
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #getMatchCount()
+     *      #getMaxMatchCount()
      */
     @Override
-    public int getMatchCount() {
+    public int getMaxMatchCount() {
         return Integer.MAX_VALUE;
     }
 

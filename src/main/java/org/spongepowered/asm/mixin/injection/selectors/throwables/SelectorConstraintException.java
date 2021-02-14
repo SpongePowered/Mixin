@@ -22,35 +22,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection.selectors.throwables;
 
-import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 
 /**
- * Thrown when a {@link MemberInfo} fails basic syntax validation
+ * Exception to be thrown when a {@link ITargetSelector target selector} 
+ * {@link ITargetSelector#getMinMatchCount min} or
+ * {@link ITargetSelector#getMaxMatchCount max} constraint is not met when
+ * running the selector 
  */
-public class InvalidMemberDescriptorException extends InvalidSelectorException {
+public class SelectorConstraintException extends SelectorException {
 
     private static final long serialVersionUID = 1L;
-    private final String input;
-
-    public InvalidMemberDescriptorException(String input, String message) {
-        super(message);
-        this.input = input;
-    }
-
-    public InvalidMemberDescriptorException(String input, Throwable cause) {
-        super(cause);
-        this.input = input;
-    }
-
-    public InvalidMemberDescriptorException(String input, String message, Throwable cause) {
-        super(message, cause);
-        this.input = input;
-    }
     
-    public String getInput() {
-        return this.input;
+    public SelectorConstraintException(ITargetSelector selector, String message) {
+        super(selector, message);
+    }
+
+    public SelectorConstraintException(ITargetSelector selector, Throwable cause) {
+        super(selector, cause);
+    }
+
+    public SelectorConstraintException(ITargetSelector selector, String message, Throwable cause) {
+        super(selector, message, cause);
     }
 
 }

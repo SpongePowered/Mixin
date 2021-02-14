@@ -22,35 +22,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.struct;
+package org.spongepowered.asm.mixin.injection.selectors.throwables;
 
-import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 
 /**
- * Thrown when a {@link MemberInfo} fails basic syntax validation
+ * Exception to be thrown for error conditions raised by {@link ITargetSelector
+ * target selectors}
  */
-public class InvalidMemberDescriptorException extends InvalidSelectorException {
+public class SelectorException extends MixinException {
 
     private static final long serialVersionUID = 1L;
-    private final String input;
-
-    public InvalidMemberDescriptorException(String input, String message) {
-        super(message);
-        this.input = input;
-    }
-
-    public InvalidMemberDescriptorException(String input, Throwable cause) {
-        super(cause);
-        this.input = input;
-    }
-
-    public InvalidMemberDescriptorException(String input, String message, Throwable cause) {
-        super(message, cause);
-        this.input = input;
-    }
     
-    public String getInput() {
-        return this.input;
+    private final ITargetSelector selector;
+
+    public SelectorException(ITargetSelector selector, String message) {
+        super(message);
+        this.selector = selector;
+    }
+
+    public SelectorException(ITargetSelector selector, Throwable cause) {
+        super(cause);
+        this.selector = selector;
+    }
+
+    public SelectorException(ITargetSelector selector, String message, Throwable cause) {
+        super(message, cause);
+        this.selector = selector;
+    }
+
+    public ITargetSelector getSelector() {
+        return this.selector;
     }
 
 }

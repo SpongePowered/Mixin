@@ -288,7 +288,7 @@ public class InjectionPointData {
                 if (desc != null) {
                     String id = Annotations.<String>getValue(desc, "id", "at");
                     if ("at".equalsIgnoreCase(id)) {
-                        return DynamicSelectorDesc.of(this.context, Annotations.handleOf(desc));
+                        return DynamicSelectorDesc.of(Annotations.handleOf(desc), this.context);
                     }
                 }
             }

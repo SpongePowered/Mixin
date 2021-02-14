@@ -27,10 +27,21 @@ package org.spongepowered.asm.mixin.injection.selectors;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.util.asm.ElementNode;
 
+/**
+ * Since the contract of {@link TargetSelector#parse} prohibits returing <tt>
+ * null</tt>, instances of this selector are returned when supplied arguments
+ * are unparseable in order to throw exceptions only during validation.
+ */
 public class InvalidSelector implements ITargetSelector {
     
+    /**
+     * The original input string, used in error messages
+     */
     private String input;
     
+    /**
+     * The cause of the parser failure, emitted from {@link #validate}
+     */
     private Throwable cause;
     
     public InvalidSelector(Throwable cause) {
@@ -45,17 +56,37 @@ public class InvalidSelector implements ITargetSelector {
         this.input = input;
         this.cause = cause;
     }
+    
+    @Override
+    public String toString() {
+        if (this.cause != null) {
+            return String.format("%s: %s", this.cause.getClass().getName(), this.cause.getMessage());
+        }
+        return this.input;
+    }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #next()
+     */
     @Override
     public ITargetSelector next() {
         return null;
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #configure(ITargetSelector.Configure, java.lang.String[])
+     */
     @Override
-    public ITargetSelector configure(String... args) {
+    public ITargetSelector configure(Configure request, String... args) {
         return this;
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #validate()
+     */
     @Override
     public ITargetSelector validate() throws InvalidSelectorException {
         if (this.cause instanceof InvalidSelectorException) {
@@ -71,22 +102,47 @@ public class InvalidSelector implements ITargetSelector {
         throw new InvalidSelectorException(message);
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #attach(ISelectorContext)
+     */
     @Override
     public ITargetSelector attach(ISelectorContext context) throws InvalidSelectorException {
         return this;
     }
-
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #getMinMatchCount()
+     */
     @Override
-    public int getMatchCount() {
+    public int getMinMatchCount() {
         return 0;
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #getMaxMatchCount()
+     */
+    @Override
+    public int getMaxMatchCount() {
+        return 0;
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #match(org.spongepowered.asm.util.asm.ElementNode)
+     */
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
         this.validate();
         return MatchResult.NONE;
     }
 
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
+     *      #match(org.objectweb.asm.tree.AbstractInsnNode)
+     */
     @Override
     public MatchResult match(AbstractInsnNode insn) {
         this.validate();

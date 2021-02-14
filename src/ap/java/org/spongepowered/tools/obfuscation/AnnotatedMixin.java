@@ -384,7 +384,6 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     }
 
     public void registerInjector(ExecutableElement method, AnnotationHandle inject, InjectorRemap remap) {
-        System.err.printf(">>> %s\n", method);
         this.methods.remove(method);
         AnnotatedElementInjector injectorElement = new AnnotatedElementInjector(method, inject, this, remap);
         this.injectors.registerInjector(injectorElement);

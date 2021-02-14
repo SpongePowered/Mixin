@@ -24,26 +24,34 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.tools.Diagnostic.Kind;
 
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AnnotationNode;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic.SelectorAnnotation;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorDynamic.SelectorId;
 import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
-import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
+import org.spongepowered.asm.mixin.injection.selectors.throwables.SelectorConstraintException;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.throwables.MixinError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
+import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.asm.ElementNode;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
 import com.google.common.base.Strings;
@@ -111,20 +119,42 @@ public final class TargetSelector {
         
         final Class<? extends ITargetSelectorDynamic> type;
         
-        final Method parse;
-
+        final Class<? extends Annotation> annotation;
+        
+        final Method mdParseString, mdParseAnnotation;
+        
         DynamicSelectorEntry(String namespace, String id, Class<? extends ITargetSelectorDynamic> type) throws NoSuchMethodException {
             this.namespace = namespace;
             this.id = id;
             this.type = type;
-            this.parse = type.getDeclaredMethod("parse", String.class, ISelectorContext.class);
-            if (!Modifier.isStatic(this.parse.getModifiers())) {
+            this.mdParseString = type.getDeclaredMethod("parse", String.class, ISelectorContext.class);
+            if (!Modifier.isStatic(this.mdParseString.getModifiers())) {
                 throw new MixinError("parse method for dynamic target selector [" + this.type.getName() + "] must be static");
             }
-            if (!ITargetSelectorDynamic.class.isAssignableFrom(this.parse.getReturnType())) {
-                throw new MixinError("parse method for dynamic target selector [" + this.type.getName()
+            if (!ITargetSelectorDynamic.class.isAssignableFrom(this.mdParseString.getReturnType())) {
+                throw new MixinError("parse(String) method for dynamic target selector [" + this.type.getName()
                         + "] must return an ITargetSelectorDynamic subtype");
             }
+            
+            Class<? extends Annotation> annotation = null;
+            Method mdParseAnnotation = null;
+
+            SelectorAnnotation selectorAnnotation = type.<SelectorAnnotation>getAnnotation(SelectorAnnotation.class);
+            if (selectorAnnotation != null) {
+                annotation = selectorAnnotation.value();
+                mdParseAnnotation = type.getDeclaredMethod("parse", IAnnotationHandle.class, ISelectorContext.class);
+                
+                if (!Modifier.isStatic(mdParseAnnotation.getModifiers())) {
+                    throw new MixinError("parse method for dynamic target selector [" + this.type.getName() + "] must be static");
+                }
+                if (!ITargetSelectorDynamic.class.isAssignableFrom(mdParseAnnotation.getReturnType())) {
+                    throw new MixinError("parse(Annotation) method for dynamic target selector [" + this.type.getName()
+                            + "] must return an ITargetSelectorDynamic subtype");
+                }
+            }
+
+            this.annotation = annotation;
+            this.mdParseAnnotation = mdParseAnnotation;
         }
         
         String getCode() {
@@ -132,8 +162,16 @@ public final class TargetSelector {
         }
         
         ITargetSelectorDynamic parse(String input, ISelectorContext context) throws ReflectiveOperationException {
+            return this.parse(input, context, this.mdParseString);
+        }
+        
+        ITargetSelectorDynamic parse(IAnnotationHandle input, ISelectorContext context) throws ReflectiveOperationException {
+            return this.parse(input, context, this.mdParseAnnotation);
+        }
+        
+        ITargetSelectorDynamic parse(Object input, ISelectorContext context, Method parseMethod) throws ReflectiveOperationException {
             try {
-                return (ITargetSelectorDynamic)this.parse.invoke(null, input, context);
+                return (ITargetSelectorDynamic)parseMethod.invoke(null, input, context);
             } catch (InvocationTargetException itex) {
                 Throwable cause = itex.getCause();
                 if (cause instanceof MixinException) {
@@ -235,14 +273,114 @@ public final class TargetSelector {
     }
     
     /**
+     * Parse a target selector from the supplied annotation and perform
+     * validation
+     * 
+     * @param annotation Annotation to parse target selector from
+     * @param context Context to use for reference mapping
+     * @return parsed target selector
+     */
+    public static ITargetSelector parseAndValidate(IAnnotationHandle annotation, ISelectorContext context) throws InvalidSelectorException {
+        return TargetSelector.parse(annotation, context).validate();
+    }
+    
+    /**
      * Parse a target selector from a string and perform validation
      * 
      * @param string String to parse target selector from
      * @param context Context to use for reference mapping
      * @return parsed target selector
      */
-    public static ITargetSelector parseAndValidate(String string, ISelectorContext context) throws InvalidMemberDescriptorException {
+    public static ITargetSelector parseAndValidate(String string, ISelectorContext context) throws InvalidSelectorException {
         return TargetSelector.parse(string, context).validate();
+    }
+    
+    /**
+     * Parse a collection of target selector representations (strings,
+     * annotations, class literals) into selectors.
+     * 
+     * @param selectors Selectors to parse
+     * @param context Selection context
+     * @return parsed collection of selectors, uses LinkedHashSet to preserve
+     *      parse ordering
+     */
+    public static Set<ITargetSelector> parseAndValidate(Iterable<?> selectors, ISelectorContext context) throws InvalidSelectorException {
+        Set<ITargetSelector> parsed = TargetSelector.parse(selectors, context, new LinkedHashSet<ITargetSelector>());
+        for (ITargetSelector selector : parsed) {
+            selector.validate();
+        }
+        return parsed;
+    }
+    
+    /**
+     * Parse a collection of target selector representations (strings,
+     * annotations, class literals) into selectors.
+     * 
+     * @param selectors Selectors to parse
+     * @param context Selection context
+     * @return parsed collection of selectors, uses LinkedHashSet to preserve
+     *      parse ordering
+     */
+    public static Set<ITargetSelector> parse(Iterable<?> selectors, ISelectorContext context) {
+        return TargetSelector.parse(selectors, context, new LinkedHashSet<ITargetSelector>());
+    }
+    
+    /**
+     * Parse a collection of target selector representations (strings,
+     * annotations, class literals) into selectors and store them in the
+     * provided collection.
+     * 
+     * @param selectors Selectors to parse
+     * @param context Selection context
+     * @param parsed Collection to add parsed selectors to, initialised as a
+     *      LinkedHashSet if null
+     * @return the same collection passed in via the <tt>parsed</tt> parameter,
+     *      for convenience
+     */
+    public static Set<ITargetSelector> parse(Iterable<?> selectors, ISelectorContext context, Set<ITargetSelector> parsed) {
+        if (parsed == null) {
+            parsed = new LinkedHashSet<ITargetSelector>();
+        }
+        if (selectors != null) {
+            for (Object selector : selectors) {
+                if (selector instanceof IAnnotationHandle) {
+                    parsed.add(TargetSelector.parse((IAnnotationHandle)selector, context));
+                } else if (selector instanceof AnnotationNode) {
+                    parsed.add(TargetSelector.parse(Annotations.handleOf(selector), context));
+                } else if (selector instanceof String) {
+                    parsed.add(TargetSelector.parse((String)selector, context));
+                } else if (selector instanceof Class) {
+                    String desc = Type.getType((Class<?>)selector).getDescriptor();
+                    parsed.add(TargetSelector.parse(desc, context));
+                } else if (selector != null) {
+                    parsed.add(TargetSelector.parse(selector.toString(), context));
+                }
+            }
+        }
+        return parsed;
+    }
+    
+    /**
+     * Parse a target selector from the supplied annotation
+     * 
+     * @param annotation String to parse target selector from
+     * @param context Context to use for reference mapping
+     * @return parsed target selector
+     */
+    public static ITargetSelector parse(IAnnotationHandle annotation, ISelectorContext context) {
+        for (DynamicSelectorEntry entry : TargetSelector.dynamicSelectors.values()) {
+            if (entry.annotation != null && Annotations.getDesc(entry.annotation).equals(annotation.getDesc())) {
+                try {
+                    return entry.parse(annotation, context);
+                } catch (ReflectiveOperationException ex) {
+                    return new InvalidSelector(ex.getCause());
+                } catch (Exception ex) {
+                    return new InvalidSelector(ex);
+                }
+            }
+        }
+        
+        return new InvalidSelector(new InvalidSelectorException("Dynamic selector for annotation " + annotation + " is not registered."));
     }
     
     /**
@@ -313,30 +451,30 @@ public final class TargetSelector {
     /**
      * Run query on supplied target nodes
      * 
-     * @param target Target selector
+     * @param selector Target selector
      * @param nodes Node collection to enumerate
      * @param <TNode> Node type
      * @return query result
      */
-    public static <TNode> Result<TNode> run(ITargetSelector target, List<ElementNode<TNode>> nodes) {
+    public static <TNode> Result<TNode> run(ITargetSelector selector, List<ElementNode<TNode>> nodes) {
         List<TNode> candidates = new ArrayList<TNode>();
-        TNode exactMatch = TargetSelector.runSelector(target, nodes, candidates);
+        TNode exactMatch = TargetSelector.runSelector(selector, nodes, candidates);
         return new Result<TNode>(exactMatch, candidates);
     }
     
     /**
      * Run query on supplied target nodes
      * 
-     * @param targets Target selector
+     * @param selector Target selector
      * @param nodes Node collection to enumerate
      * @param <TNode> Node type
      * @return query result
      */
-    public static <TNode> Result<TNode> run(Iterable<ITargetSelector> targets, List<ElementNode<TNode>> nodes) {
+    public static <TNode> Result<TNode> run(Iterable<ITargetSelector> selector, List<ElementNode<TNode>> nodes) {
         TNode exactMatch = null;
         List<TNode> candidates = new ArrayList<TNode>();
         
-        for (ITargetSelector target : targets) {
+        for (ITargetSelector target : selector) {
             TNode selectorExactMatch = TargetSelector.runSelector(target, nodes, candidates);
             if (exactMatch == null) {
                 exactMatch = selectorExactMatch;
@@ -346,11 +484,16 @@ public final class TargetSelector {
         return new Result<TNode>(exactMatch, candidates);
     }
 
-    private static <TNode> TNode runSelector(ITargetSelector target, List<ElementNode<TNode>> nodes, List<TNode> candidates) {
+    private static <TNode> TNode runSelector(ITargetSelector selector, List<ElementNode<TNode>> nodes, List<TNode> candidates) {
+        int matchCount = 0;
         TNode exactMatch = null;
         for (ElementNode<TNode> element : nodes) {
-            MatchResult match = target.match(element);
+            MatchResult match = selector.match(element);
             if (match.isMatch()) {
+                matchCount++;
+                if (matchCount > selector.getMaxMatchCount()) {
+                    break;
+                }
                 TNode node = element.get();
                 if (!candidates.contains(node)) {
                     candidates.add(node);
@@ -360,6 +503,12 @@ public final class TargetSelector {
                 }
             }
         }
+        
+        if (matchCount < selector.getMinMatchCount()) {
+            throw new SelectorConstraintException(selector, String.format("%s did not match the required number of targets (required=%d, matched=%d)",
+                    selector, selector.getMinMatchCount(), matchCount));
+        }
+
         return exactMatch;
     }
 

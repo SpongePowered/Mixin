@@ -620,12 +620,13 @@ public abstract class Injector {
      * @param exceptionType Type of exception to throw (binary name)
      * @param message Message to pass to the exception constructor
      */
-    protected void throwException(InsnList insns, String exceptionType, String message) {
+    protected void throwException(InsnList insns, Extension extraStack, String exceptionType, String message) {
         insns.add(new TypeInsnNode(Opcodes.NEW, exceptionType));
         insns.add(new InsnNode(Opcodes.DUP));
         insns.add(new LdcInsnNode(message));
         insns.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, exceptionType, "<init>", "(Ljava/lang/String;)V", false));
         insns.add(new InsnNode(Opcodes.ATHROW));
+        extraStack.add(3);
     }
     
     /**

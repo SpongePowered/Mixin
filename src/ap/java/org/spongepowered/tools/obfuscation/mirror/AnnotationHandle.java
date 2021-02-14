@@ -80,6 +80,7 @@ public final class AnnotationHandle implements IAnnotationHandle {
      * 
      * @return true if the annotation exists
      */
+    @Override
     public boolean exists() {
         return this.annotation != null;
     }
@@ -237,6 +238,12 @@ public final class AnnotationHandle implements IAnnotationHandle {
             annotations.add(new AnnotationHandle((AnnotationMirror)value.getValue()));
         }
         return Collections.<IAnnotationHandle>unmodifiableList(annotations);
+    }
+    
+    @Override
+    public Type getTypeValue(String key) {
+        TypeMirror typeMirror = this.<TypeMirror>getValue(key);
+        return typeMirror == null ? Type.VOID_TYPE : Type.getType(TypeUtils.getInternalName(typeMirror));
     }
     
     @Override

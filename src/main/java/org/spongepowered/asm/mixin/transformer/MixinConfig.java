@@ -1034,6 +1034,13 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public Level getLoggingLevel() {
         return this.verboseLogging ? Level.INFO : Level.DEBUG;
     }
+    
+    /**
+     * Get whether verbose logging is enabled
+     */
+    public boolean isVerboseLogging() {
+        return this.verboseLogging;
+    }
 
     /**
      * Get whether this config's package matches the supplied class name

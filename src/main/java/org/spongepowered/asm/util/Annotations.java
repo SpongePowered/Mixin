@@ -55,7 +55,7 @@ import com.google.common.collect.Lists;
 public final class Annotations {
     
     /**
-     * Wrapper for AnnotationNode to support access via IAnnotationHandle
+     * Wrapper for {@link AnnotationNode} to support access via common interface
      */
     public static class Handle implements IAnnotationHandle {
         
@@ -66,13 +66,18 @@ public final class Annotations {
             this.annotation = annotation;
         }
         
+        @Override
+        public boolean exists() {
+            return true;
+        }
+        
         public AnnotationNode getNode() {
             return this.annotation;
         }
         
         @Override
         public String getDesc() {
-            return this.annotation.desc;
+            return Type.getType(this.annotation.desc).getInternalName();
         }
 
         @Override
@@ -85,6 +90,11 @@ public final class Annotations {
                 }
             }
             return list;
+        }
+        
+        @Override
+        public Type getTypeValue(String key) {
+            return this.<Type>getValue(key, Type.VOID_TYPE);
         }
         
         @Override
@@ -159,6 +169,16 @@ public final class Annotations {
         } else {
             throw new IllegalArgumentException("Unsupported annotation type: " + annotation.getClass().getName());
         }
+    }
+    
+    /**
+     * Returns the bytecode descriptor of an annotation
+     * 
+     * @param annotationType annotation
+     * @return annotation's descriptor
+     */
+    public static String getDesc(Class<? extends Annotation> annotationType) {
+        return Type.getType(annotationType).getInternalName();
     }
 
     /**

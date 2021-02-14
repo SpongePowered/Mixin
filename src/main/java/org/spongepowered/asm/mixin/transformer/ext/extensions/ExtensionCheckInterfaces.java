@@ -86,13 +86,29 @@ public class ExtensionCheckInterfaces implements IExtension {
      * Strict mode 
      */
     private boolean strict;
+    
+    /**
+     * True once the output dir and csv have been created, not triggered until
+     * something is written
+     */
+    private boolean started = false;
 
     public ExtensionCheckInterfaces() {
         File debugOutputFolder = new File(Constants.DEBUG_OUTPUT_DIR, ExtensionCheckInterfaces.AUDIT_DIR);
-        debugOutputFolder.mkdirs();
         this.csv = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_CSV_FILENAME);
         this.report = new File(debugOutputFolder, ExtensionCheckInterfaces.IMPL_REPORT_TXT_FILENAME);
+    }
+    
+    /**
+     * Delayed creation of CSV so the dir doesn't get created when the extension
+     * is inactive
+     */
+    private void start() {
+        if (this.started) {
+            return;
+        }
         
+        this.started = true;
         this.csv.getParentFile().mkdirs();
 
         try {
@@ -137,6 +153,8 @@ public class ExtensionCheckInterfaces implements IExtension {
      */
     @Override
     public void postApply(ITargetClassContext context) {
+        this.start();
+
         ClassInfo targetClassInfo = context.getClassInfo();
         
         // If the target is abstract and strict mode is not enabled, skip this class

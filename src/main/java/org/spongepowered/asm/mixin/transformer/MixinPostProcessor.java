@@ -48,6 +48,7 @@ import org.spongepowered.asm.mixin.transformer.meta.MixinProxy;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 
 /**
  * Performs post-processing tasks required for certain classes which pass
@@ -169,6 +170,11 @@ class MixinPostProcessor implements MixinConfig.IListener {
         boolean transformed = false;
         MixinClassNode mixinClassNode = mixin.getClassNode(0);
         ClassInfo targetClass = mixin.getTargets().get(0);
+        
+        if (!Bytecode.hasFlag(mixinClassNode, Opcodes.ACC_PUBLIC)) {
+            Bytecode.setVisibility(mixinClassNode, Visibility.PUBLIC);
+            transformed = true;
+        }
         
         for (MixinMethodNode methodNode : mixinClassNode.mixinMethods) {
             if (!Bytecode.hasFlag(methodNode, Opcodes.ACC_STATIC)) {

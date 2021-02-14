@@ -774,7 +774,7 @@ public class RedirectInjector extends InvokeInjector {
         LabelNode nullCheckSucceeded = new LabelNode();
         insns.add(new InsnNode(Opcodes.DUP));
         insns.add(new JumpInsnNode(Opcodes.IFNONNULL, nullCheckSucceeded));
-        this.throwException(insns, RedirectInjector.NPE, String.format("%s %s %s returned null for %s",
+        this.throwException(insns, extraStack, RedirectInjector.NPE, String.format("%s %s %s returned null for %s",
                 this.annotationType, type, this, value));
         insns.add(nullCheckSucceeded);
         extraStack.add();

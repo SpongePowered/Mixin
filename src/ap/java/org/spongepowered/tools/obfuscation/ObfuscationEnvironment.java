@@ -37,7 +37,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.ObfuscationUtil;
@@ -281,7 +280,7 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
             }
         }
         
-        return transformed ? new MemberInfo(method.getName(), owner, desc, method.getMatchCount() > 1) : null; 
+        return transformed ? method.move(owner).transform(desc) : null; 
     }
     
     /**

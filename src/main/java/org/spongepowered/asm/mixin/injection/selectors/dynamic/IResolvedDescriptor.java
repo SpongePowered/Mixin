@@ -25,6 +25,7 @@
 package org.spongepowered.asm.mixin.injection.selectors.dynamic;
 
 import org.objectweb.asm.Type;
+import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 /**
@@ -77,5 +78,10 @@ public interface IResolvedDescriptor {
      * if the descriptor was not resolved.
      */
     public abstract Type getReturnType();
+    
+    /**
+     * Get the specified matches values from the resolved descriptor.
+     */
+    public abstract Quantifier getMatches();
 
 }
