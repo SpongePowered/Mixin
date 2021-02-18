@@ -37,14 +37,12 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
 
-import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.struct.SelectorAnnotationContext;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
@@ -475,11 +473,6 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         throw new UnsupportedOperationException("Priority not available at compile time");
     }
 
-    @Override
-    public Target getTargetMethod(MethodNode into) {
-        throw new UnsupportedOperationException("Target not available at compile time");
-    }
-    
     @Override
     public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
         return AnnotationHandle.of(this.mixin, annotationClass);

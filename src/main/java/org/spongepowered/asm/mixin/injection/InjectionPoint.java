@@ -100,7 +100,8 @@ public abstract class InjectionPoint {
         /**
          * Namespace for this code. Final selectors will be specified as
          * <tt>&lt;namespace&gt;:&lt;code&gt;</tt> in order to avoid overlaps
-         * between consumer-provided injection points.
+         * between consumer-provided injection points. Uses namespace from
+         * parent config if not specified.
          */
         public String namespace() default "";
         
@@ -719,7 +720,7 @@ public abstract class InjectionPoint {
         String type = data.getType();
         Class<? extends InjectionPoint> ipClass = InjectionPoint.types.get(type.toUpperCase(Locale.ROOT));
         if (ipClass == null) {
-            if (type.matches("^([A-Za-z_][A-Za-z0-9_]*\\.)+[A-Za-z_][A-Za-z0-9_]*$")) {
+            if (type.matches("^([A-Za-z_][A-Za-z0-9_]*[\\.\\$])+[A-Za-z_][A-Za-z0-9_]*$")) {
                 try {
                     ipClass = (Class<? extends InjectionPoint>)MixinService.getService().getClassProvider().findClass(type);
                     InjectionPoint.types.put(type, ipClass);

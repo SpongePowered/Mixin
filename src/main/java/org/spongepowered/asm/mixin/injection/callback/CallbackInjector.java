@@ -34,13 +34,14 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.spongepowered.asm.mixin.injection.Coerce;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
-import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Annotations;
@@ -53,7 +54,8 @@ import org.spongepowered.asm.util.SignaturePrinter;
 import com.google.common.base.Strings;
 
 /**
- * This class is responsible for generating the bytecode for injected callbacks
+ * This class is responsible for generating the bytecode for injected callbacks,
+ * for details of usage see {@link Inject &#64;Inject}.
  */
 public class CallbackInjector extends Injector {
     

@@ -24,10 +24,8 @@
  */
 package org.spongepowered.asm.mixin.refmap;
 
-import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 
 /**
@@ -86,15 +84,5 @@ public interface IMixinContext {
      * Get the priority of the mixin
      */
     public abstract int getPriority();
-
-    /**
-     * Obtain a {@link Target} method handle for a method in the target, this is
-     * used by consumers to manipulate the bytecode in a target method in a
-     * controlled manner.
-     * 
-     * @param method method node to wrap
-     * @return target method
-     */
-    public abstract Target getTargetMethod(MethodNode method);
 
 }

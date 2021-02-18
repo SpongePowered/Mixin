@@ -36,6 +36,7 @@ import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.util.InsnFinder;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -49,7 +50,8 @@ import org.spongepowered.asm.util.SignaturePrinter;
 
 /**
  * A bytecode injector which allows a specific constant value to be identified
- * and replaced with a callback
+ * and replaced with a callback. For details see javadoc for
+ * {@link ModifyConstant &#64;ModifyConstant}.
  */
 public class ModifyConstantInjector extends RedirectInjector {
     

@@ -1146,12 +1146,53 @@ public final class ClassInfo {
     /**
      * Test whether this class has the specified superclass in its hierarchy
      *
+     * @param superClass Superclass to search for in the hierarchy
+     * @return true if the specified class appears in the class's hierarchy
+     *      anywhere
+     */
+    public boolean hasSuperClass(Class<?> superClass) {
+        return this.hasSuperClass(superClass, Traversal.NONE, superClass.isInterface());
+    }
+
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     *
+     * @param superClass Superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @return true if the specified class appears in the class's hierarchy
+     *      anywhere
+     */
+    public boolean hasSuperClass(Class<?> superClass, Traversal traversal) {
+        return this.hasSuperClass(superClass, traversal, superClass.isInterface());
+    }
+    
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     *
+     * @param superClass Superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @param includeInterfaces True to include interfaces in the lookup
+     * @return true if the specified class appears in the class's hierarchy
+     *      anywhere
+     */
+    public boolean hasSuperClass(Class<?> superClass, Traversal traversal, boolean includeInterfaces) {
+        String internalName = org.objectweb.asm.Type.getInternalName(superClass);
+        if (ClassInfo.JAVA_LANG_OBJECT.equals(internalName)) {
+            return true;
+        }
+        
+        return this.findSuperClass(internalName, traversal) != null;
+    }
+
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     *
      * @param superClass Name of the superclass to search for in the hierarchy
      * @return true if the specified class appears in the class's hierarchy
      *      anywhere
      */
     public boolean hasSuperClass(String superClass) {
-        return this.hasSuperClass(superClass, Traversal.NONE);
+        return this.hasSuperClass(superClass, Traversal.NONE, false);
     }
 
     /**
@@ -1163,10 +1204,23 @@ public final class ClassInfo {
      *      anywhere
      */
     public boolean hasSuperClass(String superClass, Traversal traversal) {
+        return this.hasSuperClass(superClass, traversal, false);
+    }
+    
+    /**
+     * Test whether this class has the specified superclass in its hierarchy
+     *
+     * @param superClass Name of the superclass to search for in the hierarchy
+     * @param traversal Traversal type to allow during this lookup
+     * @param includeInterfaces True to include interfaces in the lookup
+     * @return true if the specified class appears in the class's hierarchy
+     *      anywhere
+     */
+    public boolean hasSuperClass(String superClass, Traversal traversal, boolean includeInterfaces) {
         if (ClassInfo.JAVA_LANG_OBJECT.equals(superClass)) {
             return true;
         }
-
+        
         return this.findSuperClass(superClass, traversal) != null;
     }
 

@@ -31,17 +31,18 @@ import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
+import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
-import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
  * A bytecode injector which allows a single argument of a chosen method call to
- * be altered.
+ * be altered. For details see javadoc for {@link ModifyArgs &#64;ModifyArgs}.
  */
 public class ModifyArgsInjector extends InvokeInjector {
 

@@ -557,7 +557,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         int passes = this.mixin.getOption(Option.REFMAP_REMAP) ? 2 : 1;
         
         for (ITargetSelector selector : selectors) {
-            selector = selector.configure(Configure.SELECT_MEMBER, null);
+            selector = selector.configure(Configure.SELECT_MEMBER);
             
             int matchCount = 0;
             int maxCount = selector.getMaxMatchCount();

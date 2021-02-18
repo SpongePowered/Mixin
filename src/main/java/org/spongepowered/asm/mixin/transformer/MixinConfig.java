@@ -555,7 +555,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             Class<?> injectionPointClass = this.findExtensionClass(className, InjectionPoint.class, "injection point");
             if (injectionPointClass != null) {
                 try {
-                    injectionPointClass.getDeclaredMethod("find", String.class, InsnList.class, Collection.class);
+                    injectionPointClass.getMethod("find", String.class, InsnList.class, Collection.class);
                 } catch (NoSuchMethodException cnfe) {
                     this.logger.error("Unable to register injection point {} for {}, the class is not compatible with this version of Mixin",
                             className, this, cnfe);

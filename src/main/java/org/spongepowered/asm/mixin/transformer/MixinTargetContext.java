@@ -972,7 +972,6 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param method method to get a target handle for
      * @return new or existing target handle for the supplied method
      */
-    @Override
     public Target getTargetMethod(MethodNode method) {
         return this.getTarget().getTargetMethod(method);
     }

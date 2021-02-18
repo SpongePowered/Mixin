@@ -58,7 +58,10 @@ import com.google.common.primitives.Ints;
  * method. For method redirects, the handler method signature must match the
  * hooked method precisely <b>but</b> prepended with an arg of the owning
  * object's type to accept the object instance the method was going to be
- * invoked upon. For example when hooking the following call:</p>
+ * invoked upon. For more details see the javadoc for the {@link Redirect
+ * &#64;Redirect} annotation.</p>
+ * 
+ * <p>For example when hooking the following call:</p>
  * 
  * <blockquote><pre>
  *   int abc = 0;
@@ -79,8 +82,8 @@ import com.google.common.primitives.Ints;
  * methods it is sufficient that the signature simply match the hooked method.
  * </p> 
  * 
- * <p>For field redirections, see the details in {@link Redirect} for the
- * required signature of the handler method.</p>
+ * <p>For field redirections, see the details in {@link Redirect &#64;Redirect}
+ * for the required signature of the handler method.</p>
  * 
  * <p>For constructor redirections, the signature of the handler method should
  * match the constructor itself, return type should be of the type of object

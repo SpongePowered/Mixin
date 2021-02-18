@@ -427,7 +427,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
                         || inner.name.startsWith(this.validationClassNode.name + "$")) {
                     if (innerClass.isProbablyStatic() && innerClass.isSynthetic()) {
                         this.syntheticInnerClasses.add(inner.name);
-                    } else {
+                    } else if (!innerClass.isMixin()) {
                         this.innerClasses.add(inner.name);
                     }
                 }
