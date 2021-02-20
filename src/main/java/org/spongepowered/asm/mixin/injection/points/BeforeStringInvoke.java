@@ -122,7 +122,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
         if (insn instanceof LdcInsnNode) {
             LdcInsnNode node = (LdcInsnNode) insn;
             if (node.cst instanceof String && this.ldcValue.equals(node.cst)) {
-                this.log("{} > found a matching LDC with value {}", this.className, node.cst);
+                this.log("{}->{} > found a matching LDC with value {}", this.context, this.className, node.cst);
                 this.foundLdc = true;
                 return;
             }
@@ -133,7 +133,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
 
     @Override
     protected boolean matchesOrdinal(int ordinal) {
-        this.log("{} > > found LDC \"{}\" = {}", this.className, this.ldcValue, this.foundLdc);
+        this.log("{}->{} > > found LDC \"{}\" = {}", this.context, this.className, this.ldcValue, this.foundLdc);
         return this.foundLdc && super.matchesOrdinal(ordinal);
     }
 }

@@ -198,7 +198,7 @@ public class BeforeInvoke extends InjectionPoint {
 
                 if (target.match(insn).isExactMatch()) {
                     this.log("{}->{} > found a matching insn, checking preconditions...", this.context, this.className);
-                    if (++matchCount > selector.getMaxMatchCount()) {
+                    if (++matchCount > target.getMaxMatchCount()) {
                         break;
                     }
                     
@@ -222,9 +222,9 @@ public class BeforeInvoke extends InjectionPoint {
                     + "To inhibit permissive search set mixin.env.allowPermissiveMatch=false", this.className, selector, this.mixin, found);
         }
         
-        if (matchCount < selector.getMinMatchCount()) {
-            throw new SelectorConstraintException(selector, String.format("%s did not match the required number of targets (required=%d, matched=%d)",
-                    selector, selector.getMinMatchCount(), matchCount));
+        if (matchCount < target.getMinMatchCount()) {
+            throw new SelectorConstraintException(target, String.format("%s did not match the required number of targets (required=%d, matched=%d)",
+                    target, selector.getMinMatchCount(), matchCount));
         }
 
         return found > 0;
