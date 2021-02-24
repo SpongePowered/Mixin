@@ -26,7 +26,9 @@ package org.spongepowered.asm.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -50,6 +52,7 @@ public abstract class MixinServiceAbstract implements IMixinService {
     // Consts
     protected static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
     protected static final String MIXIN_PACKAGE = "org.spongepowered.asm.mixin.";
+    protected static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
 
     /**
      * Logger 
@@ -61,6 +64,11 @@ public abstract class MixinServiceAbstract implements IMixinService {
      * the metadata service
      */
     protected final ReEntranceLock lock = new ReEntranceLock(1);
+    
+    /**
+     * All internals offered to this service
+     */
+    private final Map<Class<IMixinInternal>, IMixinInternal> internals = new HashMap<Class<IMixinInternal>, IMixinInternal>();
     
     /**
      * Service agent instances 
@@ -104,6 +112,46 @@ public abstract class MixinServiceAbstract implements IMixinService {
     public CompatibilityLevel getMaxCompatibilityLevel() {
         return null;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService
+     *      #offer(org.spongepowered.asm.service.IMixinInternal)
+     */
+    @Override
+    public void offer(IMixinInternal internal) {
+        this.registerInternal(internal, internal.getClass());
+    }
+    
+    @SuppressWarnings("unchecked")
+    private void registerInternal(IMixinInternal internal, Class<?> clazz) {
+        for (Class<?> iface : clazz.getInterfaces()) {
+            if (iface == IMixinInternal.class) {
+                this.internals.put((Class<IMixinInternal>)clazz, internal);
+            }
+            this.registerInternal(internal, iface);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final <T extends IMixinInternal> T getInternal(Class<T> type) {
+        for (Class<IMixinInternal> internalType : this.internals.keySet()) {
+            if (type.isAssignableFrom(internalType)) {
+                return (T)this.internals.get(internalType);
+            }
+        }
+        
+        return null;
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.service.IMixinService#init()
+     */
+    @Override
+    public void init() {
+        for (IMixinPlatformServiceAgent agent : this.getServiceAgents()) {
+            agent.init();
+        }
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#beginPhase()
@@ -118,16 +166,6 @@ public abstract class MixinServiceAbstract implements IMixinService {
      */
     @Override
     public void checkEnv(Object bootSource) {
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IMixinService#init()
-     */
-    @Override
-    public void init() {
-        for (IMixinPlatformServiceAgent agent : this.getServiceAgents()) {
-            agent.init();
-        }
     }
 
     /* (non-Javadoc)

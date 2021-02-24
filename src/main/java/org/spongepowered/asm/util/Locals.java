@@ -454,7 +454,8 @@ public final class Locals {
                     String desc = lastKnownType[j];
                     Type localType = local.getType();
                     if (localType != null) {
-                        desc = "null".equals(localType.getInternalName()) ? Constants.OBJECT_DESC : localType.getDescriptor();
+                        desc = localType.getSort() >= Type.ARRAY && "null".equals(localType.getInternalName())
+                                ? Constants.OBJECT_DESC : localType.getDescriptor();
                     }
                     
                     localNodes[j] = new LocalVariableNode("var" + j, desc, null, label, null, j);

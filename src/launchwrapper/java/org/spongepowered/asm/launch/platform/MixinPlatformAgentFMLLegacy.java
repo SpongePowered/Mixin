@@ -140,11 +140,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
 
     @Override
     public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
-        try {
-            this.clCoreModManager = MixinPlatformAgentFMLLegacy.getCoreModManagerClass();
-        } catch (ClassNotFoundException ex) {
-            MixinPlatformAgentAbstract.logger.info("FML platform manager could not load class {}. Proceeding without FML support.",
-                    ex.getMessage());
+        if (this.getCoreModManagerClass() == null) {
             return AcceptResult.INVALID;
         }
         
@@ -298,30 +294,6 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
     public void prepare() {
         this.initInjectionState |= MixinPlatformAgentFMLLegacy.isTweakerQueued(MixinPlatformAgentFMLLegacy.FML_TWEAKER_INJECTION);
     }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.launch.IMixinPlatformAgent
-     *      #initPrimaryContainer()
-     */
-    @Override
-    public void initPrimaryContainer() {
-        if (this.clCoreModManager != null) {
-//            MixinEnvironment.registerPhaseProvider(MixinPlatformAgentFMLLegacy.class.getName() + "$PhaseProvider");
-            this.injectRemapper();
-        }
-    }
-
-    private void injectRemapper() {
-        try {
-            MixinPlatformAgentAbstract.logger.debug("Creating FML remapper adapter: {}", MixinPlatformAgentFMLLegacy.FML_REMAPPER_ADAPTER_CLASS);
-            Class<?> clFmlRemapperAdapter = Class.forName(MixinPlatformAgentFMLLegacy.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
-            Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
-            IRemapper remapper = (IRemapper)mdCreate.invoke(null);
-            MixinEnvironment.getDefaultEnvironment().getRemappers().add(remapper);
-        } catch (Exception ex) {
-            MixinPlatformAgentAbstract.logger.debug("Failed instancing FML remapper adapter, things will probably go horribly for notch-obf'd mods!");
-        }
-    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.launch.platform.IMixinPlatformAgent#inject()
@@ -358,6 +330,30 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
     }
 
     /**
+     * Attempt to get the FML CoreModManager, tries the post-1.8 namespace first
+     * and falls back to 1.7.10 if class lookup fails
+     */
+    private Class<?> getCoreModManagerClass() {
+        if (this.clCoreModManager != null) {
+            return this.clCoreModManager;
+        }
+        
+        try {
+            try {
+                this.clCoreModManager = Class.forName(GlobalProperties.getString(
+                        GlobalProperties.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFMLLegacy.CORE_MOD_MANAGER_CLASS));
+            } catch (ClassNotFoundException ex) {
+                this.clCoreModManager = Class.forName(MixinPlatformAgentFMLLegacy.CORE_MOD_MANAGER_CLASS_LEGACY);
+            }
+        } catch (ClassNotFoundException ex) {
+            MixinPlatformAgentAbstract.logger.info("FML platform manager could not load class {}. Proceeding without FML support.",
+                    ex.getMessage());
+        }
+        
+        return this.clCoreModManager;
+    }
+
+    /**
      * Check whether a tweaker ending with <tt>tweakName</tt> has been enqueued
      * but not yet visited.
      * 
@@ -371,19 +367,6 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
             }
         }
         return false;
-    }
-
-    /**
-     * Attempt to get the FML CoreModManager, tries the post-1.8 namespace first
-     * and falls back to 1.7.10 if class lookup fails
-     */
-    private static Class<?> getCoreModManagerClass() throws ClassNotFoundException {
-        try {
-            return Class.forName(GlobalProperties.getString(
-                    GlobalProperties.Keys.FML_CORE_MOD_MANAGER, MixinPlatformAgentFMLLegacy.CORE_MOD_MANAGER_CLASS));
-        } catch (ClassNotFoundException ex) {
-            return Class.forName(MixinPlatformAgentFMLLegacy.CORE_MOD_MANAGER_CLASS_LEGACY);
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -412,7 +395,22 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
      */
     @Override
     public void init() {
-        // Nothing to do here
+        if (this.getCoreModManagerClass() != null) {
+//          MixinEnvironment.registerPhaseProvider(MixinPlatformAgentFMLLegacy.class.getName() + "$PhaseProvider");
+          this.injectRemapper();
+      }
+    }
+
+    private void injectRemapper() {
+        try {
+            MixinPlatformAgentAbstract.logger.debug("Creating FML remapper adapter: {}", MixinPlatformAgentFMLLegacy.FML_REMAPPER_ADAPTER_CLASS);
+            Class<?> clFmlRemapperAdapter = Class.forName(MixinPlatformAgentFMLLegacy.FML_REMAPPER_ADAPTER_CLASS, true, Launch.classLoader);
+            Method mdCreate = clFmlRemapperAdapter.getDeclaredMethod("create");
+            IRemapper remapper = (IRemapper)mdCreate.invoke(null);
+            MixinEnvironment.getDefaultEnvironment().getRemappers().add(remapper);
+        } catch (Exception ex) {
+            MixinPlatformAgentAbstract.logger.debug("Failed instancing FML remapper adapter, things will probably go horribly for notch-obf'd mods!");
+        }
     }
 
     /* (non-Javadoc)

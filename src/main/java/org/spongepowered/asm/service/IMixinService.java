@@ -63,6 +63,15 @@ public interface IMixinService {
     public abstract Phase getInitialPhase();
     
     /**
+     * Called when the subsystem is offering internal components to the service,
+     * the service can determine whether to retain or ignore the component based
+     * on its own requirements.
+     * 
+     * @param internal Internal component being offered
+     */
+    public abstract void offer(IMixinInternal internal);
+    
+    /**
      * Called at the end of subsystem boot
      */
     public abstract void init();

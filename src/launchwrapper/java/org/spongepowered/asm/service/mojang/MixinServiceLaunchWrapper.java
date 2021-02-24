@@ -81,7 +81,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     public static final Keys BLACKBOARD_KEY_TWEAKCLASSES = Keys.of("TweakClasses");
     public static final Keys BLACKBOARD_KEY_TWEAKS = Keys.of("Tweaks");
     
-    private static final String MIXIN_TWEAKER_CLASS = "org.spongepowered.asm.launch.MixinTweaker";
+    private static final String MIXIN_TWEAKER_CLASS = MixinServiceAbstract.LAUNCH_PACKAGE + "MixinTweaker";
     
     // Consts
     private static final String STATE_TWEAKER = MixinServiceAbstract.MIXIN_PACKAGE + "EnvironmentStateTweaker";
@@ -618,5 +618,5 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
         
         return 0;
     }
-
+    
 }

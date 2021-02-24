@@ -31,11 +31,12 @@ import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
-import org.spongepowered.asm.mixin.transformer.MixinTransformationHandler;
+import org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.IClassTracker;
 import org.spongepowered.asm.service.IMixinAuditTrail;
+import org.spongepowered.asm.service.IMixinInternal;
 import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.util.IConsumer;
@@ -113,6 +114,14 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      */
     public void onStartup() {
         this.phaseConsumer.accept(Phase.DEFAULT);
+    }
+    
+    @Override
+    public void offer(IMixinInternal internal) {
+        if (internal instanceof IMixinTransformerFactory) {
+            this.getTransformationHandler().offer((IMixinTransformerFactory)internal);
+        }
+        super.offer(internal);
     }
 
     // TEMP
@@ -212,7 +221,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     /**
      * Get (or create) the transformation handler
      */
-    private IClassProcessor getTransformationHandler() {
+    private MixinTransformationHandler getTransformationHandler() {
         if (this.transformationHandler == null) {
             this.transformationHandler = new MixinTransformationHandler();
         }

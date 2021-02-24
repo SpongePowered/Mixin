@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
@@ -32,6 +34,9 @@ import org.spongepowered.asm.launch.platform.CommandLineOptions;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.mixin.throwables.MixinError;
+import org.spongepowered.asm.service.IMixinInternal;
+import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 
 /**
@@ -64,9 +69,15 @@ public abstract class MixinBootstrap {
     public static final String VERSION = "0.8.3";
     
     /**
+     * Transformer factory 
+     */
+    private static final String MIXIN_TRANSFORMER_FACTORY_CLASS = "org.spongepowered.asm.mixin.transformer.MixinTransformer$Factory";
+    
+    /**
      * Log all the things
      */
     private static final Logger logger = LogManager.getLogger("mixin");
+    
     
     // These are Klass local, with luck this shouldn't be a problem
     private static boolean initialised = false;
@@ -77,7 +88,7 @@ public abstract class MixinBootstrap {
         MixinService.boot();
         MixinService.getService().prepare();
     }
-    
+
     /**
      * Platform manager instance
      */
@@ -134,6 +145,7 @@ public abstract class MixinBootstrap {
         }
             
         MixinBootstrap.registerSubsystem(MixinBootstrap.VERSION);
+        MixinBootstrap.offerInternals();
         
         if (!MixinBootstrap.initialised) {
             MixinBootstrap.initialised = true;
@@ -205,6 +217,33 @@ public abstract class MixinBootstrap {
 
     private static void registerSubsystem(String version) {
         GlobalProperties.put(GlobalProperties.Keys.INIT, version);
+    }
+
+    private static void offerInternals() {
+        IMixinService service = MixinService.getService();
+
+        try {
+            for (IMixinInternal internal : MixinBootstrap.getInternals()) {
+                service.offer(internal);
+            }
+        } catch (AbstractMethodError ex) {
+            // outdated service
+            ex.printStackTrace();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<IMixinInternal> getInternals() throws MixinError {
+        List<IMixinInternal> internals = new ArrayList<IMixinInternal>();
+        try {
+            Class<IMixinInternal> clTransformerFactory = (Class<IMixinInternal>)Class.forName(MixinBootstrap.MIXIN_TRANSFORMER_FACTORY_CLASS);
+            Constructor<IMixinInternal> ctor = clTransformerFactory.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            internals.add(ctor.newInstance());
+        } catch (ReflectiveOperationException ex) {
+            throw new MixinError(ex);
+        }
+        return internals;
     }
 
 }
