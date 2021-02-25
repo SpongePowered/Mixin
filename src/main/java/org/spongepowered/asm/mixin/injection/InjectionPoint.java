@@ -78,15 +78,63 @@ import com.google.common.collect.ImmutableList.Builder;
  * using intersection (and) or union (or) relationships to allow multiple
  * strategies to be easily combined.</p>
  * 
- * <p>You are free to create your own injection point subclasses, but take note
- * that it <b>is allowed</b> for a single InjectionPoint instance to be used for
- * multiple injections and thus implementing classes MUST NOT cache the insn
- * list, event, or nodes instance passed to the {@link #find find} method, as
- * each call to {@link #find find} must be considered a separate functional
- * contract and the InjectionPoint's lifespan is not linked to the discovery
- * lifespan, therefore it is important that the InjectionPoint implementation is
- * fully <b>stateless</b> and that calls to {@link #find find} are idempotent.
- * </p>
+ * <h4>Built-in Injection Points</h4>
+ * 
+ * <p>The following built-in Injection Points are available:</p>
+ * 
+ * <ul>
+ *   <li>{@link MethodHead HEAD} - Selects the first insn</li>
+ *   <li>{@link BeforeReturn RETURN} - Selects RETURN insns</li>
+ *   <li>{@link BeforeFinalReturn TAIL} - Selects the last RETURN insn</li>
+ *   <li>{@link BeforeInvoke INVOKE} - Selects method invocations</li>
+ *   <li>{@link AfterInvoke INVOKE_ASSIGN} - Selects STORE insns after method
+ *     invocations which return a value</li>
+ *   <li>{@link BeforeFieldAccess FIELD} - Selects field access insns</li>
+ *   <li>{@link BeforeNew NEW} - Selects object constructions</li>
+ *   <li>{@link BeforeStringInvoke INVOKE_STRING} - Selects method invocations
+ *     where a specific string is passed to the invocation.</li>
+ *   <li>{@link JumpInsnPoint JUMP} - Selects branching (jump) instructions</li>
+ *   <li>{@link BeforeConstant CONSTANT} - Selects constant values</li>
+ * </ul>
+ * 
+ * <p>Additionally, the two special injection points are available which are
+ * only supported for use with {@link ModifyVariable &#64;ModifyVariable}:</p>
+ * 
+ * <ul>
+ *   <li>{@link BeforeLoadLocal LOAD} - Selects xLOAD insns matching the <tt>
+ *     ModifyVariable</tt> discriminators.</li>
+ *   <li>{@link AfterStoreLocal STORE} - Selects xSTORE insns matching the <tt>
+ *     ModifyVariable</tt> discriminators.</li>
+ * </ul>
+ * 
+ * <p>See the javadoc for each type for more details on the scheme used by each
+ * injection point.</p>
+ * 
+ * <h4>Custom Injection Points</h4>
+ * 
+ * <p>You are free to create your own injection point subclasses. Once defined,
+ * they can be used by your mixins in one of two ways:</p>
+ * 
+ * <ol>
+ *   <li>Specify the fully-qualified name of the injection point class in the
+ *     {@link At#value &#64;At.value}.</li>
+ *   <li>Decorate your injection point class with {@link AtCode &#64;AtCode}
+ *     annotation which specifies a namespace and shortcode for the injection
+ *     point, and register the class in your mixin config. You can then specify
+ *     the namespaced code (eg. <tt>MYMOD:CUSTOMPOINT</tt>) in {@link At#value
+ *     &#64;At.value}.</li>
+ * </ol> 
+ * 
+ * <p>When writing custom injection points, note that the general contract of
+ * injection points is that they be entirely - or at least behaviourally -
+ * stateless. It <b>is allowed</b> for a single InjectionPoint instance to be
+ * used by the mixin processor for multiple injections and thus implementing
+ * classes <em>MUST NOT</em> cache the insn list, event, or nodes instance
+ * passed to the {@link #find find} method, as each call to {@link #find find}
+ * must be considered a separate contract and the InjectionPoint's lifespan is
+ * not linked to the discovery lifespan. It is therefore important that the
+ * InjectionPoint implementation is fully stateless and that calls to
+ * {@link #find find} are idempotent.</p>
  */
 public abstract class InjectionPoint {
     

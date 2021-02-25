@@ -3,32 +3,51 @@
 
 ![Mixin Logo](docs/javadoc/resources/logo.png?raw=true)
 
-**Mixin** is a trait/mixin framework for Java using [ASM](http://asm.ow2.org/)
-and hooking into the runtime class-loading process via Mojang's
-[LegacyLauncher](https://github.com/Mojang/LegacyLauncher) system.
+**Mixin** is a trait/mixin framework for Java using [ASM](https://asm.ow2.io/)
+and hooking into the runtime classloading process via a set of pluggable
+built-in or user-provided services. Built-in services currently support Mojang's
+[LegacyLauncher](https://github.com/Mojang/LegacyLauncher) system, though this
+is deprecated in favour of [ModLauncher](https://github.com/cpw/modlauncher) by
+cpw, which has greater extensibility and has support for Java 8 and later.
 
 ### Documentation
 
-The main documentation for **Mixin** can be found in the [Wiki](../../wiki).
+The main documentation for **Mixin** can be found in the
+[Wiki](https://github.com/SpongePowered/Mixin/wiki).
 
 Additional documentation for individual features and annotations can be found in
 the extensive [Javadoc](http://jenkins.liteloader.com/job/Mixin/javadoc/). For
-additional help use the channel [`#mixin` on the
-Sponge Discord Server](https://discord.gg/tBcwxz2).
+additional help use the channel [`#mixin` on the Sponge Discord Server](https://discord.gg/tBcwxz2).
 
-### Building Mixin
-**Mixin** uses the [Gradle](http://gradle.org/) build automation system. To
-perform a build, use gradle version 4.9 and execute
+### Binaries
 
-    gradle
+Mixin binaries are available via [Jenkins](https://jenkins.liteloader.com/view/Other/job/Mixin/)
+and are published to the following maven repositories:
 
-from within the project root directory. *(If you do not have Gradle installed on
-your system you can instead run the supplied Gradle wrapper `gradlew`)*
+* https://repo.spongepowered.org/repository/maven-public/ - SNAPHOTs and RELEASE
+  builds
+* https://files.minecraftforge.net/maven/ - RELEASE builds only
 
-### Integration with Eclipse IDE
+### Tooling
 
-The **Mixin** project can be integrated easily with Eclipse using Buildship.
-Simply choose `Import` -> `Gradle Project` and follow the prompts.
+For handling obfuscation tasks, Mixin provides an [Annotation Processor](https://github.com/SpongePowered/Mixin/wiki/Using-the-Mixin-Annotation-Processor)
+which works at compile time to generate obfuscation mappings for your toolchain
+to apply. If using Gradle 5 or later, annotation processors are no longer
+automatically loaded from `compile` configurations and must be specified
+explicitly via `annotationProcessor` configurations. For this purpose, Mixin
+provides "fat jar" artefacts containing all required dependencies via the
+`:processor` classifier. For example if your build uses the dependency
+`org.spongepowered:mixin:1.2.3` then your annotationProcessor configuration
+should specify dependency `org.spongepowered:mixin:1.2.3:processor`.
+
+If you are using Mixin in a [Minecraft Forge](https://minecraftforge.net/)
+project then the [MixinGradle](https://github.com/SpongePowered/MixinGradle)
+plugin can be used to simplify the configuration of the Mixin Annotation
+Processor. It provides a simple syntax for configuring the Mixin AP for your
+project, see the [MixinGradle README](https://github.com/SpongePowered/MixinGradle/blob/master/README.md)
+for how to configure MixinGradle.  
+
+### Integration with Eclipse
 
 When developing using **Mixin**, you can use the **Mixin Annotation Processor**
 within Eclipse to provide context-sensitive errors and warnings to help you more
@@ -45,17 +64,23 @@ easily troubleshoot your mixins. To do so:
 7. Check the `Enable annotation processing` checkbox
 8. Click the `New...` button next to the `Processor options` box
  * Set `Key` to **reobfSrgFile**
- * Set `Value` to the fully-qualified path to the `mcp-srg.srg` file (for Sponge
- this can be found in `Sponge/build/srgs/mcp-srg.srg`)
+ * Set `Value` to the fully-qualified path to the `mcp-srg.srg` file (the
+   location of the mapping file varies by platform, if you are unsure where to
+   find it please follow the discord link below). 
 9. Click `OK` to apply the changes
 
-### Integration with IntelliJ IDEA IDE
+### Integration with IntelliJ IDEA
 
 Enhanced functionality for working with **Mixin** in IntelliJ IDEA is available
 via the [Minecraft Development for IntelliJ IDEA](https://plugins.jetbrains.com/idea/plugin/8327)
 plugin developed by [DemonWav](https://github.com/demonwav).  
 
 ### Version History
+
+[Specifying the `minVersion` property in your configurations](https://github.com/SpongePowered/Mixin/wiki/PSA-Forward-Compatibility-Features-in-Mixin)
+is extrememly important. The following version history can be used to determine
+when features were introduced (and sometimes when major bugs are squashed) in
+order to help you determine which `minVersion` you should specify.
 
 <table width="100%">
   <thead>
@@ -67,13 +92,28 @@ plugin developed by [DemonWav](https://github.com/demonwav).
   </thead>
   <tbody>
     <tr>
-      <td valign="top"><b>0.8.1</b></td>
+      <td valign="top"><b>0.8.3</b></td>
+      <td valign="top">February 2021</td>
+      <td valign="top">
+        <ul>
+          <li>Added dynamic target selector support and <tt>&#64;Desc</tt>
+            target selector</li>
+          <li>Added pattern target selector</li>
+          <li>Added more expressive quantifier support to explicit target
+            selectors</li>
+          <li>Facelift and overall improvements to javadoc</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b><s>0.8.1</s> (0.8.2)</b></td>
       <td valign="top">September 2020</td>
       <td valign="top">
         <ul>
           <li><b>Hotfix for supporting ModLauncher 7.0</b></li>
           <li>Fix critical issue with resolving obfuscated members in inherited
             interfaces</li>
+          <li><b>Updated to ASM 7.2</b></li>
         </ul>
       </td>
     </tr>

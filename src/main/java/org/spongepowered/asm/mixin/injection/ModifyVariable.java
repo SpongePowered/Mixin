@@ -30,6 +30,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.modify.AfterStoreLocal;
+import org.spongepowered.asm.mixin.injection.modify.BeforeLoadLocal;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
@@ -57,7 +59,9 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * 
  * <p>The injector has two operating modes, <em>explicit</em> and <em>implicit
  * </em>, and can operate either on the entire LVT or on the {@link #argsOnly 
- * ethod arguments only}.</p>
+ * method arguments only}.</p>
+ * 
+ * <h4>Explicit mode</h4>
  * 
  * <p>In <em>explicit</em> mode, the variable to capture can be specified by
  * specifying values for the discriminator arguments {@link #ordinal},
@@ -65,11 +69,31 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * order to attempt to locate the variable to capture. If no local variable
  * matches any discriminators, the capture fails.</p>
  * 
+ * <h4>Implicit mode</h4>
+ * 
  * <p>If no values for the capture discrimiators are specified, the injector
  * operates in <em>implicit</em> mode. If exactly one variable of the capture
  * type exists in the target LVT, then capture will succeed. However, if more
  * than one variable of the required type is encountered in the LVT then an
  * {@link InvalidInjectionException} is thrown.</p> 
+ * 
+ * <h4>Context-sensitive injection points</h4>
+ *
+ * <p>Normally the {@link InjectionPoint injection points} specified by {@link
+ * #at} are independent of the injector being used. With <tt>ModifyVariable</tt>
+ * there are two special injection points which consume the discriminator from
+ * the annotation:</p>
+ * 
+ * <ul>
+ *   <li>{@link BeforeLoadLocal LOAD} - matches <tt>xLOAD</tt> insns <em>for
+ *     the variable matched by the discriminator</em> in the target method.</li>
+ *   <li>{@link AfterStoreLocal STORE} - matches <tt>xSTORE</tt> insns <em>for
+ *     the variable matched by the discriminator</em> in the target method.</li>
+ * </ul>
+ * 
+ * <p>See the javadoc for each injection point for details.</p>
+ * 
+ * <h4>Notes</h4>
  * 
  * <p>Like other injectors, the callback signature can optionally include the
  * target method arguments by simply appending them to the handler method
@@ -108,7 +132,8 @@ public @interface ModifyVariable {
      * An {@link At} annotation which describes the {@link InjectionPoint} in
      * the target method.
      * 
-     * @return {@link At} which identifies the target method invocation
+     * @return {@link At} which identifies the location to inject inside the
+     *      target method.
      */
     public At at();
     
