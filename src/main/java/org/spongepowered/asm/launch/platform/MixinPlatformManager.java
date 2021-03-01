@@ -297,7 +297,6 @@ public class MixinPlatformManager {
      */
     final void addConnector(String connectorClass) {
         this.connectors.addConnector(connectorClass);
-        
     }
 
 }

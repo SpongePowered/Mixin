@@ -230,7 +230,7 @@ public abstract class MixinServiceAbstract implements IMixinService {
             try {
                 @SuppressWarnings("unchecked")
                 Class<IMixinPlatformAgent> agentClass = (Class<IMixinPlatformAgent>)this.getClassProvider().findClass(agentClassName, false);
-                IMixinPlatformAgent agent = agentClass.newInstance();
+                IMixinPlatformAgent agent = agentClass.getDeclaredConstructor().newInstance();
                 if (agent instanceof IMixinPlatformServiceAgent) {
                     this.serviceAgents.add((IMixinPlatformServiceAgent)agent);
                 }

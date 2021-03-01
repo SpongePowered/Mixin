@@ -70,7 +70,7 @@ public class MixinContainer {
                 String simpleName = clazz.getSimpleName();
                 
                 MixinContainer.logger.debug("Instancing new {} for {}", simpleName, this.handle);
-                IMixinPlatformAgent agent = clazz.newInstance();
+                IMixinPlatformAgent agent = clazz.getDeclaredConstructor().newInstance();
                 
                 AcceptResult acceptAction = agent.accept(manager, this.handle);
                 if (acceptAction == AcceptResult.ACCEPTED) {

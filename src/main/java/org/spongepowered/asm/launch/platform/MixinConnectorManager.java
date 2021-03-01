@@ -80,7 +80,7 @@ public class MixinConnectorManager {
             }
             
             try {
-                IMixinConnector connector = connectorClass.newInstance();
+                IMixinConnector connector = connectorClass.getDeclaredConstructor().newInstance();
                 this.connectors.add(connector);
                 MixinConnectorManager.logger.info("Successfully loaded Mixin Connector [" + connectorClassName + "]");
             } catch (ReflectiveOperationException ex) {

@@ -94,7 +94,7 @@ class PluginHandle {
         if (!Strings.isNullOrEmpty(pluginClassName)) {
             try {
                 Class<?> pluginClass = service.getClassProvider().findClass(pluginClassName, true);
-                plugin = (IMixinConfigPlugin)pluginClass.newInstance();
+                plugin = (IMixinConfigPlugin)pluginClass.getDeclaredConstructor().newInstance();
             } catch (Throwable th) {
                 PluginHandle.logger.error("Error loading companion plugin class [{}] for mixin config [{}]. The plugin may be out of date: {}:{}",
                         pluginClassName, parent, th.getClass().getSimpleName(), th.getMessage(), th);

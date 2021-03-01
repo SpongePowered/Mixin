@@ -1070,7 +1070,7 @@ public final class MixinEnvironment implements ITokenProvider {
                 @SuppressWarnings("unchecked")
                 Class<? extends IEnvironmentTokenProvider> providerClass =
                         (Class<? extends IEnvironmentTokenProvider>)this.service.getClassProvider().findClass(providerName, true);
-                IEnvironmentTokenProvider provider = providerClass.newInstance();
+                IEnvironmentTokenProvider provider = providerClass.getDeclaredConstructor().newInstance();
                 this.registerTokenProvider(provider);
             } catch (Throwable th) {
                 MixinEnvironment.logger.error("Error instantiating " + providerName, th);
