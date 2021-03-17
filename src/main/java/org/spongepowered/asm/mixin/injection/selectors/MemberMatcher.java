@@ -31,7 +31,6 @@ import java.util.regex.PatternSyntaxException;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
  * A {@link ITargetSelector Target Selector} which matches an element of
@@ -231,7 +230,7 @@ public final class MemberMatcher implements ITargetSelector {
      */
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
-        return node == null ? MatchResult.NONE : this.matches(node.getOwnerName(), node.getName(), node.getDesc());
+        return node == null ? MatchResult.NONE : this.matches(node.getOwner(), node.getName(), node.getDesc());
     }
     
     /* (non-Javadoc)

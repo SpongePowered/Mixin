@@ -57,7 +57,7 @@ public final class MethodSlice {
      * identified by <tt>start</tt> and <tt>end</tt> to be accessed. In essence
      * this class provides a <em>view</em> of the underlying InsnList.
      */
-    static final class InsnListSlice extends ReadOnlyInsnList { 
+    static final class InsnListSlice extends InsnListReadOnly { 
     
         /**
          * ListIterator for the slice view, wraps an iterator returned by the
@@ -359,7 +359,7 @@ public final class MethodSlice {
      * @param method method to slice
      * @return read only slice
      */
-    public ReadOnlyInsnList getSlice(MethodNode method) {
+    public InsnListReadOnly getSlice(MethodNode method) {
         int max = method.instructions.size() - 1;
         int start = this.find(method, this.from, 0, 0, this.name + "(from)");
         int end = this.find(method, this.to, max, start, this.name + "(to)");
@@ -373,7 +373,7 @@ public final class MethodSlice {
         }
         
         if (start == 0 && end == max) {
-            return new ReadOnlyInsnList(method.instructions);
+            return new InsnListReadOnly(method.instructions);
         }
         
         return new InsnListSlice(method.instructions, start, end);
@@ -398,7 +398,7 @@ public final class MethodSlice {
         }
         
         Deque<AbstractInsnNode> nodes = new LinkedList<AbstractInsnNode>();
-        ReadOnlyInsnList insns = new ReadOnlyInsnList(method.instructions);
+        InsnListReadOnly insns = new InsnListReadOnly(method.instructions);
         boolean result = injectionPoint.find(method.desc, insns, nodes);
         Selector select = injectionPoint.getSelector();
         if (nodes.size() != 1 && select == Selector.ONE) {

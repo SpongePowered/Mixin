@@ -121,7 +121,10 @@ public final class DescriptorResolver {
                 return Type.VOID_TYPE;
             }
             Type ownerClass = this.desc.getTypeValue("owner");
-            return ownerClass == Type.VOID_TYPE ? Type.getObjectType(this.context.getMixin().getTargetClassRef()) : ownerClass;
+            if (ownerClass != Type.VOID_TYPE) {
+                return ownerClass;
+            }
+            return this.context != null ? Type.getObjectType(this.context.getMixin().getTargetClassRef()) : ownerClass;
         }
 
         @Override
@@ -162,6 +165,11 @@ public final class DescriptorResolver {
             int min = Math.max(0, this.desc != null ? this.desc.<Integer>getValue("min", 0) : 0);
             Integer max = this.desc != null ? this.desc.<Integer>getValue("max", null) : null;
             return new Quantifier(min, max != null ? (max > 0 ? max : Integer.MAX_VALUE) : -1);
+        }
+        
+        @Override
+        public List<IAnnotationHandle> getNext() {
+            return this.desc != null ? this.desc.getAnnotationList("next") : Collections.<IAnnotationHandle>emptyList();
         }
         
     }

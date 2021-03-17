@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors.dynamic;
 
+import java.util.List;
+
 import org.objectweb.asm.Type;
 import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
@@ -33,7 +35,7 @@ import org.spongepowered.asm.util.asm.IAnnotationHandle;
  * descriptor was not resolved then {@link #isResolved} returns <tt>false</tt>.
  */
 public interface IResolvedDescriptor {
-
+    
     /**
      * Get whether the descriptor was successfully resolved
      */
@@ -83,5 +85,10 @@ public interface IResolvedDescriptor {
      * Get the specified matches values from the resolved descriptor.
      */
     public abstract Quantifier getMatches();
+    
+    /**
+     * Get the values specified for next, if any
+     */
+    public abstract List<IAnnotationHandle> getNext();
 
 }

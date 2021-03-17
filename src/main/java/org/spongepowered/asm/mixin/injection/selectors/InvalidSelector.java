@@ -25,7 +25,6 @@
 package org.spongepowered.asm.mixin.injection.selectors;
 
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
  * Since the contract of {@link TargetSelector#parse} prohibits returing <tt>

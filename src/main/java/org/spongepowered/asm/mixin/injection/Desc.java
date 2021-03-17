@@ -112,6 +112,12 @@ public @interface Desc {
     public Class<?>[] args() default { };
     
     /**
+     * The next elements of this descriptor path, evaluated in order for each
+     * recurse point.
+     */
+    // public Next[] next() default { };
+    
+    /**
      * The minimum number of times this selector should match. By default the
      * selector is allowed to match no targets. When selecting fields or methods
      * setting this value to anything other than 0 or 1 is pointless since the

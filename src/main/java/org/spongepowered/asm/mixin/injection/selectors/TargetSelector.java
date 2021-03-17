@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -50,7 +51,6 @@ import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.throwables.MixinError;
 import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.asm.ElementNode;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
@@ -71,14 +71,14 @@ public final class TargetSelector {
         /**
          * Any exact match returned by the query
          */
-        public final TNode exactMatch;
+        public final ElementNode<TNode> exactMatch;
         
         /**
          * All candidates returned by the query
          */
-        public final List<TNode> candidates;
+        public final List<ElementNode<TNode>> candidates;
 
-        Result(TNode exactMatch, List<TNode> candidates) {
+        Result(ElementNode<TNode> exactMatch, List<ElementNode<TNode>> candidates) {
             this.exactMatch = exactMatch;
             this.candidates = candidates;
         }
@@ -98,10 +98,10 @@ public final class TargetSelector {
         public TNode getSingleResult(boolean strict) {
             int resultCount = this.candidates.size();
             if (this.exactMatch != null) {
-                return this.exactMatch;
+                return this.exactMatch.get();
             }
             if (resultCount == 1 || !strict) {
-                return this.candidates.get(0);
+                return this.candidates.get(0).get();
             }
             throw new IllegalStateException((resultCount == 0 ? "No" : "Multiple") + " candidates were found");
         }
@@ -456,9 +456,9 @@ public final class TargetSelector {
      * @param <TNode> Node type
      * @return query result
      */
-    public static <TNode> Result<TNode> run(ITargetSelector selector, List<ElementNode<TNode>> nodes) {
-        List<TNode> candidates = new ArrayList<TNode>();
-        TNode exactMatch = TargetSelector.runSelector(selector, nodes, candidates);
+    public static <TNode> Result<TNode> run(ITargetSelector selector, Iterable<ElementNode<TNode>> nodes) {
+        List<ElementNode<TNode>> candidates = new ArrayList<ElementNode<TNode>>();
+        ElementNode<TNode> exactMatch = TargetSelector.runSelector(selector, nodes, candidates);
         return new Result<TNode>(exactMatch, candidates);
     }
     
@@ -470,12 +470,12 @@ public final class TargetSelector {
      * @param <TNode> Node type
      * @return query result
      */
-    public static <TNode> Result<TNode> run(Iterable<ITargetSelector> selector, List<ElementNode<TNode>> nodes) {
-        TNode exactMatch = null;
-        List<TNode> candidates = new ArrayList<TNode>();
+    public static <TNode> Result<TNode> run(Iterable<ITargetSelector> selector, Iterable<ElementNode<TNode>> nodes) {
+        ElementNode<TNode> exactMatch = null;
+        List<ElementNode<TNode>> candidates = new ArrayList<ElementNode<TNode>>();
         
         for (ITargetSelector target : selector) {
-            TNode selectorExactMatch = TargetSelector.runSelector(target, nodes, candidates);
+            ElementNode<TNode> selectorExactMatch = TargetSelector.runSelector(target, nodes, candidates);
             if (exactMatch == null) {
                 exactMatch = selectorExactMatch;
             }
@@ -484,22 +484,23 @@ public final class TargetSelector {
         return new Result<TNode>(exactMatch, candidates);
     }
 
-    private static <TNode> TNode runSelector(ITargetSelector selector, List<ElementNode<TNode>> nodes, List<TNode> candidates) {
+    private static <TNode> ElementNode<TNode> runSelector(ITargetSelector selector, Iterable<ElementNode<TNode>> nodes,
+            List<ElementNode<TNode>> candidates) {
         int matchCount = 0;
-        TNode exactMatch = null;
-        for (ElementNode<TNode> element : nodes) {
+        ElementNode<TNode> exactMatch = null;
+        for (Iterator<ElementNode<TNode>> iterator = nodes.iterator(); iterator.hasNext();) {
+            ElementNode<TNode> element = iterator.next();
             MatchResult match = selector.match(element);
             if (match.isMatch()) {
                 matchCount++;
                 if (matchCount > selector.getMaxMatchCount()) {
                     break;
                 }
-                TNode node = element.get();
-                if (!candidates.contains(node)) {
-                    candidates.add(node);
+                if (!candidates.contains(element)) {
+                    candidates.add(element);
                 }
                 if (exactMatch == null && match.isExactMatch()) {
-                    exactMatch = node;
+                    exactMatch = element;
                 }
             }
         }

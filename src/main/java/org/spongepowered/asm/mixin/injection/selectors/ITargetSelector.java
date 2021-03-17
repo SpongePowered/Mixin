@@ -28,7 +28,6 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.Desc;
 import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-import org.spongepowered.asm.util.asm.ElementNode;
 
 /**
  * Target Selectors are used to identify target members in a class, with the

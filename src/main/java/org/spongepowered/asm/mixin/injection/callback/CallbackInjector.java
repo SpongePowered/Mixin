@@ -457,7 +457,7 @@ public class CallbackInjector extends Injector {
         MethodNode callbackMethod = this.methodNode;
 
         if (!callback.checkDescriptor(this.methodNode.desc)) {
-            if (this.info.getTargets().size() > 1) {
+            if (this.info.getTargetCount() > 1) {
                 return; // Look for a match in other targets before failing
             }
 

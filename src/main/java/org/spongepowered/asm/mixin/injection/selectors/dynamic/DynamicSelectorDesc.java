@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors.dynamic;
 
+import java.util.List;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
@@ -32,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Desc;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Slice;
+import org.spongepowered.asm.mixin.injection.selectors.ElementNode;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
@@ -43,7 +46,6 @@ import org.spongepowered.asm.mixin.injection.selectors.MatchResult;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.SignaturePrinter;
-import org.spongepowered.asm.util.asm.ElementNode;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 import com.google.common.base.Strings;
@@ -168,7 +170,26 @@ import com.google.common.base.Strings;
  */
 @SelectorId("Desc")
 @SelectorAnnotation(Desc.class)
-public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelectorByName {
+public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelectorByName {
+    
+    /**
+     * Next selector
+     */
+    final class Next extends DynamicSelectorDesc {
+        
+        private final int index;
+        
+        Next(int index, IResolvedDescriptor next) {
+            super(null, null, next.getOwner(), next.getName(), next.getArgs(), next.getReturnType(), next.getMatches(), null);
+            this.index = index;
+        }
+        
+        @Override
+        public ITargetSelector next() {
+            return DynamicSelectorDesc.this.next(this.index + 1);
+        }
+        
+    }
 
     /**
      * Parser/resolver error mesage, only stored if the descriptor is invalid so
@@ -216,28 +237,40 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
      */
     private final Quantifier matches;
     
+    /**
+     * Annotation for next, parsed on demand
+     */
+    private final List<IAnnotationHandle> next;
+    
     private DynamicSelectorDesc(IResolvedDescriptor desc) {
-        this(null, desc.getId(), desc.getOwner(), desc.getName(), desc.getArgs(), desc.getReturnType(), desc.getMatches());
+        this(null, desc.getId(), desc.getOwner(), desc.getName(), desc.getArgs(), desc.getReturnType(), desc.getMatches(),
+                desc.getNext());
     }
     
     private DynamicSelectorDesc(DynamicSelectorDesc desc, Quantifier quantifier) {
-        this(desc.parseException, desc.id, desc.owner, desc.name, desc.args, desc.returnType, quantifier);
+        this(desc.parseException, desc.id, desc.owner, desc.name, desc.args, desc.returnType, quantifier, desc.next);
+    }
+    
+    private DynamicSelectorDesc(DynamicSelectorDesc desc, Type owner) {
+        this(desc.parseException, desc.id, owner, desc.name, desc.args, desc.returnType, desc.matches, desc.next);
     }
     
     private DynamicSelectorDesc(InvalidSelectorException ex) {
-        this(ex, null, null, null, null, null, Quantifier.NONE);
+        this(ex, null, null, null, null, null, Quantifier.NONE, null);
     }
     
-    private DynamicSelectorDesc(InvalidSelectorException ex, String id, Type owner, String name, Type[] args, Type returnType, Quantifier matches) {
+    protected DynamicSelectorDesc(InvalidSelectorException ex, String id, Type owner, String name, Type[] args, Type returnType, Quantifier matches,
+            List<IAnnotationHandle> then) {
         this.parseException = ex;
         
         this.id = id;
         this.owner = owner;
-        this.name = name;
+        this.name = Strings.emptyToNull(name);
         this.args = args;
         this.returnType = returnType;
         this.methodDesc = returnType != null ? Bytecode.getDescriptor(returnType, args) : null;
         this.matches = matches;
+        this.next = then;
     }
     
     /**
@@ -333,7 +366,9 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
         if (started) {
             sb.append(", ");
         }
-        sb.append("name = \"").append(this.name).append("\"");
+        if (this.name != null) {
+            sb.append("value = \"").append(this.name).append("\"");
+        }
         
         if (this.args.length > 0) {
             sb.append(", args = { ");
@@ -396,9 +431,19 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
 
     @Override
     public ITargetSelector next() {
-        return this; // Recurse
+        return this.next(0);
     }
     
+    protected ITargetSelector next(int index) {
+        if (index >= 0 && index < this.next.size()) {
+            IAnnotationHandle nextAnnotation = this.next.get(index);
+            IResolvedDescriptor descriptor = DescriptorResolver.resolve(nextAnnotation, null);
+            return new Next(index, descriptor);
+        }
+        
+        return null;
+    }
+
     @Override
     public ITargetSelector configure(Configure request, String... args) {
         request.checkArgs(args);
@@ -414,12 +459,10 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
                 }
                 break;
             case MOVE:
-                return new DynamicSelectorDesc(this.parseException, this.id, Type.getObjectType(args[0]), this.name, this.args, this.returnType,
-                        this.matches);
+                return new DynamicSelectorDesc(this, Type.getObjectType(args[0]));
             case CLEAR_LIMITS:
                 if (this.getMinMatchCount() != 0 || this.getMaxMatchCount() < Integer.MAX_VALUE) {
-                    return new DynamicSelectorDesc(this.parseException, this.id, Type.getObjectType(args[0]), this.name, this.args, this.returnType,
-                            Quantifier.ANY);
+                    return new DynamicSelectorDesc(this, Quantifier.ANY);
                 }
                 break;
             default:
@@ -457,9 +500,9 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
         if (node == null) {
             return MatchResult.NONE;
         } else if (node.isMethod()) {
-            return this.matches(node.getOwnerName(), node.getName(), node.getDesc(), this.methodDesc);
+            return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.methodDesc);
         } else {
-            return this.matches(node.getOwnerName(), node.getName(), node.getDesc(), this.returnType.getInternalName());
+            return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.returnType.getInternalName());
         }
     }
     
@@ -482,12 +525,14 @@ public final class DynamicSelectorDesc implements ITargetSelectorDynamic, ITarge
     private MatchResult matches(String owner, String name, String desc, String compareWithDesc) {
         if (!compareWithDesc.equals(desc)) {
             return MatchResult.NONE;
-        } else if (!this.owner.getInternalName().equals(owner)) {
+        } else if (this.owner != Type.VOID_TYPE && !this.owner.getInternalName().equals(owner)) {
             return MatchResult.NONE;
-        } else if (this.name.equals(name)) {
+        } else if (this.name != null && this.name.equals(name)) {
             return MatchResult.EXACT_MATCH;
-        } else if (this.name.equalsIgnoreCase(name)) {
+        } else if (this.name != null && this.name.equalsIgnoreCase(name)) {
             return MatchResult.MATCH;
+        } else if (this.name == null) {
+            return MatchResult.EXACT_MATCH;
         }
         return MatchResult.NONE;
     }

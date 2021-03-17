@@ -32,6 +32,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
+import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.util.Annotations;
@@ -50,15 +51,26 @@ public class InjectorTarget {
     /**
      * Cache of slices
      */
-    private final Map<String, ReadOnlyInsnList> cache = new HashMap<String, ReadOnlyInsnList>();
+    private final Map<String, InsnListReadOnly> cache = new HashMap<String, InsnListReadOnly>();
 
     /**
      * Target method data
      */
     private final Target target;
     
+    /**
+     * Selector which selected this method
+     */
+    private final ITargetSelector selector;
+    
+    /**
+     * Name of the mixin which merged the target, if any
+     */
     private final String mergedBy;
     
+    /**
+     * Priority of the mixin which merged the target, if any 
+     */
     private final int mergedPriority;
 
     /**
@@ -67,9 +79,10 @@ public class InjectorTarget {
      * @param context owner
      * @param target target
      */
-    public InjectorTarget(ISliceContext context, Target target) {
+    public InjectorTarget(ISliceContext context, Target target, ITargetSelector selector) {
         this.context = context;
         this.target = target;
+        this.selector = selector;
         
         AnnotationNode merged = Annotations.getVisible(target.method, MixinMerged.class);
         this.mergedBy = Annotations.<String>getValue(merged, "mixin");
@@ -93,6 +106,13 @@ public class InjectorTarget {
      */
     public MethodNode getMethod() {
         return this.target.method;
+    }
+    
+    /**
+     * Get the selector which selected this target
+     */
+    public ITargetSelector getSelector() {
+        return this.selector;
     }
     
     /**
@@ -125,14 +145,14 @@ public class InjectorTarget {
      * @return insn slice
      */
     public InsnList getSlice(String id) {
-        ReadOnlyInsnList slice = this.cache.get(id);
+        InsnListReadOnly slice = this.cache.get(id);
         if (slice == null) {
             MethodSlice sliceInfo = this.context.getSlice(id);
             if (sliceInfo != null) {
                 slice = sliceInfo.getSlice(this.target.method);
             } else {
                 // No slice exists so just wrap the method insns
-                slice = new ReadOnlyInsnList(this.target.method.instructions);
+                slice = new InsnListReadOnly(this.target.method.instructions);
             }
             this.cache.put(id, slice);
         }
@@ -154,7 +174,7 @@ public class InjectorTarget {
      * Dispose all cached instruction lists
      */
     public void dispose() {
-        for (ReadOnlyInsnList insns : this.cache.values()) {
+        for (InsnListReadOnly insns : this.cache.values()) {
             insns.dispose();
         }
         

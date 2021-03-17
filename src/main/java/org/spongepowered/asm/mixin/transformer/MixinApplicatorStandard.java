@@ -1140,7 +1140,7 @@ class MixinApplicatorStandard {
      */
     protected final FieldNode findTargetField(FieldNode searchFor) {
         for (FieldNode target : this.targetClass.fields) {
-            if (target.name.equals(searchFor.name)) {
+            if (target.name.equals(searchFor.name) && target.desc.equals(searchFor.desc)) {
                 return target;
             }
         }

@@ -28,6 +28,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.injection.selectors.ElementNode;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
@@ -43,7 +44,6 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.SignaturePrinter;
-import org.spongepowered.asm.util.asm.ElementNode;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -217,6 +217,11 @@ import com.google.common.base.Strings;
 public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelectorConstructor {
     
     /**
+     * Separator for elements in the path
+     */
+    private static final String ARROW = "->";
+    
+    /**
      * Member owner in internal form but without L;, can be null
      */
     private final String owner;
@@ -247,24 +252,18 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     private final String input;
     
     /**
+     * The actual String value passed into the {@link #parse} method 
+     */
+    private final String tail;
+    
+    /**
      * ctor
      * 
      * @param name Member name, must not be null
      * @param matches Quantifier specifying the number of matches required
      */
     public MemberInfo(String name, Quantifier matches) {
-        this(name, null, null, matches, null);
-    }
-
-    /**
-     * ctor
-     * 
-     * @param name Member name, must not be null
-     * @param minMatches Min number of matches required
-     * @param maxMatches Max number of matches allowed
-     */
-    public MemberInfo(String name, int minMatches, int maxMatches) {
-        this(name, null, null, new Quantifier(minMatches, maxMatches), null);
+        this(name, null, null, matches, null, null);
     }
     
     /**
@@ -276,20 +275,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param matches Quantifier specifying the number of matches required
      */
     public MemberInfo(String name, String owner, Quantifier matches) {
-        this(name, owner, null, matches, null);
-    }
-    
-    /**
-     * ctor
-     * 
-     * @param name Member name, must not be null
-     * @param owner Member owner, can be null otherwise must be in internal form
-     *      without L;
-     * @param minMatches Min number of matches required
-     * @param maxMatches Max number of matches allowed
-     */
-    public MemberInfo(String name, String owner, int minMatches, int maxMatches) {
-        this(name, owner, null, new Quantifier(minMatches, maxMatches), null);
+        this(name, owner, null, matches, null, null);
     }
     
     /**
@@ -301,7 +287,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param desc Member descriptor, can be null
      */
     public MemberInfo(String name, String owner, String desc) {
-        this(name, owner, desc, Quantifier.DEFAULT, null);
+        this(name, owner, desc, Quantifier.DEFAULT, null, null);
     }
     
     /**
@@ -314,35 +300,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param matches Quantifier specifying the number of matches required
      */
     public MemberInfo(String name, String owner, String desc, Quantifier matches) {
-        this(name, owner, desc, matches, null);
-    }
-    
-    /**
-     * ctor
-     * 
-     * @param name Member name, must not be null
-     * @param owner Member owner, can be null otherwise must be in internal form
-     *      without L;
-     * @param desc Member descriptor, can be null
-     * @param minMatches Min number of matches required
-     * @param maxMatches Max number of matches allowed
-     */
-    public MemberInfo(String name, String owner, String desc, int minMatches, int maxMatches) {
-        this(name, owner, desc, new Quantifier(minMatches, maxMatches), null);
-    }
-    
-    /**
-     * ctor
-     * 
-     * @param name Member name, must not be null
-     * @param owner Member owner, can be null otherwise must be in internal form
-     *      without L;
-     * @param desc Member descriptor, can be null
-     * @param minMatches Min number of matches required
-     * @param maxMatches Max number of matches allowed
-     */
-    public MemberInfo(String name, String owner, String desc, int minMatches, int maxMatches, String input) {
-        this(name, owner, desc, new Quantifier(minMatches, maxMatches), input);
+        this(name, owner, desc, matches, null, null);
     }
     
     /**
@@ -354,7 +312,20 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      * @param desc Member descriptor, can be null
      * @param matches Quantifier specifying the number of matches required
      */
-    public MemberInfo(String name, String owner, String desc, Quantifier matches, String input) {
+    public MemberInfo(String name, String owner, String desc, Quantifier matches, String tail) {
+        this(name, owner, desc, matches, tail, null);
+    }
+    
+    /**
+     * ctor
+     * 
+     * @param name Member name, must not be null
+     * @param owner Member owner, can be null otherwise must be in internal form
+     *      without L;
+     * @param desc Member descriptor, can be null
+     * @param matches Quantifier specifying the number of matches required
+     */
+    public MemberInfo(String name, String owner, String desc, Quantifier matches, String tail, String input) {
         if (owner != null && owner.contains(".")) {
             throw new IllegalArgumentException("Attempt to instance a MemberInfo with an invalid owner format");
         }
@@ -364,6 +335,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.desc = desc;
         this.matches = matches;
         this.forceField = false;
+        this.tail = tail;
         this.input = input;
     }
     
@@ -377,6 +349,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.matches = Quantifier.DEFAULT;
         this.forceField = false;
         this.input = null;
+        this.tail = null;
         
         if (insn instanceof MethodInsnNode) {
             MethodInsnNode methodNode = (MethodInsnNode) insn;
@@ -404,6 +377,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.desc = mapping.getDesc();
         this.matches = Quantifier.SINGLE;
         this.forceField = mapping.getType() == IMapping.Type.FIELD;
+        this.tail = null;
         this.input = null;
     }
     
@@ -418,6 +392,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.desc = method.getDesc();
         this.matches = remapped.matches;
         this.forceField = false;
+        this.tail = null;
         this.input = null;
     }
 
@@ -433,12 +408,13 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         this.desc = original.desc;
         this.matches = original.matches;
         this.forceField = original.forceField;
+        this.tail = original.tail;
         this.input = null;
     }
     
     @Override
     public ITargetSelector next() {
-        return null; // Not supported yet
+        return Strings.isNullOrEmpty(this.tail) ? null : MemberInfo.parse(this.tail, null);
     }
     
     @Override
@@ -476,7 +452,8 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         String quantifier = this.matches.toString();
         String desc = this.desc != null ? this.desc : "";
         String separator = desc.startsWith("(") ? "" : (this.desc != null ? ":" : "");
-        return owner + name + quantifier + separator + desc;
+        String tail = this.tail != null ? " " + MemberInfo.ARROW + " " + this.tail : ""; 
+        return owner + name + quantifier + separator + desc + tail;
     }
 
     /**
@@ -718,7 +695,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
      */
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
-        return node == null ? MatchResult.NONE : this.matches(node.getOwnerName(), node.getName(), node.getDesc());
+        return node == null ? MatchResult.NONE : this.matches(node.getOwner(), node.getName(), node.getDesc());
     }
     
     /* (non-Javadoc)
@@ -808,12 +785,12 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         switch (request) {
             case SELECT_MEMBER:
                 if (this.matches.isDefault()) {
-                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.SINGLE);
+                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.SINGLE, this.tail);
                 }
                 break;
             case SELECT_INSTRUCTION:
                 if (this.matches.isDefault()) {
-                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.ANY);
+                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.ANY, this.tail);
                 }
                 break;
             case MOVE:
@@ -826,7 +803,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
                 return this.transform(null);
             case CLEAR_LIMITS:
                 if (this.matches.getMin() != 0 || this.matches.getMax() < Integer.MAX_VALUE) {
-                    return new MemberInfo(this.name, this.owner, this.desc, 0, Integer.MAX_VALUE);
+                    return new MemberInfo(this.name, this.owner, this.desc, Quantifier.ANY, this.tail);
                 }
                 break;
             default:
@@ -896,6 +873,13 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
         String desc = null;
         String owner = null;
         String name = Strings.nullToEmpty(input).replaceAll("\\s", "");
+        String tail = null;
+        
+        int arrowPos = name.indexOf(MemberInfo.ARROW);
+        if (arrowPos > -1) {
+            tail = name.substring(arrowPos + 2);
+            name = name.substring(0, arrowPos);
+        }
 
         if (context != null) {
             name = context.remap(name);
@@ -959,7 +943,7 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
             name = null;
         }
         
-        return new MemberInfo(name, owner, desc, quantifier, input);
+        return new MemberInfo(name, owner, desc, quantifier, tail, input);
     }
 
     /**

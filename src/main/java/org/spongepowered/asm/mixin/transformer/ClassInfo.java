@@ -251,7 +251,7 @@ public final class ClassInfo {
             return String.format("FrameData[index=%d, type=%s, locals=%d]", this.index, FrameData.FRAMETYPES[this.type + 1], this.locals);
         }
     }
-
+    
     /**
      * Information about a member in this class
      */

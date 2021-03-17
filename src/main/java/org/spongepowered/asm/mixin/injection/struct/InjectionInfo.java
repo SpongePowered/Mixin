@@ -30,10 +30,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -58,6 +56,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.code.MethodSlice;
 import org.spongepowered.asm.mixin.injection.code.MethodSlices;
+import org.spongepowered.asm.mixin.injection.selectors.ElementNode;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector.Configure;
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
@@ -77,7 +76,6 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.ASM;
-import org.spongepowered.asm.util.asm.ElementNode;
 import org.spongepowered.asm.util.asm.MethodNodeEx;
 import org.spongepowered.asm.util.logging.MessageRouter;
 
@@ -163,6 +161,33 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
     
     /**
+     * Selected target, paired with the selector which identified it
+     */
+    static class SelectedTarget {
+        
+        private final ITargetSelector root;
+        
+        final ITargetSelector selector;
+        
+        final MethodNode method;
+
+        SelectedTarget(ITargetSelector root, ITargetSelector selector, MethodNode method) {
+            this.root = root;
+            this.selector = selector;
+            this.method = method;
+        }
+        
+        SelectedTarget(ITargetSelector selector, MethodNode method) {
+            this(null, selector, method);
+        }
+        
+        ITargetSelector getRoot() {
+            return this.root != null ? this.root : this.selector;
+        }
+        
+    }
+    
+    /**
      * Default conform prefix for handler methods 
      */
     public static final String DEFAULT_PREFIX = "handler";
@@ -195,9 +220,14 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     protected final boolean isStatic;
     
     /**
+     * Target selector(s)
+     */
+    protected final Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
+    
+    /**
      * Target method(s)
      */
-    protected final Deque<MethodNode> targets = new ArrayDeque<MethodNode>();
+    protected final List<SelectedTarget> targets = new ArrayList<SelectedTarget>();
     
     /**
      * Method slice descriptors parsed from the annotation
@@ -296,12 +326,13 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         
         List<AnnotationNode> injectionPoints = this.readInjectionPoints();
         this.parseRequirements();
-        this.findMethods(this.parseTargets());
+        this.parseSelectors();
+        this.findTargets();
         this.parseInjectionPoints(injectionPoints);
         this.injector = this.parseInjector(this.annotation);
     }
 
-    protected Set<ITargetSelector> parseTargets() {
+    protected void parseSelectors() {
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
         TargetSelector.parse(Annotations.<String>getValue(this.annotation, "method", false), this, selectors);
         TargetSelector.parse(Annotations.<AnnotationNode>getValue(this.annotation, "target", false), this, selectors);
@@ -312,12 +343,10 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                     this.annotationType, this.methodName));
         }
         
-        Set<ITargetSelector> attachedSelectors = new LinkedHashSet<ITargetSelector>();
-
         // Validate and attach the parsed selectors
         for (ITargetSelector selector : selectors) {
             try {
-                attachedSelectors.add(selector.validate().attach(this));
+                this.selectors.add(selector.validate().attach(this));
             } catch (InvalidMemberDescriptorException ex) {
                 throw new InvalidInjectionException(this, String.format("%s annotation on %s, has invalid target descriptor: %s. %s",
                         this.annotationType, this.methodName, ex.getMessage(), this.mixin.getReferenceMapper().getStatus()));
@@ -331,8 +360,6 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                         ex.getMessage()));
             }
         }
-
-        return attachedSelectors;
     }
 
     protected List<AnnotationNode> readInjectionPoints() {
@@ -387,9 +414,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      */
     public void prepare() {
         this.targetNodes.clear();
-        for (MethodNode targetMethod : this.targets) {
-            Target target = this.mixin.getTargetMethod(targetMethod);
-            InjectorTarget injectorTarget = new InjectorTarget(this, target);
+        for (SelectedTarget targetMethod : this.targets) {
+            Target target = this.mixin.getTargetMethod(targetMethod.method);
+            InjectorTarget injectorTarget = new InjectorTarget(this, target, targetMethod.selector);
             try {
                 this.targetNodes.put(target, this.injector.find(injectorTarget, this.injectionPoints));
             } catch (SelectorException ex) {
@@ -459,12 +486,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
     
     /**
-     * Get methods being injected into
+     * Get number of methods being injected into
      * 
-     * @return methods being injected into
+     * @return count of methods being injected into
      */
-    public Collection<MethodNode> getTargets() {
-        return this.targets;
+    public int getTargetCount() {
+        return this.targets.size();
     }
     
     /**
@@ -543,20 +570,26 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
     
     /**
-     * Finds methods in the target class which match searchFor
-     * 
-     * @param selectors members to search for
+     * Find methods in the target class which match the parsed selectors
      */
-    private void findMethods(Set<ITargetSelector> selectors) {
+    protected void findTargets() {
         this.targets.clear();
+        this.findRootTargets();
+        this.validateTargets();
+    }
 
+    /**
+     * Evaluate the root selectors parsed from this injector, find the root
+     * targets and store them in the {@link #targets} collection.
+     */
+    private void findRootTargets() {
         // When remapping refmap is enabled this implies we are in a development
         // environment. In certain circumstances including the descriptor for
         // the method may actually fail, so we will do a second pass without the
         // descriptor if this happens.
         int passes = this.mixin.getOption(Option.REFMAP_REMAP) ? 2 : 1;
         
-        for (ITargetSelector selector : selectors) {
+        for (ITargetSelector selector : this.selectors) {
             selector = selector.configure(Configure.SELECT_MEMBER);
             
             int matchCount = 0;
@@ -564,12 +597,9 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             
             // Second pass ignores descriptor
             ITargetSelector permissiveSelector = selector.configure(Configure.PERMISSIVE);
-            if (permissiveSelector == selector) {
-                // Selector is already permissive, so skip the second pass
-                passes = 1;
-            }
+            int selectorPasses = (permissiveSelector == selector) ? 1 : passes;
 
-            scan: for (int pass = 0; pass < passes && matchCount < 1; pass++) {
+            scan: for (int pass = 0; pass < selectorPasses && matchCount < 1; pass++) {
                 ITargetSelector passSelector = pass == 0 ? selector : permissiveSelector;
                 for (MethodNode target : this.classNode.methods) {
                     if (passSelector.match(ElementNode.of(this.classNode, target)).isExactMatch()) {
@@ -578,7 +608,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                         boolean isMixinMethod = Annotations.getVisible(target, MixinMerged.class) != null;
                         if (maxCount <= 1 || ((this.isStatic || !Bytecode.isStatic(target)) && target != this.method && !isMixinMethod)) {
                             this.checkTarget(target);
-                            this.targets.add(target);
+                            this.targets.add(new SelectedTarget(passSelector, target));
                         }
 
                         if (matchCount >= maxCount) {
@@ -595,7 +625,13 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
                         this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo())));
             }
         }
-        
+    }
+
+    /**
+     * Post-search validation that some targets were found, we can fail-fast if
+     * no targets were actually identified
+     */
+    protected void validateTargets() {
         this.targetCount = this.targets.size(); 
         if (this.targetCount > 0) {
             return;
@@ -604,17 +640,17 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         if ((this.mixin.getOption(Option.DEBUG_INJECTORS) && this.expectedCallbackCount > 0)) {
             throw new InvalidInjectionException(this,
                     String.format("Injection validation failed: %s annotation on %s could not find any targets matching %s in %s. %s%s", 
-                            this.annotationType, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
+                            this.annotationType, this.methodName, InjectionInfo.namesOf(this.selectors), this.mixin.getTarget(),
                             this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
         } else if (this.requiredCallbackCount > 0) {
             throw new InvalidInjectionException(this,
                     String.format("Critical injection failure: %s annotation on %s could not find any targets matching %s in %s. %s%s", 
-                            this.annotationType, this.methodName, InjectionInfo.namesOf(selectors), this.mixin.getTarget(),
+                            this.annotationType, this.methodName, InjectionInfo.namesOf(this.selectors), this.mixin.getTarget(),
                             this.mixin.getReferenceMapper().getStatus(), this.getDynamicInfo()));
         }
     }
 
-    private void checkTarget(MethodNode target) {
+    protected void checkTarget(MethodNode target) {
         AnnotationNode merged = Annotations.getVisible(target, MixinMerged.class);
         if (merged == null) {
             return;
@@ -641,7 +677,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         return description.length() > 0 ? String.format(" Method is @Dynamic(%s).", description) : "";
     }
-    
+
     /**
      * Parse an injector from the specified method (if an injector annotation is
      * present). If no injector annotation is present then <tt>null</tt> is
@@ -733,7 +769,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         }
         return sb.toString();
     }
-    
+
     /**
      * Register an injector info class. The supplied class must be decorated
      * with an {@link AnnotationType} annotation for registration purposes.
