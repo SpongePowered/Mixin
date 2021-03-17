@@ -27,9 +27,6 @@ package org.spongepowered.asm.mixin.injection.selectors.dynamic;
 import java.util.List;
 
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Desc;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -504,22 +501,6 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
         } else {
             return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.returnType.getInternalName());
         }
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #matches(org.objectweb.asm.tree.AbstractInsnNode)
-     */
-    @Override
-    public MatchResult match(AbstractInsnNode insn) {
-        if (insn instanceof MethodInsnNode) {
-            MethodInsnNode method = (MethodInsnNode)insn;
-            return this.matches(method.owner, method.name, method.desc, this.methodDesc);
-        } else if (insn instanceof FieldInsnNode) {
-            FieldInsnNode field = (FieldInsnNode)insn;
-            return this.matches(field.owner, field.name, field.desc, this.returnType.getInternalName());
-        }
-        return MatchResult.NONE;
     }
     
     private MatchResult matches(String owner, String name, String desc, String compareWithDesc) {

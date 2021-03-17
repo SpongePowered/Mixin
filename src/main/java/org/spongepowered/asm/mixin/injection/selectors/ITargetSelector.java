@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.Desc;
 import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
@@ -235,13 +234,5 @@ public interface ITargetSelector {
      * @return true if this selector can match the supplied field
      */
     public abstract <TNode> MatchResult match(ElementNode<TNode> node);
-    
-    /**
-     * Test whether this selector matches the supplied instruction node
-     * 
-     * @param insn instruction node to test
-     * @return true if this selector can match the supplied instruction
-     */
-    public abstract MatchResult match(AbstractInsnNode insn);
 
 }

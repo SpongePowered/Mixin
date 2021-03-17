@@ -39,7 +39,6 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.spongepowered.asm.util.Handles;
 
 import com.google.common.base.Strings;
 
@@ -188,7 +187,7 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isMethod() {
+        public boolean isInsn() {
             return true;
         }
         
@@ -263,8 +262,13 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isMethod() {
-            return this.implMethod == null || !Handles.isField(this.implMethod);
+        public boolean isInvokeDynamic() {
+            return true;
+        }
+        
+        @Override
+        public boolean isInsn() {
+            return true;
         }
         
         @Override
@@ -336,7 +340,7 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isField() {
+        public boolean isInsn() {
             return true;
         }
         
@@ -431,23 +435,33 @@ public abstract class ElementNode<TNode> {
     }
     
     /**
-     * Get whether this element is a method
+     * Get whether this element is a method, implies getMethod() will return
+     * a value
      */
     public boolean isMethod() {
         return false;
     }
     
     /**
-     * get whether this element is a field
+     * get whether this element is a field, implies getField() will return
+     * a value
      */
     public boolean isField() {
         return false;
     }
     
     /**
-     * get whether this element is an instruction
+     * get whether this element is an instruction, implies getInsn() will return
+     * a value
      */
     public boolean isInsn() {
+        return false;
+    }
+    
+    /**
+     * get whether this element is an INVOKEDYNAMIC insn
+     */
+    public boolean isInvokeDynamic() {
         return false;
     }
     

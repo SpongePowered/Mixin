@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
+import org.spongepowered.asm.mixin.injection.selectors.ElementNode;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector.Configure;
@@ -196,7 +197,7 @@ public class BeforeInvoke extends InjectionPoint {
                 MemberInfo nodeInfo = new MemberInfo(insn);
                 this.log("{}->{} is considering {}", this.context, this.className, nodeInfo);
 
-                if (target.match(insn).isExactMatch()) {
+                if (target.match(ElementNode.<AbstractInsnNode>of(insn)).isExactMatch()) {
                     this.log("{}->{} > found a matching insn, checking preconditions...", this.context, this.className);
                     if (++matchCount > target.getMaxMatchCount()) {
                         break;

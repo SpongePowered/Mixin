@@ -24,8 +24,6 @@
  */
 package org.spongepowered.asm.mixin.injection.selectors;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-
 /**
  * Since the contract of {@link TargetSelector#parse} prohibits returing <tt>
  * null</tt>, instances of this selector are returned when supplied arguments
@@ -134,16 +132,6 @@ public class InvalidSelector implements ITargetSelector {
      */
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
-        this.validate();
-        return MatchResult.NONE;
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #match(org.objectweb.asm.tree.AbstractInsnNode)
-     */
-    @Override
-    public MatchResult match(AbstractInsnNode insn) {
         this.validate();
         return MatchResult.NONE;
     }

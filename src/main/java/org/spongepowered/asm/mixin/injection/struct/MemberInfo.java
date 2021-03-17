@@ -700,22 +700,6 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
     
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #matches(org.objectweb.asm.tree.AbstractInsnNode)
-     */
-    @Override
-    public MatchResult match(AbstractInsnNode insn) {
-        if (insn instanceof MethodInsnNode) {
-            MethodInsnNode method = (MethodInsnNode)insn;
-            return this.matches(method.owner, method.name, method.desc);
-        } else if (insn instanceof FieldInsnNode) {
-            FieldInsnNode field = (FieldInsnNode)insn;
-            return this.matches(field.owner, field.name, field.desc);
-        }
-        return MatchResult.NONE;
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
      *      #matches(java.lang.String, java.lang.String, java.lang.String)
      */
     @Override

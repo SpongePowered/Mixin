@@ -28,10 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-
 /**
  * A {@link ITargetSelector Target Selector} which matches an element of
  * candidate members using a regular expression. This selector is not remappable
@@ -231,22 +227,6 @@ public final class MemberMatcher implements ITargetSelector {
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
         return node == null ? MatchResult.NONE : this.matches(node.getOwner(), node.getName(), node.getDesc());
-    }
-    
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.mixin.injection.selectors.ITargetSelector
-     *      #matches(org.objectweb.asm.tree.AbstractInsnNode)
-     */
-    @Override
-    public MatchResult match(AbstractInsnNode insn) {
-        if (insn instanceof MethodInsnNode) {
-            MethodInsnNode method = (MethodInsnNode)insn;
-            return this.matches(method.owner, method.name, method.desc);
-        } else if (insn instanceof FieldInsnNode) {
-            FieldInsnNode field = (FieldInsnNode)insn;
-            return this.matches(field.owner, field.name, field.desc);
-        }
-        return MatchResult.NONE;
     }
     
     private MatchResult matches(String... args) {
