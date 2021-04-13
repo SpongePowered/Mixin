@@ -496,10 +496,10 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
     public <TNode> MatchResult match(ElementNode<TNode> node) {
         if (node == null) {
             return MatchResult.NONE;
-        } else if (node.isMethod()) {
-            return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.methodDesc);
-        } else {
+        } else if (node.isField()) {
             return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.returnType.getInternalName());
+        } else {
+            return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.methodDesc);
         }
     }
     

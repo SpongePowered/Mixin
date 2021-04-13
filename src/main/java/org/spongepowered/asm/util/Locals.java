@@ -173,7 +173,8 @@ public final class Locals {
             if (storeInsn != null) {
                 LocalVariableNode storedLocal = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
                 frame[storeInsn.var] = storedLocal;
-                if (storedLocal != null && storeInsn.var < method.maxLocals - 1 && Type.getType(storedLocal.desc).getSize() == 2) {
+                if (storedLocal != null && storeInsn.var < method.maxLocals - 1 && storedLocal.desc != null
+                        && Type.getType(storedLocal.desc).getSize() == 2) {
                     frame[storeInsn.var + 1] = null; // TOP
                 }
                 storeInsn = null;

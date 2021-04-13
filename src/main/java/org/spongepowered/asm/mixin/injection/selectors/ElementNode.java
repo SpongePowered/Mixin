@@ -39,6 +39,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.util.Handles;
 
 import com.google.common.base.Strings;
 
@@ -52,6 +53,69 @@ import com.google.common.base.Strings;
  * @param <TNode> node type
  */
 public abstract class ElementNode<TNode> {
+    
+    /**
+     * Element node type, returned by <tt>getType</tt> so consumers don't need
+     * to do instanceof checks, and allows switching on element type in a more
+     * expressive way
+     */
+    public static enum NodeType {
+        
+        /**
+         * None or unknown type 
+         */
+        UNDEFINED(false, false, false),
+        
+        /**
+         * A method node 
+         */
+        METHOD(true, false, false),
+        
+        /**
+         * A field node 
+         */
+        FIELD(false, true, false),
+        
+        /**
+         * An invoke instruction 
+         */
+        METHOD_INSN(false, false, true),
+        
+        /**
+         * A get or put field instruction 
+         */
+        FIELD_INSN(false, false, true),
+        
+        /**
+         * An INVOKEDYNAMIC instruction
+         */
+        INVOKEDYNAMIC_INSN(false, false, true);
+        
+        /**
+         * Whether this node holds a method, implies that calling <tt>getMethod
+         * </tt> will return a value
+         */
+        public final boolean hasMethod;
+        
+        /**
+         * Whether this node holds a field, implies that calling <tt>getField
+         * </tt> will return a value
+         */
+        public final boolean hasField;
+        
+        /**
+         * Whether this node holds an insn, implies that calling <tt>getInsn
+         * </tt> will return a value
+         */
+        public final boolean hasInsn;
+
+        private NodeType(boolean isMethod, boolean isField, boolean isInsn) {
+            this.hasMethod = isMethod;
+            this.hasField = isField;
+            this.hasInsn = isInsn;
+        }
+        
+    }
     
     /**
      * ElementNode for MethodNode
@@ -68,8 +132,8 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isMethod() {
-            return true;
+        public NodeType getType() {
+            return NodeType.METHOD;
         }
         
         @Override
@@ -129,6 +193,11 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
+        public NodeType getType() {
+            return NodeType.FIELD;
+        }
+
+        @Override
         public boolean isField() {
             return true;
         }
@@ -187,8 +256,8 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isInsn() {
-            return true;
+        public NodeType getType() {
+            return NodeType.METHOD_INSN;
         }
         
         @Override
@@ -262,13 +331,13 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isInvokeDynamic() {
-            return true;
+        public NodeType getType() {
+            return NodeType.INVOKEDYNAMIC_INSN;
         }
         
         @Override
-        public boolean isInsn() {
-            return true;
+        public boolean isField() {
+            return this.implMethod != null && Handles.isField(this.implMethod);
         }
         
         @Override
@@ -340,10 +409,15 @@ public abstract class ElementNode<TNode> {
         }
         
         @Override
-        public boolean isInsn() {
-            return true;
+        public NodeType getType() {
+            return NodeType.FIELD_INSN;
         }
         
+        @Override
+        public boolean isField() {
+            return true;
+        }
+
         @Override
         public AbstractInsnNode getInsn() {
             return this.insn;
@@ -435,35 +509,19 @@ public abstract class ElementNode<TNode> {
     }
     
     /**
-     * Get whether this element is a method, implies getMethod() will return
-     * a value
-     */
-    public boolean isMethod() {
-        return false;
-    }
-    
-    /**
-     * get whether this element is a field, implies getField() will return
-     * a value
+     * Get whether this element is a field type and the descriptor is a bare
+     * type descriptor without arguments. Otherwise assumes the descriptor is a
+     * method descriptor. 
      */
     public boolean isField() {
         return false;
     }
     
     /**
-     * get whether this element is an instruction, implies getInsn() will return
-     * a value
+     * Get the type of this ElementNode, the return value can be used to
+     * determine which accessor ({@link #getMethod}, {@link #getField}
      */
-    public boolean isInsn() {
-        return false;
-    }
-    
-    /**
-     * get whether this element is an INVOKEDYNAMIC insn
-     */
-    public boolean isInvokeDynamic() {
-        return false;
-    }
+    public abstract NodeType getType();
     
     /**
      * Get the {@link MethodNode} if this member is a method, otherwise returns
@@ -550,7 +608,7 @@ public abstract class ElementNode<TNode> {
         if (!owner.isEmpty()) {
             owner = "L" + owner + ";";
         }
-        return String.format("%s%%s", owner, Strings.nullToEmpty(this.getName()), desc);
+        return String.format("%s%s%s", owner, Strings.nullToEmpty(this.getName()), desc);
     }
 
     /**
