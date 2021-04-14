@@ -236,7 +236,7 @@ public class BeforeConstant extends InjectionPoint {
             if (matchesInsn) {
                 this.log("    BeforeConstant found a matching constant{} at ordinal {}", this.matchByType != null ? " TYPE" : " value", ordinal);
                 if (this.ordinal == -1 || this.ordinal == ordinal) {
-                    this.log("      BeforeConstant found {}", Bytecode.describeNode(insn).trim());
+                    this.log("      BeforeConstant found {}", Bytecode.describeNode(insn, false));
                     nodes.add(insn);
                     found = true;
                 }

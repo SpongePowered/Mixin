@@ -248,7 +248,8 @@ public final class ClassInfo {
          */
         @Override
         public String toString() {
-            return String.format("FrameData[index=%d, type=%s, locals=%d]", this.index, FrameData.FRAMETYPES[this.type + 1], this.locals);
+            return String.format("FrameData[index=%d, type=%s, locals=%d size=%d]", this.index, FrameData.FRAMETYPES[this.type + 1], this.locals,
+                    this.size);
         }
     }
     

@@ -413,15 +413,27 @@ public final class Bytecode {
      * @return human-readable description of node
      */
     public static String describeNode(AbstractInsnNode node) {
+        return Bytecode.describeNode(node, true);
+    }
+        
+    /**
+     * Gets a description of the supplied node for debugging purposes
+     * 
+     * @param node node to describe
+     * @param listFormat format the returned string so that returned nodes line
+     *      up (node names aligned to 14 chars)
+     * @return human-readable description of node
+     */
+    public static String describeNode(AbstractInsnNode node, boolean listFormat) {
         if (node == null) {
-            return String.format("   %-14s ", "null");
+            return listFormat ? String.format("   %-14s ", "null") : "null";
         }
         
         if (node instanceof LabelNode) {
             return String.format("[%s]", ((LabelNode)node).getLabel());
         }
         
-        String out = String.format("   %-14s ", node.getClass().getSimpleName().replace("Node", ""));
+        String out = String.format(listFormat ? "   %-14s " : "%s ", node.getClass().getSimpleName().replace("Node", ""));
         if (node instanceof JumpInsnNode) {
             out += String.format("[%s] [%s]", Bytecode.getOpcodeName(node), ((JumpInsnNode)node).label.getLabel());
         } else if (node instanceof VarInsnNode) {
@@ -445,6 +457,8 @@ public final class Bytecode {
             out += (((IntInsnNode)node).operand);
         } else if (node instanceof FrameNode) {
             out += String.format("[%s] ", Bytecode.getOpcodeName(((FrameNode)node).type, "H_INVOKEINTERFACE", -1));
+        } else if (node instanceof TypeInsnNode) {
+            out += String.format("[%s] %s", Bytecode.getOpcodeName(node), ((TypeInsnNode)node).desc);
         } else {
             out += String.format("[%s] ", Bytecode.getOpcodeName(node));
         }
