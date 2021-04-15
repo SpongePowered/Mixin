@@ -138,6 +138,11 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * configured via the build script (eg. when using AP with MCP)
      */
     private Properties properties;
+    
+    /**
+     * No informational messages, I'm hunting wabbits
+     */
+    private boolean beVewyVewyQuiet;
 
     /**
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
@@ -145,6 +150,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
         this.env = this.detectEnvironment(processingEnv);
         this.processingEnv = processingEnv;
+        this.beVewyVewyQuiet = this.env == CompilerEnvironment.JDT || "true".equalsIgnoreCase(this.getOption(SupportedOptions.QUIET));
         
         MessageRouter.setMessager(processingEnv.getMessager());
 
@@ -555,7 +561,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      */
     @Override
     public void printMessage(Kind kind, CharSequence msg) {
-        if (this.env == CompilerEnvironment.JAVAC || kind != Kind.NOTE) {
+        if (!this.beVewyVewyQuiet || kind != Kind.NOTE) {
             this.processingEnv.getMessager().printMessage(kind, msg);
         }
     }

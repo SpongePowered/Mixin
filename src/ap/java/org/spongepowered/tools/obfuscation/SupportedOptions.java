@@ -47,6 +47,7 @@ public final class SupportedOptions {
     public static final String DEPENDENCY_TARGETS_FILE   = "dependencyTargetsFile";
     public static final String MAPPING_TYPES             = "mappingTypes";
     public static final String PLUGIN_VERSION            = "pluginVersion";
+    public static final String QUIET                     = "quiet";
     
     private SupportedOptions() {}
 
@@ -65,7 +66,8 @@ public final class SupportedOptions {
             SupportedOptions.DEFAULT_OBFUSCATION_ENV,
             SupportedOptions.DEPENDENCY_TARGETS_FILE,
             SupportedOptions.MAPPING_TYPES,
-            SupportedOptions.PLUGIN_VERSION
+            SupportedOptions.PLUGIN_VERSION,
+            SupportedOptions.QUIET
         );
         options.addAll(
             ObfuscationServices.getInstance().getSupportedOptions()
