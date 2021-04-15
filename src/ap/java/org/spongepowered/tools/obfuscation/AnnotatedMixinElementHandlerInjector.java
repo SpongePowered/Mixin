@@ -43,7 +43,6 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
 import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
-import org.spongepowered.asm.mixin.injection.struct.InvalidMemberDescriptorException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
@@ -232,7 +231,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         if (desc == null) {
             Kind error = this.mixin.isMultiTarget() ? Kind.ERROR : Kind.WARNING;
             if (target.isSimulated()) {
-                elem.printMessage(this.ap, Kind.NOTE, elem + " target '" + reference + "' in @Pseudo mixin will not be obfuscated");
+                elem.printMessage(this.ap, Kind.OTHER, elem + " target '" + reference + "' in @Pseudo mixin will not be obfuscated");
             } else if (target.isImaginary()) {
                 elem.printMessage(this.ap, error, elem + " target requires method signature because enclosing type information for " 
                         + target + " is unavailable");
@@ -301,29 +300,36 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             this.ap.printMessage(Kind.ERROR, "Injector in interface is unsupported", elem.getElement());
         }
         
-        String reference = elem.getAt().<String>getValue("target");
-        if (reference == null) {
-            return;
+        ITargetSelector targetSelector = null;
+        String targetReference = elem.getAt().<String>getValue("target");
+        if (targetReference != null) {
+            targetSelector = TargetSelector.parse(targetReference, elem);
+            try {
+                targetSelector.validate();
+            } catch (InvalidSelectorException ex) {
+                this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAtErrorElement(this.ap.getCompilerEnvironment()));
+            }
         }
         
-        ITargetSelector selector = TargetSelector.parse(reference, elem);
-
-        try {
-            selector.validate();
-        } catch (InvalidMemberDescriptorException ex) {
-            this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAtErrorElement(this.ap.getCompilerEnvironment()));
+        String type = InjectionPointData.parseType(elem.getAt().<String>getValue("value", ""));
+        
+        ITargetSelector classSelector = null;
+        String classReference = elem.getAtArg("class");
+        if ("NEW".equals(type) && classReference != null) {
+            classSelector = TargetSelector.parse(classReference, elem);
+            try {
+                classSelector.validate();
+            } catch (InvalidSelectorException ex) {
+                this.ap.printMessage(Kind.ERROR, ex.getMessage(), elem.getElement(), elem.getAtErrorElement(this.ap.getCompilerEnvironment()));
+            }
         }
         
         if (elem.shouldRemap()) {
-            String type = InjectionPointData.parseType(elem.getAt().<String>getValue("value"));
             if ("NEW".equals(type)) {
-                String classReference = elem.getAtArg("class");
-                ITargetSelector classSelector = TargetSelector.parse(classReference, elem);
-                
-                this.remapNewTarget(String.format(format, type + ".<target>"), reference, selector, elem);
+                this.remapNewTarget(String.format(format, type + ".<target>"), targetReference, targetSelector, elem);
                 this.remapNewTarget(String.format(format, type + ".args[class]"), classReference, classSelector, elem);
             } else {
-                this.remapReference(String.format(format, type + ".<target>"), reference, selector, elem);
+                this.remapReference(String.format(format, type + ".<target>"), targetReference, targetSelector, elem);
             }
         }
     }
@@ -366,6 +372,7 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
         if (!(selector instanceof ITargetSelectorRemappable)) {
             return;
         }
+        
         ITargetSelectorRemappable targetMember = (ITargetSelectorRemappable)selector;
         AnnotationMirror errorElement = elem.getAtErrorElement(this.ap.getCompilerEnvironment());
         
