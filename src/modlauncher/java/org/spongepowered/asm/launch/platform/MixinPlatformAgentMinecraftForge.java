@@ -24,8 +24,10 @@
  */
 package org.spongepowered.asm.launch.platform;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.util.Constants;
@@ -33,11 +35,17 @@ import org.spongepowered.asm.util.Constants;
 import cpw.mods.modlauncher.Environment;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
+import cpw.mods.modlauncher.api.ILaunchHandlerService;
 
 /**
  * Platform agent for minecraft forge under ModLauncher, only detects the side
  */
 public class MixinPlatformAgentMinecraftForge extends MixinPlatformAgentAbstract implements IMixinPlatformServiceAgent {
+
+    /**
+     * getDist method name in launch handler
+     */
+    private static final String GET_DIST_METHOD = "getDist";
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.launch.platform.IMixinPlatformServiceAgent
@@ -71,6 +79,22 @@ public class MixinPlatformAgentMinecraftForge extends MixinPlatformAgentAbstract
         }
         if (launchTarget.contains("client")) {
             return Constants.SIDE_CLIENT;
+        }
+        Optional<ILaunchHandlerService> launchHandler = environment.findLaunchHandler(launchTarget);
+        if (launchHandler.isPresent()) {
+            ILaunchHandlerService service = launchHandler.get();
+            try {
+                Method mdGetDist = service.getClass().getDeclaredMethod(MixinPlatformAgentMinecraftForge.GET_DIST_METHOD);
+                String strDist = mdGetDist.invoke(service).toString().toLowerCase(Locale.ROOT);
+                if (strDist.contains("server")) {
+                    return Constants.SIDE_SERVER;
+                }
+                if (strDist.contains("client")) {
+                    return Constants.SIDE_CLIENT;
+                }
+            } catch (Exception ex) {
+                return null;
+            }
         }
         return null;
     }
