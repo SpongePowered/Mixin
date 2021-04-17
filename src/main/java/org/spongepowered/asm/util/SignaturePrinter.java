@@ -238,9 +238,9 @@ public class SignaturePrinter {
     private StringBuilder appendType(StringBuilder sb, Type type, String name) {
         switch (type.getSort()) {
             case Type.ARRAY:
-                return SignaturePrinter.appendArraySuffix(this.appendType(sb, type.getElementType(), name), type);
+                return SignaturePrinter.appendArraySuffix(this.appendType(sb, SignaturePrinter.getElementType(type), name), type);
             case Type.OBJECT:
-                return this.appendType(sb, type.getClassName(), name);
+                return this.appendType(sb, SignaturePrinter.getClassName(type), name);
             default:
                 sb.append(SignaturePrinter.getTypeName(type, false, this.fullyQualified));
                 if (name != null) {
@@ -263,7 +263,7 @@ public class SignaturePrinter {
         }
         return sb;
     }
-    
+
     /**
      * Get the source code name for the specified type
      * 
@@ -310,9 +310,10 @@ public class SignaturePrinter {
             case Type.FLOAT:   return box ? "Float"     : "float";
             case Type.LONG:    return box ? "Long"      : "long";
             case Type.DOUBLE:  return box ? "Double"    : "double";
-            case Type.ARRAY:   return SignaturePrinter.getTypeName(type.getElementType(), box, fullyQualified) + SignaturePrinter.arraySuffix(type);
+            case Type.ARRAY:  
+                return SignaturePrinter.getTypeName(SignaturePrinter.getElementType(type), box, fullyQualified) + SignaturePrinter.arraySuffix(type);
             case Type.OBJECT:
-                String typeName = type.getClassName();
+                String typeName = SignaturePrinter.getClassName(type);
                 if (!fullyQualified) {
                     typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
                 }
@@ -322,10 +323,25 @@ public class SignaturePrinter {
         }
     }
     
+    private static Type getElementType(Type type) {
+        try {
+            return type.getElementType();
+        } catch (Exception ex) {
+            return Type.getObjectType("InvalidType");
+        }
+    }
+
+    private static String getClassName(Type type) {
+        try {
+            return type.getClassName();
+        } catch (Exception ex) {
+            return "InvalidType";
+        }
+    }
+    
     private static String arraySuffix(Type type) {
         return Strings.repeat("[]", type.getDimensions());
     }
-    
     
     private static StringBuilder appendArraySuffix(StringBuilder sb, Type type) {
         for (int i = 0; i < type.getDimensions(); i++) {

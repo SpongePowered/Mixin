@@ -667,7 +667,11 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
                 }
             } else {
                 try {
-                    Type.getArgumentTypes(this.desc);
+                    for (Type argType : Type.getArgumentTypes(this.desc)) {
+                        // getInternalName is a useful litmus test for improperly-formatted types which parse out of
+                        // the descriptor correctly but are actually invalid, for example unterminated class names
+                        argType.getInternalName();
+                    }
                 } catch (Exception ex) {
                     throw new InvalidMemberDescriptorException(this.input, "Invalid descriptor: " + this.desc);
                 }
@@ -675,6 +679,10 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
                 String retString = this.desc.substring(this.desc.indexOf(')') + 1);
                 try {
                     Type retType = Type.getType(retString);
+                    int sort = retType.getSort();
+                    if (sort >= Type.ARRAY) {
+                        retType.getInternalName(); // sanity check
+                    }
                     if (!retString.equals(retType.getDescriptor())) {
                         throw new InvalidMemberDescriptorException(this.input, "Invalid return type \"" + retString + "\" in descriptor: "
                                 + this.desc);
