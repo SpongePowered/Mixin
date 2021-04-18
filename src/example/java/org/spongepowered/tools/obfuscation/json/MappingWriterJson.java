@@ -79,7 +79,7 @@ public class MappingWriterJson extends MappingWriter {
         
         try {
             writer = this.openFileWriter(output, type + " output");
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
             gson.toJson(mappings, writer);
         } catch (IOException ex) {
             ex.printStackTrace();
