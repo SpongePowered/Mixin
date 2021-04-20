@@ -666,7 +666,8 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         if (typeInsn.getOpcode() == Opcodes.CHECKCAST
                 && typeInsn.desc.equals(this.getTarget().getClassRef())
                 && lastNode.getOpcode() == Opcodes.ALOAD
-                && ((VarInsnNode)lastNode).var == 0) {
+                && ((VarInsnNode)lastNode).var == 0
+                && !Bytecode.isStatic(method)) {
             iter.remove();
             return;
         }
