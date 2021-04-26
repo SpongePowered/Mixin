@@ -272,7 +272,8 @@ public final class Locals {
                 boolean isLoad = insn.getOpcode() >= Opcodes.ILOAD && insn.getOpcode() <= Opcodes.SALOAD;
                 if (isLoad) {
                     frame[varNode.var] = Locals.getLocalVariableAt(classNode, method, insn, varNode.var);
-                    knownFrameSize = Math.max(knownFrameSize, varNode.var + Type.getType(frame[varNode.var].desc).getSize());
+                    int varSize = frame[varNode.var].desc != null ? Type.getType(frame[varNode.var].desc).getSize() : 1;
+                    knownFrameSize = Math.max(knownFrameSize, varNode.var + varSize);
                 } else {
                     // Update the LVT for the opcode AFTER this one, since we always want to know
                     // the frame state BEFORE the *current* instruction to match the contract of
