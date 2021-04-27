@@ -69,7 +69,7 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
     public String remap(String reference) {
         if (this.context != null) {
             IReferenceMapper referenceMapper = this.context.getReferenceMapper();
-            return referenceMapper != null ? referenceMapper.remap(this.context.getClassName(), reference) : reference;
+            return referenceMapper != null ? referenceMapper.remap(this.context.getClassRef(), reference) : reference;
         }
         return reference;
     }
