@@ -643,7 +643,7 @@ public final class MixinEnvironment implements ITokenProvider {
         },
         
         /**
-         * Java 10 and above
+         * Java 11 and above
          */
         JAVA_11(11, Opcodes.V11, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
                 | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
