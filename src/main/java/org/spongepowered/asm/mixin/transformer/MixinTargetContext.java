@@ -1277,7 +1277,14 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.activities.clear();
         
         try {
-            Activity applyActivity = this.activities.begin("Inject");
+            Activity applyActivity = this.activities.begin("PreInject");
+            Activity preInjectActivity = this.activities.begin("?");
+            for (InjectionInfo injectInfo : this.injectors) {
+                preInjectActivity.next(injectInfo.toString());
+                injectInfo.preInject();
+            }
+
+            applyActivity.next("Inject");
             Activity injectActivity = this.activities.begin("?");
             for (InjectionInfo injectInfo : this.injectors) {
                 injectActivity.next(injectInfo.toString());

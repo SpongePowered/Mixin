@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -45,6 +44,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.Locals.SyntheticLocalVariableNode;
 
 /**
  * Information about the current injection target, mainly just convenience
@@ -751,13 +751,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param desc local variable type
      */
     public void addLocalVariable(int index, String name, String desc) {
-        if (this.start == null) {
-            this.start = new LabelNode(new Label());
-            this.end = new LabelNode(new Label());
-            this.insns.insert(this.start);
-            this.insns.add(this.end);
-        }
-        this.addLocalVariable(index, name, desc, this.start, this.end);
+        this.addLocalVariable(index, name, desc, null, null);
     }
 
     /**
@@ -766,14 +760,50 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param index local variable index
      * @param name local variable name
      * @param desc local variable type
-     * @param start start of range
-     * @param end end of range
+     * @param from start of range
+     * @param to end of range
      */
-    private void addLocalVariable(int index, String name, String desc, LabelNode start, LabelNode end) {
+    public void addLocalVariable(int index, String name, String desc, LabelNode from, LabelNode to) {
+        if (from == null) {
+            from = this.getStartLabel();
+        }
+        
+        if (to == null) {
+            to = this.getEndLabel();
+        }
+        
         if (this.method.localVariables == null) {
             this.method.localVariables = new ArrayList<LocalVariableNode>();
         }
-        this.method.localVariables.add(new LocalVariableNode(name, desc, null, start, end, index));
+        
+        for (Iterator<LocalVariableNode> iter = this.method.localVariables.iterator(); iter.hasNext();) {
+            LocalVariableNode local = iter.next();
+            if (local != null && local.index == index && from == local.start && to == local.end) {
+                iter.remove();
+            }
+        }
+        
+        this.method.localVariables.add(new SyntheticLocalVariableNode(name, desc, null, from, to, index));
     }
-    
+
+    /**
+     * Get a label which marks the very start of the method
+     */
+    private LabelNode getStartLabel() {
+        if (this.start == null) {
+            this.insns.insert(this.start = new LabelNode());
+        }
+        return this.start;
+    }
+
+    /**
+     * Get a label which marks the very end of the method
+     */
+    private LabelNode getEndLabel() {
+        if (this.end == null) {
+            this.insns.add(this.end = new LabelNode());
+        }
+        return this.end;
+    }
+
 }

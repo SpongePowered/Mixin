@@ -327,6 +327,11 @@ public class CallbackInjector extends Injector {
     }
     
     /**
+     * Decorator key for local variables decoration
+     */
+    private static final String LOCALS_KEY = "locals";
+
+    /**
      * True if cancellable 
      */
     private final boolean cancellable;
@@ -417,6 +422,19 @@ public class CallbackInjector extends Injector {
         myNodes.add(injectionNode);
         this.totalInjections++;
     }
+    
+    @Override
+    protected void preInject(Target target, InjectionNode node) {
+        if (this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) {
+            LocalVariableNode[] locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
+            for (int j = 0; j < locals.length; j++) {
+                if (locals[j] != null && locals[j].desc != null && locals[j].desc.startsWith("Lorg/spongepowered/asm/mixin/injection/callback/")) {
+                    locals[j] = null;
+                }
+            }
+            node.<LocalVariableNode[]>decorate(CallbackInjector.LOCALS_KEY, locals);
+        }
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.injection.callback.BytecodeInjector
@@ -425,17 +443,7 @@ public class CallbackInjector extends Injector {
      */
     @Override
     protected void inject(Target target, InjectionNode node) {
-        LocalVariableNode[] locals = null;
-
-        if (this.localCapture.isCaptureLocals() || this.localCapture.isPrintLocals()) {
-            locals = Locals.getLocalsAt(this.classNode, target.method, node.getCurrentTarget());
-            for (int j = 0; j < locals.length; j++) {
-                if (locals[j] != null && locals[j].desc != null && locals[j].desc.startsWith("Lorg/spongepowered/asm/mixin/injection/callback/")) {
-                    locals[j] = null;
-                }
-            }
-        }
-
+        LocalVariableNode[] locals = node.<LocalVariableNode[]>getDecoration(CallbackInjector.LOCALS_KEY);
         this.inject(new Callback(this.methodNode, target, node, locals, this.localCapture.isCaptureLocals()));
     }
 

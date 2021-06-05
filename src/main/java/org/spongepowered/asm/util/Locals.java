@@ -58,6 +58,17 @@ import org.spongepowered.asm.util.throwables.LVTGeneratorError;
 public final class Locals {
 
     /**
+     * A local variable entry added by mixin itself, eg. by an injector
+     */
+    public static class SyntheticLocalVariableNode extends LocalVariableNode {
+
+        public SyntheticLocalVariableNode(String name, String descriptor, String signature, LabelNode start, LabelNode end, int index) {
+            super(name, descriptor, signature, start, end, index);
+        }
+    
+    }
+
+    /**
      * Frame type names just for the purposes of debug printing
      */
     private static final String[] FRAME_TYPES = { "TOP", "INTEGER", "FLOAT", "DOUBLE", "LONG", "NULL", "UNINITIALIZED_THIS" };
@@ -287,9 +298,9 @@ public final class Locals {
             }
         }
         
-        // Null out any "unknown" locals
+        // Null out any "unknown" or mixin-provided locals
         for (int l = 0; l < frame.length; l++) {
-            if (frame[l] != null && frame[l].desc == null) {
+            if (frame[l] != null && frame[l].desc == null || frame[l] instanceof SyntheticLocalVariableNode) {
                 frame[l] = null;
             }
         }

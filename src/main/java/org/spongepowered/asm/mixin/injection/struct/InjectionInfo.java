@@ -429,6 +429,15 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     }
     
     /**
+     * Perform pre-injection checks and tasks
+     */
+    public void preInject() {
+        for (Entry<Target, List<InjectionNode>> entry : this.targetNodes.entrySet()) {
+            this.injector.preInject(entry.getKey(), entry.getValue());
+        }
+    }
+    
+    /**
      * Perform injections
      */
     public void inject() {
