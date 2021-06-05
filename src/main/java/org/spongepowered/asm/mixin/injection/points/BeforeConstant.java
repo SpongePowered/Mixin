@@ -280,7 +280,7 @@ public class BeforeConstant extends InjectionPoint {
         }
         
         Object value = Bytecode.getConstant(insn);
-        if (value == null) {
+        if (value == Type.VOID_TYPE) {
             this.log("  BeforeConstant found NULL constant: nullValue = {}", this.nullValue);
             return this.nullValue || Constants.OBJECT_DESC.equals(this.matchByType);
         } else if (value instanceof Integer) {
