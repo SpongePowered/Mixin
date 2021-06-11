@@ -653,6 +653,84 @@ public final class MixinEnvironment implements ITokenProvider {
                 return JavaVersion.current() >= 11.0;
             }
             
+        },
+
+        /**
+         * Java 12 and above
+         */
+        JAVA_12(12, Opcodes.V12, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 12.0;
+            }
+
+        },
+
+        /**
+         * Java 13 and above
+         */
+        JAVA_13(13, Opcodes.V13, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 13.0;
+            }
+
+        },
+
+        /**
+         * Java 14 and above
+         */
+        JAVA_14(14, Opcodes.V14, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 14.0;
+            }
+
+        },
+
+        /**
+         * Java 16 and above
+         */
+        JAVA_15(15, Opcodes.V15, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 15.0;
+            }
+
+        },
+
+        /**
+         * Java 16 and above
+         */
+        JAVA_16(16, Opcodes.V16, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 16.0;
+            }
+
+        },
+
+        /**
+         * Java 17 and above
+         */
+        JAVA_17(17, Opcodes.V17, LanguageFeature.METHODS_IN_INTERFACES | LanguageFeature.PRIVATE_METHODS_IN_INTERFACES
+                                                                         | LanguageFeature.NESTING | LanguageFeature.DYNAMIC_CONSTANTS) {
+
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= 17.0;
+            }
+
         };
         
         /**
