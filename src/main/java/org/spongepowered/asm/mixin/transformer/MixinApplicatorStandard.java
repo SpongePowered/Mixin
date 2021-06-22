@@ -64,6 +64,7 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
+import org.spongepowered.asm.util.LanguageFeatures;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
@@ -381,6 +382,8 @@ class MixinApplicatorStandard {
                 this.applyMethods(mixin);
                 activity.next("Apply Initialisers");
                 this.applyInitialisers(mixin);
+                activity.next("Apply Nesting");
+                this.applyNesting(mixin);
                 break;
                 
             case PREINJECT:
@@ -1022,6 +1025,30 @@ class MixinApplicatorStandard {
 
     private static String fieldKey(FieldInsnNode fieldNode) {
         return String.format("%s:%s", fieldNode.desc, fieldNode.name);
+    }
+    
+    /**
+     * Apply nesting attributes from the mixin to the target.
+     * 
+     * <p><strong>NOT YET SUPPORTED!</strong></p>
+     */
+    protected void applyNesting(MixinTargetContext mixin) {
+       
+        String nestHostClass = mixin.getNestHostClass();
+        List<String> nestMembers = mixin.getNestMembers();
+        if ((nestHostClass == null && nestMembers == null) || (nestMembers != null && nestMembers.size() == 0)) {
+            return;
+        }
+        
+        if (!MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.NESTING)) {
+            // Shouldn't get here because we should error out during the initial scan, but you never know
+            throw new InvalidMixinException(mixin,
+                    String.format("%s contains nesting information but the current compatibility level does not support class nesting attributes",
+                    mixin));
+        }
+        
+        // TODO Nesting not done yet, just log an error for now that we're not applying these attributes
+        this.logger.error("NESTING not supported in this version of Mixin. {} nesting attributes will not be applied to the target", mixin);
     }
 
     /**

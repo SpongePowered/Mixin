@@ -41,6 +41,7 @@ import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.transformers.MixinClassReader;
 import org.spongepowered.asm.util.asm.ASM;
 
 /**
@@ -65,7 +66,7 @@ public class MixinAgent implements IHotSwap {
             byte[] mixinBytecode = MixinAgent.classLoader.getFakeMixinBytecode(classBeingRedefined);
             if (mixinBytecode != null) {
                 ClassNode classNode = new ClassNode(ASM.API_VERSION);
-                ClassReader cr = new ClassReader(classfileBuffer);
+                ClassReader cr = new MixinClassReader(classfileBuffer, className);
                 cr.accept(classNode, ClassReader.EXPAND_FRAMES);
                 
                 List<String> targets = this.reloadMixin(className, classNode);

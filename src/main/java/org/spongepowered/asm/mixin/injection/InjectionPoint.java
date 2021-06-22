@@ -868,6 +868,7 @@ public abstract class InjectionPoint {
      */
     @Deprecated
     public static void register(Class<? extends InjectionPoint> type) {
+        InjectionPoint.register(type, null);
     }
         
     /**

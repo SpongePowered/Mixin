@@ -41,8 +41,8 @@ public abstract class TreeTransformer implements ILegacyClassTransformer {
      * @param basicClass Original bytecode
      * @return tree
      */
-    protected final ClassNode readClass(byte[] basicClass) {
-        return this.readClass(basicClass, true);
+    protected final ClassNode readClass(String className, byte[] basicClass) {
+        return this.readClass(className, basicClass, true);
     }
     
     /**
@@ -51,8 +51,8 @@ public abstract class TreeTransformer implements ILegacyClassTransformer {
      *      writing the generated ClassNode later
      * @return tree
      */
-    protected final ClassNode readClass(byte[] basicClass, boolean cacheReader) {
-        ClassReader classReader = new ClassReader(basicClass);
+    protected final ClassNode readClass(String className, byte[] basicClass, boolean cacheReader) {
+        ClassReader classReader = new MixinClassReader(basicClass, className);
         if (cacheReader) {
             this.classReader = classReader;
         }

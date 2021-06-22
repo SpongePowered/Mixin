@@ -27,11 +27,14 @@ package org.spongepowered.asm.mixin.transformer;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidInterfaceMixinException;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.LanguageFeatures;
 
 /**
  * Bytecode preprocessor for interface mixins, simply performs some additional
@@ -57,9 +60,17 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
     @Override
     protected void prepareMethod(MixinMethodNode mixinMethod, Method method) {
         // Userland interfaces should not have non-public methods except for lambda bodies
-        if (!Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC) && !Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)) {
-            throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains a non-public method! Found " + method + " in "
-                    + this.mixin);
+        if (!Bytecode.hasFlag(mixinMethod, Opcodes.ACC_PUBLIC)) {
+            if (!Bytecode.hasFlag(mixinMethod, Opcodes.ACC_SYNTHETIC)) {
+                throw new InvalidInterfaceMixinException(this.mixin, String.format("Interface mixin contains a non-public method! Found %s in %s",
+                        method, this.mixin));
+            }
+            CompatibilityLevel requiredLevel = CompatibilityLevel.requiredFor(LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES);
+            if (MixinEnvironment.getCompatibilityLevel().isLessThan(requiredLevel)) {
+                throw new InvalidInterfaceMixinException(this.mixin, String.format(
+                        "Interface mixin contains a synthetic private method but compatibility level %s is required! Found %s in %s",
+                        requiredLevel, method, this.mixin));
+            }
         }
         
         super.prepareMethod(mixinMethod, method);
@@ -75,8 +86,8 @@ class MixinPreProcessorInterface extends MixinPreProcessorStandard {
     @Override
     protected boolean validateField(MixinTargetContext context, FieldNode field, AnnotationNode shadow) {
         if (!Bytecode.isStatic(field)) {
-            throw new InvalidInterfaceMixinException(this.mixin, "Interface mixin contains an instance field! Found " + field.name + " in "
-                    + this.mixin);
+            throw new InvalidInterfaceMixinException(this.mixin, String.format("Interface mixin contains an instance field! Found %s in %s",
+                    field.name, this.mixin));
         }
         
         return super.validateField(context, field, shadow);

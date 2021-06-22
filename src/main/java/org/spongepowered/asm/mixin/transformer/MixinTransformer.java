@@ -223,7 +223,7 @@ final class MixinTransformer extends TreeTransformer implements IMixinTransforme
      */
     @Override
     public byte[] transformClass(MixinEnvironment environment, String name, byte[] classBytes) {
-        ClassNode classNode = this.readClass(classBytes);
+        ClassNode classNode = this.readClass(name, classBytes);
         if (this.processor.applyMixins(environment, name, classNode)) {
             return this.writeClass(classNode);
         }
@@ -276,7 +276,7 @@ final class MixinTransformer extends TreeTransformer implements IMixinTransforme
     private static ClassNode createEmptyClass(String name) {
         ClassNode classNode = new ClassNode(ASM.API_VERSION);
         classNode.name = name.replace('.', '/');
-        classNode.version = MixinEnvironment.getCompatibilityLevel().classVersion();
+        classNode.version = MixinEnvironment.getCompatibilityLevel().getClassVersion();
         classNode.superName = Constants.OBJECT;
         return classNode;
     }

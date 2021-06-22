@@ -39,6 +39,7 @@ import java.util.Set;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -76,6 +77,9 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.LanguageFeatures;
+import org.spongepowered.asm.util.asm.ASM;
+import org.spongepowered.asm.util.asm.ClassNodeAdapter;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -179,7 +183,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * Minimum class version required to apply this mixin, target class will be
      * upgraded if the version is below this value
      */
-    private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.classVersion();
+    private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.getClassVersion();
 
     /**
      * ctor
@@ -730,6 +734,8 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             return constant;
         } else if (constant instanceof Handle) {
             return this.transformHandle(method, iter, (Handle)constant);
+        } else if (ASM.isAtLeastVersion(6) && constant instanceof ConstantDynamic) {
+            return this.transformDynamicConstant(method, iter, (ConstantDynamic)constant);
         }
         return constant;
     }
@@ -750,6 +756,36 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             this.transformMethodRef(method, iter, memberRef);
         }
         return memberRef.getMethodHandle();
+    }
+
+    /**
+     * Transforms a dynamic constant, this is currently a blind implementation
+     * since I haven't seen this bytecode in the wild.
+     * TODO Find out if this even works
+     * 
+     * @param method Method being processed
+     * @param iter Insn iterator
+     * @param constant Dynamic constant to transform
+     * @return Transformed dynamic constant
+     */
+    private ConstantDynamic transformDynamicConstant(MethodNode method, Iterator<AbstractInsnNode> iter, ConstantDynamic constant) {
+        this.requireVersion(Opcodes.V11);
+        
+        if (!MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.DYNAMIC_CONSTANTS)) {
+            // Shouldn't get here because we should error out during the initial scan, but you never know
+            throw new InvalidMixinException(this, String.format(
+                    "%s%s in %s contains a dynamic constant, which is not supported by the current compatibility level",
+                    method.name, method.desc, this));
+        }
+        
+        String desc = this.transformSingleDescriptor(constant.getDescriptor(), false);
+        Handle bsm = this.transformHandle(method, iter, constant.getBootstrapMethod());
+        Object[] bsmArgs = new Object[constant.getBootstrapMethodArgumentCount()];
+        for (int i = 0; i < bsmArgs.length; i++) {
+            bsmArgs[i] = this.transformConstant(method, iter, constant.getBootstrapMethodArgument(i));
+        }
+
+        return new ConstantDynamic(constant.getName(), desc, bsm, bsmArgs);
     }
 
     /**
@@ -1038,9 +1074,9 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.minRequiredClassVersion = Math.max(this.minRequiredClassVersion, version);
         
         // This validation is done on the mixin beforehand, however it's still
-        // possible that an upstream transformer can inject java 7 instructions
-        // without updating the class version.
-        if (version > MixinEnvironment.getCompatibilityLevel().classVersion()) {
+        // possible that an upstream transformer can inject unsupported
+        // instructions without updating the class version.
+        if ((version & 0xFFFF) > ASM.getMaxSupportedClassVersionMajor()) {
             throw new InvalidMixinException(this, "Unsupported mixin class version " + version);
         }
     }
@@ -1156,6 +1192,20 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      */
     String getSourceFile() {
         return this.classNode.sourceFile;
+    }
+    
+    /**
+     * Get the nest host class from the mixin
+     */
+    String getNestHostClass() {
+        return ClassNodeAdapter.getNestHostClass(this.classNode);
+    }
+    
+    /**
+     * Get the nest members from the mixin
+     */
+    List<String> getNestMembers() {
+        return ClassNodeAdapter.getNestMembers(this.classNode);
     }
 
     /* (non-Javadoc)

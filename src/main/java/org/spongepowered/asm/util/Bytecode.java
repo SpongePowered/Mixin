@@ -103,6 +103,17 @@ public final class Bytecode {
             return other == null || other.ordinal() <= this.ordinal();
         }
         
+        /**
+         * Get whether this visibility level represents a level which less than
+         * the supplied level
+         * 
+         * @param other level to compare to
+         * @return true if greater or equal
+         */
+        public boolean isLessThan(Visibility other) {
+            return other != null && this.ordinal() < other.ordinal();
+        }
+        
     }
     
     /**
@@ -1301,9 +1312,12 @@ public final class Bytecode {
         }
         
         // TODO Java 10
-//        dest.nestHostClassExperimental = source.nestHostClassExperimental;
-//        Bytecode.<String>clear(dest.nestMembersExperimental);
-//        dest.nestMembersExperimental = Bytecode.<String>merge(source.nestMembersExperimental, dest.nestMembersExperimental);
+//        if (MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.NESTING)) {
+//            ClassNodeAdapter.setNestHostClass(dest, ClassNodeAdapter.getNestHostClass(source));
+//            Bytecode.<String>clear(ClassNodeAdapter.getNestMembers(dest));
+//            ClassNodeAdapter.setNestMembers(dest, Bytecode.<String>merge(ClassNodeAdapter.getNestMembers(source),
+//                    ClassNodeAdapter.getNestMembers(dest)));
+//        }
         
         Bytecode.merge(source, dest);
         

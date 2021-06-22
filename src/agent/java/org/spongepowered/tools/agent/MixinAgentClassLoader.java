@@ -128,7 +128,7 @@ class MixinAgentClassLoader extends ClassLoader {
      */
     private byte[] materialise(String name) {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        cw.visit(MixinEnvironment.getCompatibilityLevel().classVersion(), Opcodes.ACC_PUBLIC, name.replace('.', '/'), null,
+        cw.visit(MixinEnvironment.getCompatibilityLevel().getClassVersion(), Opcodes.ACC_PUBLIC, name.replace('.', '/'), null,
                 Type.getInternalName(Object.class), null);
 
         // create init method

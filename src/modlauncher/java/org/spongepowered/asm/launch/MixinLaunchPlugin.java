@@ -42,6 +42,7 @@ import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher;
 import org.spongepowered.asm.service.modlauncher.ModLauncherAuditTrail;
+import org.spongepowered.asm.transformers.MixinClassReader;
 
 import com.google.common.io.Resources;
 
@@ -229,7 +230,7 @@ public class MixinLaunchPlugin implements ILaunchPluginService, IClassBytecodePr
         }
 
         ClassNode classNode = new ClassNode();
-        ClassReader classReader = new ClassReader(classBytes);
+        ClassReader classReader = new MixinClassReader(classBytes, name);
         classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
         return classNode;
     }

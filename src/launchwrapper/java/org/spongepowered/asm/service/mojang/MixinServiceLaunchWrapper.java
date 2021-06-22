@@ -38,14 +38,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.GlobalProperties.Keys;
 import org.spongepowered.asm.launch.platform.MainAttributes;
-import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleURI;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleVirtual;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
+import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -58,15 +58,16 @@ import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.ITransformer;
 import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
+import org.spongepowered.asm.transformers.MixinClassReader;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.collect.ImmutableList.Builder;
 
 import net.minecraft.launchwrapper.IClassNameTransformer;
 import net.minecraft.launchwrapper.IClassTransformer;
@@ -576,7 +577,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
      */
     @Override
     public ClassNode getClassNode(String className) throws ClassNotFoundException, IOException {
-        return this.getClassNode(this.getClassBytes(className, true), ClassReader.EXPAND_FRAMES);
+        return this.getClassNode(className, this.getClassBytes(className, true), ClassReader.EXPAND_FRAMES);
     }
     
     /* (non-Javadoc)
@@ -585,7 +586,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
      */
     @Override
     public ClassNode getClassNode(String className, boolean runTransformers) throws ClassNotFoundException, IOException {
-        return this.getClassNode(this.getClassBytes(className, true), ClassReader.EXPAND_FRAMES);
+        return this.getClassNode(className, this.getClassBytes(className, true), ClassReader.EXPAND_FRAMES);
     }
 
     /**
@@ -595,9 +596,9 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
      * @param flags ClassReader flags
      * @return ASM Tree view of the specified class 
      */
-    private ClassNode getClassNode(byte[] classBytes, int flags) {
+    private ClassNode getClassNode(String className, byte[] classBytes, int flags) {
         ClassNode classNode = new ClassNode();
-        ClassReader classReader = new ClassReader(classBytes);
+        ClassReader classReader = new MixinClassReader(classBytes, className);
         classReader.accept(classNode, flags);
         return classNode;
     }
