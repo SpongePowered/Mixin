@@ -538,7 +538,7 @@ class MixinProcessor {
                 }
             }
             
-            plugin.acceptTargets(config.getTargets(), Collections.<String>unmodifiableSet(otherTargets));
+            plugin.acceptTargets(config.getTargetsSet(), Collections.<String>unmodifiableSet(otherTargets));
         }
 
         for (MixinConfig config : this.pendingConfigs) {
