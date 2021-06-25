@@ -65,7 +65,7 @@ public class MappingProviderTSrg extends MappingProvider {
         this.inputMappings.addAll(Files.readLines(input, Charset.defaultCharset()));
         
         for (String line : this.inputMappings) {
-            if (Strings.isNullOrEmpty(line) || line.startsWith("#")) {
+            if (Strings.isNullOrEmpty(line) || line.startsWith("#") || line.startsWith("tsrg2") || line.startsWith("\t\t")) {
                 continue;
             }
             
