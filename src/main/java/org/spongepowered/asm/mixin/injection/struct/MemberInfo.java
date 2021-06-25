@@ -44,6 +44,7 @@ import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Quantifier;
 import org.spongepowered.asm.util.SignaturePrinter;
+import org.spongepowered.asm.util.asm.ASM;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -667,10 +668,16 @@ public final class MemberInfo implements ITargetSelectorRemappable, ITargetSelec
                 }
             } else {
                 try {
-                    for (Type argType : Type.getArgumentTypes(this.desc)) {
-                        // getInternalName is a useful litmus test for improperly-formatted types which parse out of
-                        // the descriptor correctly but are actually invalid, for example unterminated class names
-                        argType.getInternalName();
+                    // getArgumentTypes can choke on some invalid descriptors
+                    Type[] argTypes = Type.getArgumentTypes(this.desc);
+                    // getInternalName is a useful litmus test for improperly-formatted types which parse out of
+                    // the descriptor correctly but are actually invalid, for example unterminated class names.
+                    // However it doesn't support primitive types properly in ASM versions before 6 so don't run
+                    // the test unless running ASM 6 or later
+                    if (ASM.isAtLeastVersion(6)) {
+                        for (Type argType : argTypes) {
+                            argType.getInternalName();
+                        }
                     }
                 } catch (Exception ex) {
                     throw new InvalidMemberDescriptorException(this.input, "Invalid descriptor: " + this.desc);
