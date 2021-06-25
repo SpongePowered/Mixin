@@ -434,7 +434,11 @@ class MixinApplicatorStandard {
         if (mixin.shouldSetSourceFile()) {
             this.targetClass.sourceFile = mixin.getSourceFile();
         }
-        this.targetClass.version = Math.max(this.targetClass.version, mixin.getMinRequiredClassVersion());
+        
+        int requiredVersion = mixin.getMinRequiredClassVersion();
+        if ((requiredVersion & 0xFFFF) > (this.targetClass.version & 0xFFFF)) {
+            this.targetClass.version = requiredVersion;
+        }
     }
 
     /**

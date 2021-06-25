@@ -1071,13 +1071,28 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @param version version to require
      */
     protected void requireVersion(int version) {
-        this.minRequiredClassVersion = Math.max(this.minRequiredClassVersion, version);
+        int majorVersion = version & 0xFFFF;
+        int minorVersion = (version >> 16) & 0xFFFF;
+        
+        if (majorVersion <= (this.minRequiredClassVersion & 0xFFFF)) {
+            return;
+        }
+        
+        this.minRequiredClassVersion = version;
         
         // This validation is done on the mixin beforehand, however it's still
         // possible that an upstream transformer can inject unsupported
         // instructions without updating the class version.
-        if ((version & 0xFFFF) > ASM.getMaxSupportedClassVersionMajor()) {
-            throw new InvalidMixinException(this, "Unsupported mixin class version " + version);
+        if (majorVersion > ASM.getMaxSupportedClassVersionMajor()) {
+            throw new InvalidMixinException(this, String.format("Unsupported mixin class version %d.%d. ASM supports %s",
+                    majorVersion, minorVersion, ASM.getClassVersionString()));
+        }
+        
+        CompatibilityLevel compatibilityLevel = MixinEnvironment.getCompatibilityLevel();
+        if (majorVersion > compatibilityLevel.getClassMajorVersion()) {
+            MixinTargetContext.logger.warn(
+                    "{}: Class version {}.{} required is higher than the class version supported by the current compatibility level {} ",
+                    this, majorVersion, minorVersion, compatibilityLevel);
         }
     }
     

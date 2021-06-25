@@ -671,9 +671,9 @@ public final class MixinEnvironment implements ITokenProvider {
         
         private CompatibilityLevel maxCompatibleLevel;
         
-        private CompatibilityLevel(int ver, int classMajorVersion, int languageFeatures) {
+        private CompatibilityLevel(int ver, int classVersion, int languageFeatures) {
             this.ver = ver;
-            this.classVersion = classMajorVersion & 0xFF;
+            this.classVersion = classVersion;
             this.languageFeatures = languageFeatures;
         }
         
@@ -700,6 +700,13 @@ public final class MixinEnvironment implements ITokenProvider {
          */
         public int getClassVersion() {
             return this.classVersion;
+        }
+        
+        /**
+         * Get the major class version expected at this compatibility level
+         */
+        public int getClassMajorVersion() {
+            return this.classVersion & 0xFFFF;
         }
         
         /**
