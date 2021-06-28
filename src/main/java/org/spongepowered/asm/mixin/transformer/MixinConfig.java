@@ -729,7 +729,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             String wrapperName = this.mixinPackage + this.refMapperWrapper;
             try {
                 @SuppressWarnings("unchecked")
-                Class<IReferenceMapper> wrapperCls = (Class<IReferenceMapper>) Class.forName(wrapperName);
+                Class<IReferenceMapper> wrapperCls = (Class<IReferenceMapper>) this.service.getClassProvider().findClass(wrapperName, true);
                 Constructor<IReferenceMapper> ctr = wrapperCls.getConstructor(MixinEnvironment.class, IReferenceMapper.class);
                 this.refMapper = ctr.newInstance(this.env, this.refMapper);
             } catch (ClassNotFoundException e) {
