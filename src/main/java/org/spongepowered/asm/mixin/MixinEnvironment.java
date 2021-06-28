@@ -663,6 +663,28 @@ public final class MixinEnvironment implements ITokenProvider {
          */
         public static CompatibilityLevel DEFAULT = CompatibilityLevel.JAVA_6;
         
+        /**
+         * Maximum compatibility level actually supported. Other compatibility
+         * levels might exist but we don't actually have any internal code in
+         * place which supports those features. This is mainly used to indicate
+         * that mixin classes compiled with newer JDKs might have bytecode-level
+         * class features that this version of mixin doesn't understand, even
+         * when the current ASM or JRE do.
+         * 
+         * <p>This is particularly important for the case where a config
+         * declares a higher version (eg. JAVA_14) which has been added to the 
+         * enum but no code actually exists within Mixin as a library to handle
+         * language features from that version. In other words adding values to
+         * this enum doesn't magically add support for language features, and
+         * this field should point to the highest <em>known <b>supported</b>
+         * </em> version regardless of other <em>known</em> versions.</p>
+         * 
+         * <p>This comment mainly added to avoid stuff in the future like
+         * PR #500 which demonstrates that the nature of compatibility levels
+         * in mixin are not understood that well.</p>
+         */
+        public static CompatibilityLevel MAX_SUPPORTED = CompatibilityLevel.JAVA_11;
+        
         private final int ver;
         
         private final int classVersion;
@@ -808,13 +830,28 @@ public final class MixinEnvironment implements ITokenProvider {
         static String getSupportedVersions() {
             StringBuilder sb = new StringBuilder();
             boolean comma = false;
+            int rangeStart = 0, rangeEnd = 0;
             for (CompatibilityLevel level : CompatibilityLevel.values()) {
                 if (level.isSupported()) {
-                    if (comma) {
-                        sb.append(", ");
+                    if (level.ver == rangeEnd + 1) {
+                        rangeEnd = level.ver;
+                    } else {
+                        if (rangeStart > 0) {
+                            sb.append(comma ? "," : "").append(rangeStart);
+                            if (rangeEnd > rangeStart) {
+                                sb.append(rangeEnd > rangeStart + 1 ? '-' : ',').append(rangeEnd);
+                            }
+                            comma = true;
+                            rangeStart = rangeEnd = level.ver;
+                        }
+                        rangeStart = rangeEnd = level.ver;
                     }
-                    sb.append(level.ver);
-                    comma = true;
+                }
+            }
+            if (rangeStart > 0) {
+                sb.append(comma ? "," : "").append(rangeStart);
+                if (rangeEnd > rangeStart) {
+                    sb.append(rangeEnd > rangeStart + 1 ? '-' : ',').append(rangeEnd);
                 }
             }
             return sb.toString();
@@ -998,8 +1035,8 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.add("SpongePowered MIXIN%s", verbose ? " (Verbose debugging enabled)" : "").centre().hr();
             printer.kv("Code source", codeSource);
             printer.kv("Internal Version", version);
-            printer.kv("Java Versions Supported", CompatibilityLevel.getSupportedVersions());
-            printer.kv("Current Compatibility Level", MixinEnvironment.getCompatibilityLevel());
+            printer.kv("Java Version", "%s (supports compatibility %s)", JavaVersion.current(), CompatibilityLevel.getSupportedVersions());
+            printer.kv("Default Compatibility Level", MixinEnvironment.getCompatibilityLevel());
             printer.kv("Detected ASM API Version", ASM.getApiVersionString());
             printer.kv("Detected ASM Supports Java", ASM.getClassVersionString()).hr();
             printer.kv("Service Name", serviceName);

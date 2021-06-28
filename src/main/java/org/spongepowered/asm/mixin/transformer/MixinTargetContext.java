@@ -1088,12 +1088,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
                     majorVersion, minorVersion, ASM.getClassVersionString()));
         }
         
-        CompatibilityLevel compatibilityLevel = MixinEnvironment.getCompatibilityLevel();
-        if (majorVersion > compatibilityLevel.getClassMajorVersion()) {
-            MixinTargetContext.logger.warn(
-                    "{}: Class version {}.{} required is higher than the class version supported by the current compatibility level {} ",
-                    this, majorVersion, minorVersion, compatibilityLevel);
-        }
+        this.mixin.getParent().checkCompatibilityLevel(this.mixin, majorVersion, minorVersion);
     }
     
     /* (non-Javadoc)
