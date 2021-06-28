@@ -693,7 +693,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     void onSelect() {
         this.plugin = new PluginHandle(this, this.service, this.pluginClassName);
-        this.plugin.onLoad(this.mixinPackage);
+        this.plugin.onLoad(Strings.nullToEmpty(this.mixinPackage));
+        
+        if (Strings.isNullOrEmpty(this.mixinPackage)) {
+            return;
+        }
 
         if (!this.mixinPackage.endsWith(".")) {
             this.mixinPackage += ".";
@@ -757,14 +761,14 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
         this.prepared = true;
         
-        this.prepareMixins(this.mixinClasses, false);
+        this.prepareMixins("mixins", this.mixinClasses, false);
         
         switch (this.env.getSide()) {
             case CLIENT:
-                this.prepareMixins(this.mixinClassesClient, false);
+                this.prepareMixins("client", this.mixinClassesClient, false);
                 break;
             case SERVER:
-                this.prepareMixins(this.mixinClassesServer, false);
+                this.prepareMixins("server", this.mixinClassesServer, false);
                 break;
             case UNKNOWN:
                 //$FALL-THROUGH$
@@ -777,7 +781,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     void postInitialise() {
         if (this.plugin != null) {
             List<String> pluginMixins = this.plugin.getMixins();
-            this.prepareMixins(pluginMixins, true);
+            this.prepareMixins("companion plugin", pluginMixins, true);
         }
         
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
@@ -809,8 +813,16 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
 
-    private void prepareMixins(List<String> mixinClasses, boolean ignorePlugin) {
+    private void prepareMixins(String collectionName, List<String> mixinClasses, boolean ignorePlugin) {
         if (mixinClasses == null) {
+            return;
+        }
+        
+        if (Strings.isNullOrEmpty(this.mixinPackage)) {
+            if (mixinClasses.size() > 0) {
+                this.logger.error("{} declares mixin classes in {} but does not specify a package, {} orphaned mixins will not be loaded: {}",
+                        this, collectionName, mixinClasses.size(), mixinClasses);
+            }
             return;
         }
         
@@ -917,7 +929,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @Override
     public String getMixinPackage() {
-        return this.mixinPackage;
+        return Strings.nullToEmpty(this.mixinPackage);
     }
     
     /**
@@ -1022,6 +1034,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public List<String> getClasses() {
+        if (Strings.isNullOrEmpty(this.mixinPackage)) {
+            return Collections.<String>emptyList();
+        }
+
         Builder<String> list = ImmutableList.<String>builder();
         for (List<String> classes : new List[] { this.mixinClasses, this.mixinClassesClient, this.mixinClassesServer} ) {
             if (classes != null) {
@@ -1113,7 +1129,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      *      package
      */
     public boolean packageMatch(String className) {
-        return className.startsWith(this.mixinPackage);
+        return !Strings.isNullOrEmpty(this.mixinPackage) && className.startsWith(this.mixinPackage);
     }
     
     /**
