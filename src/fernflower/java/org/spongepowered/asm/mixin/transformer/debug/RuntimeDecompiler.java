@@ -26,6 +26,8 @@ package org.spongepowered.asm.mixin.transformer.debug;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.Map;
 import java.util.jar.Manifest;
 
@@ -35,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.java.decompiler.main.Fernflower;
 import org.jetbrains.java.decompiler.main.extern.IBytecodeProvider;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger;
+import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
 import org.jetbrains.java.decompiler.main.extern.IResultSaver;
 import org.jetbrains.java.decompiler.util.InterpreterUtil;
 import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
@@ -53,8 +56,14 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
     private static final Level[] SEVERITY_LEVELS = { Level.TRACE, Level.INFO, Level.WARN, Level.ERROR };
     
     private final Map<String, Object> options = ImmutableMap.<String, Object>builder()
-        .put("din", "0").put("rbr", "0").put("dgs", "1").put("asc", "1")
-        .put("den", "1").put("hdc", "1").put("ind", "    ").build();
+            .put(IFernflowerPreferences.DECOMPILE_INNER,              "0")
+            .put(IFernflowerPreferences.REMOVE_BRIDGE,                "0")
+            .put(IFernflowerPreferences.DECOMPILE_GENERIC_SIGNATURES, "1")
+            .put(IFernflowerPreferences.ASCII_STRING_CHARACTERS,      "1")
+            .put(IFernflowerPreferences.DECOMPILE_ENUM,               "1")
+            .put(IFernflowerPreferences.HIDE_DEFAULT_CONSTRUCTOR,     "1")
+            .put(IFernflowerPreferences.INDENT_STRING,                "    ")
+            .build();
 
     private final File outputPath;
 
@@ -68,6 +77,17 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
             } catch (IOException ex) {
                 this.logger.debug("Error cleaning output directory: {}", ex.getMessage());
             }
+        }
+    }
+    
+    @Override
+    public String toString() {
+        try {
+            URL codeSource = Fernflower.class.getProtectionDomain().getCodeSource().getLocation();
+            File file = new File(codeSource.toURI());
+            return file.getName();
+        } catch (Exception ex) {
+            return "unknown source (classpath)";
         }
     }
 
@@ -88,7 +108,15 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
                 
             }, this, this.options, this);
             
-            fernflower.getStructContext().addSpace(file, true);
+            try {
+                // New fernflower (including forgeflower)
+                Method mdAddSource = fernflower.getClass().getDeclaredMethod("addSource", File.class);
+                mdAddSource.invoke(fernflower, file);
+            } catch (ReflectiveOperationException ex) {
+                // Old fernflower
+                fernflower.getStructContext().addSpace(file, true);
+            }
+            
             fernflower.decompileContext();
         } catch (Throwable ex) {
             this.logger.warn("Decompilation error while processing {}", file.getName());
@@ -128,7 +156,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
     
     @Override
     public void writeMessage(String message, Severity severity, Throwable t) {
-        this.logger.log(RuntimeDecompiler.SEVERITY_LEVELS[severity.ordinal()], message, t);
+        this.logger.log(RuntimeDecompiler.SEVERITY_LEVELS[severity.ordinal()], message, severity == Severity.ERROR ? t : null);
     }
 
     @Override

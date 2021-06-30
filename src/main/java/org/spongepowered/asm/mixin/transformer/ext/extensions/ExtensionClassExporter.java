@@ -98,8 +98,8 @@ public class ExtensionClassExporter implements IExtension {
             Class<? extends IDecompiler> clazz = (Class<? extends IDecompiler>)Class.forName(className);
             Constructor<? extends IDecompiler> ctor = clazz.getDeclaredConstructor(File.class);
             IDecompiler decompiler = ctor.newInstance(outputPath);
-            ExtensionClassExporter.logger.info("Fernflower decompiler was successfully initialised, exported classes will be decompiled{}",
-                    as ? " in a separate thread" : "");
+            ExtensionClassExporter.logger.info("Fernflower decompiler was successfully initialised from {}, exported classes will be decompiled{}",
+                    decompiler, as ? " in a separate thread" : "");
             return decompiler;
         } catch (Throwable th) {
             ExtensionClassExporter.logger.info("Fernflower could not be loaded, exported classes will not be decompiled. {}: {}",
