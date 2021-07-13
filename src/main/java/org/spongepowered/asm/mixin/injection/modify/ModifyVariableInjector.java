@@ -93,11 +93,6 @@ public class ModifyVariableInjector extends Injector {
         abstract boolean find(InjectionInfo info, InsnList insns, Collection<AbstractInsnNode> nodes, Target target);
 
     }
-    
-    /**
-     * Decorator key for Context decoration
-     */
-    private static final String LOCALS_CONTEXT_KEY = "localcontext";
 
     /**
      * True to consider only method args
@@ -142,10 +137,27 @@ public class ModifyVariableInjector extends Injector {
         }
     }
     
+    /**
+     * Generate a key which uniquely identifies the combination of return type,
+     * frame type and target injection node so that injectors targetting the
+     * same instruction still get unique contexts.
+     * 
+     * @param target Target method
+     * @param node Target node
+     * @return Key for storing/retrieving the injector context decoration
+     */
+    protected String getTargetNodeKey(Target target, InjectionNode node) {
+        return String.format("localcontext(%s,%s,#%s)", this.returnType, this.discriminator.isArgsOnly() ? "argsOnly" : "fullFrame", node.getId());
+    }
+    
     @Override
     protected void preInject(Target target, InjectionNode node) {
+        String key = this.getTargetNodeKey(target, node);
+        if (node.hasDecoration(key)) {
+            return; // already have a suitable context
+        }
         Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
-        node.<Context>decorate(ModifyVariableInjector.LOCALS_CONTEXT_KEY, context);
+        node.<Context>decorate(key, context);
     }
     
     /**
@@ -157,10 +169,19 @@ public class ModifyVariableInjector extends Injector {
             throw new InvalidInjectionException(this.info, "Variable modifier target for " + this + " was removed by another injector");
         }
         
-        Context context = node.<Context>getDecoration(ModifyVariableInjector.LOCALS_CONTEXT_KEY);
+        Context context = node.<Context>getDecoration(this.getTargetNodeKey(target, node));
         if (context == null) {
             throw new InjectionError(String.format(
                     "%s injector target is missing CONTEXT decoration for %s. PreInjection failure or illegal internal state change",
+                    this.annotationType, this.info));
+        }
+        
+        // If the context is being reused (because two identical injectors are targetting this node)
+        // then the insns SHOULD have been drained by the previous insertBefore. If the list hasn't
+        // been cleared for some reason then something probably went wrong during the previous inject
+        if (context.insns.size() > 0) {
+            throw new InjectionError(String.format(
+                    "%s injector target has contaminated CONTEXT decoration for %s. Check for previous errors.",
                     this.annotationType, this.info));
         }
         

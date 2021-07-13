@@ -65,17 +65,17 @@ public class LocalVariableDiscriminator {
             /**
              * Ordinal value of this local variable type 
              */
-            int ord = 0;
+            private int ord = -1;
             
             /**
              * Local variable name 
              */
-            String name;
+            final String name;
             
             /**
              * Local variable type 
              */
-            Type type;
+            final Type type;
 
             public Local(String name, Type type) {
                 this.name = name;
@@ -87,6 +87,17 @@ public class LocalVariableDiscriminator {
                 return String.format("Local[ordinal=%d, name=%s, type=%s]", this.ord, this.name, this.type);
             }
             
+            void setOrdinal(int ordinal) {
+                if (this.ord > -1 && this.ord != ordinal) {
+                    throw new IllegalStateException("Attempted to reset ordinal for computed local");
+                }
+                this.ord = ordinal;
+            }
+            
+            int getOrdinal() {
+                return this.ord;
+            }
+
         }
         
         /**
@@ -166,7 +177,7 @@ public class LocalVariableDiscriminator {
                 if (this.locals[l] != null) {
                     ordinal = ordinalMap.get(this.locals[l].type);
                     ordinalMap.put(this.locals[l].type, ordinal = Integer.valueOf(ordinal == null ? 0 : ordinal.intValue() + 1));
-                    this.locals[l].ord = ordinal.intValue();
+                    this.locals[l].setOrdinal(ordinal.intValue());
                 }
             }
         }
@@ -189,7 +200,7 @@ public class LocalVariableDiscriminator {
                 if (local != null) {
                     Type localType = local.type;
                     String localName = local.name;
-                    int ordinal = local.ord;
+                    int ordinal = local.getOrdinal();
                     String candidate = this.returnType.equals(localType) ? "YES" : "-";
                     printer.add("[%3d]    [%3d]  %30s  %-50s  %s", l, ordinal, SignaturePrinter.getTypeName(localType, false), localName, candidate);
                 } else if (l > 0) {
@@ -366,7 +377,7 @@ public class LocalVariableDiscriminator {
                 continue;
             }
             if (this.ordinal > -1) {
-                if (this.ordinal == local.ord) {
+                if (this.ordinal == local.getOrdinal()) {
                     return index;
                 }
                 continue;
