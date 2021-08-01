@@ -24,17 +24,19 @@
  */
 package org.spongepowered.asm.mixin.transformer;
 
+import org.spongepowered.asm.mixin.extensibility.IActivityContext;
+
 /**
  * Tracker for processors which want to express their activity stack on crash in
  * a user-readable way.
  */
-public class ActivityStack {
+public class ActivityStack implements IActivityContext {
     
     /**
      * An activity node in the activity stack (yes it's actually a doubly-linked
      * list).
      */
-    public class Activity {
+    public class Activity implements IActivity {
         
         /**
          * Description of this activity
@@ -56,6 +58,7 @@ public class ActivityStack {
          * 
          * @param text Text to append
          */
+        @Override
         public void append(String text) {
             this.description = this.description != null ? this.description + text : text;
         }
@@ -66,6 +69,7 @@ public class ActivityStack {
          * @param textFormat Format for text to append
          * @param args Format args
          */
+        @Override
         public void append(String textFormat, Object...args) {
             this.append(String.format(textFormat, args));
         }
@@ -73,6 +77,7 @@ public class ActivityStack {
         /**
          * End this activity and remove it (and any descendants)
          */
+        @Override
         public void end() {
             // Cannot end head or ended activity
             if (this.last != null) {
@@ -87,6 +92,7 @@ public class ActivityStack {
          * 
          * @param description New activity description
          */
+        @Override
         public void next(String description) {
             if (this.next != null) {
                 this.next.end();
@@ -101,6 +107,7 @@ public class ActivityStack {
          * @param descriptionFormat New activity description format
          * @param args New activity description args
          */
+        @Override
         public void next(String descriptionFormat, Object... args) {
             if (descriptionFormat == null) {
                 descriptionFormat = "null";
@@ -133,6 +140,7 @@ public class ActivityStack {
     /**
      * Clear the activity stack
      */
+    @Override
     public void clear() {
         this.tail = this.head;
         this.head.next = null;
@@ -144,7 +152,8 @@ public class ActivityStack {
      * @param description Activity description
      * @return new activity handle
      */
-    public Activity begin(String description) {
+    @Override
+    public IActivity begin(String description) {
         return this.tail = new Activity(this.tail, description != null ? description : "null");
     }
     
@@ -155,7 +164,8 @@ public class ActivityStack {
      * @param args format args
      * @return new activity handle
      */
-    public Activity begin(String descriptionFormat, Object... args) {
+    @Override
+    public IActivity begin(String descriptionFormat, Object... args) {
         if (descriptionFormat == null) {
             descriptionFormat = "null";
         }
@@ -182,6 +192,7 @@ public class ActivityStack {
      * @param glue glue string
      * @return string representation of this activity stack
      */
+    @Override
     public String toString(String glue) {
         if (this.head.description == null && this.head.next == null) {
             return "Unknown";

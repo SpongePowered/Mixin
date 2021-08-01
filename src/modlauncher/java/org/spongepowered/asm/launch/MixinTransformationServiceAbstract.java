@@ -24,8 +24,11 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -41,17 +44,18 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionSpecBuilder;
 
 /**
- * Service for handling transforms mixin under ModLauncher
+ * Service for handling transforms mixin under ModLauncher, now abstract to
+ * support both Modlauncher 9 and previous versions of Modlauncher
  */
-public class MixinTransformationService implements ITransformationService {
+public abstract class MixinTransformationServiceAbstract implements ITransformationService {
     
     private ArgumentAcceptingOptionSpec<String> mixinsArgument;
     private List<String> commandLineMixins = new ArrayList<String>();
-    private MixinLaunchPlugin plugin;
+    private MixinLaunchPluginLegacy plugin;
     
     @Override
     public String name() {
-        return MixinLaunchPlugin.NAME;
+        return MixinLaunchPluginLegacy.NAME;
     }
     
     @Override
@@ -71,24 +75,34 @@ public class MixinTransformationService implements ITransformationService {
 
     @Override
     public void initialize(IEnvironment environment) {
-        Optional<ILaunchPluginService> plugin = environment.findLaunchPlugin(MixinLaunchPlugin.NAME);
+        Optional<ILaunchPluginService> plugin = environment.findLaunchPlugin(MixinLaunchPluginLegacy.NAME);
         if (!plugin.isPresent()) {
             throw new MixinInitialisationError("Mixin Launch Plugin Service could not be located");
         }
         ILaunchPluginService launchPlugin = plugin.get();
-        if (!(launchPlugin instanceof MixinLaunchPlugin)) {
+        if (!(launchPlugin instanceof MixinLaunchPluginLegacy)) {
             throw new MixinInitialisationError("Mixin Launch Plugin Service is present but not compatible");
         }
-        this.plugin = (MixinLaunchPlugin)launchPlugin;
+        this.plugin = (MixinLaunchPluginLegacy)launchPlugin;
         
         MixinBootstrap.start();
         this.plugin.init(environment, this.commandLineMixins);
     }
     
-    @Override
-    public void beginScanning(IEnvironment environment) {
+    /**
+     * This is "overridden" from Modlauncher 4-8 since it would normally call
+     * <tt>beginScanning</tt> which returned <tt>void</tt>. Since we can't
+     * override the old method, and omitting it would lead to an Abstract Method
+     * Error in ML 8, we instead override <em>this</em> method to avoid calling
+     * the now-removed <tt>beginScanning</tt>.
+     * 
+     * @param environment Scanning env
+     * @return discovered containers
+     */
+    public List<Map.Entry<String, Path>> runScan(IEnvironment environment) {
+        return Collections.emptyList();
     }
-
+    
     @SuppressWarnings("rawtypes")
     @Override
     public List<ITransformer> transformers() {

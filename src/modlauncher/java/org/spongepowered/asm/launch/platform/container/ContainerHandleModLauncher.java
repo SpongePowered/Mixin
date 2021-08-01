@@ -28,15 +28,18 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map.Entry;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * ModLauncher root container
  */
 public class ContainerHandleModLauncher extends ContainerHandleVirtual {
     
     /**
-     * Container handle for resources offered by ModLauncher
+     * Container handle for nio resources offered by ModLauncher
      */
-    public class Resource extends ContainerHandleURI {
+    class Resource extends ContainerHandleURI {
 
         private String name;
         private Path path;
@@ -61,6 +64,11 @@ public class ContainerHandleModLauncher extends ContainerHandleVirtual {
         }
         
     }
+    
+    /**
+     * Logger
+     */
+    protected static final Logger logger = LogManager.getLogger("mixin");
 
     public ContainerHandleModLauncher(String name) {
         super(name);
@@ -77,19 +85,42 @@ public class ContainerHandleModLauncher extends ContainerHandleVirtual {
     }
     
     /**
+     * Add a resource to to this container
+     * 
+     * @param entry Resource entry
+     */
+    public void addResource(Entry<String, Path> entry) {
+        this.add(new Resource(entry.getKey(), entry.getValue()));
+    }
+    
+    /**
+     * Add a resource to to this container
+     * 
+     * @param resource Resource
+     */
+    @SuppressWarnings("unchecked")
+    public void addResource(Object resource) {
+        if (resource instanceof Entry) {
+            this.addResource((Entry<String, Path>)resource);
+        } else {
+            ContainerHandleModLauncher.logger.error("Unrecognised resource type {} passed to {}", resource.getClass(), this);
+        }
+    }
+    
+    /**
      * Add a collection of resources to this container
      * 
      * @param resources Resources to add
      */
-    public void addResources(List<Entry<String, Path>> resources) {
-        for (Entry<String, Path> resource : resources) {
-            this.addResource(resource.getKey(), resource.getValue());
+    public void addResources(List<?> resources) {
+        for (Object resource : resources) {
+            this.addResource(resource);
         }
     }
-    
+
     @Override
     public String toString() {
-        return String.format("ModLauncher Root Container(%x)", this.hashCode());
+        return String.format("ModLauncher Root Container(%s:%x)", this.getName(), this.hashCode());
     }
 
 }

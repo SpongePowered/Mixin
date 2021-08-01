@@ -63,6 +63,13 @@ public class ContainerHandleVirtual implements IContainerHandle {
     }
     
     /**
+     * Get the name of this container
+     */
+    public String getName() {
+        return this.name;
+    }
+    
+    /**
      * Set a virtual attribute on this virtual container
      * 
      * @param key attribute key

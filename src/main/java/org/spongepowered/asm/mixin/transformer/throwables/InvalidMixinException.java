@@ -24,10 +24,10 @@
  */
 package org.spongepowered.asm.mixin.transformer.throwables;
 
+import org.spongepowered.asm.mixin.extensibility.IActivityContext;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.throwables.MixinException;
-import org.spongepowered.asm.mixin.transformer.ActivityStack;
 
 /**
  * Thrown by the mixin validator when a mixin fails a pre-flight check
@@ -43,7 +43,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
-    public InvalidMixinException(IMixinInfo mixin, String message, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinInfo mixin, String message, IActivityContext activityContext) {
         super(message, activityContext);
         this.mixin = mixin;
     }
@@ -52,7 +52,7 @@ public class InvalidMixinException extends MixinException {
         this(context.getMixin(), message);
     }
 
-    public InvalidMixinException(IMixinContext context, String message, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinContext context, String message, IActivityContext activityContext) {
         this(context.getMixin(), message, activityContext);
     }
 
@@ -61,7 +61,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
 
-    public InvalidMixinException(IMixinInfo mixin, Throwable cause, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinInfo mixin, Throwable cause, IActivityContext activityContext) {
         super(cause, activityContext);
         this.mixin = mixin;
     }
@@ -70,7 +70,7 @@ public class InvalidMixinException extends MixinException {
         this(context.getMixin(), cause);
     }
     
-    public InvalidMixinException(IMixinContext context, Throwable cause, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinContext context, Throwable cause, IActivityContext activityContext) {
         this(context.getMixin(), cause, activityContext);
     }
     
@@ -79,7 +79,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = mixin;
     }
     
-    public InvalidMixinException(IMixinInfo mixin, String message, Throwable cause, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinInfo mixin, String message, Throwable cause, IActivityContext activityContext) {
         super(message, cause, activityContext);
         this.mixin = mixin;
     }
@@ -89,7 +89,7 @@ public class InvalidMixinException extends MixinException {
         this.mixin = context.getMixin();
     }
     
-    public InvalidMixinException(IMixinContext context, String message, Throwable cause, ActivityStack activityContext) {
+    public InvalidMixinException(IMixinContext context, String message, Throwable cause, IActivityContext activityContext) {
         super(message, cause, activityContext);
         this.mixin = context.getMixin();
     }

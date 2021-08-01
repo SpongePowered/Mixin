@@ -24,8 +24,8 @@
  */
 package org.spongepowered.asm.mixin.transformer.throwables;
 
+import org.spongepowered.asm.mixin.extensibility.IActivityContext;
 import org.spongepowered.asm.mixin.throwables.MixinException;
-import org.spongepowered.asm.mixin.transformer.ActivityStack;
 
 /**
  * Exception indicating a problem during pre-processing
@@ -34,11 +34,11 @@ public class MixinPreProcessorException extends MixinException {
 
     private static final long serialVersionUID = 1L;
 
-    public MixinPreProcessorException(String message, ActivityStack context) {
+    public MixinPreProcessorException(String message, IActivityContext context) {
         super(message, context);
     }
 
-    public MixinPreProcessorException(String message, Throwable cause, ActivityStack context) {
+    public MixinPreProcessorException(String message, Throwable cause, IActivityContext context) {
         super(message, cause, context);
     }
 

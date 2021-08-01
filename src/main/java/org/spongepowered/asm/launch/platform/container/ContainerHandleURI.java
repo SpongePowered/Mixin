@@ -43,18 +43,12 @@ public class ContainerHandleURI implements IContainerHandle {
     private final URI uri;
 
     /**
-     * File containing this tweaker
-     */
-    private final File file;
-    
-    /**
      * "Main" manifest attributes from the container
      */
     private final MainAttributes attributes;
 
     public ContainerHandleURI(URI uri) {
         this.uri = uri;
-        this.file = this.uri != null ? new File(this.uri) : null;
         this.attributes = MainAttributes.of(uri);
     }
     
@@ -68,8 +62,9 @@ public class ContainerHandleURI implements IContainerHandle {
     /**
      * Get the container file
      */
+    @Deprecated
     public File getFile() {
-        return this.file;
+        return this.uri != null && "file".equals(this.uri.getScheme()) ? new File(this.uri) : null;
     }
 
     /* (non-Javadoc)

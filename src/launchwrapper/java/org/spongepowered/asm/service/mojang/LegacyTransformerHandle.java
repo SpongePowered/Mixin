@@ -24,9 +24,11 @@
  */
 package org.spongepowered.asm.service.mojang;
 
-import javax.annotation.Resource;
+import java.lang.annotation.Annotation;
 
+import org.spongepowered.asm.service.IClassProvider;
 import org.spongepowered.asm.service.ILegacyClassTransformer;
+import org.spongepowered.asm.service.MixinService;
 
 import net.minecraft.launchwrapper.IClassTransformer;
 
@@ -57,9 +59,16 @@ class LegacyTransformerHandle implements ILegacyClassTransformer {
      * @see org.spongepowered.asm.service.ILegacyClassTransformer
      *      #isDelegationExcluded()
      */
+    @SuppressWarnings("unchecked")
     @Override
     public boolean isDelegationExcluded() {
-        return this.transformer.getClass().getAnnotation(Resource.class) != null;
+        try {
+            IClassProvider classProvider = MixinService.getService().getClassProvider();
+            Class<? extends Annotation> clResource = (Class<? extends Annotation>)classProvider.findClass("javax.annotation.Resource");
+            return this.transformer.getClass().getAnnotation(clResource) != null;
+        } catch (ClassNotFoundException ex) {
+            return false;
+        }
     }
 
     /* (non-Javadoc)

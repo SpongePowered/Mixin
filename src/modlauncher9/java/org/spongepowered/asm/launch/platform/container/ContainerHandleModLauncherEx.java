@@ -22,40 +22,55 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.asm.launch.platform.container;
 
-import java.util.Collection;
+import java.nio.file.Path;
 
-import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import cpw.mods.jarhandling.SecureJar;
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * ModLauncher root container for ModLauncher 9+
  */
-public interface IMixinValidator {
-    
+public class ContainerHandleModLauncherEx extends ContainerHandleModLauncher {
+
     /**
-     * Validation pass
+     * Container handle for secure jar resources offered by ModLauncher
      */
-    public enum ValidationPass {
-        EARLY,
-        LATE,
-        FINAL
+    static class SecureJarResource extends ContainerHandleURI {
+
+        private SecureJar jar;
+
+        public SecureJarResource(SecureJar resource) {
+            super(resource.getPrimaryPath().toUri());
+            this.jar = resource;
+        }
+        
+        public String getName() {
+            return this.jar.name();
+        }
+        
+        public Path getPath() {
+            return this.jar.getPrimaryPath();
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("SecureJarResource(%s)", this.getName());
+        }
+
+    }
+
+    public ContainerHandleModLauncherEx(String name) {
+        super(name);
     }
     
-    /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * @param pass current validation pass
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
-     * 
-     * @return False to halt processing of further validators
-     */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets);
+    @Override
+    public void addResource(Object resource) {
+        if (resource instanceof SecureJar) {
+            this.add(new SecureJarResource((SecureJar)resource));
+        } else {
+            super.addResource(resource);
+        }
+    }
 
 }

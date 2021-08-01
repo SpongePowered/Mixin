@@ -135,7 +135,7 @@ class PluginHandle {
     /**
      * Called immediately before the mixin is applied to targetClass
      */
-    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, MixinInfo mixinInfo) {
+    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, MixinInfo mixinInfo) throws Exception {
         if (this.plugin == null) {
             return;
         }
@@ -166,7 +166,7 @@ class PluginHandle {
     /**
      * Called immediately after the mixin is applied to targetClass
      */
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, MixinInfo mixinInfo) {
+    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, MixinInfo mixinInfo) throws Exception {
         if (this.plugin == null) {
             return;
         }

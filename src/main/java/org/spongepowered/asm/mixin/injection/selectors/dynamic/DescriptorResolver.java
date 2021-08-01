@@ -265,7 +265,7 @@ public final class DescriptorResolver {
     }
     
     public static IResolvedDescriptor resolve(IAnnotationHandle desc, ISelectorContext context) {
-        return new Descriptor(Collections.emptySet(), desc, context);
+        return new Descriptor(Collections.<String>emptySet(), desc, context);
     }
 
     /**

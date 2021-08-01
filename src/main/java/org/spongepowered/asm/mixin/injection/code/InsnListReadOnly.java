@@ -34,7 +34,7 @@ import org.objectweb.asm.tree.InsnList;
  * instances so that custom InjectionPoint implementations cannot modify the
  * insn list whilst inspecting it.
  */
-class InsnListReadOnly extends InsnList {
+public class InsnListReadOnly extends InsnList {
 
     private InsnList insnList;
 

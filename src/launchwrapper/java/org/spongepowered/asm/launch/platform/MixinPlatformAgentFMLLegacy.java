@@ -138,6 +138,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
      */
     private boolean initInjectionState;
 
+    @SuppressWarnings("deprecation")
     @Override
     public AcceptResult accept(MixinPlatformManager manager, IContainerHandle handle) {
         if (this.getCoreModManagerClass() == null) {
@@ -521,6 +522,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
 
         private final IConsumer<Phase> delegate;
 
+        @SuppressWarnings("deprecation")
         MixinAppender(IConsumer<Phase> delegate) {
             super("MixinLogWatcherAppender", null, null);
             this.delegate = delegate;

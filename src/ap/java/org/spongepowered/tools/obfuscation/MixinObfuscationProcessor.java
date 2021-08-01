@@ -80,13 +80,7 @@ abstract class MixinObfuscationProcessor extends AbstractProcessor {
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
-        try {
-            return SourceVersion.valueOf("RELEASE_8");
-        } catch (IllegalArgumentException ex) {
-            // Java 8 not supported
-        }
-        
-        return super.getSupportedSourceVersion();
+        return SourceVersion.latestSupported();
     }
     
     @Override

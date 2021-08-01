@@ -1335,7 +1335,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Called immediately before the mixin is applied to targetClass
      */
-    public void preApply(String transformedName, ClassNode targetClass) {
+    public void preApply(String transformedName, ClassNode targetClass) throws Exception {
         if (this.plugin.isAvailable()) {
             Section pluginTimer = this.profiler.begin("plugin");
             try {
@@ -1349,7 +1349,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Called immediately after the mixin is applied to targetClass
      */
-    public void postApply(String transformedName, ClassNode targetClass) {
+    public void postApply(String transformedName, ClassNode targetClass) throws Exception {
         if (this.plugin.isAvailable()) {
             Section pluginTimer = this.profiler.begin("plugin");
             try {

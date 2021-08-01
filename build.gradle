@@ -1,19 +1,21 @@
 // Gradle repositories and dependencies
 buildscript {
     repositories {
-        jcenter()
+        gradlePluginPortal()
     }
     dependencies {
-        classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.11.0'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.4'
+        classpath 'gradle.plugin.com.hierynomus.gradle.plugins:license-gradle-plugin:0.16.1'
+        classpath 'gradle.plugin.com.github.jengelman.gradle.plugins:shadow:7.0.0'
     }
 }
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 // Apply plugin
 apply plugin: 'java'
-apply plugin: 'license'
+apply plugin: 'com.github.hierynomus.license'
 apply plugin: 'checkstyle'
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'com.github.johnrengelman.shadow'
@@ -41,9 +43,9 @@ ext.legacyForgeAsmVersion = project.hasProperty("legacyForgeAsmVersion") ? asmVe
 // True to do jar signing task
 ext.doSignJar = project.hasProperty("keyStorePath")
 
-// Minimum version of Java required
-sourceCompatibility = '1.6'
-targetCompatibility = '1.6'
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(16)
+}
 
 // Project repositories
 repositories {
@@ -65,28 +67,47 @@ repositories {
 }
 
 configurations {
-    deployerJars // maven stuff
     thinJar
     stagingJar
+    
+    exampleImplementation       .extendsFrom implementation
+    fernflowerImplementation    .extendsFrom implementation
+    launchwrapperImplementation .extendsFrom implementation
+    agentImplementation         .extendsFrom implementation
+    modlauncherImplementation   .extendsFrom implementation
+    modlauncher9Implementation  .extendsFrom modlauncherImplementation
+    modularityImplementation    .extendsFrom modlauncher9Implementation
 }
 
-// Include annotation processor sourceSet
 sourceSets {
-    legacy
+    legacy {
+        ext.languageVersion = 8
+        ext.compatibility = '1.6'
+    }
     main {
         compileClasspath += legacy.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.6'
     }
     ap {
         compileClasspath += main.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.6'
     }
     fernflower {
         compileClasspath += main.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.6'
     }
     agent {
         compileClasspath += main.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.6'
     }
     bridge {
         compileClasspath += main.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.8'
     }
     example {
         compileClasspath += main.output
@@ -94,26 +115,46 @@ sourceSets {
     }
     launchwrapper {
         compileClasspath += main.output
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        ext.languageVersion = 8
+        ext.compatibility = '1.8'
     }
     modlauncher {
         compileClasspath += main.output
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        ext.languageVersion = 8
+        ext.compatibility = '1.8'
+    }
+    modlauncher4 {
+        compileClasspath += main.output
+        compileClasspath += modlauncher.output
+        ext.languageVersion = 8
+        ext.compatibility = '1.8'
+    }
+    modlauncher9 {
+        compileClasspath += main.output
+        compileClasspath += modlauncher.output
+    }
+    modularity {
+        java.srcDirs += [
+            sourceSets.legacy.java.srcDirs,
+            sourceSets.main.java.srcDirs,
+            sourceSets.ap.java.srcDirs,
+            sourceSets.agent.java.srcDirs,
+            sourceSets.modlauncher.java.srcDirs,
+            sourceSets.modlauncher9.java.srcDirs
+        ]
     }
 }
 
 // Project dependencies
 dependencies {
     def guava = 'com.google.guava:guava:21.0' // from mc1.12 onwards
-    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.0-beta9'
+    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.11.2'
     
-    compile guava
-    compile log4j2
-    compile 'com.google.code.gson:gson:2.2.4'
+    implementation guava
+    implementation log4j2
+    implementation 'com.google.code.gson:gson:2.2.4'
     if (Float.parseFloat(asmVersion) < 6) {
-        compile "org.ow2.asm:asm-debug-all:$asmVersion"
+        implementation "org.ow2.asm:asm-debug-all:$asmVersion"
     }
     implementation "org.ow2.asm:asm-tree:$asmVersion"
     implementation "org.ow2.asm:asm-commons:$asmVersion"
@@ -122,53 +163,61 @@ dependencies {
     thinJar "org.ow2.asm:asm-tree:$asmVersion"
     thinJar "org.ow2.asm:asm-util:$asmVersion"
     
-    // Tests
-//    testCompile 'junit:junit:4.11'
-//    testCompile 'org.hamcrest:hamcrest-library:1.3'
-//    testCompile 'org.mockito:mockito-core:1.9.0'
-    
     // Annotation Processor
-    apCompile "org.ow2.asm:asm-tree:$asmVersion"
-    apCompile guava
+    apImplementation "org.ow2.asm:asm-tree:$asmVersion"
+    apImplementation guava
     
-    // AP extension example
-    exampleCompile configurations.compile
-    exampleImplementation configurations.implementation
-
-    // Maven FTP
-    deployerJars 'org.apache.maven.wagon:wagon-ftp:2.7'
-
     // Fernflower decompiler
-    fernflowerCompile configurations.compile
-    fernflowerImplementation configurations.implementation
-    fernflowerCompile 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
+    fernflowerImplementation 'org.jetbrains.java.decompiler:fernflower:sponge-SNAPSHOT'
 
     // LegacyLauncher service
-    launchwrapperCompile configurations.compile
-    launchwrapperImplementation configurations.implementation
-    launchwrapperCompile ('net.minecraft:launchwrapper:1.11') {
+    launchwrapperImplementation ('net.minecraft:launchwrapper:1.11') {
         exclude module: 'lwjgl'
+        exclude module: 'asm-debug-all'
+        exclude module: 'jopt-simple'
     }
     
-    modlauncherCompile configurations.compile
-    modlauncherImplementation configurations.implementation
-    modlauncherCompile 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    modlauncherCompile "org.ow2.asm:asm-tree:$modlauncherAsmVersion"
-    modlauncherCompile "org.ow2.asm:asm-commons:$modlauncherAsmVersion"
-    modlauncherCompile "org.ow2.asm:asm-util:$modlauncherAsmVersion"
-    modlauncherCompile ("cpw.mods:modlauncher:$modlauncherVersion") {
+    modlauncherImplementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    modlauncherImplementation ("cpw.mods:modlauncher:$legacyModlauncherVersion") {
+        exclude module: 'asm'
+        exclude module: 'asm-analysis'
+        exclude module: 'asm-commons'
+        exclude module: 'asm-tree'
+        exclude module: 'log4j-api'
         exclude module: 'log4j-core'
+        exclude module: 'jopt-simple'
     }
     
-    // agent
-    agentCompile configurations.compile
-    agentImplementation configurations.implementation
+    modlauncher4Implementation ("cpw.mods:modlauncher:$legacyModlauncherVersion") {
+        exclude module: 'asm'
+        exclude module: 'asm-analysis'
+        exclude module: 'asm-commons'
+        exclude module: 'asm-tree'
+        exclude module: 'log4j-api'
+        exclude module: 'log4j-core'
+        exclude module: 'jopt-simple'
+    }
+    
+    modlauncher9Implementation ("cpw.mods:modlauncher:$modlauncherVersion") {
+        exclude module: 'log4j-api'
+        exclude module: 'log4j-core'
+        exclude module: 'jopt-simple'
+    }
+    modlauncher9Implementation 'cpw.mods:securejarhandler:0.9.+'
     
     // asm bridge
-    bridgeCompile log4j2
-    bridgeCompile "org.ow2.asm:asm-commons:$legacyForgeAsmVersion"
+    bridgeImplementation log4j2
+    bridgeImplementation "org.ow2.asm:asm-commons:$legacyForgeAsmVersion"
     
-    legacyCompile "org.ow2.asm:asm-tree:$asmVersion"
+    legacyImplementation "org.ow2.asm:asm-tree:$asmVersion"
+}
+
+compileModularityJava {
+    doFirst {
+        options.compilerArgs = [
+            '--module-path', classpath.asPath
+        ]
+    }
 }
 
 javadoc {
@@ -191,21 +240,21 @@ javadoc {
     }
 }
 
-// Eclipse
-eclipse.classpath.plusConfigurations += [
-    configurations.fernflowerCompile,
-    configurations.launchwrapperCompile,
-    configurations.modlauncherCompile,
-    configurations.bridgeCompile
-]
-
-// IntelliJ
-idea.module.scopes.COMPILE.plus += [
-    configurations.fernflowerCompile,
-    configurations.launchwrapperCompile,
-    configurations.modlauncherCompile,
-    configurations.bridgeCompile
-]
+eclipse {
+    classpath {
+        containers 'org.eclipse.buildship.core.gradleclasspathcontainer'
+        file.whenMerged {
+            // Can't include old modlauncher because it causes issues with modules
+            entries.removeAll { it.kind == 'lib' && it.path =~ ~/modlauncher-$legacyModlauncherVersion/ }
+            entries.removeAll { it.kind == 'src' && it.path =~ ~/modlauncher4/ }
+            
+            // Mark everything else as a module
+            entries.findAll { it.kind == "con" && it.path =~ /gradleclasspathcontainer$/ }.each {
+                it.entryAttributes['module'] = 'true'
+            }
+        }
+    }
+}
 
 // Filter, process, and include resources
 processResources {
@@ -239,6 +288,7 @@ checkstyle {
     ]
     configFile = file("checkstyle.xml")
     toolVersion = '8.43'
+    sourceSets -= project.sourceSets['modularity']
 }
 
 // Source compiler configuration
@@ -248,18 +298,28 @@ tasks.withType(JavaCompile) {
     options.encoding = 'utf8'
 }
 
+project.sourceSets.each { set -> {
+    if (set.ext.has("languageVersion")) {
+        project.tasks[set.compileJavaTaskName].javaCompiler = javaToolchains.compilerFor {
+            languageVersion = JavaLanguageVersion.of(set.ext.languageVersion)
+        }
+    } 
+    if (set.ext.has("compatibility")) {
+        project.tasks[set.compileJavaTaskName].sourceCompatibility = set.ext.compatibility
+        project.tasks[set.compileJavaTaskName].targetCompatibility = set.ext.compatibility
+    }
+}}
+
 if (JavaVersion.current().isJava8Compatible()) {
     tasks.withType(Javadoc) {
         // disable the crazy super-strict doclint tool in Java 8
-        options.addStringOption('Xdoclint:none', '-quiet')
+        options.addStringOption('Xdoclint:syntax', '-quiet')
     }
 }
 
-task stagingJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
-    sourceSets.each {
-        if (it.name != 'example') {
-            from it.output
-        }
+task stagingJar(type: ShadowJar) {
+    sourceSets.findAll { !(it.name =~ /example|modularity/) }.each {
+        from it.output
     }
     
     configurations = [project.configurations.stagingJar]
@@ -269,7 +329,7 @@ task stagingJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
         "Built-By": System.properties['user.name'],
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
-        "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
+        "Implementation-Version": project.version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
         "Implementation-Vendor": url,
         // for hotswap agent
         "Premain-Class": "org.spongepowered.tools.agent.MixinAgent",
@@ -303,7 +363,7 @@ task thinJar(type: Jar) {
         "Built-By": System.properties['user.name'],
         "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
         "Implementation-Title": name,
-        "Implementation-Version": version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
+        "Implementation-Version": project.version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
         "Implementation-Vendor": url,
     )
 }
@@ -312,8 +372,6 @@ build.dependsOn(thinJar)
 // generate shadow jar so we can use the AP standalone
 shadowJar  {
     from sourceSets.ap.output
-    exclude 'META-INF/*.DSA'
-    exclude 'META-INF/*.RSA'
     classifier = 'processor'
 }
 build.dependsOn(shadowJar)
@@ -352,11 +410,12 @@ task timestamp(type: Jar, dependsOn: build) {
 }
 
 task sourceJar(type: Jar) {
-    sourceSets.each {
+    sourceSets.findAll { it.name != 'modularity' }.each {
         from it.java
         from it.resources
     }
 	classifier = "sources"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
@@ -376,79 +435,80 @@ artifacts {
     archives shadowJar
 }
 
-ext.excludePomDeps = [
-    'asm-tree',
-    'asm-commons',
-    'asm-util',
-    'log4j-core',
-    'guava',
-    'gson',
-]
-
 ext.mavenPom = {
-    groupId = project.group
-    version = project.version
-    artifactId = project.archivesBaseName
-    project {
-        name project.archivesBaseName
-        packaging project.packaging
-        description project.projectName
-        url 'http://www.spongepowered.org/'
+    name = project.archivesBaseName
+    packaging = project.packaging
+    description = project.projectName
+    url = 'http://www.spongepowered.org/'
 
-        scm {
-            url 'https://github.com/SpongePowered/Mixin'
-            connection 'scm:git:git://github.com/SpongePowered/Mixin.git'
-            developerConnection 'scm:git:git@github.com:SpongePowered/Mixin.git'
-        }
-
-        issueManagement {
-            system 'GitHub Issues'
-            url 'https://github.com/SpongePowered/Mixin/issues'
-        }
-
-        licenses {
-            license {
-                name 'MIT license'
-                url 'http://opensource.org/licenses/MIT'
-                distribution 'repo'
-            }
-        }
+    scm {
+        url = 'https://github.com/SpongePowered/Mixin'
+        connection = 'scm:git:git://github.com/SpongePowered/Mixin.git'
+        developerConnection = 'scm:git:git@github.com:SpongePowered/Mixin.git'
     }
-    whenConfigured {
-        dependencies = dependencies.findAll {
-            !it.artifactId.matches(excludePomDeps.join('|'))
+
+    issueManagement {
+        system = 'GitHub Issues'
+        url = 'https://github.com/SpongePowered/Mixin/issues'
+    }
+
+    licenses {
+        license {
+            name = 'MIT license'
+            url = 'http://opensource.org/licenses/MIT'
+            distribution = 'repo'
         }
     }
 }
 
-uploadArchives {
+publishing {
+    publications {
+        maven(MavenPublication) {
+            pom mavenPom
+            groupId = project.group
+            version = project.version
+            artifactId = project.archivesBaseName
+
+            if (project.doSignJar) {
+                artifact signJar.outputs.files[0]
+            } else {
+                artifact stagingJar
+            }
+            artifact thinJar
+            artifact sourceJar
+            artifact javadocJar
+            artifact shadowJar
+        }
+    }
+    
     repositories {
-        // Push releases to release repo
-        if (buildType == 'RELEASE' && project.hasProperty("releaseRepo")) {
-            mavenDeployer {
-                name = "release"
-                configuration = configurations.deployerJars
-                pom mavenPom
-                repository(url: project.releaseRepo) {
-                    authentication(userName: project.releaseRepoUsername, password: project.releaseRepoPassword)
+        if (buildType == 'RELEASE') {
+            if (project.hasProperty("releaseRepo")) {
+                maven {
+                    credentials {
+                        username = project.releaseRepoUsername
+                        password = project.releaseRepoPassword
+                    }
+                    url project.releaseRepo
                 }
             }
-        }
-            
-        // Push everything to sponge repo
-        if (project.hasProperty("spongeRepo")) {
-            mavenDeployer {
-                name = "sponge"
-                configuration = configurations.deployerJars
-                pom mavenPom
-                repository(url: project.spongeRepo) {
-                    authentication(userName: project.spongeUsername, password: project.spongePassword)
+            if (project.hasProperty("spongeReleaseRepo")) {
+                maven {
+                    credentials {
+                        username = project.spongeUsername
+                        password = project.spongePassword
+                    }
+                    url project.spongeReleaseRepo
                 }
+            }
+        } else if (project.hasProperty("spongeSnapshotRepo")) {
+            maven {
+                credentials {
+                    username = project.spongeUsername
+                    password = project.spongePassword
+                }
+                url project.spongeSnapshotRepo
             }
         }
     }
 }
-
-install.repositories.mavenInstaller {
-    pom mavenPom
-} 

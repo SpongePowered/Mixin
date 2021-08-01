@@ -654,7 +654,7 @@ class MixinProcessor {
             try {
                 MixinProcessor.logger.info("Instancing error handler class {}", handlerClassName);
                 Class<?> handlerClass = this.service.getClassProvider().findClass(handlerClassName, true);
-                IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.newInstance();
+                IMixinErrorHandler handler = (IMixinErrorHandler)handlerClass.getDeclaredConstructor().newInstance();
                 if (handler != null) {
                     handlers.add(handler);
                 }

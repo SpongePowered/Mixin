@@ -29,7 +29,7 @@ import java.util.EnumSet;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.IClassProcessor;
-import org.spongepowered.asm.launch.MixinLaunchPlugin;
+import org.spongepowered.asm.launch.MixinLaunchPluginLegacy;
 import org.spongepowered.asm.launch.Phases;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
@@ -108,7 +108,7 @@ public class MixinTransformationHandler implements IClassProcessor {
         }
         
         // Don't transform when the reason is mixin (side-loading in progress) 
-        if (MixinLaunchPlugin.NAME.equals(reason)) {
+        if (MixinLaunchPluginLegacy.NAME.equals(reason)) {
             return false;
         }
 

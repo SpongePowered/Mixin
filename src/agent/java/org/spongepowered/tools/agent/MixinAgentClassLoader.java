@@ -68,7 +68,7 @@ class MixinAgentClassLoader extends ClassLoader {
             Class<?> clazz = this.defineClass(name, bytes, 0, bytes.length);
             // apparently the class needs to be instantiated at least once
             // to be including in list returned by allClasses() method in jdi api
-            clazz.newInstance();
+            clazz.getDeclaredConstructor().newInstance();
             this.mixins.put(clazz, bytes);
         } catch (Throwable e) {
             MixinAgentClassLoader.logger.catching(e);

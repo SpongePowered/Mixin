@@ -22,40 +22,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
-
-import java.util.Collection;
-
-import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+package org.spongepowered.asm.launch;
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * Service for handling transforms mixin under ModLauncher, now just a concrete
+ * class which extends the abstract base class used for pre-9 versions of
+ * ModLauncher
  */
-public interface IMixinValidator {
+public class MixinTransformationService extends MixinTransformationServiceAbstract {
     
-    /**
-     * Validation pass
-     */
-    public enum ValidationPass {
-        EARLY,
-        LATE,
-        FINAL
-    }
-    
-    /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * @param pass current validation pass
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
-     * 
-     * @return False to halt processing of further validators
-     */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, AnnotationHandle annotation, Collection<TypeHandle> targets);
-
 }

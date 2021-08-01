@@ -602,7 +602,7 @@ public final class MixinEnvironment implements ITokenProvider {
 
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= 1.7;
+                return JavaVersion.current() >= JavaVersion.JAVA_7;
             }
             
         },
@@ -614,7 +614,7 @@ public final class MixinEnvironment implements ITokenProvider {
 
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= 1.8;
+                return JavaVersion.current() >= JavaVersion.JAVA_8;
             }
             
         },
@@ -627,7 +627,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= 9.0;
+                return JavaVersion.current() >= JavaVersion.JAVA_8;
             }
             
         },
@@ -640,7 +640,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= 10.0;
+                return JavaVersion.current() >= JavaVersion.JAVA_10;
             }
             
         },
@@ -653,7 +653,72 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= 11.0;
+                return JavaVersion.current() >= JavaVersion.JAVA_11;
+            }
+            
+        },
+        
+        /**
+         * Java 12 or above is required
+         */
+        JAVA_12(12, Opcodes.V12, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_12;
+            }
+            
+        },
+        
+        /**
+         * Java 13 or above is required
+         */
+        JAVA_13(13, Opcodes.V13, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_13;
+            }
+            
+        },
+        
+        /**
+         * Java 14 or above is required
+         */
+        JAVA_14(14, Opcodes.V14, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_14;
+            }
+            
+        },
+        
+        /**
+         * Java 15 or above is required
+         */
+        JAVA_15(15, Opcodes.V15, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_15;
+            }
+            
+        },
+        
+        /**
+         * Java 16 or above is required
+         */
+        JAVA_16(16, Opcodes.V16, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_16;
             }
             
         };

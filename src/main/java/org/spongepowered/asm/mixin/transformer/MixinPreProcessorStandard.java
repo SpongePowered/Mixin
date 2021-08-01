@@ -44,12 +44,12 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.extensibility.IActivityContext.IActivity;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.gen.throwables.InvalidAccessorException;
 import org.spongepowered.asm.mixin.throwables.ClassMetadataNotFoundException;
 import org.spongepowered.asm.mixin.throwables.MixinException;
-import org.spongepowered.asm.mixin.transformer.ActivityStack.Activity;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
@@ -177,16 +177,16 @@ class MixinPreProcessorStandard {
         Section prepareTimer = this.profiler.begin("prepare");
         try {
     
-            Activity activity = this.activities.begin("Prepare method");
+            IActivity activity = this.activities.begin("Prepare method");
             for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
                 Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
-                Activity methodActivity = this.activities.begin(mixinMethod.toString());
+                IActivity methodActivity = this.activities.begin(mixinMethod.toString());
                 this.prepareMethod(mixinMethod, method);
                 methodActivity.end();
             }
             activity.next("Prepare field");
             for (FieldNode mixinField : this.classNode.fields) {
-                Activity fieldActivity = this.activities.begin(String.format("%s:%s", mixinField.name, mixinField.desc));
+                IActivity fieldActivity = this.activities.begin(String.format("%s:%s", mixinField.name, mixinField.desc));
                 this.prepareField(mixinField);
                 fieldActivity.end();
             }
@@ -242,7 +242,7 @@ class MixinPreProcessorStandard {
             for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
                 if (mixinMethod.isInjector()) {
                     Method method = this.mixin.getClassInfo().findMethod(mixinMethod, ClassInfo.INCLUDE_ALL);
-                    Activity methodActivity = this.activities.begin("Conform injector %s", mixinMethod);
+                    IActivity methodActivity = this.activities.begin("Conform injector %s", mixinMethod);
                     this.conformInjector(target, mixinMethod, method);
                     methodActivity.end();
                 }
@@ -285,7 +285,7 @@ class MixinPreProcessorStandard {
         try {
             // Perform context-sensitive attachment phase
             Section timer = this.profiler.begin("methods");
-            Activity activity = this.activities.begin("Attach method");
+            IActivity activity = this.activities.begin("Attach method");
             this.attachMethods(context);
             timer = timer.next("fields");
             activity.next("Attach field");
@@ -307,7 +307,7 @@ class MixinPreProcessorStandard {
     }
 
     protected void attachMethods(MixinTargetContext context) {
-        Activity methodActivity = this.activities.begin("?");
+        IActivity methodActivity = this.activities.begin("?");
         for (Iterator<MixinMethodNode> iter = this.classNode.mixinMethods.iterator(); iter.hasNext();) {
             MixinMethodNode mixinMethod = iter.next();
             methodActivity.next(mixinMethod.toString());
@@ -585,7 +585,7 @@ class MixinPreProcessorStandard {
     }
 
     protected void attachFields(MixinTargetContext context) {
-        Activity fieldActivity = this.activities.begin("?");
+        IActivity fieldActivity = this.activities.begin("?");
         for (Iterator<FieldNode> iter = this.classNode.getFields().iterator(); iter.hasNext();) {
             FieldNode mixinField = iter.next();
             fieldActivity.next("%s:%s", mixinField.name, mixinField.desc);
@@ -716,12 +716,12 @@ class MixinPreProcessorStandard {
      * accesses in the mixin
      */
     protected void transform(MixinTargetContext context) {
-        Activity methodActivity = this.activities.begin("method");
+        IActivity methodActivity = this.activities.begin("method");
         for (MethodNode mixinMethod : this.classNode.methods) {
             methodActivity.next("Method %s", mixinMethod);
             for (Iterator<AbstractInsnNode> iter = mixinMethod.instructions.iterator(); iter.hasNext();) {
                 AbstractInsnNode insn = iter.next();
-                Activity activity = this.activities.begin(Bytecode.getOpcodeName(insn));
+                IActivity activity = this.activities.begin(Bytecode.getOpcodeName(insn));
                 if (insn instanceof MethodInsnNode) {
                     this.transformMethod((MethodInsnNode)insn);
                 } else if (insn instanceof FieldInsnNode) {
@@ -734,7 +734,7 @@ class MixinPreProcessorStandard {
     }
 
     protected void transformMethod(MethodInsnNode methodNode) {
-        Activity activity = this.activities.begin("%s::%s%s", methodNode.owner, methodNode.name, methodNode.desc);
+        IActivity activity = this.activities.begin("%s::%s%s", methodNode.owner, methodNode.name, methodNode.desc);
         Section metaTimer = this.profiler.begin("meta");
         ClassInfo owner = ClassInfo.forDescriptor(methodNode.owner, TypeLookup.DECLARED_TYPE);
         if (owner == null) {
@@ -751,7 +751,7 @@ class MixinPreProcessorStandard {
     }
 
     protected void transformField(FieldInsnNode fieldNode) {
-        Activity activity = this.activities.begin("%s::%s:%s", fieldNode.owner, fieldNode.name, fieldNode.desc);
+        IActivity activity = this.activities.begin("%s::%s:%s", fieldNode.owner, fieldNode.name, fieldNode.desc);
         Section metaTimer = this.profiler.begin("meta");
         ClassInfo owner = ClassInfo.forDescriptor(fieldNode.owner, TypeLookup.DECLARED_TYPE);
         if (owner == null) {

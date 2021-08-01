@@ -32,6 +32,61 @@ import java.util.regex.Pattern;
  */
 public abstract class JavaVersion {
     
+    /**
+     * Version number for Java 6
+     */
+    public static final double JAVA_6 = 1.6;
+    
+    /**
+     * Version number for Java 7
+     */
+    public static final double JAVA_7 = 1.7;
+    
+    /**
+     * Version number for Java 8
+     */
+    public static final double JAVA_8 = 1.8;
+    
+    /**
+     * Version number for Java 9
+     */
+    public static final double JAVA_9 = 9.0;
+    
+    /**
+     * Version number for Java 10
+     */
+    public static final double JAVA_10 = 10.0;
+    
+    /**
+     * Version number for Java 11
+     */
+    public static final double JAVA_11 = 11.0;
+    
+    /**
+     * Version number for Java 12
+     */
+    public static final double JAVA_12 = 12.0;
+    
+    /**
+     * Version number for Java 13
+     */
+    public static final double JAVA_13 = 13.0;
+    
+    /**
+     * Version number for Java 14
+     */
+    public static final double JAVA_14 = 14.0;
+    
+    /**
+     * Version number for Java 15
+     */
+    public static final double JAVA_15 = 15.0;
+    
+    /**
+     * Version number for Java 16
+     */
+    public static final double JAVA_16 = 16.0;
+    
     private static double current = 0.0;
     
     private JavaVersion() {}

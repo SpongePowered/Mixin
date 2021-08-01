@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.throwables;
 
-import org.spongepowered.asm.mixin.transformer.ActivityStack;
+import org.spongepowered.asm.mixin.extensibility.IActivityContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
 /**
@@ -42,7 +42,7 @@ public class ClassMetadataNotFoundException extends MixinException {
         super(message);
     }
 
-    public ClassMetadataNotFoundException(String message, ActivityStack context) {
+    public ClassMetadataNotFoundException(String message, IActivityContext context) {
         super(message, context);
     }
 
@@ -50,7 +50,7 @@ public class ClassMetadataNotFoundException extends MixinException {
         super(cause);
     }
 
-    public ClassMetadataNotFoundException(Throwable cause, ActivityStack context) {
+    public ClassMetadataNotFoundException(Throwable cause, IActivityContext context) {
         super(cause, context);
     }
 
@@ -58,7 +58,7 @@ public class ClassMetadataNotFoundException extends MixinException {
         super(message, cause);
     }
 
-    public ClassMetadataNotFoundException(String message, Throwable cause, ActivityStack context) {
+    public ClassMetadataNotFoundException(String message, Throwable cause, IActivityContext context) {
         super(message, cause, context);
     }
 
