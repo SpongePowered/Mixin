@@ -76,6 +76,12 @@ final class MixinTransformer extends TreeTransformer implements IMixinTransforme
      * Hotswap agent, if available 
      */
     private final IHotSwap hotSwapper;
+    
+    /**
+     * Coprocessor which handles merging nest members into nest hosts which may
+     * or may not be mixin targets themselves 
+     */
+    private final MixinCoprocessorNestHost nestHostCoprocessor;
 
     /**
      * Mixin processor which actually manages application of mixins
@@ -102,11 +108,12 @@ final class MixinTransformer extends TreeTransformer implements IMixinTransforme
         this.extensions = new Extensions(this.syntheticClassRegistry);
         
         this.hotSwapper = this.initHotSwapper(environment);
+        this.nestHostCoprocessor = new MixinCoprocessorNestHost();
 
-        this.processor = new MixinProcessor(environment, this.extensions, this.hotSwapper);
+        this.processor = new MixinProcessor(environment, this.extensions, this.hotSwapper, this.nestHostCoprocessor);
         this.generator = new MixinClassGenerator(environment, this.extensions);
         
-        DefaultExtensions.create(environment, this.extensions, this.syntheticClassRegistry);
+        DefaultExtensions.create(environment, this.extensions, this.syntheticClassRegistry, this.nestHostCoprocessor);
     }
     
     private IHotSwap initHotSwapper(MixinEnvironment environment) {

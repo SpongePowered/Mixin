@@ -41,7 +41,8 @@ final class DefaultExtensions {
     private DefaultExtensions() {
     }
 
-    static void create(final MixinEnvironment environment, final Extensions extensions, final SyntheticClassRegistry registry) {
+    static void create(final MixinEnvironment environment, final Extensions extensions, final SyntheticClassRegistry registry,
+            final MixinCoprocessorNestHost nestHostCoprocessor) {
         IConsumer<ISyntheticClassInfo> registryDelegate = new IConsumer<ISyntheticClassInfo>() {
             @Override
             public void accept(ISyntheticClassInfo item) {
@@ -50,7 +51,7 @@ final class DefaultExtensions {
         };
         
         extensions.add(new ArgsClassGenerator(registryDelegate));
-        extensions.add(new InnerClassGenerator(registryDelegate));
+        extensions.add(new InnerClassGenerator(registryDelegate, nestHostCoprocessor));
 
         extensions.add(new ExtensionClassExporter(environment));
         extensions.add(new ExtensionCheckClass());

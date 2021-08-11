@@ -70,6 +70,16 @@ public final class LanguageFeatures {
     public static final int DYNAMIC_CONSTANTS = 16;
     
     /**
+     * Record types 
+     */
+    public static final int RECORDS = 32;
+    
+    /**
+     * Sealed classes (permitted subclasses) 
+     */
+    public static final int SEALED_CLASSES = 64;
+    
+    /**
      * Utility class
      */
     private LanguageFeatures() {

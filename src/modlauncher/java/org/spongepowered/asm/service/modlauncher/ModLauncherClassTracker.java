@@ -112,5 +112,23 @@ public class ModLauncherClassTracker implements IClassProcessor, IClassTracker {
         
         return false;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.launch.IClassProcessor#generatesClass(
+     *      org.objectweb.asm.Type)
+     */
+    @Override
+    public boolean generatesClass(Type classType) {
+        return false;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.launch.IClassProcessor#generateClass(
+     *      org.objectweb.asm.Type, org.objectweb.asm.tree.ClassNode)
+     */
+    @Override
+    public boolean generateClass(Type classType, ClassNode classNode) {
+        return false;
+    }
         
 }

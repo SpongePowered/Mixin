@@ -110,6 +110,7 @@ public final class ClassNodeAdapter {
     public static void setNestMembers(ClassNode classNode, List<String> nestMembers) {
         if (ASM.isAtLeastVersion(7)) {
             classNode.nestMembers = nestMembers;
+            return;
         }
         
         if (ClassNodeAdapter.fdNestMembers == null || ClassNodeAdapter.notSupported) {

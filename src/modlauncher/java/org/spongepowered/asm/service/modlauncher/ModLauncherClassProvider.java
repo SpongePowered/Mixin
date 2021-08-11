@@ -24,11 +24,11 @@
  */
 package org.spongepowered.asm.service.modlauncher;
 
+import java.lang.reflect.Method;
 import java.net.URL;
 
 import org.spongepowered.asm.service.IClassProvider;
 
-import cpw.mods.gross.Java9ClassLoaderUtil;
 import cpw.mods.modlauncher.Launcher;
 
 /**
@@ -36,6 +36,9 @@ import cpw.mods.modlauncher.Launcher;
  */
 class ModLauncherClassProvider implements IClassProvider {
     
+    private static final String GET_SYSTEM_CLASS_PATH_METHOD = "getSystemClassPathURLs";
+    private static final String JAVA9_CLASS_LOADER_UTIL_CLASS = "cpw.mods.gross.Java9ClassLoaderUtil";
+
     ModLauncherClassProvider() {
     }
 
@@ -45,7 +48,14 @@ class ModLauncherClassProvider implements IClassProvider {
     @Override
     @Deprecated
     public URL[] getClassPath() {
-        return Java9ClassLoaderUtil.getSystemClassPathURLs();
+        try {
+            Class<?> clJava9ClassLoaderUtil = this.findClass(ModLauncherClassProvider.JAVA9_CLASS_LOADER_UTIL_CLASS);
+            Method mdGetSystemClassPathURLs = clJava9ClassLoaderUtil.getDeclaredMethod(ModLauncherClassProvider.GET_SYSTEM_CLASS_PATH_METHOD);
+            return (URL[])mdGetSystemClassPathURLs.invoke(null);
+        } catch (ReflectiveOperationException ex) {
+            // Probably Modlauncher 9+
+            return new URL[0];
+        }
     }
 
     /* (non-Javadoc)

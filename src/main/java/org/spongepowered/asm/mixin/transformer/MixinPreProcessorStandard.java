@@ -56,6 +56,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.TypeLookup;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinMethodNode;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.meta.MixinRenamed;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinPreProcessorException;
@@ -166,7 +167,7 @@ class MixinPreProcessorStandard {
      * 
      * @return Prepared classnode
      */
-    final MixinPreProcessorStandard prepare() {
+    final MixinPreProcessorStandard prepare(Extensions extensions) {
         if (this.prepared) {
             return this;
         }
@@ -176,8 +177,10 @@ class MixinPreProcessorStandard {
         this.activities.clear();
         Section prepareTimer = this.profiler.begin("prepare");
         try {
-    
-            IActivity activity = this.activities.begin("Prepare method");
+            IActivity activity = this.activities.begin("Prepare inner classes");
+            this.prepareInnerClasses(extensions);
+            
+            activity.next("Prepare method");
             for (MixinMethodNode mixinMethod : this.classNode.mixinMethods) {
                 Method method = this.mixin.getClassInfo().findMethod(mixinMethod);
                 IActivity methodActivity = this.activities.begin(mixinMethod.toString());
@@ -198,6 +201,16 @@ class MixinPreProcessorStandard {
         }
         prepareTimer.end();
         return this;
+    }
+
+    protected void prepareInnerClasses(Extensions extensions) {
+        InnerClassGenerator icg = extensions.<InnerClassGenerator>getGenerator(InnerClassGenerator.class);
+        for (String targetClassName : this.mixin.getDeclaredTargetClasses()) {
+            ClassInfo targetClassInfo = ClassInfo.forName(targetClassName);
+            for (String innerClass : this.mixin.getInnerClasses()) {
+                icg.registerInnerClass(this.mixin, targetClassInfo, innerClass);
+            }
+        }
     }
 
     protected void prepareMethod(MixinMethodNode mixinMethod, Method method) {

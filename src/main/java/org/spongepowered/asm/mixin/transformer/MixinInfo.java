@@ -62,6 +62,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
@@ -318,7 +319,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         void validate(SubType type, List<ClassInfo> targetClasses) {
             MixinClassNode classNode = this.getValidationClassNode();
             
-            MixinPreProcessorStandard preProcessor = type.createPreProcessor(classNode).prepare();
+            MixinPreProcessorStandard preProcessor = type.createPreProcessor(classNode).prepare(MixinInfo.this.getExtensions());
             for (ClassInfo target : targetClasses) {
                 preProcessor.conform(target);
             }
@@ -438,7 +439,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         protected void validateChanges(SubType type, List<ClassInfo> targetClasses) {
-            type.createPreProcessor(this.validationClassNode).prepare();
+            type.createPreProcessor(this.validationClassNode).prepare(MixinInfo.this.getExtensions());
         }
     }
 
@@ -816,6 +817,11 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
      * Strict target checks enabled
      */
     private final transient boolean strict;
+    
+    /**
+     * Transformer extensions manager 
+     */
+    private final transient Extensions extensions;
 
     /**
      * Holds state that currently is not fully initialised or validated
@@ -836,7 +842,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
      * @param ignorePlugin true to prevent the plugin from filtering targets of
      *      this mixin
      */
-    MixinInfo(IMixinService service, MixinConfig parent, String name, PluginHandle plugin, boolean ignorePlugin) {
+    MixinInfo(IMixinService service, MixinConfig parent, String name, PluginHandle plugin, boolean ignorePlugin, Extensions extensions) {
         this.service = service;
         this.parent = parent;
         this.name = name;
@@ -844,6 +850,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         this.plugin = plugin;
         this.phase = parent.getEnvironment().getPhase();
         this.strict = parent.getEnvironment().getOption(Option.DEBUG_TARGETS);
+        this.extensions = extensions;
         
         // Read the class bytes and transform
         try {
@@ -1261,6 +1268,13 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     Set<String> getInterfaces() {
         return this.getState().getInterfaces();
     }
+    
+    /**
+     * Get transformer extensions
+     */
+    Extensions getExtensions() {
+        return this.extensions;
+    }
 
     /**
      * Get a new mixin target context object for the specified target
@@ -1271,7 +1285,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     MixinTargetContext createContextFor(TargetClassContext target) {
         MixinClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
         Section preTimer = this.profiler.begin("pre");
-        MixinTargetContext context = this.type.createPreProcessor(classNode).prepare().createContextFor(target);
+        MixinTargetContext context = this.type.createPreProcessor(classNode).prepare(this.extensions).createContextFor(target);
         preTimer.end();
         return context;
     }

@@ -89,7 +89,6 @@ public class MixinLaunchPluginLegacy implements ILaunchPluginService, IClassByte
     
     @Override
     public boolean processClass(Phase phase, ClassNode classNode, Type classType) {
-        Thread.dumpStack();
         throw new IllegalStateException("Outdated ModLauncher");
     }
     
@@ -128,8 +127,8 @@ public class MixinLaunchPluginLegacy implements ILaunchPluginService, IClassByte
         boolean processed = false;
         
         synchronized (this.processors) {
-            for (IClassProcessor postProcessor : this.processors) {
-                processed |= postProcessor.processClass(phase, classNode, classType, reason);
+            for (IClassProcessor processor : this.processors) {
+                processed |= processor.processClass(phase, classNode, classType, reason);
             }
         }
         
@@ -233,14 +232,28 @@ public class MixinLaunchPluginLegacy implements ILaunchPluginService, IClassByte
             }
         }
         
-        if (classBytes == null || classBytes.length == 0) {
-            throw new ClassNotFoundException(canonicalName);
+        if (classBytes != null && classBytes.length != 0) {
+            ClassNode classNode = new ClassNode();
+            ClassReader classReader = new MixinClassReader(classBytes, canonicalName);
+            classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
+            return classNode;
         }
-
-        ClassNode classNode = new ClassNode();
-        ClassReader classReader = new MixinClassReader(classBytes, canonicalName);
-        classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
-        return classNode;
+        
+        Type classType = Type.getObjectType(internalName);
+        synchronized (this.processors) {
+            for (IClassProcessor processor : this.processors) {
+                if (!processor.generatesClass(classType)) {
+                    continue;
+                }
+                
+                ClassNode classNode = new ClassNode();
+                if (processor.generateClass(classType, classNode)) {
+                    return classNode;
+                }
+            }
+        }
+        
+        throw new ClassNotFoundException(canonicalName);
     }
 
 }

@@ -22,16 +22,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch;
+package org.spongepowered.asm.mixin.transformer;
 
-import cpw.mods.modlauncher.api.NamedPath;
+import java.util.HashSet;
+import java.util.Set;
 
-public class MixinLaunchPlugin extends MixinLaunchPluginLegacy {
+import org.objectweb.asm.tree.ClassNode;
 
-    // ModLauncher 9+
+/**
+ * Passthrough coprocessor which simply keeps track of classes which are
+ * loadable.
+ */
+class MixinCoprocessorPassthrough extends MixinCoprocessor {
+    
+    /**
+     * Loadable classes within mixin packages
+     */
+    private final Set<String> loadable = new HashSet<String>();
+
+    MixinCoprocessorPassthrough() {
+    }
+    
     @Override
-    public void initializeLaunch(ITransformerLoader transformerLoader, NamedPath[] specialPaths) {
-        this.initializeLaunch(transformerLoader);
+    String getName() {
+        return "passthrough";
+    }
+
+    @Override
+    public void onPrepare(MixinInfo mixin) {
+        if (mixin.isLoadable()) {
+            this.registerLoadable(mixin.getClassName());
+        }
+    }
+
+    void registerLoadable(String className) {
+        this.loadable.add(className);
+    }
+    
+    @Override
+    ProcessResult process(String className, ClassNode classNode) {
+        return this.loadable.contains(className) ? ProcessResult.PASSTHROUGH_NONE : ProcessResult.NONE;
     }
 
 }

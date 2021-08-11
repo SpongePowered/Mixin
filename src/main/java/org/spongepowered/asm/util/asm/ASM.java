@@ -25,8 +25,11 @@
 package org.spongepowered.asm.util.asm;
 
 import java.lang.reflect.Field;
+import java.util.jar.Attributes;
 
 import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.launch.platform.MainAttributes;
+import org.spongepowered.asm.util.VersionNumber;
 
 /**
  * Utility methods for determining ASM version and other version-specific
@@ -36,6 +39,11 @@ public final class ASM {
     
     private static int majorVersion = 5;
     private static int minorVersion = 0;
+    
+    // Implementation versions, only available from ASM
+    private static int implMinorVersion = 0;
+    private static int patchVersion = 0;
+    
     private static String maxVersion = "FALLBACK";
     
     private static int maxClassVersion = Opcodes.V1_6;
@@ -61,6 +69,32 @@ public final class ASM {
     }
     
     /**
+     * Get whether the current ASM API is at least the specified version
+     * (including minor version when it's relevant)
+     * 
+     * @param majorVersion major version to check for (eg. 6)
+     * @param minorVersion minor version to check for
+     */
+    public static boolean isAtLeastVersion(int majorVersion, int minorVersion) {
+        return ASM.majorVersion >= majorVersion && (ASM.majorVersion > majorVersion || ASM.implMinorVersion >= minorVersion);
+    }
+    
+    /**
+     * Get whether the current ASM API is at least the specified version
+     * (including minor version and patch version when it's relevant)
+     * 
+     * @param majorVersion major version to check for (eg. 6)
+     * @param minorVersion minor version to check for
+     * @param patchVersion patch version to check for
+     */
+    public static boolean isAtLeastVersion(int majorVersion, int minorVersion, int patchVersion) {
+        if (ASM.majorVersion == majorVersion) {
+            return ASM.implMinorVersion >= minorVersion && (ASM.implMinorVersion > minorVersion || ASM.patchVersion >= patchVersion);
+        }
+        return ASM.majorVersion > majorVersion;
+    }
+    
+    /**
      * Get the major API version
      */
     public static int getApiVersionMajor() {
@@ -75,12 +109,22 @@ public final class ASM {
     }
     
     /**
-     * Get the ASM API version as a string (mostly for debugging and the banner)
+     * Get the ASM API version as a string (mostly for debugging)
      * 
      * @return ASM API version as string
      */
     public static String getApiVersionString() {
-        return String.format("ASM %d.%d (%s)", ASM.majorVersion, ASM.minorVersion, ASM.maxVersion);
+        return String.format("%d.%d", ASM.majorVersion, ASM.minorVersion);
+    }
+    
+    /**
+     * Get the ASM version as a string (mostly for debugging and the banner)
+     * 
+     * @return ASM library version as string
+     */
+    public static String getVersionString() {
+        return String.format("ASM %d.%d%s (%s)",
+                ASM.majorVersion, ASM.implMinorVersion, ASM.patchVersion > 0 ? "." + ASM.patchVersion : "", ASM.maxVersion);
     }
 
     /**
@@ -115,7 +159,9 @@ public final class ASM {
 
     private static int detectVersion() {
         int apiVersion = Opcodes.ASM4;
-        
+
+        VersionNumber packageVersion = ASM.getPackageVersion(Opcodes.class);
+
         for (Field field : Opcodes.class.getDeclaredFields()) {
             if (field.getType() != Integer.TYPE) {
                 continue;
@@ -135,7 +181,12 @@ public final class ASM {
                         if (!experimental) {
                             apiVersion = version;
                             ASM.majorVersion = major;
-                            ASM.minorVersion = minor;
+                            ASM.minorVersion = ASM.implMinorVersion = minor;
+                            
+                            if (packageVersion.getMajor() == major && minor == 0) {
+                                ASM.implMinorVersion = packageVersion.getMinor();
+                                ASM.patchVersion = packageVersion.getPatch();
+                            }
                         }
                     }
                 } else if (name.matches("V([0-9_]+)")) {
@@ -156,6 +207,20 @@ public final class ASM {
         }
         
         return apiVersion;
+    }
+
+    private static VersionNumber getPackageVersion(Class<?> clazz) {
+        String implVersion = clazz.getPackage().getImplementationVersion();
+        if (implVersion != null) {
+            return VersionNumber.parse(implVersion);
+        }
+        
+        try {
+            MainAttributes manifest = MainAttributes.of(clazz.getProtectionDomain().getCodeSource().getLocation().toURI());
+            return VersionNumber.parse(manifest.get(Attributes.Name.IMPLEMENTATION_VERSION));
+        } catch (Exception ex) {
+            return VersionNumber.NONE;
+        }
     }
 
 }

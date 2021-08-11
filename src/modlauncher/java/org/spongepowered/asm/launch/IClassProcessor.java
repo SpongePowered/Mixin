@@ -62,4 +62,21 @@ public interface IClassProcessor {
      */
     public abstract boolean processClass(Phase phase, ClassNode classNode, Type classType, String reason);
     
+    /**
+     * Returns whether this generator can generate the specified class
+     * 
+     * @param classType Class to generate
+     * @return true if this generator can generate the class
+     */
+    public abstract boolean generatesClass(Type classType);
+    
+    /**
+     * Generate the specified class
+     * 
+     * @param classType Class to generate
+     * @param classNode ClassNode to populate with the new class data
+     * @return true if the class was generated
+     */
+    public abstract boolean generateClass(Type classType, ClassNode classNode);
+
 }

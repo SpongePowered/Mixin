@@ -34,7 +34,6 @@ import org.spongepowered.asm.launch.Phases;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory;
-import org.spongepowered.asm.service.ISyntheticClassInfo;
 import org.spongepowered.asm.service.ISyntheticClassRegistry;
 
 import com.google.common.base.Preconditions;
@@ -83,8 +82,16 @@ public class MixinTransformationHandler implements IClassProcessor {
             return null;
         }            
         
-        ISyntheticClassInfo syntheticClass = this.registry.findSyntheticClass(classType.getClassName());
-        return syntheticClass != null ? Phases.AFTER_ONLY : null;
+        return this.generatesClass(classType) ? Phases.AFTER_ONLY : null;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.launch.IClassProcessor#generatesClass(
+     *      org.objectweb.asm.Type)
+     */
+    @Override
+    public boolean generatesClass(Type classType) {
+        return this.registry.findSyntheticClass(classType.getClassName()) != null;
     }
 
     /* (non-Javadoc)
@@ -112,17 +119,25 @@ public class MixinTransformationHandler implements IClassProcessor {
             return false;
         }
 
-        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
-        ISyntheticClassInfo syntheticClass = this.registry.findSyntheticClass(classType.getClassName());
-        if (syntheticClass != null) {
-            return this.transformer.generateClass(environment, classType.getClassName(), classNode);
+        if (this.generatesClass(classType)) {
+            return this.generateClass(classType, classNode);
         }
 
+        MixinEnvironment environment = MixinEnvironment.getCurrentEnvironment();
         if (ITransformerActivity.COMPUTING_FRAMES_REASON.equals(reason)) {
             return this.transformer.computeFramesForClass(environment, classType.getClassName(), classNode);
         }
         
         return this.transformer.transformClass(environment, classType.getClassName(), classNode);
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.launch.IClassProcessor#generateClass(
+     *      org.objectweb.asm.Type, org.objectweb.asm.tree.ClassNode)
+     */
+    @Override
+    public boolean generateClass(Type classType, ClassNode classNode) {
+        return this.transformer.generateClass(MixinEnvironment.getCurrentEnvironment(), classType.getClassName(), classNode);
     }
 
 }

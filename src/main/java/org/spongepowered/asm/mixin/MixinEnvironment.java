@@ -627,7 +627,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_8;
+                return JavaVersion.current() >= JavaVersion.JAVA_8 && ASM.isAtLeastVersion(6);
             }
             
         },
@@ -640,7 +640,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_10;
+                return JavaVersion.current() >= JavaVersion.JAVA_10 && ASM.isAtLeastVersion(6, 1);
             }
             
         },
@@ -653,7 +653,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_11;
+                return JavaVersion.current() >= JavaVersion.JAVA_11 && ASM.isAtLeastVersion(7);
             }
             
         },
@@ -666,7 +666,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_12;
+                return JavaVersion.current() >= JavaVersion.JAVA_12 && ASM.isAtLeastVersion(7);
             }
             
         },
@@ -679,33 +679,37 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_13;
+                return JavaVersion.current() >= JavaVersion.JAVA_13 && ASM.isAtLeastVersion(7);
             }
             
         },
         
         /**
-         * Java 14 or above is required
+         * Java 14 or above is required. Records are a preview feature in this
+         * release.
          */
         JAVA_14(14, Opcodes.V14, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
-                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS
+                | LanguageFeatures.RECORDS) {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_14;
+                return JavaVersion.current() >= JavaVersion.JAVA_14 && ASM.isAtLeastVersion(8);
             }
             
         },
         
         /**
-         * Java 15 or above is required
+         * Java 15 or above is required. Records and sealed classes are preview
+         * features in this release.
          */
         JAVA_15(15, Opcodes.V15, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
-                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS
+                | LanguageFeatures.RECORDS | LanguageFeatures.SEALED_CLASSES) {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_15;
+                return JavaVersion.current() >= JavaVersion.JAVA_15 && ASM.isAtLeastVersion(9);
             }
             
         },
@@ -714,11 +718,40 @@ public final class MixinEnvironment implements ITokenProvider {
          * Java 16 or above is required
          */
         JAVA_16(16, Opcodes.V16, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
-                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS) {
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS
+                | LanguageFeatures.RECORDS | LanguageFeatures.SEALED_CLASSES) {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_16;
+                return JavaVersion.current() >= JavaVersion.JAVA_16 && ASM.isAtLeastVersion(9);
+            }
+            
+        },
+        
+        /**
+         * Java 17 or above is required
+         */
+        JAVA_17(17, Opcodes.V17, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS
+                | LanguageFeatures.RECORDS | LanguageFeatures.SEALED_CLASSES) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_17 && ASM.isAtLeastVersion(9, 1);
+            }
+            
+        },
+        
+        /**
+         * Java 18 or above is required
+         */
+        JAVA_18(18, Opcodes.V18, LanguageFeatures.METHODS_IN_INTERFACES | LanguageFeatures.PRIVATE_SYNTHETIC_METHODS_IN_INTERFACES
+                | LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES | LanguageFeatures.NESTING | LanguageFeatures.DYNAMIC_CONSTANTS
+                | LanguageFeatures.RECORDS | LanguageFeatures.SEALED_CLASSES) {
+            
+            @Override
+            boolean isSupported() {
+                return JavaVersion.current() >= JavaVersion.JAVA_18 && ASM.isAtLeastVersion(9, 2);
             }
             
         };
@@ -748,7 +781,7 @@ public final class MixinEnvironment implements ITokenProvider {
          * PR #500 which demonstrates that the nature of compatibility levels
          * in mixin are not understood that well.</p>
          */
-        public static CompatibilityLevel MAX_SUPPORTED = CompatibilityLevel.JAVA_11;
+        public static CompatibilityLevel MAX_SUPPORTED = CompatibilityLevel.JAVA_13;
         
         private final int ver;
         
@@ -1102,7 +1135,7 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.kv("Internal Version", version);
             printer.kv("Java Version", "%s (supports compatibility %s)", JavaVersion.current(), CompatibilityLevel.getSupportedVersions());
             printer.kv("Default Compatibility Level", MixinEnvironment.getCompatibilityLevel());
-            printer.kv("Detected ASM API Version", ASM.getApiVersionString());
+            printer.kv("Detected ASM Version", ASM.getVersionString());
             printer.kv("Detected ASM Supports Java", ASM.getClassVersionString()).hr();
             printer.kv("Service Name", serviceName);
             printer.kv("Mixin Service Class", this.service.getClass().getName());
@@ -1513,7 +1546,11 @@ public final class MixinEnvironment implements ITokenProvider {
         return MixinEnvironment.compatibility;
     }
     
-    private static CompatibilityLevel getMinCompatibilityLevel() {
+    /**
+     * Get the minimum (default) compatibility level supported by the current
+     * service
+     */
+    public static CompatibilityLevel getMinCompatibilityLevel() {
         CompatibilityLevel minLevel = MixinService.getService().getMinCompatibilityLevel();
         return minLevel == null ? CompatibilityLevel.DEFAULT : minLevel;
     }
@@ -1535,7 +1572,10 @@ public final class MixinEnvironment implements ITokenProvider {
         CompatibilityLevel currentLevel = MixinEnvironment.getCompatibilityLevel();
         if (level != currentLevel && level.isAtLeast(currentLevel)) {
             if (!level.isSupported()) {
-                throw new IllegalArgumentException("The requested compatibility level " + level + " could not be set. Level is not supported");
+                throw new IllegalArgumentException(String.format(
+                    "The requested compatibility level %s could not be set. Level is not supported by the active JRE or ASM version (Java %s, %s)",
+                    level, JavaVersion.current(), ASM.getVersionString()
+                ));
             }
 
             IMixinService service = MixinService.getService();

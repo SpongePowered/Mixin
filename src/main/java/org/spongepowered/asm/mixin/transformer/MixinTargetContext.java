@@ -82,7 +82,6 @@ import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.asm.ClassNodeAdapter;
 
 import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 
 /**
  * This object keeps track of data for applying a mixin to a specific target
@@ -132,7 +131,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     /**
      * 
      */
-    private final BiMap<String, String> innerClasses = HashBiMap.<String, String>create();
+    private final BiMap<String, String> innerClasses;
 
     /**
      * Shadow method list
@@ -203,10 +202,8 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         this.sessionId = context.getSessionId();
         this.requireVersion(classNode.version);
         
-        InnerClassGenerator icg = context.getExtensions().getGenerator(InnerClassGenerator.class);
-        for (String innerClass : this.mixin.getInnerClasses()) {
-            this.innerClasses.put(innerClass, icg.registerInnerClass(this.mixin, innerClass, this));
-        }
+        InnerClassGenerator icg = context.getExtensions().<InnerClassGenerator>getGenerator(InnerClassGenerator.class);
+        this.innerClasses = icg.getInnerClasses(this.mixin, this.getTargetClassRef());
     }
     
     /**
@@ -1216,6 +1213,13 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      */
     List<String> getNestMembers() {
         return ClassNodeAdapter.getNestMembers(this.classNode);
+    }
+    
+    /**
+     * Get the map of inner classes to remapped inner classes
+     */
+    BiMap<String, String> getInnerClasses() {
+        return this.innerClasses;
     }
 
     /* (non-Javadoc)

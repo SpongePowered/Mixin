@@ -87,6 +87,16 @@ public abstract class JavaVersion {
      */
     public static final double JAVA_16 = 16.0;
     
+    /**
+     * Version number for Java 17
+     */
+    public static final double JAVA_17 = 17.0;
+    
+    /**
+     * Version number for Java 18
+     */
+    public static final double JAVA_18 = 18.0;
+    
     private static double current = 0.0;
     
     private JavaVersion() {}

@@ -65,7 +65,6 @@ import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
-import org.spongepowered.asm.util.LanguageFeatures;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 import org.spongepowered.asm.util.throwables.ConstraintViolationException;
@@ -95,6 +94,7 @@ class MixinApplicatorStandard {
      * Passes the mixin applicator applies to each mixin
      */
     enum ApplicatorPass {
+
         /**
          * Main pass, mix in methods, fields, interfaces etc
          */
@@ -109,12 +109,14 @@ class MixinApplicatorStandard {
          * Apply injectors from previous pass 
          */
         INJECT
+
     }
     
     /**
      * Strategy for injecting initialiser insns
      */
     enum InitialiserInjectionMode {
+
         /**
          * Default mode, attempts to place initialisers after all other
          * competing initialisers in the target ctor
@@ -126,12 +128,14 @@ class MixinApplicatorStandard {
          * invocation 
          */
         SAFE
+
     }
     
     /**
      * Internal struct for representing a range
      */
     class Range {
+
         /**
          * Start of the range
          */
@@ -196,6 +200,7 @@ class MixinApplicatorStandard {
         public String toString() {
             return String.format("Range[%d-%d,%d,valid=%s)", this.start, this.end, this.marker, this.isValid());
         }
+
     }
     
     /**
@@ -382,8 +387,6 @@ class MixinApplicatorStandard {
                 this.applyMethods(mixin);
                 activity.next("Apply Initialisers");
                 this.applyInitialisers(mixin);
-                activity.next("Apply Nesting");
-                this.applyNesting(mixin);
                 break;
                 
             case PREINJECT:
@@ -1029,30 +1032,6 @@ class MixinApplicatorStandard {
 
     private static String fieldKey(FieldInsnNode fieldNode) {
         return String.format("%s:%s", fieldNode.desc, fieldNode.name);
-    }
-    
-    /**
-     * Apply nesting attributes from the mixin to the target.
-     * 
-     * <p><strong>NOT YET SUPPORTED!</strong></p>
-     */
-    protected void applyNesting(MixinTargetContext mixin) {
-       
-        String nestHostClass = mixin.getNestHostClass();
-        List<String> nestMembers = mixin.getNestMembers();
-        if ((nestHostClass == null && nestMembers == null) || (nestMembers != null && nestMembers.size() == 0)) {
-            return;
-        }
-        
-        if (!MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.NESTING)) {
-            // Shouldn't get here because we should error out during the initial scan, but you never know
-            throw new InvalidMixinException(mixin,
-                    String.format("%s contains nesting information but the current compatibility level does not support class nesting attributes",
-                    mixin));
-        }
-        
-        // TODO Nesting not done yet, just log an error for now that we're not applying these attributes
-        this.logger.error("NESTING not supported in this version of Mixin. {} nesting attributes will not be applied to the target", mixin);
     }
 
     /**

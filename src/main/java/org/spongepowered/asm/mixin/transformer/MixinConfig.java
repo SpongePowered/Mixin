@@ -52,6 +52,7 @@ import org.spongepowered.asm.mixin.injection.selectors.TargetSelector;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.ReferenceMapper;
 import org.spongepowered.asm.mixin.refmap.RemappingReferenceMapper;
+import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
@@ -529,14 +530,20 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             throw new MixinInitialisationError(String.format("Mixin config %s requires compatibility level %s which is prohibited by %s",
                     this.name, this.compatibilityLevel, currentLevel));
         }
-        
+
+        CompatibilityLevel minCompatibilityLevel = MixinEnvironment.getMinCompatibilityLevel();
+        if (this.compatibilityLevel.isLessThan(minCompatibilityLevel)) {
+            this.logger.log(this.verboseLogging ? Level.INFO : Level.DEBUG,
+                    "Compatibility level {} specified by {} is lower than the default level supported by the current mixin service ({}).",
+                    this.compatibilityLevel, this, minCompatibilityLevel);
+        }
+
         // Required level is higher than highest version we support, this possibly
         // means that a shaded mixin dependency has been usurped by an old version,
         // or the mixin author is trying to elevate the compatibility level beyond
         // the versions currently supported
         if (CompatibilityLevel.MAX_SUPPORTED.isLessThan(this.compatibilityLevel)) {
-            Level logLevel = this.verboseLogging ? Level.WARN : Level.DEBUG;
-            this.logger.log(logLevel,
+            this.logger.log(this.verboseLogging ? Level.WARN : Level.DEBUG,
                     "Compatibility level {} specified by {} is higher than the maximum level supported by this version of mixin ({}).",
                     this.compatibilityLevel, this, CompatibilityLevel.MAX_SUPPORTED);
         }
@@ -755,20 +762,20 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * either the <em>hasMixinsFor()</em> or <em>getMixinsFor()</em> methods.
      * </p>
      */
-    void prepare() {
+    void prepare(Extensions extensions) {
         if (this.prepared) {
             return;
         }
         this.prepared = true;
         
-        this.prepareMixins("mixins", this.mixinClasses, false);
+        this.prepareMixins("mixins", this.mixinClasses, false, extensions);
         
         switch (this.env.getSide()) {
             case CLIENT:
-                this.prepareMixins("client", this.mixinClassesClient, false);
+                this.prepareMixins("client", this.mixinClassesClient, false, extensions);
                 break;
             case SERVER:
-                this.prepareMixins("server", this.mixinClassesServer, false);
+                this.prepareMixins("server", this.mixinClassesServer, false, extensions);
                 break;
             case UNKNOWN:
                 //$FALL-THROUGH$
@@ -778,10 +785,10 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
     
-    void postInitialise() {
+    void postInitialise(Extensions extensions) {
         if (this.plugin != null) {
             List<String> pluginMixins = this.plugin.getMixins();
-            this.prepareMixins("companion plugin", pluginMixins, true);
+            this.prepareMixins("companion plugin", pluginMixins, true, extensions);
         }
         
         for (Iterator<MixinInfo> iter = this.mixins.iterator(); iter.hasNext();) {
@@ -813,7 +820,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
     }
 
-    private void prepareMixins(String collectionName, List<String> mixinClasses, boolean ignorePlugin) {
+    private void prepareMixins(String collectionName, List<String> mixinClasses, boolean ignorePlugin, Extensions extensions) {
         if (mixinClasses == null) {
             return;
         }
@@ -836,7 +843,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             MixinInfo mixin = null;
             
             try {
-                this.pendingMixins.add(mixin = new MixinInfo(this.service, this, mixinClass, this.plugin, ignorePlugin));
+                this.pendingMixins.add(mixin = new MixinInfo(this.service, this, mixinClass, this.plugin, ignorePlugin, extensions));
                 MixinConfig.globalMixinList.add(fqMixinClass);
             } catch (InvalidMixinException ex) {
                 if (this.required) {

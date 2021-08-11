@@ -42,17 +42,17 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * method invocation within the target method(s). To affect multiple arguments
  * of an invocation all at once, use {@link ModifyArgs} instead.
  * 
- * <p>Use this injector when a method contains an method invocation and you wish
- * to change a single value being <em>passed to</em> that method. If you need to
- * alter an argument <em>received by</em> a target method, use {@link
- * ModifyVariable} instead.</p>
+ * <p>Use this injector when a (target) method contains an method invocation
+ * (the subject) and you wish to change a single value being <em>passed to</em>
+ * that subject method. If you need to alter an argument <em>received by</em> a
+ * target method, use {@link ModifyVariable} instead.</p>
  * 
  * <p>Consider the following method:</p>
  * 
  * <blockquote><pre><code>private void targetMethod() {
  *    Entity someEntity = this.obtainEntity();
  *    float x = 1.0F, y = 3.0F, z = 0.1F;
- *    someEntity.<ins>setLocation</ins>(x, <ins>y</ins>, z, true);
+ *    someEntity.<ins>setLocation</ins>(x, <ins>y</ins>, z, true); // subject
  *}</code></pre>
  *</blockquote>
  * 
@@ -71,7 +71,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * <p>The callback consumes the original value of <tt>y</tt> and returns the
  * adjusted value.</p>
  * 
- * <p><tt>&#064;ModifyArg</tt> can also consume all of the target method's
+ * <p><tt>&#064;ModifyArg</tt> can also consume all of the subject method's
  * arguments if required, to provide additional context for the callback. In
  * this case the arguments of the callback should match the target method:</p> 
  *  
@@ -80,6 +80,9 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * private float adjustYCoord(float x, float y, float z, boolean interpolate) {
  * <br />&nbsp; &nbsp; return (x == 0 &amp;&amp; y == 0) ? 0 : y;<br />
  * }</code></blockquote>
+ * 
+ * <p>Note that <tt>&#064;ModifyArg</tt> <em>cannot</em> capture the arguments
+ * of the <em>target</em> method like some other injectors can
  */
 @Target({ ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)

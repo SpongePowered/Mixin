@@ -36,6 +36,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.jar.Attributes;
+import java.util.jar.Attributes.Name;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
@@ -72,6 +73,20 @@ public final class MainAttributes {
      * @return attribute value or null if not present
      */
     public final String get(String name) {
+        if (this.attributes != null) {
+            return this.attributes.getValue(name);
+        }
+        return null;
+    }
+    
+    /**
+     * Retrieve the value of attribute with the specified name, or null if not
+     * present
+     * 
+     * @param name attribute name
+     * @return attribute value or null if not present
+     */
+    public final String get(Name name) {
         if (this.attributes != null) {
             return this.attributes.getValue(name);
         }

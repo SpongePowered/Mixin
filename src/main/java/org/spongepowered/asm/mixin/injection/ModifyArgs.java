@@ -49,7 +49,8 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * <p>This injector works by creating an <em>argument bundle</em> in the form of
  * {@link Args} which is passed to your handler method. You can manipulate the
  * method arguments via the bundle in your handler method. The bundle is then
- * unpacked and the original method is called with the modified arguments.</p>
+ * unpacked and the original subject method is called with the modified
+ * arguments.</p>
  * 
  * <p>Since the argument bundle is created for every invocation of the target
  * method, and primitive types must undergo boxing and unboxing, this injector
@@ -66,7 +67,7 @@ import org.spongepowered.asm.util.ConstraintParser.Constraint;
  * </ul>
  * 
  * <p>Methods decorated with this injector should return <tt>void</tt> and
- * return either:</p>
+ * consume either:</p>
  * 
  * <ul>
  *   <li>A single argument of type {@link Args}</li>

@@ -46,10 +46,13 @@ import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.struct.SourceMap;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
+import org.spongepowered.asm.util.perf.Profiler;
+import org.spongepowered.asm.util.perf.Profiler.Section;
 
 /**
  * Struct for containing target class information during mixin application
@@ -70,6 +73,11 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
      * Mixin transformer extensions
      */
     private final Extensions extensions;
+    
+    /**
+     * Profiler 
+     */
+    private final Profiler profiler;
 
     /**
      * Transformer session ID
@@ -131,14 +139,21 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
     private boolean applied;
     
     /**
+     * True if this class is eligible for export. That is, it was successfully
+     * applied or if validation failed and export is enabled.  
+     */
+    private boolean export;
+    
+    /**
      * True if this class is decorated with an {@link Debug} annotation which
      * instructs an export 
      */
     private boolean forceExport;
-
+    
     TargetClassContext(MixinEnvironment env, Extensions extensions, String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
         this.env = env;
         this.extensions = extensions;
+        this.profiler = MixinEnvironment.getProfiler();
         this.sessionId = sessionId;
         this.className = name;
         this.classNode = classNode;
@@ -156,6 +171,10 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
     
     boolean isApplied() {
         return this.applied;
+    }
+    
+    boolean isExported() {
+        return this.export;
     }
     
     boolean isExportForced() {
@@ -331,21 +350,54 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
         }
         return target;
     }
-
+    
     /**
-     * Apply mixins to this class
+     * Apply mixins for this target class
      */
     void applyMixins() {
         if (this.applied) {
             throw new IllegalStateException("Mixins already applied to target class " + this.className);
         }
         this.applied = true;
-        
+        Section timer = this.profiler.begin("preapply");
+        this.preApply();
+        timer = timer.next("apply");
+        this.apply();
+        timer = timer.next("postapply");
+        this.postApply();
+        timer.end();
+    }
+    
+    /**
+     * Run extensions before apply
+     */
+    private void preApply() {
+        this.extensions.preApply(this);
+    }
+
+    /**
+     * Apply mixins to this class
+     */
+    private void apply() {
         MixinApplicatorStandard applicator = this.createApplicator();
         applicator.apply(this.mixins);
         this.applySignature();
         this.upgradeMethods();
         this.checkMerges();
+    }
+    
+    /**
+     * Run extensions after apply
+     */
+    private void postApply() {
+        try {
+            this.extensions.postApply(this);
+            this.export = true;
+        } catch (ValidationFailedException ex) {
+            MixinProcessor.logger.info(ex.getMessage());
+            // If verify is enabled and failed, write out the bytecode to allow us to inspect it
+            this.export |= this.forceExport || this.env.getOption(Option.DEBUG_EXPORT);
+        }
     }
 
     private MixinApplicatorStandard createApplicator() {

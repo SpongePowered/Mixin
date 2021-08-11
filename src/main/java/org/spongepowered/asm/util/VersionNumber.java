@@ -83,6 +83,41 @@ public final class VersionNumber implements Comparable<VersionNumber>, Serializa
         this.suffix = suffix != null ? suffix : "";
     }
     
+    /**
+     * Get the major version from this version number
+     */
+    public short getMajor() {
+        return (short)(this.value >> 48);
+    }
+    
+    /**
+     * Get the minor version from this version number
+     */
+    public short getMinor() {
+        return (short)(this.value >> 32 & Short.MAX_VALUE);
+    }
+    
+    /**
+     * Get the patch from this version number
+     */
+    public short getPatch() {
+        return (short)(this.value >> 16 & Short.MAX_VALUE);
+    }
+    
+    /**
+     * Get the revision from this version number
+     */
+    public short getRevision() {
+        return (short)(this.value & Short.MAX_VALUE); 
+    }
+    
+    /**
+     * Get the suffix from this version
+     */
+    public String getSuffix() {
+        return this.suffix;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */

@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +43,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.tree.InnerClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Final;
@@ -56,12 +58,15 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Member.Type;
 import org.spongepowered.asm.mixin.transformer.MixinInfo.MixinClassNode;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
 import org.spongepowered.asm.util.LanguageFeatures;
 import org.spongepowered.asm.util.Locals;
+import org.spongepowered.asm.util.asm.ClassNodeAdapter;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -236,7 +241,7 @@ public final class ClassInfo {
             this.size = size;
         }
 
-        FrameData(int index, FrameNode frameNode) {
+        FrameData(int index, FrameNode frameNode, int initialFrameSize) {
             this.index = index;
             this.type = frameNode.type;
             this.locals = frameNode.local != null ? frameNode.local.size() : 0;
@@ -522,7 +527,7 @@ public final class ClassInfo {
             for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
                 AbstractInsnNode insn = iter.next();
                 if (insn instanceof FrameNode) {
-                    frames.add(new FrameData(method.instructions.indexOf(insn), (FrameNode)insn));
+                    frames.add(new FrameData(method.instructions.indexOf(insn), (FrameNode)insn, Bytecode.getFirstNonArgLocalIndex(method)));
                 }
             }
             return frames;
@@ -691,6 +696,11 @@ public final class ClassInfo {
     private final String outerName;
 
     /**
+     * True if this in an inner class
+     */
+    private final boolean isInner;
+
+    /**
      * True either if this is not an inner class or if it is an inner class but
      * does not contain a reference to its outer class.
      */
@@ -768,6 +778,16 @@ public final class ClassInfo {
      * Mixins which have been applied this class
      */
     private Set<MixinInfo> appliedMixins;
+    
+    /**
+     * Declared nest host
+     */
+    private String nestHost;
+    
+    /**
+     * Declared nest members 
+     */
+    private Set<String> nestMembers;
 
     /**
      * Private constructor used to initialise the ClassInfo for {@link Object}
@@ -776,6 +796,7 @@ public final class ClassInfo {
         this.name = ClassInfo.JAVA_LANG_OBJECT;
         this.superName = null;
         this.outerName = null;
+        this.isInner = false;
         this.isProbablyStatic = true;
         this.initialisers = ImmutableSet.<Method>of(
             new Method("<init>", "()V")
@@ -818,7 +839,6 @@ public final class ClassInfo {
             this.fields = new HashSet<Field>();
             this.isInterface = ((classNode.access & Opcodes.ACC_INTERFACE) != 0);
             this.interfaces = new HashSet<String>();
-            this.access = classNode.access;
             this.isMixin = classNode instanceof MixinClassNode;
             this.mixin = this.isMixin ? ((MixinClassNode)classNode).getMixin() : null;
             this.mixins = this.isMixin ? Collections.<MixinInfo>emptySet() : new HashSet<MixinInfo>();
@@ -837,7 +857,7 @@ public final class ClassInfo {
                         isProbablyStatic = false;
                         if (outerName == null) {
                             outerName = field.desc;
-                            if (outerName != null && outerName.startsWith("L")) {
+                            if (outerName != null && outerName.startsWith("L") && outerName.endsWith(";")) {
                                 outerName = outerName.substring(1, outerName.length() - 1);
                             }
                         }
@@ -848,9 +868,32 @@ public final class ClassInfo {
             }
 
             this.isProbablyStatic = isProbablyStatic;
-            this.outerName = outerName;
             this.methodMapper = new MethodMapper(MixinEnvironment.getCurrentEnvironment(), this);
             this.signature = ClassSignature.ofLazy(classNode);
+            
+            int access = classNode.access;
+            boolean isInner = outerName != null;
+            
+            for (InnerClassNode innerClass : classNode.innerClasses) {
+                if (this.name.equals(innerClass.name)) {
+                    access = innerClass.access;
+                    isInner = true;
+                    outerName = innerClass.outerName;
+                }
+            }
+            
+            this.access = access;
+            this.isInner = isInner;
+            this.outerName = outerName;
+
+            if (MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.NESTING)) {
+                this.nestHost = ClassNodeAdapter.getNestHostClass(classNode);
+                List<String> nestMembers = ClassNodeAdapter.getNestMembers(classNode);
+                if (nestMembers != null) {
+                    this.nestMembers = new LinkedHashSet<String>();
+                    this.nestMembers.addAll(nestMembers);
+                }
+            }
         } finally {
             timer.end();
         }
@@ -926,6 +969,42 @@ public final class ClassInfo {
      */
     public boolean isPublic() {
         return (this.access & Opcodes.ACC_PUBLIC) != 0;
+    }
+
+    /**
+     * Get whether this class is really public (only valid for inner classes
+     * which may be "public" themselves but aren't actually visible because
+     * their enclosing type is package-private for example.
+     */
+    public boolean isReallyPublic() {
+        boolean isPublic = this.isPublic();
+        if (!this.isInner || !isPublic) {
+            return isPublic;
+        }
+        
+        ClassInfo outer = this;
+        while (outer != null && outer.outerName != null) {
+            outer = ClassInfo.forName(outer.outerName);
+            if (outer != null && !outer.isPublic()) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Get whether this class has ACC_PROTECTED (only valid for inner classes)
+     */
+    public boolean isProtected() {
+        return (this.access & Opcodes.ACC_PROTECTED) != 0;
+    }
+    
+    /**
+     * Get whether this class has ACC_PRIVATE (only valid for inner classes)
+     */
+    public boolean isPrivate() {
+        return (this.access & Opcodes.ACC_PRIVATE) != 0;
     }
 
     /**
@@ -1058,7 +1137,36 @@ public final class ClassInfo {
     public ClassSignature getSignature() {
         return this.signature.wake();
     }
-
+    
+    /**
+     * Return the nest host declared in the class
+     */
+    public String getNestHost() {
+        return this.nestHost;
+    }
+    
+    /**
+     * Get nest members declared in the class
+     */
+    public Set<String> getNestMembers() {
+        return this.nestMembers != null ? Collections.<String>unmodifiableSet(this.nestMembers) : Collections.<String>emptySet();
+    }
+    
+    /**
+     * Resolve the nest host for inner classes of this class. If the class
+     * itself has a nest host, the host is returned so that members can be added
+     * to it. If the class itself <em>is</em> a nest host (already has nest
+     * members) or is neither a nest host or member (eg. per the specification
+     * is already a nest host with itself as the sole member) then this method
+     * simply returns this ClassInfo.
+     */
+    public ClassInfo resolveNestHost() {
+        if (!Strings.isNullOrEmpty(this.nestHost)) {
+            return ClassInfo.forName(this.nestHost);
+        }
+        return this;
+    }
+    
     /**
      * Class targets
      */
@@ -2031,6 +2139,9 @@ public final class ClassInfo {
      * @return common superclass info
      */
     private static ClassInfo getCommonSuperClass(ClassInfo type1, ClassInfo type2) {
+        if (type1 == null || type2 == null) {
+            return ClassInfo.OBJECT;
+        }
         return ClassInfo.getCommonSuperClass(type1, type2, false);
     }
 
