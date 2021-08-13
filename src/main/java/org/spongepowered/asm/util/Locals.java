@@ -53,6 +53,33 @@ import org.spongepowered.asm.util.asm.ASM;
 import org.spongepowered.asm.util.asm.MixinVerifier;
 import org.spongepowered.asm.util.throwables.LVTGeneratorError;
 
+// <------------------------------ VERBOSE START ------------------------------>
+// 
+// You are looking at the VERBOSE MODE source for Locals, this is not a
+// production class as it is heavily instrumented with a tonne of console spam.
+// 
+// Since this whole thing is a annoying, nasty state machine, I use this
+// instrumented version to get a blow-by-blow output of locals generation in the
+// console. I don't recommend anyone use this for anything, but I'm putting it
+// on a public branch mainly as a tool for anyone that wants to look into the
+// locals generator using the same tools I do.
+//
+// I have my IDE console configured with a regex-to-highlight-colour plugin
+// which allows lines with different prefixes to be highlighted with different
+// colours which I find helps me decode the log output, hence all the wacky
+// prefixes for the console messages. I use the following:
+//
+//   System.err = yellow (no regex highlight)
+//   >>> prefix = green 
+//   --> prefix = pink 
+//   === prefix = purple
+//   ### prefix = cyan
+//
+// While this is public, it's not necessarily meant to in any way mean anything
+// to anyone who doesn't already understand what Locals does in the first place.
+// 
+// <------------------------------- VERBOSE END ------------------------------->
+
 /**
  * Utility methods for working with local variables using ASM
  */
@@ -387,6 +414,26 @@ public final class Locals {
             node = nextNode;
         }
         
+        // <------------------------------ VERBOSE START ------------------------------>
+        if (Locals.classOfInterest != null && Locals.classOfInterest.replace('.', '/').equals(classNode.name)) {
+            Locals.logging = true;
+            Locals.printf("  > %s [offet = %d]\n", Bytecode.describeNode(node), method.instructions.indexOf(node));
+            Thread.dumpStack();
+            Locals.printf(">>>\n");
+            Locals.printf(">>>\n");
+            Locals.printf(">>>\n");
+            Locals.printf("  > %s [offet = %d]\n", Bytecode.describeNode(node), method.instructions.indexOf(node));
+            Locals.printf(">>>\n");
+        } else {
+            Locals.logging = !Locals.logOnlyClassOfInterest;
+        }
+        
+        if (Locals.logging) {
+            Locals.printf(">>> ------------------------------------------------------------------------------------------------------------------\n");
+            Locals.printf(">>> %s\n", classNode.name);
+            Locals.printf(">>> ------------------------------------------------------------------------------------------------------------------\n");
+        }
+        // <------------------------------- VERBOSE END ------------------------------->
         ClassInfo classInfo = ClassInfo.forName(classNode.name);
         if (classInfo == null) {
             throw new LVTGeneratorError("Could not load class metadata for " + classNode.name + " generating LVT for " + method.name);
@@ -432,16 +479,25 @@ public final class Locals {
                 }
             }
 
+            // <------------------------------ VERBOSE START ------------------------------>
+            Locals.printf("--> %s (%d)\n", Bytecode.describeNode(insn), method.instructions.indexOf(insn));
+            // <------------------------------- VERBOSE END ------------------------------->
             if (storeInsn != null) {
                 LocalVariableNode storedLocal = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
                 frame[storeInsn.var] = storedLocal;
                 knownFrameSize = Math.max(knownFrameSize, storeInsn.var + 1);
+                // <------------------------------ VERBOSE START ------------------------------>
+                Locals.printf("----- STORE VAR(%d)=%s\n", storeInsn.var, frame[storeInsn.var].desc);
+                // <------------------------------- VERBOSE END ------------------------------->
                 if (storedLocal != null && storeInsn.var < method.maxLocals - 1 && storedLocal.desc != null
                         && Type.getType(storedLocal.desc).getSize() == 2) {
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf("----- STORE TOP (%d) FOR 64BIT VALUE\n", storeInsn.var);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     frame[storeInsn.var + 1] = null; // TOP
                     knownFrameSize = Math.max(knownFrameSize, storeInsn.var + 2);
                     if (settings.hasFlags(Settings.RESURRECT_EXPOSED_ON_STORE)) {
-                        Locals.resurrect(frame, knownFrameSize, settings);
+                        Locals.resurrect(frame, knownFrameSize, settings, "STORE");
                     }
                 }
                 storeInsn = null;
@@ -458,12 +514,28 @@ public final class Locals {
                 FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
 
                 if (frameData != null) {
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf("### Original frame size = %s (frameNodeSize=%d) (%s)\n", frameSize, frameNodeSize, frameData);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     if (frameData.type == Opcodes.F_FULL) {
+                        // <------------------------------ VERBOSE START ------------------------------>
+                        int kfs = knownFrameSize;
+                        // <------------------------------- VERBOSE END ------------------------------->
                         knownFrameSize = lastFrameSize = frameSize = Math.max(initialFrameSize, Math.min(frameNodeSize, frameData.size));
+                        // <------------------------------ VERBOSE START ------------------------------>
+                        Locals.printf("### New frame size = %s = max(initialSize(%d), min(frameNodeSize(%d), frameData(%d))) knownFrameSize=%d->%d\n",
+                                frameSize, initialFrameSize, frameNodeSize, frameData.size, kfs, knownFrameSize);
+                        // <------------------------------- VERBOSE END ------------------------------->
                     } else {
                         frameSize = Locals.getAdjustedFrameSize(frameSize, frameData, initialFrameSize);
+                        // <------------------------------ VERBOSE START ------------------------------>
+                        Locals.printf("### Adjusted frame size = %s\n", frameSize);
+                        // <------------------------------- VERBOSE END ------------------------------->
                     }
                 } else {
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf(">>> NO FRAME DATA\n");
+                    // <------------------------------- VERBOSE END ------------------------------->
                     frameSize = Locals.getAdjustedFrameSize(frameSize, frameNode, initialFrameSize);
                 }
                 
@@ -474,9 +546,22 @@ public final class Locals {
                             method.instructions.indexOf(insn), Bytecode.describeNode(insn, false), initialFrameSize, frameSize, frameData));
                 }
                 
+                // <------------------------------ VERBOSE START ------------------------------>
+                Locals.printf(">>> %s (%d)%s -> %d [%d]\n", Bytecode.describeNode(frameNode), frameNodeSize, frameData != null
+                        ? " " + frameData : "", frameSize,
+                        method.instructions.indexOf(insn));
+                
+                Locals.printf("### Types in frame node:\n");
+                int i = 0; for (Object frameLocal : frameNode.local) {
+                    Locals.printf("### [%d] %s\n", i++, Locals.getFrameTypeName(frameLocal));
+                }
+                // <------------------------------- VERBOSE END ------------------------------->
                 if ((frameData == null && (frameNode.type == Opcodes.F_CHOP || frameNode.type == Opcodes.F_NEW))
                         || (frameData != null && frameData.type == Opcodes.F_CHOP)) {
                     for (int framePos = frameSize; framePos < frame.length; framePos++) {
+                        // <------------------------------ VERBOSE START ------------------------------>    
+                        Locals.printf("### REMOVING LOCAL (ZOMBIE) [%d]\n", framePos, frame[framePos] != null ? frame[framePos].desc : "null");
+                        // <------------------------------- VERBOSE END ------------------------------->
                         frame[framePos] = ZombieLocalVariableNode.of(frame[framePos], ZombieLocalVariableNode.CHOP);
                     }
                     knownFrameSize = lastFrameSize = frameSize;
@@ -484,32 +569,63 @@ public final class Locals {
                 }
 
                 int framePos = frameNode.type == Opcodes.F_APPEND ? lastFrameSize : 0;
+                // <------------------------------ VERBOSE START ------------------------------>
+                if (frameNode.type == Opcodes.F_APPEND) {
+                    Locals.printf("### APPENDING types CURRENT=%d NEW=%d\n", i++, lastFrameSize, frameSize);
+                }
+                // <------------------------------- VERBOSE END ------------------------------->
                 lastFrameSize = frameSize;
                 
                 // localPos tracks the location in the frame node's locals list, which doesn't leave space for TOP entries
                 for (int localPos = 0; framePos < frame.length; framePos++, localPos++) {
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf("---------- LOCAL=%d FRAME=%d LENGTH=%d -->\n", localPos, framePos, frame.length);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     // Get the local at the current position in the FrameNode's locals list
                     final Object localType = (localPos < frameNode.local.size()) ? frameNode.local.get(localPos) : null;
 
                     if (localType instanceof String) { // String refers to a reference type
                         frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
+                        // <------------------------------ VERBOSE START ------------------------------>
+                        Locals.printf("-------------- TYPE=%s\n", frame[framePos].desc);
+                        // <------------------------------- VERBOSE END ------------------------------->
                     } else if (localType instanceof Integer) { // Integer refers to a primitive type or other marker
                         boolean isMarkerType = localType == Opcodes.UNINITIALIZED_THIS || localType == Opcodes.NULL;
                         boolean is32bitValue = localType == Opcodes.INTEGER || localType == Opcodes.FLOAT;
                         boolean is64bitValue = localType == Opcodes.DOUBLE || localType == Opcodes.LONG;
+                        // <------------------------------ VERBOSE START ------------------------------>
+                        Locals.printf("-------------- MARKER=%s 32=%s 64=%s\n", isMarkerType, is32bitValue, is64bitValue);
+                        // <------------------------------- VERBOSE END ------------------------------->
                         if (localType == Opcodes.TOP) {
                             // Explicit TOP entries are pretty much always bogus, but depending on our resurrection
                             // strategy we may want to resurrect eligible zombies here. Real TOP entries are handled below
+                            // <------------------------------ VERBOSE START ------------------------------>
+                            Locals.printf("---------------- TOP=YES (BOGUS?)\n");
+                            // <------------------------------- VERBOSE END ------------------------------->
                             if (frame[framePos] instanceof ZombieLocalVariableNode && settings.hasFlags(Settings.RESURRECT_FOR_BOGUS_TOP)) {
                                 ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[framePos];
                                 if (zombie.type == ZombieLocalVariableNode.TRIM) {
+                                    // <------------------------------ VERBOSE START ------------------------------>
+                                    Locals.printf(">>> ---------------- RESURRECTING ZOMBIE (slumbered for %d insns)!\n", zombie.lifetime);
+                                    // <------------------------------- VERBOSE END ------------------------------->
                                     frame[framePos] = zombie.ancestor;
+                                // <------------------------------ VERBOSE START ------------------------------>
+                                } else {
+                                    Locals.printf("--> ---------------- IGNORNING ZOMBIE with type '%s' (slumbered for %d insns)!\n",
+                                            zombie.type, zombie.lifetime);
+                                // <------------------------------- VERBOSE END ------------------------------->
                                 }
                             }
                         } else if (isMarkerType) {
                             frame[framePos] = null;
+                            // <------------------------------ VERBOSE START ------------------------------>
+                            Locals.printf("---------------- NULL=YES\n");
+                            // <------------------------------- VERBOSE END ------------------------------->
                         } else if (is32bitValue || is64bitValue) {
                             frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
+                            // <------------------------------ VERBOSE START ------------------------------>
+                            Locals.printf("---------------- VALUE=%s\n", frame[framePos].desc);
+                            // <------------------------------- VERBOSE END ------------------------------->
 
                             if (is64bitValue) {
                                 framePos++;
@@ -520,10 +636,23 @@ public final class Locals {
                                     + " in " + classNode.name + "." + method.name + method.desc);
                         }
                     } else if (localType == null) {
+                        // <------------------------------ VERBOSE START ------------------------------>    
+                        Locals.printf("---------------- NULL=YES\n");
+                        LocalVariableNode lv = Locals.getLocalVariableAt(classNode, method, insn, framePos);
+                        if (lv != null) {
+                            Locals.printf("---------------- TYPE=%s\n", lv.desc);
+                        }
+                        // <------------------------------- VERBOSE END ------------------------------->
                         if (framePos >= initialFrameSize && framePos >= frameSize && frameSize > 0) {
                             if (framePos < knownFrameSize) {
                                 frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
+                                // <------------------------------ VERBOSE START ------------------------------>
+                                Locals.printf("-------------- TYPE=%s\n", frame[framePos].desc);
+                                // <------------------------------- VERBOSE END ------------------------------->
                             } else {
+                                // <------------------------------ VERBOSE START ------------------------------>
+                                Locals.printf("-------------------- CLEAR (MARK AS ZOMBIE)\n");
+                                // <------------------------------- VERBOSE END ------------------------------->
                                 frame[framePos] = ZombieLocalVariableNode.of(frame[framePos], ZombieLocalVariableNode.TRIM);
                             }
                         }
@@ -540,9 +669,12 @@ public final class Locals {
                 if (isLoad) {
                     frame[varInsn.var] = Locals.getLocalVariableAt(classNode, method, insn, varInsn.var);
                     int varSize = frame[varInsn.var].desc != null ? Type.getType(frame[varInsn.var].desc).getSize() : 1;
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf("----- LOAD VAR(%d)=%s\n", varInsn.var, frame[varInsn.var].desc);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     knownFrameSize = Math.max(knownFrameSize, varInsn.var + varSize);
                     if (settings.hasFlags(Settings.RESURRECT_EXPOSED_ON_LOAD)) {
-                        Locals.resurrect(frame, knownFrameSize, settings);
+                        Locals.resurrect(frame, knownFrameSize, settings, "LOAD");
                     }
                 } else {
                     // Update the LVT for the opcode AFTER this one, since we always want to know
@@ -552,10 +684,65 @@ public final class Locals {
                 }
             }
             
+            // <------------------------------ VERBOSE START ------------------------------>
+            Locals.printf("> ");
+            int lvnIndex = 0;
+            for (LocalVariableNode lvn : frame) {
+                if (lvnIndex == lastFrameSize) {
+                    Locals.printf("<<@@ ");
+                } else if (lvnIndex == knownFrameSize) {
+                    Locals.printf("<<!! ");
+                }
+                lvnIndex++;
+                Locals.printf("[");
+                if (lvn == null) {
+                    Locals.printf("-");
+                } else {
+                    String desc = lvn.desc;
+                    if (desc == null) {
+                        Locals.printf("???");
+                    } else if (desc.startsWith("L")) {
+                        Locals.printf(Bytecode.getSimpleName(desc));
+                    } else { 
+                        Locals.printf(desc);
+                    }
+                    if (lvn instanceof ZombieLocalVariableNode) {
+                        Locals.printf(":%s", lvn);
+                    }
+                }
+                Locals.printf("] ");
+            }
+            if (lvnIndex == lastFrameSize) {
+                Locals.printf("<<@@ ");
+            } else if (lvnIndex == knownFrameSize) {
+                Locals.printf("<<!! ");
+            }
+            Locals.printf("SIZE = %d KNOWN = %d\n", lastFrameSize, knownFrameSize);
+            // <------------------------------- VERBOSE END ------------------------------->
             if (insn == node) {
+                // <------------------------------ VERBOSE START ------------------------------>
+                Locals.printf(">>> BREAKING SEARCH AT [%s] (%d)\n", Bytecode.describeNode(insn, false), method.instructions.indexOf(insn));
+                // <------------------------------- VERBOSE END ------------------------------->
                 break;
             }
         }
+
+        // <------------------------------ VERBOSE START ------------------------------>
+        Locals.printf(">>> --------------------------------------------------------------------------------------------------------------------"
+                + "----------------------------------------------------------------------------------------------------------------------------\n");
+        Locals.printf(">>> %s::%s%s computed locals at %s\n", classNode.name, method.name, method.desc, Bytecode.describeNode(node, false));
+        for (int l = 0; l < frame.length; l++) {
+            if (frame[l] != null) {
+                Object state = frame[l] instanceof ZombieLocalVariableNode ? frame[l] : "       ";
+                Locals.printf(">>> [%-4s] [%s] %-16s %s\n", frame[l].index, state, frame[l].name, frame[l].desc);
+            } else {
+                Locals.printf(">>> [%-4s] [%s] %-16s %s\n", "?", "-------", "", "");
+            }
+        }        
+        Locals.printf(">>> --------------------------------------------------------------------------------------------------------------------"
+                + "----------------------------------------------------------------------------------------------------------------------------\n");
+        Locals.logging = false;
+        // <------------------------------- VERBOSE END ------------------------------->
 
         // Null out any "unknown" or mixin-provided locals
         for (int l = 0; l < frame.length; l++) {
@@ -572,6 +759,20 @@ public final class Locals {
             }
         }
 
+        // <------------------------------ VERBOSE START ------------------------------>
+        Locals.printfAndLog("--------------------------------------------------------------------------------------------------------------------"
+                + "----------------------------------------------------------------------------------------------------------------------------\n");
+        Locals.printfAndLog("%s::%s%s computed locals at %s\n", classNode.name, method.name, method.desc, Bytecode.describeNode(node, false));
+        for (int l = 0; l < frame.length; l++) {
+            if (frame[l] != null) {
+                Locals.printfAndLog("[%-4s] %-16s %s\n", frame[l].index, frame[l].name, frame[l].desc);
+            }
+        }        
+        Locals.printfAndLog("--------------------------------------------------------------------------------------------------------------------"
+                + "----------------------------------------------------------------------------------------------------------------------------\n");
+        Locals.logging = false;
+        // <------------------------------- VERBOSE END ------------------------------->
+
         return frame;
     }
 
@@ -583,12 +784,24 @@ public final class Locals {
      * @param knownFrameSize Known frame size in which to resurrect
      * @param settings Resurrection settings
      */
-    private static void resurrect(LocalVariableNode[] frame, int knownFrameSize, Settings settings) {
+    private static void resurrect(LocalVariableNode[] frame, int knownFrameSize, Settings settings, String reason) {
+        // <------------------------------ VERBOSE START ------------------------------>
+        Locals.printf("--------- RESURRECTING ZOMBIES up to %d because %s\n", knownFrameSize, reason);
+        // <------------------------------- VERBOSE END ------------------------------->
         for (int l = 0; l < knownFrameSize && l < frame.length; l++) {
             if (frame[l] instanceof ZombieLocalVariableNode) {
                 ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[l];
                 if (zombie.checkResurrect(settings)) {
+                    // <------------------------------ VERBOSE START ------------------------------>
+                    Locals.printf("--> ---------------- RESURRECTING ZOMBIE with type '%s' (slumbered for %d insns, %d frames)!\n",
+                            zombie.type, zombie.lifetime, zombie.frames);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     frame[l] = zombie.ancestor;
+                // <------------------------------ VERBOSE START ------------------------------>
+                } else {
+                    Locals.printf("--> ---------------- IGNORNING ZOMBIE with type '%s' (slumbered for %d insns, %d frames)!\n",
+                            zombie.type, zombie.lifetime, zombie.frames);
+                // <------------------------------- VERBOSE END ------------------------------->
                 }
             }
         }
@@ -625,6 +838,9 @@ public final class Locals {
         LocalVariableNode localVariableNode = null;
         LocalVariableNode fallbackNode = null;
 
+        // <------------------------------ VERBOSE START ------------------------------>    
+        Locals.printf("=== Checking EXPLICIT LVT Entries:\n");
+        // <------------------------------- VERBOSE END ------------------------------->
         for (LocalVariableNode local : Locals.getLocalVariableTable(classNode, method)) {
             if (local.index != var) {
                 continue;
@@ -637,6 +853,9 @@ public final class Locals {
         }
         
         if (localVariableNode == null && !method.localVariables.isEmpty()) {
+            // <------------------------------ VERBOSE START ------------------------------>
+            Locals.printf("=== Checking GENERATED LVT Entries:\n");
+            // <------------------------------- VERBOSE END ------------------------------->
             for (LocalVariableNode local : Locals.getGeneratedLocalVariableTable(classNode, method)) {
                 if (local.index == var && Locals.isOpcodeInRange(method.instructions, local, pos)) {
                     localVariableNode = local;
@@ -648,6 +867,12 @@ public final class Locals {
     }
 
     private static boolean isOpcodeInRange(InsnList insns, LocalVariableNode local, int pos) {
+        // <------------------------------ VERBOSE START ------------------------------>    
+        int start = insns.indexOf(local.start);
+        int end = insns.indexOf(local.end);
+        boolean m = start <= pos && end > pos;
+        Locals.printf("=== Checking LVT FROM=%d  VAL=%d  TO=%d (lv = %s) %s\n" , start, pos, end, local.desc, m ? "MATCHED!" : "no");
+        // <------------------------------- VERBOSE END ------------------------------->
         return insns.indexOf(local.start) <= pos && insns.indexOf(local.end) > pos;
     }
 
@@ -697,6 +922,9 @@ public final class Locals {
      * @return generated local variable table
      */
     public static List<LocalVariableNode> generateLocalVariableTable(ClassNode classNode, MethodNode method) {
+        // <------------------------------ VERBOSE START ------------------------------>
+        Locals.printf("### Generating LVT for %s%s\n", method.name, method.desc);
+        // <------------------------------- VERBOSE END ------------------------------->
         List<Type> interfaces = null;
         if (classNode.interfaces != null) {
             interfaces = new ArrayList<Type>();
@@ -777,6 +1005,12 @@ public final class Locals {
                                 ? Constants.OBJECT_DESC : localType.getDescriptor();
                     }
                     
+                    // <------------------------------ VERBOSE START ------------------------------>                    
+//                    boolean haveLocalType = (localType != null);
+//                    String prefix = j == 5 ? ">>>" : "###";
+//                    Object sort = haveLocalType ? localType.getInternalName() : "MISSING";
+//                    Locals.printf("%s [%s] -> [%s] [%s] %s (%s)\n", prefix, i, haveLocalType, j, desc, sort);
+                    // <------------------------------- VERBOSE END ------------------------------->
                     localNodes[j] = new LocalVariableNode("var" + j, desc, null, label, null, j);
                     if (desc != null) {
                         lastKnownType[j] = desc;
@@ -934,4 +1168,37 @@ public final class Locals {
         return "?";
     }
     
+    // <------------------------------ VERBOSE START ------------------------------>
+    private static final String classOfInterest = System.getProperty("mixin.dev.locals.classOfInterest");
+    private static final boolean logOnlyClassOfInterest = true;
+    
+    private static boolean logging = true;
+    
+    private static java.io.File logFile;
+    
+    private static void printfAndLog(String format, Object... args) {
+        try {
+            if (Locals.logFile == null) {
+                Locals.logFile = new java.io.File(Constants.DEBUG_OUTPUT_DIR, "locals/locals.log");
+                Locals.logFile.getParentFile().mkdirs();
+                String dateTime = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date());
+                com.google.common.io.Files.write("Locals log file opened on " + dateTime + "\n", Locals.logFile,
+                        com.google.common.base.Charsets.ISO_8859_1);
+            }
+            
+            synchronized (Locals.logFile) {
+                com.google.common.io.Files.append(String.format(format, args), Locals.logFile, com.google.common.base.Charsets.ISO_8859_1);
+            }
+        } catch (java.io.IOException ex) {
+            // derp 
+        }
+        System.err.printf("--> " + format, args);
+    }
+    
+    private static void printf(String format, Object... args) {
+        if (Locals.logging) {
+            System.err.printf(format, args);
+        }
+    }
+    // <------------------------------- VERBOSE END ------------------------------->
 }
