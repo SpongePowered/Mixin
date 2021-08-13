@@ -36,6 +36,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator.Context.Local;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Annotations;
@@ -101,6 +102,11 @@ public class LocalVariableDiscriminator {
         }
         
         /**
+         * Injection info 
+         */
+        final InjectionInfo info;
+        
+        /**
          * Target method for this context
          */
         final Target target;
@@ -132,7 +138,8 @@ public class LocalVariableDiscriminator {
          */
         private final boolean isStatic;
 
-        public Context(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+        public Context(InjectionInfo info, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+            this.info = info;
             this.isStatic = Bytecode.isStatic(target.method);
             this.returnType = returnType;
             this.target = target;

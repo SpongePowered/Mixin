@@ -384,6 +384,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private transient int warnedClassVersion = 0;
 
     /**
+     * Service decorations on this config
+     */
+    private transient Map<String, Object> decorations;
+
+    /**
      * Spawn via GSON, no public ctor for you 
      */
     private MixinConfig() {}
@@ -1114,6 +1119,50 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         return Collections.<String>unmodifiableSet(this.unhandledTargets);
     }
     
+    /**
+     * Decorate this config with arbitrary metadata for debugging or
+     * compatibility purposes
+     * 
+     * @param key meta key
+     * @param value meta value
+     * @param <V> value type
+     * @throws IllegalArgumentException if the specified key exists already
+     */
+    @Override
+    public <V> void decorate(String key, V value) {
+        if (this.decorations == null) {
+            this.decorations = new HashMap<String, Object>();
+        }
+        if (this.decorations.containsKey(key)) {
+            throw new IllegalArgumentException(String.format("Decoration with key '%s' already exists on config %s", key, this));
+        }
+        this.decorations.put(key, value);
+    }
+    
+    /**
+     * Get whether this node is decorated with the specified key
+     * 
+     * @param key meta key
+     * @return true if the specified decoration exists
+     */
+    @Override
+    public boolean hasDecoration(String key) {
+        return this.decorations != null && this.decorations.get(key) != null;
+    }
+    
+    /**
+     * Get the specified decoration
+     * 
+     * @param key meta key
+     * @param <V> value type
+     * @return decoration value or null if absent
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public <V> V getDecoration(String key) {
+        return (V) (this.decorations == null ? null : this.decorations.get(key));
+    }
+
     /**
      * Get the logging level for this config
      */

@@ -67,8 +67,8 @@ public class ModifyVariableInjector extends Injector {
          */
         final InsnList insns = new InsnList();
 
-        public Context(Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
-            super(returnType, argsOnly, target, node);
+        public Context(InjectionInfo info, Type returnType, boolean argsOnly, Target target, AbstractInsnNode node) {
+            super(info, returnType, argsOnly, target, node);
         }
         
     }
@@ -156,7 +156,7 @@ public class ModifyVariableInjector extends Injector {
         if (node.hasDecoration(key)) {
             return; // already have a suitable context
         }
-        Context context = new Context(this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
+        Context context = new Context(this.info, this.returnType, this.discriminator.isArgsOnly(), target, node.getCurrentTarget());
         node.<Context>decorate(key, context);
     }
     

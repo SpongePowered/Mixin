@@ -25,6 +25,7 @@
 package org.spongepowered.asm.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -66,6 +67,192 @@ public final class Locals {
             super(name, descriptor, signature, start, end, index);
         }
     
+    }
+
+    /**
+     * A local variable entry which is "dead" (has been removed from the known
+     * frame) but is being retained in the computed frame as a ghost so that we
+     * can decide whether we want to include it in the final frame or not.
+     * 
+     * <p>Zombie nodes are currently only persisted for 1 instruction, so in the
+     * cases where there is a frame node followed directly by the candidate insn
+     * the zombies will be returned as valid results, but otherwise culled.</p> 
+     */
+    static class ZombieLocalVariableNode extends LocalVariableNode {
+        
+        static final char CHOP = 'C';
+        static final char TRIM = 'X';
+        
+        /**
+         * Progenitor of this zombie, to allow "resurrection" (am I stretching
+         * this metaphor too far?)
+         */
+        final LocalVariableNode ancestor;
+        
+        final char type;
+
+        /**
+         * Number of instructions the zombie has "lived" for, incremented by the
+         * state machine loop 
+         */
+        int lifetime;
+        
+        /**
+         * Number of frames which have elapsed for this zombie, incremented by
+         * the state machine loop when a frame node is encountered
+         */
+        int frames;
+        
+        ZombieLocalVariableNode(LocalVariableNode ancestor, char type) {
+            super(ancestor.name, ancestor.desc, ancestor.signature, ancestor.start, ancestor.end, ancestor.index);
+            this.ancestor = ancestor;
+            this.type = type;
+        }
+        
+        boolean checkResurrect(Settings settings) {
+            int insnThreshold = this.type == ZombieLocalVariableNode.CHOP ? settings.choppedInsnThreshold : settings.trimmedInsnThreshold;
+            if (insnThreshold > -1 && this.lifetime > insnThreshold) {
+                return false;
+            }
+            int frameThreshold = this.type == ZombieLocalVariableNode.CHOP ? settings.choppedFrameThreshold : settings.trimmedFrameThreshold;
+            return frameThreshold == -1 || this.frames <= frameThreshold;
+        }
+        
+        static ZombieLocalVariableNode of(LocalVariableNode ancestor, char type) {
+            if (ancestor instanceof ZombieLocalVariableNode) {
+                return (ZombieLocalVariableNode)ancestor;
+            }
+            return ancestor != null ? new ZombieLocalVariableNode(ancestor, type) : null;
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("Z(%s,%-2d)", this.type, this.lifetime);
+        }
+        
+    }
+    
+    /**
+     * Settings for <tt>getLocalsAt</tt> containing the tunable options for the
+     * algorithm. This exists for two purposes: Firstly, wrapping tunables up in
+     * a single object for convenience, but secondly providing some level of
+     * forward compatibility for platforms that which to provide <em>backward
+     * </em> compatibility to their own consumers. The {@link #flagsCustom}
+     * field is* provided as a way of encoding arbitrary options that downstream
+     * projects may wish to use to tune their own implementations. The {@link
+     * #flags} field is reserved for mixin internal flags to be added at a later
+     * date.
+     */
+    public static class Settings {
+        
+        /**
+         * When an incoming frame contains TOP entries, these are nearly always
+         * bogus. If we previously knew the local in that slot, resurrect it.
+         * Only resurrects TRIM zombies.
+         */
+        public static int RESURRECT_FOR_BOGUS_TOP = 0x01;
+        
+        /**
+         * When a LOAD grows the frame, resurrect any zombies in the exposed
+         * portion of the frame, based on the thresholds configured.
+         */
+        public static int RESURRECT_EXPOSED_ON_LOAD = 0x02;
+        
+        /**
+         * When a STORE grows the frame, resurrect any zombies in the exposed
+         * portion of the frame, based on the thresholds configured.
+         */
+        public static int RESURRECT_EXPOSED_ON_STORE = 0x04;
+
+        /**
+         * Default flags
+         */
+        public static int DEFAULT_FLAGS = Settings.RESURRECT_FOR_BOGUS_TOP | Settings.RESURRECT_EXPOSED_ON_LOAD | Settings.RESURRECT_EXPOSED_ON_STORE;
+        
+        /**
+         * Default settings. CHOP zombies can be resurrected for 1 frame, TRIM
+         * zombies can be resurrected forever
+         */
+        public static Settings DEFAULT = new Settings(Settings.DEFAULT_FLAGS, 0, -1, 1, -1, -1);
+        
+        /**
+         * Reserved flags for Mixin 
+         */
+        final int flags;
+        
+        /**
+         * Platform-specific flags
+         */
+        final int flagsCustom;
+        
+        /**
+         * Number of instructions that a CHOPped local is eligible for
+         * resurrection, -1 to ignore, 0 for none
+         */
+        final int choppedInsnThreshold;
+        
+        /**
+         * Number of frames that a CHOPped local is eligible for resurrection,
+         * -1 to ignore, 0 for none
+         */
+        final int choppedFrameThreshold;
+        
+        /**
+         * Number of instructions that a TRIMmed local is eligible for
+         * resurrection, -1 to ignore, 0 for none
+         */
+        final int trimmedInsnThreshold;
+
+        /**
+         * Number of frames that a TRIMmed local is eligible for resurrection,
+         * -1 to ignore, 0 for none
+         */
+        final int trimmedFrameThreshold;
+
+        /**
+         * @param flags Mixin flags
+         * @param flagsCustom Platform-specific flags
+         * @param insnThreshold Number of instructions that a local (regardless
+         *      of death reason) is eligible for resurrection, -1 to ignore,
+     *          0 for none
+         * @param frameThreshold Number of frames that a local (regardless of
+         *      death reason) is eligible for resurrection,-1 to ignore, 0 for
+         *      none
+         */
+        public Settings(int flags, int flagsCustom, int insnThreshold, int frameThreshold) {
+            this(flags, flagsCustom, insnThreshold, frameThreshold, insnThreshold, frameThreshold);
+        }
+        
+        /**
+         * @param flags Mixin flags
+         * @param flagsCustom Platform-specific flags
+         * @param choppedInsnThreshold Number of instructions that a CHOPped
+         *      local is eligible for resurrection, -1 to ignore, 0 for none
+         * @param choppedFrameThreshold Number of frames that a CHOPped local is
+         *      eligible for resurrection,-1 to ignore, 0 for none
+         * @param trimmedInsnThreshold Number of instructions that a TRIMmed#
+         *      local is eligible for resurrection, -1 to ignore, 0 for none
+         * @param trimmedFrameThreshold Number of frames that a TRIMmed local is
+         *      eligible for resurrection, -1 to ignore, 0 for none
+         */
+        public Settings(int flags, int flagsCustom, int choppedInsnThreshold, int choppedFrameThreshold, int trimmedInsnThreshold,
+                int trimmedFrameThreshold) {
+            this.flags = flags;
+            this.flagsCustom = flagsCustom;
+            this.choppedInsnThreshold = choppedInsnThreshold;
+            this.choppedFrameThreshold = choppedFrameThreshold;
+            this.trimmedInsnThreshold = trimmedInsnThreshold;
+            this.trimmedFrameThreshold = trimmedFrameThreshold;
+        }
+        
+        boolean hasFlags(int flags) {
+            return (this.flags & flags) == flags;
+        }
+        
+        boolean hasCustomFlags(int flagsCustom) {
+            return (this.flagsCustom & flagsCustom) == flagsCustom;
+        }
+        
     }
 
     /**
@@ -145,6 +332,53 @@ public final class Locals {
      *      specified location
      */
     public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node) {
+        return Locals.getLocalsAt(classNode, method, node, Settings.DEFAULT);
+    }
+    
+    /**
+     * <p>Attempts to identify available locals at an arbitrary point in the
+     * bytecode specified by node.</p>
+     * 
+     * <p>This method builds an approximate view of the locals available at an
+     * arbitrary point in the bytecode by examining the following features in
+     * the bytecode:</p> 
+     * <ul>
+     *   <li>Any available stack map frames</li>
+     *   <li>STORE opcodes</li>
+     *   <li>The local variable table</li>
+     * </ul>
+     * 
+     * <p>Inference proceeds by walking the bytecode from the start of the
+     * method looking for stack frames and STORE opcodes. When either of these
+     * is encountered, an attempt is made to cross-reference the values in the
+     * stack map or STORE opcode with the value in the local variable table
+     * which covers the code range. Stack map frames overwrite the entire
+     * simulated local variable table with their own value types, STORE opcodes
+     * overwrite only the local slot to which they pertain. Values in the
+     * simulated locals array are spaced according to their size (unlike the
+     * representation in FrameNode) and this TOP, NULL and UNINTITIALIZED_THIS
+     * opcodes will be represented as null values in the simulated frame.</p>
+     * 
+     * <p>This code does not currently simulate the prescribed JVM behaviour
+     * where overwriting the second slot of a DOUBLE or LONG actually
+     * invalidates the DOUBLE or LONG stored in the previous location, so we
+     * have to hope (for now) that this behaviour isn't emitted by the compiler
+     * or any upstream transformers. I may have to re-think this strategy if
+     * this situation is encountered in the wild.</p>
+     * 
+     * @param classNode ClassNode containing the method, used to initialise the
+     *      implicit "this" reference in simple methods with no stack frames
+     * @param method MethodNode to explore
+     * @param node Node indicating the position at which to determine the locals
+     *      state. The locals will be enumerated UP TO the specified node, so
+     *      bear in mind that if the specified node is itself a STORE opcode,
+     *      then we will be looking at the state of the locals PRIOR to its
+     *      invocation
+     * @param settings Tunable settings for the state machine
+     * @return A sparse array containing a view (hopefully) of the locals at the
+     *      specified location
+     */
+    public static LocalVariableNode[] getLocalsAt(ClassNode classNode, MethodNode method, AbstractInsnNode node, Settings settings) {
         for (int i = 0; i < 3 && (node instanceof LabelNode || node instanceof LineNumberNode); i++) {
             AbstractInsnNode nextNode = Locals.nextNode(method.instructions, node);
             if (nextNode instanceof FrameNode) { // Do not ffwd over frames
@@ -177,7 +411,7 @@ public final class Locals {
             local += argType.getSize();
         }
         
-        int initialFrameSize = local;
+        final int initialFrameSize = local;
         int frameSize = local;
         int frameIndex = -1;
         int lastFrameSize = local;
@@ -186,6 +420,18 @@ public final class Locals {
 
         for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
+            
+            // Tick the zombies
+            for (int l = 0; l < frame.length; l++) {
+                if (frame[l] instanceof ZombieLocalVariableNode) {
+                    ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[l];
+                    zombie.lifetime++;
+                    if (insn instanceof FrameNode) {
+                        zombie.frames++;
+                    }
+                }
+            }
+
             if (storeInsn != null) {
                 LocalVariableNode storedLocal = Locals.getLocalVariableAt(classNode, method, insn, storeInsn.var);
                 frame[storeInsn.var] = storedLocal;
@@ -194,6 +440,9 @@ public final class Locals {
                         && Type.getType(storedLocal.desc).getSize() == 2) {
                     frame[storeInsn.var + 1] = null; // TOP
                     knownFrameSize = Math.max(knownFrameSize, storeInsn.var + 2);
+                    if (settings.hasFlags(Settings.RESURRECT_EXPOSED_ON_STORE)) {
+                        Locals.resurrect(frame, knownFrameSize, settings);
+                    }
                 }
                 storeInsn = null;
             }
@@ -205,21 +454,21 @@ public final class Locals {
                     break handleFrame;
                 }
                 
-                int frameNodeSize = Locals.computeFrameSize(frameNode);
+                int frameNodeSize = Locals.computeFrameSize(frameNode, initialFrameSize);
                 FrameData frameData = frameIndex < frames.size() ? frames.get(frameIndex) : null;
 
                 if (frameData != null) {
                     if (frameData.type == Opcodes.F_FULL) {
-                        knownFrameSize = lastFrameSize = frameSize = Math.min(frameNodeSize, frameData.size);
+                        knownFrameSize = lastFrameSize = frameSize = Math.max(initialFrameSize, Math.min(frameNodeSize, frameData.size));
                     } else {
-                        frameSize = Locals.getAdjustedFrameSize(frameSize, frameData);
+                        frameSize = Locals.getAdjustedFrameSize(frameSize, frameData, initialFrameSize);
                     }
                 } else {
-                    frameSize = Locals.getAdjustedFrameSize(frameSize, frameNode);
+                    frameSize = Locals.getAdjustedFrameSize(frameSize, frameNode, initialFrameSize);
                 }
                 
                 // Sanity check
-                if (frameSize < 0) {
+                if (frameSize < initialFrameSize) {
                     throw new IllegalStateException(String.format("Locals entered an invalid state evaluating %s::%s%s at instruction %d (%s). "
                             + "Initial frame size is %d, calculated a frame size of %d with %s", classNode.name, method.name, method.desc,
                             method.instructions.indexOf(insn), Bytecode.describeNode(insn, false), initialFrameSize, frameSize, frameData));
@@ -228,7 +477,7 @@ public final class Locals {
                 if ((frameData == null && (frameNode.type == Opcodes.F_CHOP || frameNode.type == Opcodes.F_NEW))
                         || (frameData != null && frameData.type == Opcodes.F_CHOP)) {
                     for (int framePos = frameSize; framePos < frame.length; framePos++) {
-                        frame[framePos] = null; 
+                        frame[framePos] = ZombieLocalVariableNode.of(frame[framePos], ZombieLocalVariableNode.CHOP);
                     }
                     knownFrameSize = lastFrameSize = frameSize;
                     break handleFrame;
@@ -249,7 +498,14 @@ public final class Locals {
                         boolean is32bitValue = localType == Opcodes.INTEGER || localType == Opcodes.FLOAT;
                         boolean is64bitValue = localType == Opcodes.DOUBLE || localType == Opcodes.LONG;
                         if (localType == Opcodes.TOP) {
-                            // Do nothing, explicit TOP entries are pretty much always bogus, and real ones are handled below
+                            // Explicit TOP entries are pretty much always bogus, but depending on our resurrection
+                            // strategy we may want to resurrect eligible zombies here. Real TOP entries are handled below
+                            if (frame[framePos] instanceof ZombieLocalVariableNode && settings.hasFlags(Settings.RESURRECT_FOR_BOGUS_TOP)) {
+                                ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[framePos];
+                                if (zombie.type == ZombieLocalVariableNode.TRIM) {
+                                    frame[framePos] = zombie.ancestor;
+                                }
+                            }
                         } else if (isMarkerType) {
                             frame[framePos] = null;
                         } else if (is32bitValue || is64bitValue) {
@@ -268,7 +524,7 @@ public final class Locals {
                             if (framePos < knownFrameSize) {
                                 frame[framePos] = Locals.getLocalVariableAt(classNode, method, insn, framePos);
                             } else {
-                                frame[framePos] = null;
+                                frame[framePos] = ZombieLocalVariableNode.of(frame[framePos], ZombieLocalVariableNode.TRIM);
                             }
                         }
                     } else if (localType instanceof LabelNode) {
@@ -279,17 +535,20 @@ public final class Locals {
                     }
                 }
             } else if (insn instanceof VarInsnNode) {
-                VarInsnNode varNode = (VarInsnNode) insn;
+                VarInsnNode varInsn = (VarInsnNode)insn;
                 boolean isLoad = insn.getOpcode() >= Opcodes.ILOAD && insn.getOpcode() <= Opcodes.SALOAD;
                 if (isLoad) {
-                    frame[varNode.var] = Locals.getLocalVariableAt(classNode, method, insn, varNode.var);
-                    int varSize = frame[varNode.var].desc != null ? Type.getType(frame[varNode.var].desc).getSize() : 1;
-                    knownFrameSize = Math.max(knownFrameSize, varNode.var + varSize);
+                    frame[varInsn.var] = Locals.getLocalVariableAt(classNode, method, insn, varInsn.var);
+                    int varSize = frame[varInsn.var].desc != null ? Type.getType(frame[varInsn.var].desc).getSize() : 1;
+                    knownFrameSize = Math.max(knownFrameSize, varInsn.var + varSize);
+                    if (settings.hasFlags(Settings.RESURRECT_EXPOSED_ON_LOAD)) {
+                        Locals.resurrect(frame, knownFrameSize, settings);
+                    }
                 } else {
                     // Update the LVT for the opcode AFTER this one, since we always want to know
                     // the frame state BEFORE the *current* instruction to match the contract of
                     // injection points
-                    storeInsn = varNode;
+                    storeInsn = varInsn;
                 }
             }
             
@@ -297,15 +556,42 @@ public final class Locals {
                 break;
             }
         }
-        
+
         // Null out any "unknown" or mixin-provided locals
         for (int l = 0; l < frame.length; l++) {
-            if (frame[l] != null && frame[l].desc == null || frame[l] instanceof SyntheticLocalVariableNode) {
+            if (frame[l] instanceof ZombieLocalVariableNode) {
+                ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[l];
+                // preserve zombies where the frame node which culled them was immediately prior to
+                // the matched instruction, or *was itself* the matched instruction, the returned
+                // frame will contain the original node (the zombie ancestor)
+                frame[l] = (zombie.lifetime > 1) ? null : zombie.ancestor;
+            }
+            
+            if ((frame[l] != null && frame[l].desc == null) || frame[l] instanceof SyntheticLocalVariableNode) {
                 frame[l] = null;
             }
         }
 
         return frame;
+    }
+
+    /**
+     * Walks the supplied <tt>frame</tt> up to the specified <tt>knownFrameSize
+     * </tt> and resurrects any zombies that meet the required criteria
+     * 
+     * @param frame Frame to walk
+     * @param knownFrameSize Known frame size in which to resurrect
+     * @param settings Resurrection settings
+     */
+    private static void resurrect(LocalVariableNode[] frame, int knownFrameSize, Settings settings) {
+        for (int l = 0; l < knownFrameSize && l < frame.length; l++) {
+            if (frame[l] instanceof ZombieLocalVariableNode) {
+                ZombieLocalVariableNode zombie = (ZombieLocalVariableNode)frame[l];
+                if (zombie.checkResurrect(settings)) {
+                    frame[l] = zombie.ancestor;
+                }
+            }
+        }
     }
 
    /**
@@ -380,7 +666,7 @@ public final class Locals {
         if (method.localVariables.isEmpty()) {
             return Locals.getGeneratedLocalVariableTable(classNode, method);
         }
-        return method.localVariables;
+        return Collections.<LocalVariableNode>unmodifiableList(method.localVariables);
     }
     
     /**
@@ -399,7 +685,7 @@ public final class Locals {
 
         localVars = Locals.generateLocalVariableTable(classNode, method);
         Locals.calculatedLocalVariables.put(methodId, localVars);
-        return localVars;
+        return Collections.<LocalVariableNode>unmodifiableList(localVars);
     }
 
     /**
@@ -548,10 +834,11 @@ public final class Locals {
      * 
      * @param currentSize current frame size
      * @param frameNode frame entry
+     * @param initialFrameSize Method initial frame size
      * @return new frame size
      */
-    private static int getAdjustedFrameSize(int currentSize, FrameNode frameNode) {
-        return Locals.getAdjustedFrameSize(currentSize, frameNode.type, Locals.computeFrameSize(frameNode));
+    private static int getAdjustedFrameSize(int currentSize, FrameNode frameNode, int initialFrameSize) {
+        return Locals.getAdjustedFrameSize(currentSize, frameNode.type, Locals.computeFrameSize(frameNode, initialFrameSize), initialFrameSize);
     }
 
     /**
@@ -561,10 +848,11 @@ public final class Locals {
      * 
      * @param currentSize current frame size
      * @param frameData frame entry
+     * @param initialFrameSize Method initial frame size
      * @return new frame size
      */
-    private static int getAdjustedFrameSize(int currentSize, FrameData frameData) {
-        return Locals.getAdjustedFrameSize(currentSize, frameData.type, frameData.size);
+    private static int getAdjustedFrameSize(int currentSize, FrameData frameData, int initialFrameSize) {
+        return Locals.getAdjustedFrameSize(currentSize, frameData.type, frameData.size, initialFrameSize);
     }
     
     /**
@@ -575,17 +863,18 @@ public final class Locals {
      * @param currentSize current frame size
      * @param type frame entry type
      * @param size frame entry size
+     * @param initialFrameSize Method initial frame size
      * @return new frame size
      */
-    private static int getAdjustedFrameSize(int currentSize, int type, int size) {
+    private static int getAdjustedFrameSize(int currentSize, int type, int size, int initialFrameSize) {
         switch (type) {
             case Opcodes.F_NEW:
             case Opcodes.F_FULL:
-                return size;
+                return Math.max(initialFrameSize, size);
             case Opcodes.F_APPEND:
                 return currentSize + size;
             case Opcodes.F_CHOP:
-                return currentSize - size;
+                return Math.max(initialFrameSize, currentSize - size);
             case Opcodes.F_SAME:
             case Opcodes.F_SAME1:
                 return currentSize;
@@ -599,11 +888,12 @@ public final class Locals {
      * supplied frame node
      * 
      * @param frameNode frame node with locals to compute
+     * @param initialFrameSize Method initial frame size
      * @return size of frame node locals
      */
-    public static int computeFrameSize(FrameNode frameNode) {
+    public static int computeFrameSize(FrameNode frameNode, int initialFrameSize) {
         if (frameNode.local == null) {
-            return 0;
+            return initialFrameSize;
         }
         int size = 0;
         for (Object local : frameNode.local) {
@@ -613,7 +903,7 @@ public final class Locals {
                 size++;
             }
         }
-        return size;
+        return Math.max(initialFrameSize, size);
     }
     
     /**

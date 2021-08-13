@@ -245,7 +245,7 @@ public final class ClassInfo {
             this.index = index;
             this.type = frameNode.type;
             this.locals = frameNode.local != null ? frameNode.local.size() : 0;
-            this.size = Locals.computeFrameSize(frameNode);
+            this.size = Locals.computeFrameSize(frameNode, initialFrameSize);
         }
 
         /* (non-Javadoc)
@@ -694,7 +694,7 @@ public final class ClassInfo {
      * Outer class name
      */
     private final String outerName;
-
+    
     /**
      * True if this in an inner class
      */
@@ -970,7 +970,7 @@ public final class ClassInfo {
     public boolean isPublic() {
         return (this.access & Opcodes.ACC_PUBLIC) != 0;
     }
-
+    
     /**
      * Get whether this class is really public (only valid for inner classes
      * which may be "public" themselves but aren't actually visible because
@@ -1032,7 +1032,7 @@ public final class ClassInfo {
      * Get whether this class is an inner class
      */
     public boolean isInner() {
-        return this.outerName != null;
+        return this.isInner;
     }
 
     /**
