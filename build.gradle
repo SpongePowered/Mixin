@@ -44,7 +44,7 @@ ext.legacyForgeAsmVersion = project.hasProperty("legacyForgeAsmVersion") ? asmVe
 ext.doSignJar = project.hasProperty("keyStorePath")
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(16)
+    toolchain.languageVersion = JavaLanguageVersion.of(8)
 }
 
 // Project repositories
@@ -80,32 +80,26 @@ configurations {
 
 sourceSets {
     legacy {
-        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     main {
         compileClasspath += legacy.output
-        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     ap {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     fernflower {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     agent {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     bridge {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     example {
@@ -114,25 +108,24 @@ sourceSets {
     }
     launchwrapper {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher {
         compileClasspath += main.output
-        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher4 {
         compileClasspath += main.output
         compileClasspath += modlauncher.output
-        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher9 {
+        ext.languageVersion = 16
         compileClasspath += main.output
         compileClasspath += modlauncher.output
     }
     modularity {
+        ext.languageVersion = 16
         java.srcDirs += [
             sourceSets.legacy.java.srcDirs,
             sourceSets.main.java.srcDirs,
