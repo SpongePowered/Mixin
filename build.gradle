@@ -67,7 +67,6 @@ repositories {
 }
 
 configurations {
-    thinJar
     stagingJar
     
     exampleImplementation       .extendsFrom implementation
@@ -160,9 +159,6 @@ dependencies {
     implementation "org.ow2.asm:asm-commons:$asmVersion"
     implementation "org.ow2.asm:asm-util:$asmVersion"
 
-    thinJar "org.ow2.asm:asm-tree:$asmVersion"
-    thinJar "org.ow2.asm:asm-util:$asmVersion"
-    
     // Annotation Processor
     apImplementation "org.ow2.asm:asm-tree:$asmVersion"
     apImplementation guava
@@ -318,9 +314,10 @@ if (JavaVersion.current().isJava8Compatible()) {
 }
 
 task stagingJar(type: ShadowJar) {
-    sourceSets.findAll { !(it.name =~ /example|modularity/) }.each {
+    sourceSets.findAll { !(it.name =~ /example|test/) }.each {
         from it.output
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
     configurations = [project.configurations.stagingJar]
     
@@ -347,27 +344,6 @@ task stagingJar(type: ShadowJar) {
 
 // Clear artifacts because jar will be there by default and we want to use staging jar instead
 configurations.archives.artifacts.clear()
-
-task thinJar(type: Jar) {
-    from sourceSets.main.output
-//    from { configurations.thinJar.collect { zipTree(it) }
-    classifier = 'thin'
-    
-    exclude 'org/spongepowered/asm/launch/**'
-    exclude 'org/spongepowered/asm/mixin/injection/invoke/**'
-    exclude 'org/spongepowered/asm/mixin/transformer/*.class'
-    exclude 'org/spongepowered/asm/mixin/transformer/debug/**'
-    exclude 'org/spongepowered/asm/mixin/transformer/verify/**'
-    
-    manifest.mainAttributes(
-        "Built-By": System.properties['user.name'],
-        "Created-By": System.properties['java.vm.version'] + " (" + System.properties['java.vm.vendor'] + ")",
-        "Implementation-Title": name,
-        "Implementation-Version": project.version + "+" + ciSystem + "-b" + buildNumber + ".git-" + commit,
-        "Implementation-Vendor": url,
-    )
-}
-build.dependsOn(thinJar)
 
 // generate shadow jar so we can use the AP standalone
 shadowJar  {
@@ -429,7 +405,6 @@ artifacts {
     } else {
         archives stagingJar
     }
-    archives thinJar
     archives sourceJar
     archives javadocJar
     archives shadowJar
@@ -474,7 +449,6 @@ publishing {
             } else {
                 artifact stagingJar
             }
-            artifact thinJar
             artifact sourceJar
             artifact javadocJar
             artifact shadowJar
