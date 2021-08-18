@@ -24,6 +24,12 @@
  */
 package org.spongepowered.asm.logging;
 
+/**
+ * Interface extracted from Log4j2's Logger (<tt>org.apache.logging.log4j.Logger
+ * </tt>) with only the main methods used by Mixin included. This is to
+ * facilitate the delegation of logging to mixin services, and to sever the
+ * dependency on log4j2 from Mixin's core.
+ */
 public interface ILogger {
 
     /**
@@ -38,6 +44,7 @@ public interface ILogger {
 
     /**
      * Logs an exception or error that has been caught.
+     * 
      * @param level The logging Level.
      * @param t The Throwable.
      */
@@ -51,9 +58,9 @@ public interface ILogger {
 
     /**
      * Logs a message with parameters at the {@link Level#DEBUG DEBUG} level.
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * 
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void debug(String message, Object... params);
 
@@ -61,17 +68,16 @@ public interface ILogger {
      * Logs a message at the {@link Level#DEBUG DEBUG} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
-     * @param message the message to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void debug(String message, Throwable t);
 
      /**
-     * Logs a message with parameters at the {@link Level#ERROR ERROR} level.
+     * Logs a message with parameters at the {@link Level#ERROR ERROR} level
      *
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void error(String message, Object... params);
 
@@ -79,17 +85,16 @@ public interface ILogger {
      * Logs a message at the {@link Level#ERROR ERROR} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
-     * @param message the message object to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message object to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void error(String message, Throwable t);
 
     /**
      * Logs a message with parameters at the {@link Level#FATAL FATAL} level.
      *
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * @param message the message to log
+     * @param params parameters to the message
      */
     void fatal(String message, Object... params);
 
@@ -97,17 +102,16 @@ public interface ILogger {
      * Logs a message at the {@link Level#FATAL FATAL} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
-     * @param message the message object to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message object to log
+     * @param t the exception to log, including its stack trace
      */
     void fatal(String message, Throwable t);
 
     /**
      * Logs a message with parameters at the {@link Level#INFO INFO} level.
      *
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void info(String message, Object... params);
 
@@ -115,8 +119,8 @@ public interface ILogger {
      * Logs a message at the {@link Level#INFO INFO} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
-     * @param message the message object to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message object to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void info(String message, Throwable t);
 
@@ -124,9 +128,8 @@ public interface ILogger {
      * Logs a message with parameters at the given level.
      *
      * @param level the logging level
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void log(Level level, String message, Object... params);
 
@@ -135,48 +138,41 @@ public interface ILogger {
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
      * @param level the logging level
-     * @param message the message to log.
-     * @param t the exception to log, including its stack trace.
+     * @param message the message to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void log(Level level, String message, Throwable t);
 
     /**
-     * Logs an exception or error to be thrown. This may be coded as <br />
-     *    throw logger.throwing(myException);
-     *    }
+     * Logs an exception or error to be thrown.
      *
-     * @param <T> the Throwable type.
-     * @param t The Throwable.
-     * @return the Throwable.
+     * @param <T> the Throwable type
+     * @param t The Throwable
+     * @return the Throwable
      */
     public <T extends Throwable> T throwing(T t);
 
     /**
      * Logs a message with parameters at the {@link Level#TRACE TRACE} level.
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void trace(String message, Object... params);
 
     /**
      * Logs a message at the {@link Level#TRACE TRACE} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
-     * <p/>
-     * <p>
-     * See {@link #debug(String)} form for more detailed information.
-     * </p>
      *
-     * @param message the message object to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message object to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void trace(String message, Throwable t);
 
     /**
      * Logs a message with parameters at the {@link Level#WARN WARN} level.
-     * @param message the message to log; the format depends on the message
-     *      factory.
-     * @param params parameters to the message.
+     * 
+     * @param message the message to log
+     * @param params parameters to the message
      */
     public abstract void warn(String message, Object... params);
 
@@ -184,8 +180,8 @@ public interface ILogger {
      * Logs a message at the {@link Level#WARN WARN} level including the
      * stack trace of the {@link Throwable} <code>t</code> passed as parameter.
      *
-     * @param message the message object to log.
-     * @param t       the exception to log, including its stack trace.
+     * @param message the message object to log
+     * @param t the exception to log, including its stack trace
      */
     public abstract void warn(String message, Throwable t);
 
