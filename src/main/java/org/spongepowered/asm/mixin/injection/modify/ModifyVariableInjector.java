@@ -224,9 +224,6 @@ public class ModifyVariableInjector extends Injector {
      * Pretty-print local variable information to stderr
      */
     private void printLocals(Target target, Context context) {
-        SignaturePrinter handlerSig = new SignaturePrinter(this.info.getMethodName(), this.returnType, this.methodArgs, new String[] { "var" });
-        handlerSig.setModifiers(this.methodNode);
-
         String matchMode = "EXPLICIT (match by criteria)";
         if (this.discriminator.isImplicit(context)) {
             int candidateCount = context.getCandidateCount();
