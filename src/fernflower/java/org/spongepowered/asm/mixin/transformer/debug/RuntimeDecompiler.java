@@ -31,9 +31,8 @@ import java.net.URL;
 import java.util.Map;
 import java.util.jar.Manifest;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.logging.ILogger;
 import org.jetbrains.java.decompiler.main.Fernflower;
 import org.jetbrains.java.decompiler.main.extern.IBytecodeProvider;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger;
@@ -41,6 +40,7 @@ import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
 import org.jetbrains.java.decompiler.main.extern.IResultSaver;
 import org.jetbrains.java.decompiler.util.InterpreterUtil;
 import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
@@ -67,7 +67,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
 
     private final File outputPath;
 
-    protected final Logger logger = LogManager.getLogger("fernflower");
+    protected final ILogger logger = MixinService.getService().getLogger("fernflower");
 
     public RuntimeDecompiler(File outputPath) {
         this.outputPath = outputPath;

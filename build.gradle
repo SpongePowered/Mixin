@@ -44,7 +44,7 @@ ext.legacyForgeAsmVersion = project.hasProperty("legacyForgeAsmVersion") ? asmVe
 ext.doSignJar = project.hasProperty("keyStorePath")
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(8)
+    toolchain.languageVersion = JavaLanguageVersion.of(ciSystem == 'unknown' ? 16 : 8)
 }
 
 // Project repositories
@@ -80,26 +80,32 @@ configurations {
 
 sourceSets {
     legacy {
+        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     main {
         compileClasspath += legacy.output
+        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     ap {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     fernflower {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     agent {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.6'
     }
     bridge {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     example {
@@ -108,15 +114,18 @@ sourceSets {
     }
     launchwrapper {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher {
         compileClasspath += main.output
+        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher4 {
         compileClasspath += main.output
         compileClasspath += modlauncher.output
+        ext.languageVersion = 8
         ext.compatibility = '1.8'
     }
     modlauncher9 {
@@ -140,10 +149,8 @@ sourceSets {
 // Project dependencies
 dependencies {
     def guava = 'com.google.guava:guava:21.0' // from mc1.12 onwards
-    def log4j2 = 'org.apache.logging.log4j:log4j-core:2.11.2'
     
     implementation guava
-    implementation log4j2
     implementation 'com.google.code.gson:gson:2.2.4'
     if (Float.parseFloat(asmVersion) < 6) {
         implementation "org.ow2.asm:asm-debug-all:$asmVersion"
@@ -167,13 +174,12 @@ dependencies {
     }
     
     modlauncherImplementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    modlauncherCompileOnly 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     modlauncherImplementation ("cpw.mods:modlauncher:$legacyModlauncherVersion") {
         exclude module: 'asm'
         exclude module: 'asm-analysis'
         exclude module: 'asm-commons'
         exclude module: 'asm-tree'
-        exclude module: 'log4j-api'
-        exclude module: 'log4j-core'
         exclude module: 'jopt-simple'
     }
     
@@ -182,23 +188,21 @@ dependencies {
         exclude module: 'asm-analysis'
         exclude module: 'asm-commons'
         exclude module: 'asm-tree'
-        exclude module: 'log4j-api'
-        exclude module: 'log4j-core'
         exclude module: 'jopt-simple'
     }
     
     modlauncher9Implementation ("cpw.mods:modlauncher:$modlauncherVersion") {
-        exclude module: 'log4j-api'
-        exclude module: 'log4j-core'
         exclude module: 'jopt-simple'
     }
     modlauncher9Implementation 'cpw.mods:securejarhandler:0.9.+'
     
     // asm bridge
-    bridgeImplementation log4j2
+    bridgeImplementation 'org.apache.logging.log4j:log4j-core:2.0-beta9'
     bridgeImplementation "org.ow2.asm:asm-commons:$legacyForgeAsmVersion"
     
     legacyImplementation "org.ow2.asm:asm-tree:$asmVersion"
+    
+    modularityCompileOnly 'org.apache.logging.log4j:log4j-core:2.11.2'
 }
 
 compileModularityJava {
@@ -236,6 +240,7 @@ eclipse {
             // Can't include old modlauncher because it causes issues with modules
             entries.removeAll { it.kind == 'lib' && it.path =~ ~/modlauncher-$legacyModlauncherVersion/ }
             entries.removeAll { it.kind == 'src' && it.path =~ ~/modlauncher4/ }
+            entries.removeAll { it.kind == 'lib' && it.path =~ ~/log4j.*beta9/ }
             
             // Mark everything else as a module
             entries.findAll { it.kind == "con" && it.path =~ /gradleclasspathcontainer$/ }.each {

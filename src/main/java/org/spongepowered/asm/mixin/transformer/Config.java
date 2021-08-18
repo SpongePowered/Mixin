@@ -27,11 +27,11 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Strings;
 
@@ -43,7 +43,7 @@ public class Config {
     /**
      * Logger 
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * All loaded configs, stored by name so that parents can be assigned

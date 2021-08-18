@@ -30,11 +30,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.launch.platform.IMixinPlatformAgent;
 import org.spongepowered.asm.launch.platform.IMixinPlatformServiceAgent;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+import org.spongepowered.asm.logging.ILogger;
+import org.spongepowered.asm.logging.LoggerAdapterDefault;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.util.Constants;
@@ -55,9 +55,15 @@ public abstract class MixinServiceAbstract implements IMixinService {
     protected static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
 
     /**
-     * Logger 
+     * Logger adapter, replacement for log4j2 logger as services should use
+     * their own loggers now in order to avoid contamination
      */
-    protected static final Logger logger = LogManager.getLogger("mixin");
+    private static ILogger logger;
+
+    /**
+     * Cached logger adapters 
+     */
+    private static final Map<String, ILogger> loggers = new HashMap<String, ILogger>();
 
     /**
      * Transformer re-entrance lock, shared between the mixin transformer and
@@ -79,6 +85,12 @@ public abstract class MixinServiceAbstract implements IMixinService {
      * Detected side name
      */
     private String sideName;
+    
+    protected MixinServiceAbstract() {
+        if (MixinServiceAbstract.logger == null) {
+            MixinServiceAbstract.logger = this.getLogger("mixin");
+        }
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#prepare()
@@ -240,6 +252,19 @@ public abstract class MixinServiceAbstract implements IMixinService {
             }
         }
         return this.serviceAgents;
+    }
+    
+    @Override
+    public synchronized ILogger getLogger(final String name) {
+        ILogger logger = MixinServiceAbstract.loggers.get(name);
+        if (logger == null) {
+            MixinServiceAbstract.loggers.put(name, logger = this.createLogger(name));
+        }
+        return logger;
+    }
+
+    protected ILogger createLogger(final String name) {
+        return new LoggerAdapterDefault(name);
     }
 
     // AMS - TEMP WIRING TO AVOID THE COMPLEXITY OF MERGING MULTIPHASE WITH 0.8

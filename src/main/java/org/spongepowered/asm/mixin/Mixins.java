@@ -29,13 +29,13 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.GlobalProperties.Keys;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.Config;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Entry point for registering global mixin resources. Compatibility with
@@ -47,7 +47,7 @@ public final class Mixins {
     /**
      * Logger 
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * GlobalProperties key storing mixin configs which are pending

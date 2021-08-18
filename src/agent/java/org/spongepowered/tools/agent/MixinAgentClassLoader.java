@@ -27,14 +27,14 @@ package org.spongepowered.tools.agent;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Constants;
 
 /**
@@ -43,7 +43,7 @@ import org.spongepowered.asm.util.Constants;
  */
 class MixinAgentClassLoader extends ClassLoader {
 
-    private static final Logger logger = LogManager.getLogger("mixin.agent");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin.agent");
 
     /**
      * Mapping of mixin mixin classes to their fake classes
@@ -93,7 +93,7 @@ class MixinAgentClassLoader extends ClassLoader {
             } catch (Exception ex) {
                 MixinAgentClassLoader.logger.error("Error storing original class bytecode for {} in mixin hotswap agent. {}: {}",
                         name, ex.getClass().getName(), ex.getMessage());
-                MixinAgentClassLoader.logger.debug(ex);
+                MixinAgentClassLoader.logger.debug(ex.toString());
             }
         }
     }

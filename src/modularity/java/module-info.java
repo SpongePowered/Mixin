@@ -43,6 +43,7 @@ module org.spongepowered.mixin {
     requires transitive org.objectweb.asm.tree;
     requires transitive org.objectweb.asm.tree.analysis;
     requires transitive org.objectweb.asm.util;
+    requires java.logging;
     
     //
     // Automatic modules we depend on
@@ -59,6 +60,7 @@ module org.spongepowered.mixin {
     exports org.spongepowered.asm.launch.platform.container;
     exports org.spongepowered.asm.lib;
     exports org.spongepowered.asm.lib.tree;
+    exports org.spongepowered.asm.logging;
     exports org.spongepowered.asm.mixin;
     exports org.spongepowered.asm.mixin.connect;
     exports org.spongepowered.asm.mixin.extensibility;

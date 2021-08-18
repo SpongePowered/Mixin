@@ -30,6 +30,7 @@ import java.util.Collection;
 
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformerFactory;
@@ -186,6 +187,11 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public CompatibilityLevel getMinCompatibilityLevel() {
         return this.minCompatibilityLevel;
+    }
+    
+    @Override
+    protected ILogger createLogger(String name) {
+        return new LoggerAdapterLog4j2(name);
     }
 
     /* (non-Javadoc)

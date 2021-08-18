@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke;
 
-import org.apache.logging.log4j.Level;
+import org.spongepowered.asm.logging.Level;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;

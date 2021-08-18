@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.mixin.gen;
 
-import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnNode;
@@ -34,6 +33,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Bytecode;
 
 /**
@@ -61,7 +61,7 @@ public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
         }
         
         if (this.info.getMixin().getOption(Option.DEBUG_VERBOSE)) {
-            LogManager.getLogger("mixin").warn("{} for final field {}::{} is not @Mutable", this.info,
+            MixinService.getService().getLogger("mixin").warn("{} for final field {}::{} is not @Mutable", this.info,
                     ((MixinTargetContext)this.info.getMixin()).getTarget(), this.targetField.name);
         }                    
     }

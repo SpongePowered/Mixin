@@ -32,8 +32,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
@@ -77,10 +76,10 @@ public class MixinAgent implements IHotSwap {
             }
             
             try {
-                MixinAgent.logger.info("Redefining class " + className);
+                MixinAgent.logger.info("Redefining class {}", className);
                 return MixinAgent.this.classTransformer.transformClassBytes(null, className, classfileBuffer);
             } catch (Throwable th) {
-                MixinAgent.logger.error("Error while re-transforming class " + className, th);
+                MixinAgent.logger.error("Error while re-transforming class {}", className, th);
                 return MixinAgent.ERROR_BYTECODE;
             }
         }
@@ -93,7 +92,7 @@ public class MixinAgent implements IHotSwap {
                 MixinAgent.logger.error("Mixin {} cannot be reloaded, needs a restart to be applied: {} ", e.getMixinInfo(), e.getMessage());
             } catch (Throwable th) {
                 // catch everything as otherwise it is ignored
-                MixinAgent.logger.error("Error while finding targets for mixin " + className, th);
+                MixinAgent.logger.error("Error while finding targets for mixin {}", className, th);
             }
             return null;
         }
@@ -121,7 +120,7 @@ public class MixinAgent implements IHotSwap {
                     targetBytecode = MixinAgent.this.classTransformer.transformClassBytes(null, targetName, targetBytecode);
                     MixinAgent.instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                 } catch (Throwable th) {
-                    MixinAgent.logger.error("Error while re-transforming target class " + target, th);
+                    MixinAgent.logger.error("Error while re-transforming target class {}", target, th);
                     return false;
                 }
             }
@@ -141,7 +140,7 @@ public class MixinAgent implements IHotSwap {
      */
     static final MixinAgentClassLoader classLoader = new MixinAgentClassLoader();
 
-    static final Logger logger = LogManager.getLogger("mixin.agent");
+    static final ILogger logger = MixinService.getService().getLogger("mixin.agent");
 
     /**
      * Instance used to register the transformer

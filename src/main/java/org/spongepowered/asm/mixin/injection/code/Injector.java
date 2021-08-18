@@ -34,8 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -54,6 +53,7 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.TypeLookup;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -166,7 +166,7 @@ public abstract class Injector {
     /**
      * Log more things
      */
-    protected static final Logger logger = LogManager.getLogger("mixin");
+    protected static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Injection info

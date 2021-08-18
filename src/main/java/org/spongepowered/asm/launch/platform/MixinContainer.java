@@ -30,8 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.platform.IMixinPlatformAgent.AcceptResult;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
@@ -53,7 +52,7 @@ public class MixinContainer {
         MixinContainer.agentClasses.add("org.spongepowered.asm.launch.platform.MixinPlatformAgentDefault");
     }
     
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     private final IContainerHandle handle;
     

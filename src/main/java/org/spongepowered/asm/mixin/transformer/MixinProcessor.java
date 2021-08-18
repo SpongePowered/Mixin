@@ -27,9 +27,8 @@ package org.spongepowered.asm.mixin.transformer;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.Mixin;
@@ -143,7 +142,7 @@ class MixinProcessor {
     /**
      * Log all the things
      */
-    static final Logger logger = LogManager.getLogger("mixin");
+    static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Service 
@@ -247,7 +246,7 @@ class MixinProcessor {
             unhandled.addAll(config.getUnhandledTargets());
         }
 
-        Logger auditLogger = LogManager.getLogger("mixin/audit");
+        ILogger auditLogger = MixinService.getService().getLogger("mixin.audit");
 
         for (String target : unhandled) {
             try {

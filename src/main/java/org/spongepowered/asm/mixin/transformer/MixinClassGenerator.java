@@ -26,8 +26,7 @@ package org.spongepowered.asm.mixin.transformer;
 
 import java.util.Locale;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
@@ -45,7 +44,7 @@ public class MixinClassGenerator {
     /**
      * Log things for stuff
      */
-    static final Logger logger = LogManager.getLogger("mixin");
+    static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Transformer extensions

@@ -24,7 +24,7 @@
  */
 package org.spongepowered.asm.mixin.extensibility;
 
-import org.apache.logging.log4j.Level;
+import org.spongepowered.asm.logging.Level;
 
 /**
  * Interface for objects which want to perform custom behaviour when fatal mixin

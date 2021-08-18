@@ -32,8 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
@@ -56,7 +55,7 @@ public class MixinPlatformManager {
     /**
      * Make with the logging already
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Bootstrap delegate 

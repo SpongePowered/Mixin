@@ -28,13 +28,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.throwables.CompanionPluginError;
 import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Strings;
 
@@ -66,7 +66,7 @@ class PluginHandle {
     
     }
     
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Parent config which owns this plugin handle

@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.launch.GlobalProperties;
@@ -46,6 +48,7 @@ import org.spongepowered.asm.launch.platform.MainAttributes;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleURI;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleVirtual;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
@@ -98,6 +101,11 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
         "net.minecraftforge.fml.common.asm.transformers.TerminalTransformer",
         "cpw.mods.fml.common.asm.transformers.TerminalTransformer"
     );
+    
+    /**
+     * Log4j2 logger
+     */
+    private static final Logger logger = LogManager.getLogger();
 
     /**
      * Utility for reflecting into Launch ClassLoader
@@ -173,6 +181,11 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     public CompatibilityLevel getMaxCompatibilityLevel() {
         return CompatibilityLevel.JAVA_8;
     }
+    
+    @Override
+    protected ILogger createLogger(String name) {
+        return new LoggerAdapterLog4j2(name);
+    }
 
     /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#init()
@@ -180,7 +193,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
     @Override
     public void init() {
         if (MixinServiceLaunchWrapper.findInStackTrace("net.minecraft.launchwrapper.Launch", "launch") < 4) {
-            MixinServiceAbstract.logger.error("MixinBootstrap.doInit() called during a tweak constructor!");
+            MixinServiceLaunchWrapper.logger.error("MixinBootstrap.doInit() called during a tweak constructor!");
         }
 
         List<String> tweakClasses = GlobalProperties.<List<String>>get(MixinServiceLaunchWrapper.BLACKBOARD_KEY_TWEAKCLASSES);
@@ -231,7 +244,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
             for (URL url : sources) {
                 try {
                     URI uri = url.toURI();
-                    MixinServiceAbstract.logger.debug("Scanning {} for mixin tweaker", uri);
+                    MixinServiceLaunchWrapper.logger.debug("Scanning {} for mixin tweaker", uri);
                     if (!"file".equals(uri.getScheme()) || !new File(uri).exists()) {
                         continue;
                     }
@@ -367,7 +380,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
             }
             
             if (transformer instanceof IClassNameTransformer) {
-                MixinServiceAbstract.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                MixinServiceLaunchWrapper.logger.debug("Found name transformer: {}", transformer.getClass().getName());
                 this.nameTransformer = (IClassNameTransformer)transformer;
             }
 
@@ -401,7 +414,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
      * list just once per environment and cache the result.
      */
     private void buildTransformerDelegationList() {
-        MixinServiceAbstract.logger.debug("Rebuilding transformer delegation list:");
+        MixinServiceLaunchWrapper.logger.debug("Rebuilding transformer delegation list:");
         this.delegatedTransformers = new ArrayList<ILegacyClassTransformer>();
         for (ITransformer transformer : this.getTransformers()) {
             if (!(transformer instanceof ILegacyClassTransformer)) {
@@ -418,14 +431,14 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
                 }
             }
             if (include && !legacyTransformer.isDelegationExcluded()) {
-                MixinServiceAbstract.logger.debug("  Adding:    {}", transformerName);
+                MixinServiceLaunchWrapper.logger.debug("  Adding:    {}", transformerName);
                 this.delegatedTransformers.add(legacyTransformer);
             } else {
-                MixinServiceAbstract.logger.debug("  Excluding: {}", transformerName);
+                MixinServiceLaunchWrapper.logger.debug("  Excluding: {}", transformerName);
             }
         }
 
-        MixinServiceAbstract.logger.debug("Transformer delegation list created with {} entries", this.delegatedTransformers.size());
+        MixinServiceLaunchWrapper.logger.debug("Transformer delegation list created with {} entries", this.delegatedTransformers.size());
     }
 
     /**
@@ -541,7 +554,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
                 this.addTransformerExclusion(transformer.getName());
                 
                 this.lock.clear();
-                MixinServiceAbstract.logger.info("A re-entrant transformer '{}' was detected and will no longer process meta class data",
+                MixinServiceLaunchWrapper.logger.info("A re-entrant transformer '{}' was detected and will no longer process meta class data",
                         transformer.getName());
             }
         }
@@ -565,7 +578,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
         List<IClassTransformer> transformers = Launch.classLoader.getTransformers();
         for (IClassTransformer transformer : transformers) {
             if (transformer instanceof IClassNameTransformer) {
-                MixinServiceAbstract.logger.debug("Found name transformer: {}", transformer.getClass().getName());
+                MixinServiceLaunchWrapper.logger.debug("Found name transformer: {}", transformer.getClass().getName());
                 this.nameTransformer = (IClassNameTransformer) transformer;
             }
         }

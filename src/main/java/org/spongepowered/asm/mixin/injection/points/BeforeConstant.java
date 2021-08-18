@@ -32,8 +32,7 @@ import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -49,6 +48,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
@@ -124,7 +124,7 @@ import com.google.common.primitives.Longs;
 @AtCode("CONSTANT")
 public class BeforeConstant extends InjectionPoint {
     
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Ordinal of the target insn

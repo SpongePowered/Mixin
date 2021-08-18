@@ -26,10 +26,10 @@ package org.spongepowered.asm.launch.platform;
 
 import java.lang.reflect.Method;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.IConsumer;
 
 /**
@@ -40,7 +40,7 @@ public abstract class MixinPlatformAgentAbstract implements IMixinPlatformAgent 
     /**
      * Logger 
      */
-    protected static final Logger logger = LogManager.getLogger("mixin");
+    protected static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     protected MixinPlatformManager manager;
     

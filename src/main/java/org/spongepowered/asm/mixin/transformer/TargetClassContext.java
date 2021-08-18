@@ -33,8 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
@@ -48,6 +47,7 @@ import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
 import org.spongepowered.asm.mixin.transformer.ext.extensions.ExtensionCheckClass.ValidationFailedException;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
@@ -62,7 +62,7 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
     /**
      * Logger
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Mixin environment

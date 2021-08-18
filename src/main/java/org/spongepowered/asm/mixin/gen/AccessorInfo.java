@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -48,6 +47,7 @@ import org.spongepowered.asm.mixin.injection.selectors.TargetSelector.Result;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.struct.SpecialMethodInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 
@@ -400,7 +400,7 @@ public class AccessorInfo extends SpecialMethodInfo {
     public static String inflectTarget(AccessorName name, AccessorType type, String description, ISelectorContext context, boolean verbose) {
         if (name != null) {
             if (!type.isExpectedPrefix(name.prefix) && verbose) {
-                LogManager.getLogger("mixin").warn("Unexpected prefix for {}, found [{}] expecting {}", description, name.prefix,
+                MixinService.getService().getLogger("mixin").warn("Unexpected prefix for {}, found [{}] expecting {}", description, name.prefix,
                         type.getExpectedPrefixes());
             }
             return TargetSelector.parseName(name.name, context);

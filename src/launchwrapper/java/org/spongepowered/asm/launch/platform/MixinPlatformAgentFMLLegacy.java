@@ -382,7 +382,7 @@ public class MixinPlatformAgentFMLLegacy extends MixinPlatformAgentAbstract impl
                 // Legacy name
                 mdGetIgnoredMods = clCoreModManager.getDeclaredMethod(MixinPlatformAgentFMLLegacy.GET_IGNORED_MODS_METHOD_LEGACY);
             } catch (NoSuchMethodException ex2) {
-                MixinPlatformAgentAbstract.logger.catching(Level.DEBUG, ex2);
+                MixinPlatformAgentAbstract.logger.catching(org.spongepowered.asm.logging.Level.DEBUG, ex2);
                 return Collections.<String>emptyList();
             }
         }

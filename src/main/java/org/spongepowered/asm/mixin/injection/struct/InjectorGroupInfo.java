@@ -30,11 +30,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionValidationException;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 
 /**
@@ -207,7 +207,7 @@ public class InjectorGroupInfo {
                     + min + " on " + this);
         }
         if (this.minCallbackCount > 0 && this.minCallbackCount != min) {
-            LogManager.getLogger("mixin").warn("Conflicting min value '{}' on @Group({}), previously specified {}", min, this.name,
+            MixinService.getService().getLogger("mixin").warn("Conflicting min value '{}' on @Group({}), previously specified {}", min, this.name,
                     this.minCallbackCount);
         }
         this.minCallbackCount = Math.max(this.minCallbackCount, min);
@@ -227,7 +227,7 @@ public class InjectorGroupInfo {
                     + max + " on " + this);
         }
         if (this.maxCallbackCount < Integer.MAX_VALUE && this.maxCallbackCount != max) {
-            LogManager.getLogger("mixin").warn("Conflicting max value '{}' on @Group({}), previously specified {}", max, this.name,
+            MixinService.getService().getLogger("mixin").warn("Conflicting max value '{}' on @Group({}), previously specified {}", max, this.name,
                     this.maxCallbackCount);
         }
         this.maxCallbackCount = Math.min(this.maxCallbackCount, max);

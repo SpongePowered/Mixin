@@ -28,8 +28,7 @@ import java.util.Collection;
 import java.util.ListIterator;
 import java.util.Locale;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -46,6 +45,7 @@ import org.spongepowered.asm.mixin.injection.selectors.throwables.SelectorConstr
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * <p>This injection point searches for INVOKEVIRTUAL, INVOKESTATIC and
@@ -122,7 +122,7 @@ public class BeforeInvoke extends InjectionPoint {
     /**
      * Logger reference 
      */
-    protected final Logger logger = LogManager.getLogger("mixin");
+    protected final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * True to turn on strategy debugging to the console

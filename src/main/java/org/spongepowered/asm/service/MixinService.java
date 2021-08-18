@@ -32,10 +32,11 @@ import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
+import org.spongepowered.asm.logging.LoggerAdapterConsole;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ObjectArrays;
 
 /**
  * Provides access to the service layer which connects the mixin transformer to
@@ -46,10 +47,71 @@ import com.google.common.base.Joiner;
 public final class MixinService {
     
     /**
-     * Log all the things
+     * Since we want to log things during startup but need the service itself to
+     * provide a logging implementation adapter, we need a place to store log
+     * messages prior to the service startup which can later be flushed into the
+     * logger itself if startup succeeds, or into the console if startup fails.
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    static class LogBuffer {
+        
+        public static class LogEntry {
+            
+            public String message;
+            public Object[] params;
+            public Throwable t;
+            
+            public LogEntry(String message, Object[] params, Throwable t) {
+                this.message = message;
+                this.params = params;
+                this.t = t;
+            }
+            
+        }
+        
+        private final List<LogEntry> buffer = new ArrayList<LogEntry>();
+        
+        private ILogger logger;
 
+        synchronized void debug(String message, Object... params) {
+            if (this.logger != null) {
+                this.logger.debug(message, params);
+                return;
+            }
+            this.buffer.add(new LogEntry(message, params, null));
+        }
+
+        synchronized void debug(String message, Throwable t) {
+            if (this.logger != null) {
+                this.logger.debug(message, t);
+                return;
+            }
+            this.buffer.add(new LogEntry(message, new Object[0], t));
+        }
+
+        /**
+         * Flush the contents of the buffer into the specified logger
+         */
+        synchronized void flush(ILogger logger) {
+            for (LogEntry buffered : this.buffer) {
+                if (buffered.t != null) {
+                    logger.debug(buffered.message, ObjectArrays.concat(buffered.params, buffered.t));
+                } else {
+                    logger.debug(buffered.message, buffered.params);
+                }
+            }
+            this.buffer.clear();
+            this.logger = logger;
+        }
+
+    }
+
+    /**
+     * Log buffer for messages generated during service startup but before the
+     * actual logger can be retrieved from the service, flushed once the service
+     * is started
+     */
+    private static LogBuffer logBuffer = new LogBuffer();
+    
     /**
      * Singleton
      */
@@ -91,9 +153,10 @@ public final class MixinService {
                 this.bootedServices.add(bootService.getServiceClassName());
             } catch (ServiceInitialisationException ex) {
                 // Expected if service cannot start
-                MixinService.logger.debug("Mixin bootstrap service {} is not available: {}", ex.getStackTrace()[0].getClassName(), ex.getMessage());
+                MixinService.logBuffer.debug("Mixin bootstrap service {} is not available: {}", ex.getStackTrace()[0].getClassName(),
+                        ex.getMessage());
             } catch (Throwable th) {
-                MixinService.logger.debug("Catching {}:{} initialising service", th.getClass().getName(), th.getMessage(), th);
+                MixinService.logBuffer.debug("Catching {}:{} initialising service", th.getClass().getName(), th.getMessage(), th);
             }
         }
     }
@@ -122,7 +185,16 @@ public final class MixinService {
 
     private synchronized IMixinService getServiceInstance() {
         if (this.service == null) {
-            this.service = this.initService();
+            try {
+                this.service = this.initService();
+                ILogger serviceLogger = this.service.getLogger("mixin");
+                MixinService.logBuffer.flush(serviceLogger);
+            } catch (Error err) {
+                ILogger defaultLogger = MixinService.<ILogger>getDefaultLogger();
+                MixinService.logBuffer.flush(defaultLogger);
+                defaultLogger.error(err.getMessage(), err);
+                throw err;
+            }
         }
         return this.service;
     }
@@ -136,19 +208,20 @@ public final class MixinService {
             try {
                 IMixinService service = iter.next();
                 if (this.bootedServices.contains(service.getClass().getName())) {
-                    MixinService.logger.debug("MixinService [{}] was successfully booted in {}", service.getName(), this.getClass().getClassLoader());
+                    MixinService.logBuffer.debug("MixinService [{}] was successfully booted in {}", service.getName(),
+                            this.getClass().getClassLoader());
                 }
                 if (service.isValid()) {
                     return service;
                 }
-                MixinService.logger.debug("MixinService [{}] is not valid", service.getName());
+                MixinService.logBuffer.debug("MixinService [{}] is not valid", service.getName());
                 badServices.add(String.format("INVALID[%s]", service.getName()));
             } catch (ServiceConfigurationError sce) {
 //                sce.printStackTrace();
                 brokenServiceCount++;
             } catch (Throwable th) {
                 String faultingClassName = th.getStackTrace()[0].getClassName();
-                MixinService.logger.debug("MixinService [{}] failed initialisation: {}", faultingClassName, th.getMessage());
+                MixinService.logBuffer.debug("MixinService [{}] failed initialisation: {}", faultingClassName, th.getMessage());
                 int pos = faultingClassName.lastIndexOf('.');
                 badServices.add(String.format("ERROR[%s]", pos < 0 ? faultingClassName : faultingClassName.substring(pos + 1)));
 //                th.printStackTrace();
@@ -195,4 +268,14 @@ public final class MixinService {
         }
         throw new ServiceNotAvailableError("No mixin global property service is available");
     }
+
+    /**
+     * Returns Object so that ILogger is not classloaded until after it doesn't
+     * matter any more
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T getDefaultLogger() {
+        return (T)new LoggerAdapterConsole("mixin").setDebugStream(System.err);
+    }
+
 }

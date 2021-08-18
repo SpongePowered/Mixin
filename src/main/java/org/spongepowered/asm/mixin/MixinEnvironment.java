@@ -33,9 +33,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.GlobalProperties.Keys;
 import org.spongepowered.asm.launch.MixinBootstrap;
@@ -1034,7 +1033,7 @@ public final class MixinEnvironment implements ITokenProvider {
     /**
      * Logger 
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Performance profiler 
@@ -1139,7 +1138,8 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.kv("Detected ASM Supports Java", ASM.getClassVersionString()).hr();
             printer.kv("Service Name", serviceName);
             printer.kv("Mixin Service Class", this.service.getClass().getName());
-            printer.kv("Global Property Service Class", MixinService.getGlobalPropertyService().getClass().getName()).hr();
+            printer.kv("Global Property Service Class", MixinService.getGlobalPropertyService().getClass().getName());
+            printer.kv("Logger Adapter Type", MixinService.getService().getLogger("mixin").getType()).hr();
             for (Option option : Option.values()) {
                 StringBuilder indent = new StringBuilder();
                 for (int i = 0; i < option.depth; i++) {

@@ -29,8 +29,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -38,6 +37,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.transformer.ext.IDecompiler;
 import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.transformers.MixinClassWriter;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler.Section;
@@ -59,7 +59,7 @@ public class ExtensionClassExporter implements IExtension {
     /**
      * Logger
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Directory to export classes to when debug.export is enabled

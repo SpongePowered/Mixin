@@ -36,6 +36,7 @@ public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstra
 
     private static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
     private static final String LAUNCH_PACKAGE = "org.spongepowered.asm.launch.";
+    private static final String LOGGING_PACKAGE = "org.spongepowered.asm.logging.";
     
     private static final String MIXIN_UTIL_PACKAGE = "org.spongepowered.asm.util.";
     private static final String LEGACY_ASM_PACKAGE = "org.spongepowered.asm.lib.";
@@ -63,6 +64,7 @@ public class MixinServiceLaunchWrapperBootstrap implements IMixinServiceBootstra
         // Essential ones
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.SERVICE_PACKAGE);
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.LAUNCH_PACKAGE);
+        Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.LOGGING_PACKAGE);
 
         // Important ones
         Launch.classLoader.addClassLoaderExclusion(MixinServiceLaunchWrapperBootstrap.ASM_PACKAGE);

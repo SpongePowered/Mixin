@@ -30,9 +30,9 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic.Kind;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.logging.ILogger;
 
 /**
  * Logging router for objects which may need to log messages during standard
@@ -49,26 +49,26 @@ public final class MessageRouter {
         /**
          * Logger 
          */
-        private static final Logger logger = LogManager.getLogger("mixin");
+        private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
         @Override
         public void printMessage(Kind kind, CharSequence msg) {
-            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg);
+            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg.toString());
         }
 
         @Override
         public void printMessage(Kind kind, CharSequence msg, Element e) {
-            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg);
+            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg.toString());
         }
 
         @Override
         public void printMessage(Kind kind, CharSequence msg, Element e, AnnotationMirror a) {
-            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg);
+            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg.toString());
         }
 
         @Override
         public void printMessage(Kind kind, CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v) {
-            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg);
+            LoggingMessager.logger.log(LoggingMessager.messageKindToLoggingLevel(kind), msg.toString());
         }
 
         private static Level messageKindToLoggingLevel(Kind kind) {

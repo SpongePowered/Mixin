@@ -24,8 +24,7 @@
  */
 package org.spongepowered.asm.mixin.injection.invoke.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -34,6 +33,7 @@ import org.objectweb.asm.tree.analysis.BasicValue;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.tree.analysis.Interpreter;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * Utility class for finding instructions using static analysis
@@ -149,7 +149,7 @@ public class InsnFinder {
     /**
      * Log more things
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Find the instruction which pops the value pushed by the specified

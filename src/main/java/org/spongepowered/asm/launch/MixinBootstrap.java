@@ -28,8 +28,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.platform.CommandLineOptions;
 import org.spongepowered.asm.launch.platform.MixinPlatformManager;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -73,20 +72,21 @@ public abstract class MixinBootstrap {
      */
     private static final String MIXIN_TRANSFORMER_FACTORY_CLASS = "org.spongepowered.asm.mixin.transformer.MixinTransformer$Factory";
     
-    /**
-     * Log all the things
-     */
-    private static final Logger logger = LogManager.getLogger("mixin");
-    
     
     // These are Klass local, with luck this shouldn't be a problem
     private static boolean initialised = false;
     private static boolean initState = true;
     
+    /**
+     * Log all the things
+     */
+    private static ILogger logger;
+    
     // Static initialiser, run boot services as early as possible
     static {
         MixinService.boot();
         MixinService.getService().prepare();
+        MixinBootstrap.logger = MixinService.getService().getLogger("mixin");
     }
 
     /**
@@ -179,7 +179,7 @@ public abstract class MixinBootstrap {
     static void doInit(CommandLineOptions args) {
         if (!MixinBootstrap.initialised) {
             if (MixinBootstrap.isSubsystemRegistered()) {
-                MixinBootstrap.logger.warn("Multiple Mixin containers present, init suppressed for " + MixinBootstrap.VERSION);
+                MixinBootstrap.logger.warn("Multiple Mixin containers present, init suppressed for {}", MixinBootstrap.VERSION);
                 return;
             }
             

@@ -30,10 +30,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
@@ -84,7 +84,7 @@ public final class RemappingReferenceMapper implements IReferenceMapper {
     /**
      * Logger
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Loaded srgs, stored as a mapping of filename to mappings. Global cache so

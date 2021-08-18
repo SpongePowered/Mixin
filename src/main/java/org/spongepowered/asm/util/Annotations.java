@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -43,6 +41,7 @@ import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Intrinsic;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 import com.google.common.base.Function;
@@ -147,8 +146,6 @@ public final class Annotations {
 
     private static Pattern mergeableAnnotationPattern = Annotations.getMergeableAnnotationPattern();
 
-    private static final Logger logger = LogManager.getLogger("mixin");
-    
     private Annotations() {
         // Utility class
     }
@@ -758,7 +755,7 @@ public final class Annotations {
                 to.add(annotation);
             }
         } catch (Exception ex) {
-            Annotations.logger.warn("Exception encountered whilst merging annotations for {} {}", type, name);
+            MixinService.getService().getLogger("mixin").warn("Exception encountered whilst merging annotations for {} {}", type, name);
         }
         
         return to;

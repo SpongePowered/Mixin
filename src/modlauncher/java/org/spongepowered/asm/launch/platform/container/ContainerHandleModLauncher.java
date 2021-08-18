@@ -28,8 +28,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.service.MixinService;
 
 /**
  * ModLauncher root container
@@ -65,11 +64,6 @@ public class ContainerHandleModLauncher extends ContainerHandleVirtual {
         
     }
     
-    /**
-     * Logger
-     */
-    protected static final Logger logger = LogManager.getLogger("mixin");
-
     public ContainerHandleModLauncher(String name) {
         super(name);
     }
@@ -103,7 +97,7 @@ public class ContainerHandleModLauncher extends ContainerHandleVirtual {
         if (resource instanceof Entry) {
             this.addResource((Entry<String, Path>)resource);
         } else {
-            ContainerHandleModLauncher.logger.error("Unrecognised resource type {} passed to {}", resource.getClass(), this);
+            MixinService.getService().getLogger("mixin").error("Unrecognised resource type {} passed to {}", resource.getClass(), this);
         }
     }
     

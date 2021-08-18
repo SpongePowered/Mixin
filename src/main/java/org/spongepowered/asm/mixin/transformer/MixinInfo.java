@@ -33,9 +33,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
@@ -68,6 +67,7 @@ import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTargetAlreadyLoadedException;
 import org.spongepowered.asm.service.IClassTracker;
 import org.spongepowered.asm.service.IMixinService;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.LanguageFeatures;
@@ -735,7 +735,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Logger
      */
-    private final transient Logger logger = LogManager.getLogger("mixin");
+    private final transient ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Profiler 

@@ -31,9 +31,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnList;
@@ -159,7 +158,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     /**
      * Log even more things
      */
-    private final Logger logger = LogManager.getLogger("mixin");
+    private final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Map of mixin target classes to mixin infos

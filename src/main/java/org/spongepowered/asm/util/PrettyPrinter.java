@@ -32,9 +32,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
+import org.spongepowered.asm.logging.Level;
+import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Strings;
 
@@ -948,7 +948,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter trace(String logger) {
-        return this.trace(System.err, LogManager.getLogger(logger));
+        return this.trace(System.err, MixinService.getService().getLogger(logger));
     }
 
     /**
@@ -960,7 +960,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter trace(String logger, Level level) {
-        return this.trace(System.err, LogManager.getLogger(logger), level);
+        return this.trace(System.err, MixinService.getService().getLogger(logger), level);
     }
 
     /**
@@ -970,7 +970,7 @@ public class PrettyPrinter {
      * @param logger Logger to write to
      * @return fluent interface
      */
-    public PrettyPrinter trace(Logger logger) {
+    public PrettyPrinter trace(ILogger logger) {
         return this.trace(System.err, logger);
     }
     
@@ -982,7 +982,7 @@ public class PrettyPrinter {
      * @param level Log level to write messages
      * @return fluent interface
      */
-    public PrettyPrinter trace(Logger logger, Level level) {
+    public PrettyPrinter trace(ILogger logger, Level level) {
         return this.trace(System.err, logger, level);
     }
     
@@ -1018,7 +1018,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter trace(PrintStream stream, String logger) {
-        return this.trace(stream, LogManager.getLogger(logger));
+        return this.trace(stream, MixinService.getService().getLogger(logger));
     }
     
     /**
@@ -1031,7 +1031,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter trace(PrintStream stream, String logger, Level level) {
-        return this.trace(stream, LogManager.getLogger(logger), level);
+        return this.trace(stream, MixinService.getService().getLogger(logger), level);
     }
     
     /**
@@ -1042,7 +1042,7 @@ public class PrettyPrinter {
      * @param logger Logger to write to
      * @return fluent interface
      */
-    public PrettyPrinter trace(PrintStream stream, Logger logger) {
+    public PrettyPrinter trace(PrintStream stream, ILogger logger) {
         return this.trace(stream, logger, Level.DEBUG);
     }
     
@@ -1055,7 +1055,7 @@ public class PrettyPrinter {
      * @param level Log level to write messages
      * @return fluent interface
      */
-    public PrettyPrinter trace(PrintStream stream, Logger logger, Level level) {
+    public PrettyPrinter trace(PrintStream stream, ILogger logger, Level level) {
         this.log(logger, level);
         this.print(stream);
         return this;
@@ -1106,7 +1106,7 @@ public class PrettyPrinter {
      * @param logger logger to log to
      * @return fluent interface
      */
-    public PrettyPrinter log(Logger logger) {
+    public PrettyPrinter log(ILogger logger) {
         return this.log(logger, Level.INFO);
     }
     
@@ -1117,7 +1117,7 @@ public class PrettyPrinter {
      * @return fluent interface
      */
     public PrettyPrinter log(Level level) {
-        return this.log(LogManager.getLogger(PrettyPrinter.getDefaultLoggerName()), level);
+        return this.log(MixinService.getService().getLogger(PrettyPrinter.getDefaultLoggerName()), level);
     }
     
     /**
@@ -1127,7 +1127,7 @@ public class PrettyPrinter {
      * @param level log level
      * @return fluent interface
      */
-    public PrettyPrinter log(Logger logger, Level level) {
+    public PrettyPrinter log(ILogger logger, Level level) {
         this.updateWidth();
         this.logSpecial(logger, level, this.horizontalRule);
         for (Object line : this.lines) {
@@ -1141,13 +1141,13 @@ public class PrettyPrinter {
         return this;
     }
 
-    private void logSpecial(Logger logger, Level level, ISpecialEntry line) {
+    private void logSpecial(ILogger logger, Level level, ISpecialEntry line) {
         logger.log(level, "/*{}*/", line.toString());
     }
 
-    private void logString(Logger logger, Level level, String line) {
+    private void logString(ILogger logger, Level level, String line) {
         if (line != null) {
-            logger.log(level, String.format("/* %-" + this.width + "s */", line));
+            logger.log(level, "/* {} */", String.format("%-" + this.width, line));
         }
     }
     

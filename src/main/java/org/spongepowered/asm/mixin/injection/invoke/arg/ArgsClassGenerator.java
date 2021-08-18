@@ -27,8 +27,7 @@ package org.spongepowered.asm.mixin.injection.invoke.arg;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -43,6 +42,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.transformer.SyntheticClassInfo;
 import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
 import org.spongepowered.asm.service.ISyntheticClassInfo;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.IConsumer;
@@ -89,7 +89,7 @@ public final class ArgsClassGenerator implements IClassGenerator {
     /**
      * Logger
      */
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * Synthetic class info for args class

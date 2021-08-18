@@ -28,8 +28,7 @@ import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -222,7 +221,7 @@ class MixinApplicatorStandard {
     /**
      * Log more things
      */
-    protected final Logger logger = LogManager.getLogger("mixin");
+    protected final ILogger logger = MixinService.getService().getLogger("mixin");
     
     /**
      * Target class context 
@@ -815,7 +814,7 @@ class MixinApplicatorStandard {
                     ctor = mixinMethod;
                 } else {
                     // Not an error condition, just weird
-                    this.logger.warn(String.format("Mixin %s has multiple constructors, %s was selected\n", mixin, ctor.desc));
+                    this.logger.warn("Mixin {} has multiple constructors, {} was selected\n", mixin, ctor.desc);
                 }
             }
         }

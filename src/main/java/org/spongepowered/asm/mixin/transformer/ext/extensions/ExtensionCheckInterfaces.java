@@ -33,8 +33,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -44,6 +43,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.ext.IExtension;
 import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
+import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.SignaturePrinter;
@@ -64,7 +64,7 @@ public class ExtensionCheckInterfaces implements IExtension {
     private static final String IMPL_REPORT_CSV_FILENAME = ExtensionCheckInterfaces.IMPL_REPORT_FILENAME + ".csv";
     private static final String IMPL_REPORT_TXT_FILENAME = ExtensionCheckInterfaces.IMPL_REPORT_FILENAME + ".txt";
 
-    private static final Logger logger = LogManager.getLogger("mixin");
+    private static final ILogger logger = MixinService.getService().getLogger("mixin");
 
     /**
      * CSV Report file
