@@ -71,15 +71,18 @@ public class LoggerAdapterConsole extends LoggerAdapterAbstract {
 
     @Override
     public void catching(Level level, Throwable t) {
-        this.log(Level.WARN, "Catching", t);
+        this.log(Level.WARN, "Catching {}: {}", t.getClass().getName(), t.getMessage(), t);
     }
 
     @Override
     public void log(Level level, String message, Object... params) {
         PrintStream out = this.getOutputStream(level);
         if (out != null) {
-            String formatted = LoggerAdapterAbstract.getFormattedMessage(message, params);
+            FormattedMessage formatted = new FormattedMessage(message, params);
             out.println(String.format("[%s] [%s/%s] %s", LoggerAdapterConsole.DATE_FORMAT.format(new Date()), this.getId(), level, formatted));
+            if (formatted.hasThrowable()) {
+                formatted.getThrowable().printStackTrace(out);
+            }
         }
     }
 
@@ -88,13 +91,13 @@ public class LoggerAdapterConsole extends LoggerAdapterAbstract {
         PrintStream out = this.getOutputStream(level);
         if (out != null) {
             out.println(String.format("[%s] [%s/%s] %s", LoggerAdapterConsole.DATE_FORMAT.format(new Date()), this.getId(), level, message));
-            t.printStackTrace();
+            t.printStackTrace(out);
         }
     }
 
     @Override
     public <T extends Throwable> T throwing(T t) {
-        this.log(Level.WARN, "Throwing", t);
+        this.log(Level.WARN, "Throwing {}: {}", t.getClass().getName(), t.getMessage(), t);
         return t;
     }
 
