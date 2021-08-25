@@ -248,6 +248,9 @@ eclipse {
             }
         }
     }
+    
+    // Build service task outputs for test projects
+    autoBuildTasks compileModlauncher4Java, compileModlauncher9Java, compileLaunchwrapperJava
 }
 
 // Filter, process, and include resources

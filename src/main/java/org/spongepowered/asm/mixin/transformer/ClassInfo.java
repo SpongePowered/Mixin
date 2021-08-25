@@ -663,7 +663,7 @@ public final class ClassInfo {
 
     private static final ILogger logger = MixinService.getService().getLogger("mixin");
     
-    private static final Profiler profiler = MixinEnvironment.getProfiler();
+    private static final Profiler profiler = Profiler.getProfiler("meta");
 
     private static final String JAVA_LANG_OBJECT = "java/lang/Object";
 

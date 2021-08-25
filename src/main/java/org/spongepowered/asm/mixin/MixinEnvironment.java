@@ -1034,11 +1034,6 @@ public final class MixinEnvironment implements ITokenProvider {
      * Logger 
      */
     private static final ILogger logger = MixinService.getService().getLogger("mixin");
-    
-    /**
-     * Performance profiler 
-     */
-    private static final Profiler profiler = new Profiler();
 
     /**
      * Active transformer
@@ -1489,7 +1484,7 @@ public final class MixinEnvironment implements ITokenProvider {
         if (MixinEnvironment.currentPhase == Phase.NOT_INITIALISED) {
             MixinEnvironment.currentPhase = phase;
             MixinEnvironment env = MixinEnvironment.getEnvironment(phase);
-            MixinEnvironment.getProfiler().setActive(env.getOption(Option.DEBUG_PROFILER));
+            Profiler.setActive(env.getOption(Option.DEBUG_PROFILER));
             
             // AMS - Temp wiring to avoid merging multiphase
             IMixinService service = MixinService.getService();
@@ -1594,9 +1589,11 @@ public final class MixinEnvironment implements ITokenProvider {
      * Get the performance profiler
      * 
      * @return profiler
+     * @deprecated use Profiler.getProfiler("mixin")
      */
+    @Deprecated
     public static Profiler getProfiler() {
-        return MixinEnvironment.profiler;
+        return Profiler.getProfiler("mixin");
     }
     
     /**

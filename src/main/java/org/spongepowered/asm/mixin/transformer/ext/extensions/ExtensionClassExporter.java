@@ -40,6 +40,7 @@ import org.spongepowered.asm.mixin.transformer.ext.ITargetClassContext;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.transformers.MixinClassWriter;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
 import com.google.common.io.Files;
@@ -136,7 +137,7 @@ public class ExtensionClassExporter implements IExtension {
         if (force || env.getOption(Option.DEBUG_EXPORT)) {
             String filter = env.getOptionValue(Option.DEBUG_EXPORT_FILTER);
             if (force || filter == null || this.applyFilter(filter, name)) {
-                Section exportTimer = MixinEnvironment.getProfiler().begin("debug.export");
+                Section exportTimer = Profiler.getProfiler("export").begin("debug.export");
                 
                 File outputFile = this.dumpClass(name.replace('.', '/'), classNode);
                 if (this.decompiler != null) {

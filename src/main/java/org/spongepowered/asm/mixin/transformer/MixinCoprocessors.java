@@ -27,7 +27,6 @@ package org.spongepowered.asm.mixin.transformer;
 import java.util.ArrayList;
 
 import org.objectweb.asm.tree.ClassNode;
-import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.transformer.MixinCoprocessor.ProcessResult;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
@@ -45,7 +44,7 @@ class MixinCoprocessors extends ArrayList<MixinCoprocessor> {
     private final Profiler profiler;
 
     MixinCoprocessors() {
-        this.profiler = MixinEnvironment.getProfiler();
+        this.profiler = Profiler.getProfiler("mixin");
     }
 
     /**

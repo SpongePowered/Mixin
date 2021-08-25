@@ -66,7 +66,7 @@ public class MixinClassGenerator {
      */
     MixinClassGenerator(MixinEnvironment environment, Extensions extensions) {
         this.extensions = extensions;
-        this.profiler = MixinEnvironment.getProfiler();
+        this.profiler = Profiler.getProfiler("generator");
         this.auditTrail = MixinService.getService().getAuditTrail();
     }
 

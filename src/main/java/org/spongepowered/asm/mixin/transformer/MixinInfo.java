@@ -740,7 +740,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     /**
      * Profiler 
      */
-    private final transient Profiler profiler = MixinEnvironment.getProfiler();
+    private final transient Profiler profiler = Profiler.getProfiler("mixin");
     
     /**
      * Parent configuration which declares this mixin 

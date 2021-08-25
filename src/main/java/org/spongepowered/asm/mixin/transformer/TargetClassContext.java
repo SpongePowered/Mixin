@@ -153,7 +153,7 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
     TargetClassContext(MixinEnvironment env, Extensions extensions, String sessionId, String name, ClassNode classNode, SortedSet<MixinInfo> mixins) {
         this.env = env;
         this.extensions = extensions;
-        this.profiler = MixinEnvironment.getProfiler();
+        this.profiler = Profiler.getProfiler("mixin");
         this.sessionId = sessionId;
         this.className = name;
         this.classNode = classNode;

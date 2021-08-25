@@ -34,6 +34,8 @@ import org.spongepowered.asm.util.PrettyPrinter;
 import org.spongepowered.asm.util.PrettyPrinter.Alignment;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 /**
  * Performance profiler for Mixin.
@@ -56,10 +58,12 @@ public final class Profiler {
     public static final int FINE = 0x02;
     
     /**
-     * Profiler section. Normal sections do nothing so that the profiler itself
-     * consumes minimal resources when disabled.
+     * Base abstract profiler section. When disabled, the profiler itself
+     * returns {@link DisabledSection} so as to consume minimal resources
+     * without needing to introduce nullability checks everwhere that sections
+     * are used. When enabled, {@link LiveSection} is used to record timings.
      */
-    public class Section {
+    public abstract static class Section {
         
         static final String SEPARATOR_ROOT = " -> ";
         
@@ -93,6 +97,10 @@ public final class Profiler {
         Section(String name) {
             this.name = name;
             this.info = name;
+        }
+        
+        protected int getCursor() {
+            return 0;
         }
         
         /**
@@ -196,9 +204,6 @@ public final class Profiler {
          * @return fluent
          */
         public Section end() {
-            if (!this.invalidated) {
-                Profiler.this.end(this);
-            }
             return this;
         }
         
@@ -210,7 +215,7 @@ public final class Profiler {
          */
         public Section next(String name) {
             this.end();
-            return Profiler.this.begin(name);
+            return this;
         }
 
         /**
@@ -296,13 +301,65 @@ public final class Profiler {
             return this.name;
         }
         
+        /**
+         * Internal accessor for markedTime from LiveSection, used by
+         * ResultSection 
+         */
+        protected long getMarkedTime() {
+            return 0L;
+        }
+        
+        /**
+         * Internal accessor for markedCount from LiveSection, used by
+         * ResultSection 
+         */
+        protected int getMarkedCount() {
+            return 0;
+        }
+        
+    }
+    
+    /**
+     * Section used when the profiler is not active
+     */
+    class DisabledSection extends Section {
+
+        DisabledSection(String name) {
+            super(name);
+        }
+        
+        /**
+         * Stop timing of this section and end it (pop from profiler stack)
+         * 
+         * @return fluent
+         */
+        @Override
+        public Section end() {
+            if (!this.invalidated) {
+                Profiler.this.end(this);
+            }
+            return this;
+        }
+        
+        /**
+         * Stop timing of this section and start a new section at the same level
+         * 
+         * @param name name of the next section
+         * @return new section
+         */
+        @Override
+        public Section next(String name) {
+            this.end();
+            return Profiler.this.begin(name);
+        }
+        
     }
     
     /**
      * Live profiler section. Actually records timings for when the profiler is
      * active.
      */
-    class LiveSection extends Section {
+    class LiveSection extends DisabledSection {
 
         /**
          * Cursor points at the current active time slice. The current time
@@ -335,6 +392,11 @@ public final class Profiler {
             this.cursor = cursor;
         }
         
+        @Override
+        protected int getCursor() {
+            return this.cursor;
+        }
+
         @Override
         Section start() {
             this.start = System.currentTimeMillis();
@@ -420,6 +482,16 @@ public final class Profiler {
         public double getTotalAverageTime() {
             return this.count > 0 ? (double)(this.time + this.markedTime) / (this.count + this.markedCount) : 0.0D;
         }
+        
+        @Override
+        protected long getMarkedTime() {
+            return this.markedTime;
+        }
+        
+        @Override
+        protected int getMarkedCount() {
+            return this.markedCount;
+        }
 
     }
     
@@ -489,6 +561,144 @@ public final class Profiler {
     }
     
     /**
+     * A result section is an aggregate of all sections with the same name from
+     * all profilers, used when printing a global summary
+     */
+    static class ResultSection extends Section {
+        
+        /**
+         * Sections to summarise
+         */
+        private List<Section> sections = new ArrayList<Section>();
+
+        ResultSection(String name) {
+            super(name);
+        }
+        
+        void add(Section section) {
+            this.sections.add(section);
+        }
+        
+        @Override
+        public long getTime() {
+            long time = 0L;
+            for (Section section : this.sections) {
+                time += section.getTime();
+            }
+            return time;
+        }
+        
+        @Override
+        public long getTotalTime() {
+            long totalTime = 0L;
+            for (Section section : this.sections) {
+                totalTime += section.getTotalTime();
+            }
+            return totalTime;
+        }
+        
+        @Override
+        public double getSeconds() {
+            double seconds = 0.0D;
+            for (Section section : this.sections) {
+                seconds += section.getSeconds();
+            }
+            return seconds;
+        }
+        
+        @Override
+        public double getTotalSeconds() {
+            double totalSeconds = 0.0D;
+            for (Section section : this.sections) {
+                totalSeconds += section.getTotalSeconds();
+            }
+            return totalSeconds;
+        }
+        
+        @Override
+        public long[] getTimes() {
+            int cursor = 0;
+            for (Section section : this.sections) {
+                cursor = Math.max(cursor, section.getCursor());
+            }
+            
+            long[] times = new long[cursor + 1];
+            for (Section section : this.sections) {
+                long[] sectionTimes = section.getTimes();
+                for (int i = 0; i < sectionTimes.length; i++) {
+                    times[i] += sectionTimes[i];
+                }
+            }
+            
+            return times;
+        }
+        
+        @Override
+        public int getCount() {
+            int count = 0;
+            for (Section section : this.sections) {
+                count += section.getCount();
+            }
+            return count;
+        }
+        
+        @Override
+        public int getTotalCount() {
+            int totalCount = 0;
+            for (Section section : this.sections) {
+                totalCount += section.getTotalCount();
+            }
+            return totalCount;
+        }
+        
+        @Override
+        protected long getMarkedTime() {
+            long markedTime = 0L;
+            for (Section section : this.sections) {
+                markedTime += section.getMarkedTime();
+            }
+            return markedTime;
+        }
+        
+        @Override
+        protected int getMarkedCount() {
+            int markedCount = 0;
+            for (Section section : this.sections) {
+                markedCount += section.getMarkedCount();
+            }
+            return markedCount;
+        }
+
+        @Override
+        public double getAverageTime() {
+            int count = this.getCount();
+            return count > 0 ? (double)(this.getTime()) / count : 0.0D;
+        }
+        
+        @Override
+        public double getTotalAverageTime() {
+            int count = this.getCount();
+            return count > 0 ? (double)(this.getTime() + this.getMarkedTime()) / (count + this.getMarkedCount()) : 0.0D;
+        }
+        
+    }
+    
+    /**
+     * All Profiler instances
+     */
+    private static final Map<String, Profiler> profilers = new HashMap<String, Profiler>();
+
+    /**
+     * True when profilers are active
+     */
+    private static boolean active;
+    
+    /**
+     * Profiler id 
+     */
+    private final String id;
+    
+    /**
      * All profiler sections
      */
     private final Map<String, Section> sections = new TreeMap<String, Profiler.Section>();
@@ -503,32 +713,29 @@ public final class Profiler {
      */
     private final Deque<Section> stack = new LinkedList<Section>();
     
-    /**
-     * True when profiler is active
-     */
-    private boolean active;
-    
-    public Profiler() {
+    public Profiler(String id) {
+        this.id = id;
         this.phases.add("Initial");
+    }
+    
+    @Override
+    public String toString() {
+        return this.id;
     }
 
     /**
-     * Set the active state of the profiler. When activating the profiler is
-     * always reset.
+     * Set the active state of the profiler.
      * 
      * @param active new active state
      */
-    public void setActive(boolean active) {
-        if ((!this.active && active) || !active) {
-            this.reset();
-        }
-        this.active = active;
+    public static void setActive(boolean active) {
+        Profiler.active = active;
     }
     
     /**
      * Reset all profiler state
      */
-    public void reset() {
+    public synchronized void reset() {
         for (Section section : this.sections.values()) {
             section.invalidate();
         }
@@ -545,17 +752,16 @@ public final class Profiler {
      * @param name section name
      * @return profiler section
      */
-    public Section get(String name) {
+    public synchronized Section get(String name) {
         Section section = this.sections.get(name);
         if (section == null) {
-            section = this.active ? new LiveSection(name, this.phases.size() - 1) : new Section(name);
+            section = Profiler.active ? new LiveSection(name, this.phases.size() - 1) : new DisabledSection(name);
             this.sections.put(name, section);
         }
-        
         return section;
     }
     
-    private Section getSubSection(String name, String baseName, Section root) {
+    private synchronized Section getSubSection(String name, String baseName, Section root) {
         Section section = this.sections.get(name);
         if (section == null) {
             section = new SubSection(name, this.phases.size() - 1, baseName, root);
@@ -607,7 +813,7 @@ public final class Profiler {
      * @param name section name
      * @return new profiler section
      */
-    public Section begin(int flags, String name) {
+    public synchronized Section begin(int flags, String name) {
         boolean root = (flags & Profiler.ROOT) != 0;
         boolean fine = (flags & Profiler.FINE) != 0;
         
@@ -623,7 +829,7 @@ public final class Profiler {
         }
         
         Section section = this.get(root ? name : path);
-        if (root && head != null && this.active) {
+        if (root && head != null && Profiler.active) {
             section = this.getSubSection(path, head.getName(), section);
         }
         
@@ -639,10 +845,10 @@ public final class Profiler {
      * 
      * @param section section ending
      */
-    void end(Section section) {
+    synchronized void end(Section section) {
         try {
             for (Section head = this.stack.pop(), next = head; next != section; next = this.stack.pop()) {
-                if (next == null && this.active) {
+                if (next == null && Profiler.active) {
                     if (head == null) {
                         throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
                     }
@@ -650,7 +856,7 @@ public final class Profiler {
                 }
             }
         } catch (NoSuchElementException ex) {
-            if (this.active) {
+            if (Profiler.active) {
                 throw new IllegalStateException("Attempted to pop " + section + " but the stack is empty");
             }
         }
@@ -663,7 +869,7 @@ public final class Profiler {
      * 
      * @param phase Name of the phase
      */
-    public void mark(String phase) {
+    public synchronized void mark(String phase) {
         long currentPhaseTime = 0L;
         for (Section section : this.sections.values()) {
             currentPhaseTime += section.getTime();
@@ -685,7 +891,7 @@ public final class Profiler {
     /**
      * Get all recorded profiler sections
      */
-    public Collection<Section> getSections() {
+    public synchronized Collection<Section> getSections() {
         return Collections.<Section>unmodifiableCollection(this.sections.values());
     }
 
@@ -698,10 +904,14 @@ public final class Profiler {
      * @return PrettyPrinter with section data
      */
     public PrettyPrinter printer(boolean includeFine, boolean group) {
+        return Profiler.printer(includeFine, group, this.phases, this.sections);
+    }
+    
+    private static PrettyPrinter printer(boolean includeFine, boolean group, List<String> phases, Map<String, Section> sections) {
         PrettyPrinter printer = new PrettyPrinter();
         
         // 4 extra columns, name, total, count, avg
-        int colCount = this.phases.size() + 4;
+        int colCount = phases.size() + 4;
         
         //                Which columns go where
         //                Name  Total  Phases  Count         Average
@@ -720,8 +930,8 @@ public final class Profiler {
                 headers[pos] = "    Count";
             } else if (col == columns[4]) {
                 headers[pos] = "Avg. ";
-            } else if (col - columns[2] < this.phases.size()) {
-                headers[pos] = this.phases.get(col - columns[2]);
+            } else if (col - columns[2] < phases.size()) {
+                headers[pos] = phases.get(col - columns[2]);
             } else {
                 headers[pos] = "";
             }
@@ -729,23 +939,23 @@ public final class Profiler {
         
         printer.table(headers).th().hr().add();
         
-        for (Section section : this.sections.values()) {
+        for (Section section : sections.values()) {
             if ((section.isFine() && !includeFine) || (group && section.getDelegate() != section)) {
                 continue;
             }
 
             // Add row for this section
-            this.printSectionRow(printer, colCount, columns, section, group);
+            Profiler.printSectionRow(printer, colCount, columns, section, group);
             
             // If grouping, print sections which have this section as delegate
             if (group) {
-                for (Section subSection : this.sections.values()) {
+                for (Section subSection : sections.values()) {
                     Section delegate = subSection.getDelegate();
                     if ((subSection.isFine() && !includeFine) || delegate != section || delegate == subSection) {
                         continue;
                     }
                     
-                    this.printSectionRow(printer, colCount, columns, subSection, group);
+                    Profiler.printSectionRow(printer, colCount, columns, subSection, group);
                 }   
             }
         }
@@ -753,7 +963,7 @@ public final class Profiler {
         return printer.add();
     }
 
-    private void printSectionRow(PrettyPrinter printer, int colCount, int[] columns, Section section, boolean group) {
+    private static void printSectionRow(PrettyPrinter printer, int colCount, int[] columns, Section section, boolean group) {
         boolean isDelegate = section.getDelegate() != section;
         Object[] values = new Object[colCount];
         int col = 1;
@@ -786,23 +996,67 @@ public final class Profiler {
     }
 
     /**
-     * Print summary of mixin performance to the console
+     * Print summary of this profiler's recorded performance to the console
      */
     public void printSummary() {
+        Profiler.printSummary(this.id, this.phases, this.sections);
+    }
+
+    /**
+     * Print summary of mixin performance from all active profilers to the
+     * console
+     */
+    public static void printAuditSummary() {
+        String id;
+        Set<String> allPhases; 
+        Map<String, Section> allSections;
+
+        // Collect sections from all profilers into ResultSections
+        synchronized (Profiler.profilers) {
+            id = Joiner.on(',').join(Profiler.profilers.values());
+            allPhases = new LinkedHashSet<String>();
+            allSections = new TreeMap<String, Section>() {
+
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public Section get(Object name) {
+                    Section section = super.get(name);
+                    if (section == null) {
+                        this.put(name.toString(), section = new ResultSection(name.toString()));
+                    }
+                    return section;
+                }
+            };
+            for (Profiler profiler : Profiler.profilers.values()) {
+                for (String phase : profiler.phases) {
+                    allPhases.add(phase);
+                }
+
+                for (Entry<String, Section> section : profiler.sections.entrySet()) {
+                    ((ResultSection)allSections.get(section.getKey())).add(section.getValue());
+                }
+            }
+        }
+        
+        Profiler.printSummary(id, new ArrayList<String>(allPhases), allSections);
+    }
+    
+    private static void printSummary(String id, List<String> phases, Map<String, Section> sections) {
         
         DecimalFormat threedp = new DecimalFormat("(###0.000");
         DecimalFormat onedp = new DecimalFormat("(###0.0");
-        PrettyPrinter printer = this.printer(false, false);
+        PrettyPrinter printer = Profiler.printer(false, false, phases, sections);
         
-        long prepareTime = this.get("mixin.prepare").getTotalTime();
-        long readTime = this.get("mixin.read").getTotalTime();
-        long applyTime = this.get("mixin.apply").getTotalTime();
-        long writeTime = this.get("mixin.write").getTotalTime();
-        long totalMixinTime = this.get("mixin").getTotalTime();
+        long prepareTime = sections.get("mixin.prepare").getTotalTime();
+        long readTime = sections.get("mixin.read").getTotalTime();
+        long applyTime = sections.get("mixin.apply").getTotalTime();
+        long writeTime = sections.get("mixin.write").getTotalTime();
+        long totalMixinTime = sections.get("mixin").getTotalTime();
         
-        long loadTime = this.get("class.load").getTotalTime();
-        long transformTime = this.get("class.transform").getTotalTime();
-        long exportTime = this.get("mixin.debug.export").getTotalTime();
+        long loadTime = sections.get("class.load").getTotalTime();
+        long transformTime = sections.get("class.transform").getTotalTime();
+        long exportTime = sections.get("mixin.debug.export").getTotalTime();
         long actualTime = totalMixinTime - loadTime - transformTime - exportTime;
         double timeSliceMixin = ((double)actualTime / (double)totalMixinTime) * 100.0D;
         double timeSliceLoad = ((double)loadTime / (double)totalMixinTime) * 100.0D;
@@ -812,7 +1066,7 @@ public final class Profiler {
         long worstTransformerTime = 0L;
         Section worstTransformer = null;
         
-        for (Section section : this.getSections()) {
+        for (Section section : sections.values()) {
             long transformerTime = section.getName().startsWith("class.transform.") ? section.getTotalTime() : 0L;
             if (transformerTime > worstTransformerTime) {
                 worstTransformerTime = transformerTime;
@@ -820,7 +1074,7 @@ public final class Profiler {
             }
         }
         
-        printer.hr().add("Summary").hr().add();
+        printer.hr().add("Summary for Profiler[%s]", id).hr().add();
         
         String format = "%9d ms %12s seconds)";
         printer.kv("Total mixin time", format, totalMixinTime, threedp.format(totalMixinTime * 0.001)).add();
@@ -865,7 +1119,7 @@ public final class Profiler {
             for (Entry<String, Long> entry : times.entrySet()) {
                 String name = entry.getKey();
                 long mixinTime = 0L;
-                for (Section section : this.getSections()) {
+                for (Section section : sections.values()) {
                     if (name.equals(section.getInfo())) {
                         mixinTime = section.getTotalTime();
                         break;
@@ -886,6 +1140,35 @@ public final class Profiler {
         }
 
         printer.print();
+    }
+    
+    /**
+     * Get the specified performance profiler
+     * 
+     * @param id Profiler id
+     * @return profiler
+     */
+    public static Profiler getProfiler(String id) {
+        synchronized (Profiler.profilers) {
+            Profiler profiler = Profiler.profilers.get(id);
+            if (profiler == null) {
+                Profiler.profilers.put(id, profiler = new Profiler(id));
+            }
+            return profiler;
+        }
+    }
+    
+    /**
+     * Get all available performance profilers
+     * 
+     * @return immutable collection of profilers
+     */
+    public static Collection<Profiler> getProfilers() {
+        Builder<Profiler> list = ImmutableList.<Profiler>builder();
+        synchronized (Profiler.profilers) {
+            list.addAll(Profiler.profilers.values());
+        }
+        return list.build();
     }
     
 }

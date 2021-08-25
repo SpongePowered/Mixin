@@ -230,7 +230,7 @@ class MixinProcessor {
         this.coprocessors.add(new MixinCoprocessorAccessor(this.sessionId));
         this.coprocessors.add(nestHostCoprocessor);
         
-        this.profiler = MixinEnvironment.getProfiler();
+        this.profiler = Profiler.getProfiler("mixin");
         this.auditTrail = this.service.getAuditTrail();
     }
 
@@ -265,7 +265,7 @@ class MixinProcessor {
         }
         
         if (environment.getOption(Option.DEBUG_PROFILER)) {
-            this.profiler.printSummary();
+            Profiler.printAuditSummary();
         }
     }
 
@@ -453,7 +453,7 @@ class MixinProcessor {
         String action = this.currentEnvironment == environment ? "Checking for additional" : "Preparing";
         MixinProcessor.logger.log(this.verboseLoggingLevel, "{} mixins for {}", action, environment);
         
-        this.profiler.setActive(true);
+        Profiler.setActive(true);
         this.profiler.mark(environment.getPhase().toString() + ":prepare");
         Section prepareTimer = this.profiler.begin("prepare");
         
@@ -479,7 +479,7 @@ class MixinProcessor {
         }
 
         this.profiler.mark(environment.getPhase().toString() + ":apply");
-        this.profiler.setActive(environment.getOption(Option.DEBUG_PROFILER));
+        Profiler.setActive(environment.getOption(Option.DEBUG_PROFILER));
     }
 
     /**
