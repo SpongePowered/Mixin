@@ -1147,7 +1147,7 @@ public class PrettyPrinter {
 
     private void logString(ILogger logger, Level level, String line) {
         if (line != null) {
-            logger.log(level, "/* {} */", String.format("%-" + this.width, line));
+            logger.log(level, "/* {} */", String.format("%-" + this.width + "s", line));
         }
     }
     

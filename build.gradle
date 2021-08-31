@@ -44,6 +44,7 @@ ext.legacyForgeAsmVersion = project.hasProperty("legacyForgeAsmVersion") ? asmVe
 ext.doSignJar = project.hasProperty("keyStorePath")
 
 java {
+    modularity.inferModulePath = false
     toolchain.languageVersion = JavaLanguageVersion.of(ciSystem == 'unknown' ? 16 : 8)
 }
 
@@ -97,6 +98,7 @@ sourceSets {
         compileClasspath += main.output
         ext.languageVersion = 8
         ext.compatibility = '1.6'
+        ext.modularityExcluded = true
     }
     agent {
         compileClasspath += main.output
@@ -107,10 +109,15 @@ sourceSets {
         compileClasspath += main.output
         ext.languageVersion = 8
         ext.compatibility = '1.8'
+        ext.modularityExcluded = true
     }
     example {
         compileClasspath += main.output
         compileClasspath += ap.output
+        ext.modularityExcluded = true
+    }
+    test {
+        ext.modularityExcluded = true
     }
     launchwrapper {
         compileClasspath += main.output
@@ -135,14 +142,7 @@ sourceSets {
     }
     modularity {
         ext.languageVersion = 16
-        java.srcDirs += [
-            sourceSets.legacy.java.srcDirs,
-            sourceSets.main.java.srcDirs,
-            sourceSets.ap.java.srcDirs,
-            sourceSets.agent.java.srcDirs,
-            sourceSets.modlauncher.java.srcDirs,
-            sourceSets.modlauncher9.java.srcDirs
-        ]
+        ext.modularityExcluded = true // don't add ourselves
     }
 }
 
@@ -203,14 +203,6 @@ dependencies {
     legacyImplementation "org.ow2.asm:asm-tree:$asmVersion"
     
     modularityCompileOnly 'org.apache.logging.log4j:log4j-core:2.11.2'
-}
-
-compileModularityJava {
-    doFirst {
-        options.compilerArgs = [
-            '--module-path', classpath.asPath
-        ]
-    }
 }
 
 javadoc {
@@ -285,7 +277,6 @@ checkstyle {
     ]
     configFile = file("checkstyle.xml")
     toolVersion = '8.43'
-    sourceSets -= project.sourceSets['modularity']
 }
 
 // Source compiler configuration
@@ -294,6 +285,8 @@ tasks.withType(JavaCompile) {
     options.deprecation = true
     options.encoding = 'utf8'
 }
+
+def modularityInputs = objects.fileCollection()
 
 project.sourceSets.each { set -> {
     if (set.ext.has("languageVersion")) {
@@ -305,7 +298,24 @@ project.sourceSets.each { set -> {
         project.tasks[set.compileJavaTaskName].sourceCompatibility = set.ext.compatibility
         project.tasks[set.compileJavaTaskName].targetCompatibility = set.ext.compatibility
     }
+    def modularityExcluded = set.ext.has("modularityExcluded") && set.ext.modularityExcluded
+    if (!modularityExcluded) {
+        project.sourceSets.modularity {
+            compileClasspath += set.output
+        }
+        modularityInputs.from set.output
+    }
 }}
+
+compileModularityJava {
+    inputs.files(modularityInputs)
+    doFirst {
+        options.compilerArgs = [
+            '--module-path', classpath.asPath,
+            '--patch-module', "org.spongepowered.mixin=${modularityInputs.collect { it.absolutePath }.join(File.pathSeparator)}"
+        ]
+    }
+}
 
 if (JavaVersion.current().isJava8Compatible()) {
     tasks.withType(Javadoc) {
@@ -318,8 +328,6 @@ task stagingJar(type: ShadowJar) {
     sourceSets.findAll { !(it.name =~ /example|test/) }.each {
         from it.output
     }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
     configurations = [project.configurations.stagingJar]
     
     // JAR manifest configuration
