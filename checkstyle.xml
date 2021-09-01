@@ -11,6 +11,9 @@
 <module name="Checker">
   <property name="severity" value="warning"/>
   <property name="charset" value="UTF-8"/>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="module\-info\.java$"/>
+  </module>
   <module name="TreeWalker">
     <module name="OuterTypeFilename"/>
     <module name="IllegalTokenText">
