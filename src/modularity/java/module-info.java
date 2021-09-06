@@ -26,18 +26,14 @@
 /**
  * Mixin module declaration
  */
-@SuppressWarnings("module") // Suppress the warnings about gson and gson below
+@SuppressWarnings("module") // Suppress the warnings about gson and gson below. Damn gsons, you ruined gson!
 module org.spongepowered.mixin {
 
     //
     // Actual modules we depend on
     //
-    requires transitive cpw.mods.modlauncher;
-    requires cpw.mods.securejarhandler;
     requires transitive java.compiler;
     requires transitive java.instrument;
-    requires transitive org.apache.logging.log4j;
-    requires org.apache.logging.log4j.core;
     requires transitive org.objectweb.asm;
     requires transitive org.objectweb.asm.commons;
     requires transitive org.objectweb.asm.tree;
@@ -46,11 +42,19 @@ module org.spongepowered.mixin {
     requires java.logging;
     
     //
-    // Automatic modules we depend on
+    // Modules we require for compilation but don't necessarily need at runtime
     //
-    requires jopt.simple;
-    requires guava;
-    requires gson;
+    requires static org.apache.logging.log4j.core;
+    requires static transitive cpw.mods.modlauncher;
+    requires static cpw.mods.securejarhandler;
+    requires static transitive org.apache.logging.log4j;
+    
+    //
+    // Automatic modules we depend on, using static to avoid the forward compatibility mess
+    //
+    requires static jopt.simple;
+    requires static guava;
+    requires static gson;
 
     //
     // Exports
