@@ -626,7 +626,7 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             boolean isSupported() {
-                return JavaVersion.current() >= JavaVersion.JAVA_8 && ASM.isAtLeastVersion(6);
+                return JavaVersion.current() >= JavaVersion.JAVA_9 && ASM.isAtLeastVersion(6);
             }
             
         },
