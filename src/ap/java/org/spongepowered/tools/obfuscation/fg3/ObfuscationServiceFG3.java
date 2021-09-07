@@ -52,6 +52,7 @@ public class ObfuscationServiceFG3 implements IObfuscationService {
     public Set<String> getSupportedOptions() {
         return ImmutableSet.<String>of(
             ObfuscationServiceFG3.REOBF_TSRG_FILE,        
+            ObfuscationServiceFG3.REOBF_EXTRA_TSRG_FILES,
             ObfuscationServiceFG3.OUT_TSRG_SRG_FILE,        
             ObfuscationServiceFG3.TSRG_OUTPUT_BEHAVIOUR
         );
