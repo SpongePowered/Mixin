@@ -1374,7 +1374,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
         }
         
         this.parent.postApply(transformedName, targetClass);
-        this.info.addAppliedMixin(this);
+        ClassInfo.fromClassNode(targetClass).addAppliedMixin(this);
     }
     
     /* (non-Javadoc)
