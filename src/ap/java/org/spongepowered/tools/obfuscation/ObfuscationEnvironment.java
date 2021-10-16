@@ -47,6 +47,7 @@ import org.spongepowered.tools.obfuscation.mapping.IMappingWriter;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer.MappingSet;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationEnvironment;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 
 /**
@@ -153,7 +154,7 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
                 File inputFile = new File(inputFileName);
                 try {
                     if (inputFile.isFile()) {
-                        this.ap.printMessage(Kind.NOTE, "Loading " + this.type + " mappings from " + inputFile.getAbsolutePath());
+                        this.ap.printMessage(MessageType.INFO, "Loading " + this.type + " mappings from " + inputFile.getAbsolutePath());
                         this.mappingProvider.read(inputFile);
                         successCount++;
                     }

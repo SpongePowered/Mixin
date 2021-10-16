@@ -33,13 +33,13 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Implements;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 
@@ -99,7 +99,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Shadow.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
+                this.mixins.printMessage(MessageType.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
@@ -110,7 +110,7 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
             } else if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerShadow((TypeElement)parent, (ExecutableElement)elem, shadow);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method or field",  elem);
+                this.mixins.printMessage(MessageType.SHADOW_ON_INVALID_ELEMENT, "Element is not a method or field",  elem);
             }
         }
     }
@@ -123,14 +123,14 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Overwrite.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
+                this.mixins.printMessage(MessageType.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerOverwrite((TypeElement)parent, (ExecutableElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+                this.mixins.printMessage(MessageType.OVERWRITE_ON_NON_METHOD_ELEMENT, "Element is not a method",  elem);
             }
         }
     }
@@ -143,14 +143,14 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Accessor.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
+                this.mixins.printMessage(MessageType.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerAccessor((TypeElement)parent, (ExecutableElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+                this.mixins.printMessage(MessageType.ACCESSOR_ON_NON_METHOD_ELEMENT, "Element is not a method",  elem);
             }
         }
     }
@@ -163,14 +163,14 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
         for (Element elem : roundEnv.getElementsAnnotatedWith(Invoker.class)) {
             Element parent = elem.getEnclosingElement();
             if (!(parent instanceof TypeElement)) {
-                this.mixins.printMessage(Kind.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
+                this.mixins.printMessage(MessageType.ERROR, "Unexpected parent with type " + TypeUtils.getElementType(parent), elem);
                 continue;
             }
             
             if (elem.getKind() == ElementKind.METHOD) {
                 this.mixins.registerInvoker((TypeElement)parent, (ExecutableElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Element is not a method",  elem);
+                this.mixins.printMessage(MessageType.ACCESSOR_ON_NON_METHOD_ELEMENT, "Element is not a method",  elem);
             }
         }
     }
@@ -185,7 +185,8 @@ public class MixinObfuscationProcessorTargets extends MixinObfuscationProcessor 
                 AnnotationHandle implementsAnnotation = AnnotationHandle.of(elem, Implements.class);
                 this.mixins.registerSoftImplements((TypeElement)elem, implementsAnnotation);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Found an @Implements annotation on an element which is not a class or interface", elem);
+                this.mixins.printMessage(MessageType.SOFT_IMPLEMENTS_ON_INVALID_TYPE,
+                        "Found an @Implements annotation on an element which is not a class or interface", elem);
             }
         }
     }

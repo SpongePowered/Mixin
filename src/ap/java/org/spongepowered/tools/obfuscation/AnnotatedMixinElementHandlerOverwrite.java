@@ -28,10 +28,10 @@ import java.lang.reflect.Method;
 import java.util.Locale;
 
 import javax.lang.model.element.ExecutableElement;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
@@ -81,21 +81,18 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
         }
         
         if (!"true".equalsIgnoreCase(this.ap.getOption(SupportedOptions.DISABLE_OVERWRITE_CHECKER))) {
-            Kind overwriteErrorKind = "error".equalsIgnoreCase(this.ap.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))
-                    ? Kind.ERROR : Kind.WARNING;
-            
             String javadoc = this.ap.getJavadocProvider().getJavadoc(elem.getElement());
             if (javadoc == null) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing javadoc comment", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(MessageType.OVERWRITE_DOCS, "@Overwrite is missing javadoc comment", elem.getElement(), SuppressedBy.OVERWRITE);
                 return;
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@author")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @author tag", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(MessageType.OVERWRITE_DOCS, "@Overwrite is missing an @author tag", elem.getElement(), SuppressedBy.OVERWRITE);
             }
             
             if (!javadoc.toLowerCase(Locale.ROOT).contains("@reason")) {
-                this.ap.printMessage(overwriteErrorKind, "@Overwrite is missing an @reason tag", elem.getElement(), SuppressedBy.OVERWRITE);
+                this.ap.printMessage(MessageType.OVERWRITE_DOCS, "@Overwrite is missing an @reason tag", elem.getElement(), SuppressedBy.OVERWRITE);
             }
         }
     }
@@ -105,27 +102,27 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod);
         
         if (obfData.isEmpty()) {
-            Kind error = Kind.ERROR;
+            MessageType messageType = MessageType.NO_OBFDATA_FOR_OVERWRITE;
             
             try {
                 // Try to access isStatic from com.sun.tools.javac.code.Symbol
                 Method md = elem.getElement().getClass().getMethod("isStatic");
                 if (((Boolean)md.invoke(elem.getElement())).booleanValue()) {
-                    error = Kind.WARNING;
+                    messageType = MessageType.NO_OBFDATA_FOR_STATIC_OVERWRITE;
                 }
             } catch (Exception ex) {
                 // well, we tried
             }
             
-            this.ap.printMessage(error, "No obfuscation mapping for @Overwrite method", elem.getElement());
+            this.ap.printMessage(messageType, "Unable to locate obfuscation mapping for @Overwrite method", elem.getElement());
             return false;
         }
 
         try {
             this.addMethodMappings(elem.getSimpleName(), elem.getDesc(), obfData);
         } catch (MappingConflictException ex) {
-            elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Overwrite method: " + ex.getNew().getSimpleName() + " for target " + target 
-                    + " conflicts with existing mapping " + ex.getOld().getSimpleName());
+            elem.printMessage(this.ap, MessageType.OVERWRITE_MAPPING_CONFLICT, "Mapping conflict for @Overwrite method: "
+                    + ex.getNew().getSimpleName() + " for target " + target + " conflicts with existing mapping " + ex.getOld().getSimpleName());
             return false;
         }
         return true;

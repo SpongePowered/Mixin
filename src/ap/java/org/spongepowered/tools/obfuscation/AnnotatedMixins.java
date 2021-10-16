@@ -138,30 +138,25 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * configured via the build script (eg. when using AP with MCP)
      */
     private Properties properties;
-    
-    /**
-     * No informational messages, I'm hunting wabbits
-     */
-    private boolean beVewyVewyQuiet;
 
     /**
      * Private constructor, get instances using {@link #getMixinsForEnvironment}
      */
     private AnnotatedMixins(ProcessingEnvironment processingEnv) {
-        this.env = this.detectEnvironment(processingEnv);
+        this.env = CompilerEnvironment.detect(processingEnv);
         this.processingEnv = processingEnv;
-        this.beVewyVewyQuiet = this.env == CompilerEnvironment.JDT || "true".equalsIgnoreCase(this.getOption(SupportedOptions.QUIET));
-        
+
+        MessageType.applyOptions(this.env, this);
         MessageRouter.setMessager(processingEnv.getMessager());
 
         String pluginVersion = this.checkPluginVersion(this.getOption(SupportedOptions.PLUGIN_VERSION));
         String pluginVersionString = pluginVersion != null ? String.format(" (MixinGradle Version=%s)", pluginVersion) : "";
-        this.printMessage(Kind.NOTE, "SpongePowered MIXIN Annotation Processor Version=" + MixinBootstrap.VERSION + pluginVersionString);
+        this.printMessage(MessageType.INFO, "SpongePowered MIXIN Annotation Processor Version=" + MixinBootstrap.VERSION + pluginVersionString);
 
         this.targets = this.initTargetMap();
         this.obf = new ObfuscationManager(this);
         this.obf.init();
-
+        
         this.validators = ImmutableList.<IMixinValidator>of(
             new ParentValidator(this),
             new TargetValidator(this)
@@ -246,7 +241,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public CompilerEnvironment getCompilerEnvironment() {
         return this.env;
     }
-
+    
     @Override
     public Integer getToken(String token) {
         if (this.tokenCache.containsKey(token)) {
@@ -321,14 +316,6 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         }
 
         return this.properties;
-    }
-
-    private CompilerEnvironment detectEnvironment(ProcessingEnvironment processingEnv) {
-        if (processingEnv.getClass().getName().contains("jdt")) {
-            return CompilerEnvironment.JDT;
-        }
-
-        return CompilerEnvironment.JAVAC;
     }
 
     /**
@@ -407,7 +394,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerAccessor(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Accessor annotation on a non-mixin method", method);
+            this.printMessage(MessageType.ACCESSOR_ON_NON_MIXIN_METHOD, "Found @Accessor annotation on a non-mixin method", method);
             return;
         }
 
@@ -424,7 +411,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerInvoker(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Accessor annotation on a non-mixin method", method);
+            this.printMessage(MessageType.ACCESSOR_ON_NON_MIXIN_METHOD, "Found @Invoker annotation on a non-mixin method", method);
             return;
         }
 
@@ -441,7 +428,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerOverwrite(TypeElement mixinType, ExecutableElement method) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Overwrite annotation on a non-mixin method", method);
+            this.printMessage(MessageType.OVERWRITE_ON_NON_MIXIN_METHOD, "Found @Overwrite annotation on a non-mixin method", method);
             return;
         }
 
@@ -459,7 +446,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerShadow(TypeElement mixinType, VariableElement field, AnnotationHandle shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin field", field);
+            this.printMessage(MessageType.SHADOW_ON_NON_MIXIN_ELEMENT, "Found @Shadow annotation on a non-mixin field", field);
             return;
         }
 
@@ -476,7 +463,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerShadow(TypeElement mixinType, ExecutableElement method, AnnotationHandle shadow) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Shadow annotation on a non-mixin method", method);
+            this.printMessage(MessageType.SHADOW_ON_NON_MIXIN_ELEMENT, "Found @Shadow annotation on a non-mixin method", method);
             return;
         }
 
@@ -494,7 +481,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerInjector(TypeElement mixinType, ExecutableElement method, AnnotationHandle inject) {
         AnnotatedMixin mixinClass = this.getMixin(mixinType);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found " + inject + " annotation on a non-mixin method", method);
+            this.printMessage(MessageType.INJECTOR_ON_NON_MIXIN_METHOD, "Found " + inject + " annotation on a non-mixin method", method);
             return;
         }
 
@@ -514,7 +501,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     public void registerSoftImplements(TypeElement mixin, AnnotationHandle implementsAnnotation) {
         AnnotatedMixin mixinClass = this.getMixin(mixin);
         if (mixinClass == null) {
-            this.printMessage(Kind.ERROR, "Found @Implements annotation on a non-mixin class");
+            this.printMessage(MessageType.SOFT_IMPLEMENTS_ON_NON_MIXIN, "Found @Implements annotation on a non-mixin class");
             return;
         }
 
@@ -560,9 +547,27 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
+    public void printMessage(MessageType type, CharSequence msg) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg));
+        }
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
     public void printMessage(Kind kind, CharSequence msg) {
-        if (!this.beVewyVewyQuiet || kind != Kind.NOTE) {
-            this.processingEnv.getMessager().printMessage(kind, msg);
+        this.processingEnv.getMessager().printMessage(kind, msg);
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element);
         }
     }
 
@@ -572,6 +577,16 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
     @Override
     public void printMessage(Kind kind, CharSequence msg, Element element) {
         this.processingEnv.getMessager().printMessage(kind, msg, element);
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element, SuppressedBy suppressedBy) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element, suppressedBy);
+        }
     }
     
     /**
@@ -588,8 +603,28 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element, annotation);
+        }
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
     public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation) {
         this.processingEnv.getMessager().printMessage(kind, msg, element, annotation);
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation, SuppressedBy suppressedBy) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element, annotation, suppressedBy);
+        }
     }
 
     /**
@@ -606,8 +641,29 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
      * Print a message to the AP messager
      */
     @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element, annotation, value);
+        }
+    }
+    
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
     public void printMessage(Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
         this.processingEnv.getMessager().printMessage(kind, msg, element, annotation, value);
+    }
+
+    /**
+     * Print a message to the AP messager
+     */
+    @Override
+    public void printMessage(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value,
+            SuppressedBy suppressedBy) {
+        if (type.isEnabled()) {
+            this.printMessage(type.getKind(), type.decorate(msg), element, annotation, value, suppressedBy);
+        }
     }
 
     /**

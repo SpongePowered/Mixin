@@ -28,7 +28,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo.AccessorName;
@@ -40,6 +39,7 @@ import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.tools.obfuscation.ReferenceManager.ReferenceConflictException;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
@@ -207,13 +207,13 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
      */
     public void registerAccessor(AnnotatedElementAccessor elem) {
         if (elem.getAccessorType() == null) {
-            elem.printMessage(this.ap, Kind.WARNING, "Unsupported accessor type");
+            elem.printMessage(this.ap, MessageType.ACCESSOR_TYPE_UNSUPPORTED, "Unsupported accessor type");
             return;
         }
 
         String targetName = this.getAccessorTargetName(elem);
         if (targetName == null) {
-            elem.printMessage(this.ap, Kind.WARNING, "Cannot inflect accessor target name");
+            elem.printMessage(this.ap, MessageType.ACCESSOR_NAME_UNRESOLVED, "Cannot inflect accessor target name");
             return;
         }
         elem.setTargetName(targetName);
@@ -222,7 +222,7 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
             try {
                 elem.attach(target);
             } catch (Exception ex) {
-                elem.printMessage(this.ap, Kind.ERROR, ex.getMessage());
+                elem.printMessage(this.ap, MessageType.ACCESSOR_ATTACH_ERROR, ex.getMessage());
                 continue;
             }
             if (elem.getAccessorType() == AccessorType.OBJECT_FACTORY) {
@@ -239,7 +239,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         FieldHandle targetField = target.findField(elem.getTargetName(), elem.getTargetTypeName(), false);
         if (targetField == null) {
             if (!target.isImaginary()) {
-                elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Accessor target " + elem + " in target " + target);
+                elem.printMessage(this.ap, MessageType.ACCESSOR_TARGET_NOT_FOUND,
+                        "Could not locate @Accessor target " + elem + " in target " + target);
                 return;
             }
             
@@ -253,7 +254,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         ObfuscationData<MappingField> obfData = this.obf.getDataProvider().getObfField(targetField.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
-            elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
+            elem.printMessage(this.ap, MessageType.NO_OBFDATA_FOR_ACCESSOR,
+                    "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
             return;
         }
 
@@ -262,8 +264,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         try {
             this.obf.getReferenceManager().addFieldMapping(this.mixin.getClassRef(), elem.getTargetName(), elem.getContext(), obfData);
         } catch (ReferenceConflictException ex) {
-            elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Accessor target " + elem + ": " + ex.getNew() + " for target "
-                    + target + " conflicts with existing mapping " + ex.getOld());
+            elem.printMessage(this.ap, MessageType.ACCESSOR_MAPPING_CONFLICT, "Mapping conflict for @Accessor target " + elem + ": "
+                    + ex.getNew() + " for target " + target + " conflicts with existing mapping " + ex.getOld());
         }
     }
 
@@ -271,7 +273,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         MethodHandle targetMethod = target.findMethod(elem.getTargetName(), elem.getTargetTypeName(), false);
         if (targetMethod == null) {
             if (!target.isImaginary()) {
-                elem.printMessage(this.ap, Kind.ERROR, "Could not locate @Invoker target " + elem + " in target " + target);
+                elem.printMessage(this.ap, MessageType.ACCESSOR_TARGET_NOT_FOUND,
+                        "Could not locate @Invoker target " + elem + " in target " + target);
                 return;
             }
             
@@ -285,7 +288,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(targetMethod.asMapping(false).move(target.getName()));
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
-            elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
+            elem.printMessage(this.ap, MessageType.NO_OBFDATA_FOR_ACCESSOR,
+                    "Unable to locate obfuscation mapping" + info + " for @Accessor target " + elem);
             return;
         }
 
@@ -294,8 +298,8 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         try {
             this.obf.getReferenceManager().addMethodMapping(this.mixin.getClassRef(), elem.getTargetName(), elem.getContext(), obfData);
         } catch (ReferenceConflictException ex) {
-            elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Invoker target " + elem + ": " + ex.getNew() + " for target "
-                    + target + " conflicts with existing mapping " + ex.getOld());
+            elem.printMessage(this.ap, MessageType.ACCESSOR_MAPPING_CONFLICT, "Mapping conflict for @Invoker target " + elem + ": "
+                    + ex.getNew() + " for target " + target + " conflicts with existing mapping " + ex.getOld());
         }
     }
 
@@ -303,19 +307,19 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         EquivalencyResult equivalency = TypeUtils.isEquivalentType(this.ap.getProcessingEnvironment(), elem.getReturnType(), target.getType());
         if (equivalency.type != Equivalency.EQUIVALENT) {
             if (equivalency.type == Equivalency.EQUIVALENT_BUT_RAW && equivalency.rawType == 1) {
-                elem.printMessage(this.ap, Kind.WARNING, "Raw return type for Factory @Invoker", SuppressedBy.RAW_TYPES);
+                elem.printMessage(this.ap, MessageType.INVOKER_RAW_RETURN_TYPE, "Raw return type for Factory @Invoker", SuppressedBy.RAW_TYPES);
             } else if (equivalency.type == Equivalency.BOUNDS_MISMATCH) {
-                elem.printMessage(this.ap, Kind.ERROR, "Invalid Factory @Invoker return type, generic type arguments of " + target.getType()
-                        + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
+                elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_GENERIC_ARGS, "Invalid Factory @Invoker return type, generic type args of "
+                        + target.getType() + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
                 return;
             } else {
-                elem.printMessage(this.ap, Kind.ERROR, "Invalid Factory @Invoker return type, expected " + target.getType() + " but found "
-                        + elem.getReturnType());
+                elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_RETURN_TYPE, "Invalid Factory @Invoker return type, expected "
+                        + target.getType() + " but found " + elem.getReturnType());
                 return;
             }
         }
         if (!elem.isStatic()) {
-            elem.printMessage(this.ap, Kind.ERROR, "Factory @Invoker must be static");
+            elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_NONSTATIC, "Factory @Invoker must be static");
             return;
         }
 

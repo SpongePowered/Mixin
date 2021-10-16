@@ -29,11 +29,11 @@ import java.util.List;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Interface.Remap;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
@@ -68,7 +68,8 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
         
         // Derp?
         if (interfaces.size() < 1) {
-            this.ap.printMessage(Kind.WARNING, "Empty @Implements annotation", this.mixin.getMixinElement(), implementsAnnotation.asMirror());
+            this.ap.printMessage(MessageType.SOFT_IMPLEMENTS_EMPTY, "Empty @Implements annotation", this.mixin.getMixinElement(),
+                    implementsAnnotation.asMirror());
             return;
         }
         
@@ -83,7 +84,7 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
                 String prefix = interfaceAnnotation.<String>getValue("prefix");
                 this.processSoftImplements(remap, iface, prefix);
             } catch (Exception ex) {
-                this.ap.printMessage(Kind.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(),
+                this.ap.printMessage(MessageType.ERROR, "Unexpected error: " + ex.getClass().getName() + ": " + ex.getMessage(),
                         this.mixin.getMixinElement(), ((AnnotationHandle)interfaceAnnotation).asMirror());
             }
         }
@@ -154,7 +155,8 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
         ObfuscationData<MappingMethod> obfData = this.obf.getDataProvider().getObfMethod(mapping);
         if (obfData.isEmpty()) {
             if (remap.forceRemap()) {
-                this.ap.printMessage(Kind.ERROR, "No obfuscation mapping for soft-implementing method", method.getElement());
+                this.ap.printMessage(MessageType.NO_OBFDATA_FOR_SOFT_IMPLEMENTS, "No obfuscation mapping for soft-implementing method",
+                        method.getElement());
             }
             return;
         }

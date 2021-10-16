@@ -26,9 +26,9 @@ package org.spongepowered.tools.obfuscation.struct;
 
 import javax.annotation.processing.Messager;
 import javax.lang.model.element.Element;
-import javax.tools.Diagnostic;
 
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 
 /**
@@ -82,13 +82,13 @@ public class InjectorRemap {
      * Add an error message on ths injector, the message will be suppressed if
      * a child {@link At} is remapped
      * 
-     * @param kind message kind
+     * @param type problem type
      * @param msg message
      * @param element annotated element
      * @param annotation annotation
      */
-    public void addMessage(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation) {
-        this.message = new Message(kind, msg, element, annotation);
+    public void addMessage(MessageType type, CharSequence msg, Element element, AnnotationHandle annotation) {
+        this.message = new Message(type, msg, element, annotation);
     }
     
     /**

@@ -30,6 +30,7 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 
 /**
@@ -44,24 +45,48 @@ public class Message {
     private final AnnotationMirror annotation;
     private final AnnotationValue value;
 
+    public Message(MessageType type, CharSequence msg) {
+        this(type.getKind(), type.decorate(msg), null, (AnnotationMirror)null, null);
+    }
+    
     public Message(Diagnostic.Kind kind, CharSequence msg) {
         this(kind, msg, null, (AnnotationMirror)null, null);
     }
     
+    public Message(MessageType type, CharSequence msg, Element element) {
+        this(type.getKind(), type.decorate(msg), element, (AnnotationMirror)null, null);
+    }
+
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element) {
         this(kind, msg, element, (AnnotationMirror)null, null);
+    }
+    
+    public Message(MessageType type, CharSequence msg, Element element, AnnotationHandle annotation) {
+        this(type.getKind(), type.decorate(msg), element, annotation.asMirror(), null);
     }
     
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation) {
         this(kind, msg, element, annotation.asMirror(), null);
     }
     
+    public Message(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation) {
+        this(type.getKind(), type.decorate(msg), element, annotation, null);
+    }
+
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationMirror annotation) {
         this(kind, msg, element, annotation, null);
     }
     
+    public Message(MessageType type, CharSequence msg, Element element, AnnotationHandle annotation, AnnotationValue value) {
+        this(type.getKind(), type.decorate(msg), element, annotation.asMirror(), value);
+    }
+
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationHandle annotation, AnnotationValue value) {
         this(kind, msg, element, annotation.asMirror(), value);
+    }
+    
+    public Message(MessageType type, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {
+        this(type.getKind(), type.decorate(msg), element, annotation, value);
     }
     
     public Message(Diagnostic.Kind kind, CharSequence msg, Element element, AnnotationMirror annotation, AnnotationValue value) {

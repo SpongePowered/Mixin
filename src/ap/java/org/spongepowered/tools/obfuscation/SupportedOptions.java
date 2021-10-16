@@ -26,6 +26,7 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.Set;
 
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx;
 import org.spongepowered.tools.obfuscation.service.ObfuscationServices;
 
 import com.google.common.collect.ImmutableSet;
@@ -48,6 +49,7 @@ public final class SupportedOptions {
     public static final String MAPPING_TYPES             = "mappingTypes";
     public static final String PLUGIN_VERSION            = "pluginVersion";
     public static final String QUIET                     = "quiet";
+    public static final String SHOW_MESSAGE_TYPES        = "showMessageTypes";
     
     private SupportedOptions() {}
 
@@ -67,10 +69,14 @@ public final class SupportedOptions {
             SupportedOptions.DEPENDENCY_TARGETS_FILE,
             SupportedOptions.MAPPING_TYPES,
             SupportedOptions.PLUGIN_VERSION,
-            SupportedOptions.QUIET
+            SupportedOptions.QUIET,
+            SupportedOptions.SHOW_MESSAGE_TYPES
         );
         options.addAll(
             ObfuscationServices.getInstance().getSupportedOptions()
+        );
+        options.addAll(
+            IMessagerEx.MessageType.getSupportedOptions()
         );
         return options.build();
     }

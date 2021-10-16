@@ -29,13 +29,13 @@ import java.util.Locale;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.IMapping.Type;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
@@ -168,11 +168,8 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
         
         if (obfData.isEmpty()) {
             String info = this.mixin.isMultiTarget() ? " in target " + target : "";
-            if (target.isSimulated()) {
-                elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
-            } else {
-                elem.printMessage(this.ap, Kind.WARNING, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
-            }
+            MessageType messageType = target.isSimulated() ? MessageType.NO_OBFDATA_FOR_SIMULATED_SHADOW : MessageType.NO_OBFDATA_FOR_SHADOW;
+            elem.printMessage(this.ap, messageType, "Unable to locate obfuscation mapping" + info + " for @Shadow " + elem);
             return;
         }
 
@@ -180,8 +177,8 @@ class AnnotatedMixinElementHandlerShadow extends AnnotatedMixinElementHandler {
             try {
                 elem.addMapping(type, obfData.get(type));
             } catch (MappingConflictException ex) {
-                elem.printMessage(this.ap, Kind.ERROR, "Mapping conflict for @Shadow " + elem + ": " + ex.getNew().getSimpleName() + " for target "
-                        + target + " conflicts with existing mapping " + ex.getOld().getSimpleName());
+                elem.printMessage(this.ap, MessageType.SHADOW_MAPPING_CONFLICT, "Mapping conflict for @Shadow " + elem + ": "
+                        + ex.getNew().getSimpleName() + " for target " + target + " conflicts with existing mapping " + ex.getOld().getSimpleName());
             }
         }
     }

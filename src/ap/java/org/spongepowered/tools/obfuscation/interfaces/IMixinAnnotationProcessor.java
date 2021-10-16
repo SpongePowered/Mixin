@@ -42,15 +42,112 @@ public interface IMixinAnnotationProcessor extends IMessagerSuppressible, IOptio
         /**
          * Default environment
          */
-        JAVAC,
+        JAVAC(false, "Java Compiler"),
         
         /**
          * Eclipse 
          */
-        JDT
+        JDT(true, "Eclipse (JDT)") {
+
+            @Override
+            protected boolean isDetected(ProcessingEnvironment processingEnv) {
+                return processingEnv.getClass().getName().contains("jdt");
+            }
+
+        },
+        
+        /**
+         * IntelliJ IDEA
+         */
+        IDEA(true, "IntelliJ IDEA") {
+
+            @Override
+            protected boolean isDetected(ProcessingEnvironment processingEnv) {
+                for (String ideaSystemProperty : new String[] {
+                        "idea.plugins.path",
+                        "idea.config.path",
+                        "idea.home.path",
+                        "idea.paths.selector"
+                    }) {
+                    if (System.getProperty(ideaSystemProperty) != null) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+        };
+
+        /**
+         * True if this compiler environment is an IDE
+         */
+        private final boolean isDevelopmentEnvironment;
+        
+        /**
+         * Display name
+         */
+        private final String friendlyName;
+
+        private CompilerEnvironment(boolean isDevelopmentEnvironment, String friendlyName) {
+            this.isDevelopmentEnvironment = isDevelopmentEnvironment;
+            this.friendlyName = friendlyName;
+        }
+        
+        /**
+         * True if this compiler environment is not an IDE
+         */
+        public boolean isCompiler() {
+            return !this.isDevelopmentEnvironment;
+        }
+        
+        /**
+         * True if this compiler environment is an IDE
+         */
+        public boolean isDevelopmentEnvironment() {
+            return this.isDevelopmentEnvironment;
+        }
+        
+        /**
+         * Get the human-readable name of this environment
+         */
+        public String getFriendlyName() {
+            return this.friendlyName;
+        }
+        
+        /**
+         * Stub for each compiler environment to implement heuristics to detect
+         * the presence of the environment
+         * 
+         * @param processingEnv Current processing environment to detect
+         *      compiler environment from
+         * @return true if this environment is detected
+         */
+        protected boolean isDetected(ProcessingEnvironment processingEnv) {
+            return false;
+        }
+
+        /**
+         * Detect compiler environments which require special handling (for the
+         * time being, the only special environments we care about are IDEs)
+         * using heuristic checks such as looking for specific class names or
+         * system properties.
+         * 
+         * @param processingEnv Current processing environment to detect
+         *      compiler environment from
+         * @return detected compiler environment, defaults to {@link #JAVAC} if
+         *      no special environment is detected
+         */
+        public static CompilerEnvironment detect(ProcessingEnvironment processingEnv) {
+            for (CompilerEnvironment environment : CompilerEnvironment.values()) {
+                if (environment.isDetected(processingEnv)) {
+                    return environment;
+                }
+            }
+            return CompilerEnvironment.JAVAC;
+        }
         
     }
-
+    
     /**
      * Get the detected compiler environment
      */

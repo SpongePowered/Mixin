@@ -27,10 +27,14 @@ package org.spongepowered.tools.obfuscation;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.tools.Diagnostic.Kind;
+
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
+import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor.CompilerEnvironment;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.IObfuscationDataProvider;
 import org.spongepowered.tools.obfuscation.interfaces.IReferenceManager;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.service.ObfuscationServices;
 
@@ -78,11 +82,35 @@ public class ObfuscationManager implements IObfuscationManager {
             return;
         }
         this.initDone = true;
+        
         ObfuscationServices.getInstance().initProviders(this.ap);
         for (ObfuscationType obfType : ObfuscationType.types()) {
             if (obfType.isSupported()) {
                 this.environments.add(obfType.createEnvironment());
             }
+        }
+
+        CompilerEnvironment compilerEnv = this.ap.getCompilerEnvironment();
+        if (this.environments.size() == 0 && compilerEnv.isDevelopmentEnvironment()) {
+            MessageType.setPrefix("(Mixin AP) ");
+
+            this.ap.printMessage(MessageType.NOTE, "No obfuscation data are available and an IDE (" + compilerEnv.getFriendlyName()
+                    + ") was detected, quenching error levels ");
+            
+            MessageType.NO_OBFDATA_FOR_CLASS.quench(Kind.NOTE);             // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_ACCESSOR.quench(Kind.NOTE);          // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_CTOR.quench(Kind.NOTE);              // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_TARGET.quench(Kind.NOTE);            // ERROR   -> NOTE
+            MessageType.NO_OBFDATA_FOR_OVERWRITE.quench(Kind.NOTE);         // ERROR   -> NOTE
+            MessageType.NO_OBFDATA_FOR_STATIC_OVERWRITE.quench(Kind.NOTE);  // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_FIELD.quench(Kind.NOTE);             // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_METHOD.quench(Kind.NOTE);            // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_SHADOW.quench(Kind.NOTE);            // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_SIMULATED_SHADOW.quench(Kind.NOTE);  // WARNING -> NOTE
+            MessageType.NO_OBFDATA_FOR_SOFT_IMPLEMENTS.quench(Kind.NOTE);   // ERROR   -> NOTE
+            
+            MessageType.PARENT_VALIDATOR.quench(Kind.WARNING);              // ERROR   -> WARNING
+            MessageType.TARGET_VALIDATOR.quench(Kind.WARNING);              // ERROR   -> WARNING
         }
     }
 

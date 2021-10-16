@@ -33,9 +33,9 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 
 /**
  * Base class for mixin annotation processor modules
@@ -69,7 +69,8 @@ abstract class MixinObfuscationProcessor extends AbstractProcessor {
             if (elem.getKind() == ElementKind.CLASS || elem.getKind() == ElementKind.INTERFACE) {
                 this.mixins.registerMixin((TypeElement)elem);
             } else {
-                this.mixins.printMessage(Kind.ERROR, "Found an @Mixin annotation on an element which is not a class or interface", elem);
+                this.mixins.printMessage(MessageType.MIXIN_ON_INVALID_TYPE,
+                        "Found an @Mixin annotation on an element which is not a class or interface", elem);
             }
         }
     }

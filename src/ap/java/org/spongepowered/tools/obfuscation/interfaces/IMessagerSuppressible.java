@@ -36,7 +36,7 @@ import org.spongepowered.tools.obfuscation.SuppressedBy;
  * An extended {@link Messager} which supports messages that can be suppressed
  * using the standard Java {@link SuppressWarnings} annotation.
  */
-public interface IMessagerSuppressible extends Messager {
+public interface IMessagerSuppressible extends IMessagerEx {
 
     /**
      * Prints a message of the specified kind at the location of the
@@ -49,6 +49,18 @@ public interface IMessagerSuppressible extends Messager {
      *      this message
      */
     void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, SuppressedBy suppressedBy);
+
+    /**
+     * Prints a message of the specified kind at the location of the
+     * element.
+     *
+     * @param type the message type
+     * @param msg the message, or an empty string if none
+     * @param e the element to use as a position hint
+     * @param suppressedBy the {@link SuppressWarnings} value which will silence
+     *      this message
+     */
+    void printMessage(MessageType type, CharSequence msg, Element e, SuppressedBy suppressedBy);
 
     /**
      * Prints a message of the specified kind at the location of the
@@ -65,6 +77,19 @@ public interface IMessagerSuppressible extends Messager {
 
     /**
      * Prints a message of the specified kind at the location of the
+     * annotation mirror of the annotated element.
+     *
+     * @param type the message type
+     * @param msg the message, or an empty string if none
+     * @param e the annotated element
+     * @param a the annotation to use as a position hint
+     * @param suppressedBy the {@link SuppressWarnings} value which will silence
+     *      this message
+     */
+    void printMessage(MessageType type, CharSequence msg, Element e, AnnotationMirror a, SuppressedBy suppressedBy);
+
+    /**
+     * Prints a message of the specified kind at the location of the
      * annotation value inside the annotation mirror of the annotated
      * element.
      *
@@ -76,7 +101,21 @@ public interface IMessagerSuppressible extends Messager {
      * @param suppressedBy the {@link SuppressWarnings} value which will silence
      *      this message
      */
-    void printMessage(Diagnostic.Kind kind,CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v, SuppressedBy suppressedBy);
+    void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v, SuppressedBy suppressedBy);
 
+    /**
+     * Prints a message of the specified kind at the location of the
+     * annotation value inside the annotation mirror of the annotated
+     * element.
+     *
+     * @param type the message type
+     * @param msg the message, or an empty string if none
+     * @param e the annotated element
+     * @param a the annotation containing the annotation value
+     * @param v the annotation value to use as a position hint
+     * @param suppressedBy the {@link SuppressWarnings} value which will silence
+     *      this message
+     */
+    void printMessage(MessageType type, CharSequence msg, Element e, AnnotationMirror a, AnnotationValue v, SuppressedBy suppressedBy);
     
 }

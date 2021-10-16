@@ -35,11 +35,10 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
-import javax.tools.Diagnostic.Kind;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.injection.struct.SelectorAnnotationContext;
@@ -51,9 +50,10 @@ import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementAccessor;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerAccessor.AnnotatedElementInvoker;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjectionPoint;
-import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementSliceInjectionPoint;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementInjector;
+import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerInjector.AnnotatedElementSliceInjectionPoint;
 import org.spongepowered.tools.obfuscation.AnnotatedMixinElementHandlerOverwrite.AnnotatedElementOverwrite;
+import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMessagerSuppressible;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
@@ -182,7 +182,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = TypeUtils.getInternalName(type);
-        this.primaryTarget = this.initTargets();
+        this.primaryTarget = this.initTargets(ap);
         this.remap = this.annotation.getBoolean("remap", true) && this.targets.size() > 0;
 
         this.overwrites = new AnnotatedMixinElementHandlerOverwrite(ap, this);
@@ -207,7 +207,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         return this;
     }
 
-    private TypeHandle initTargets() {
+    private TypeHandle initTargets(IMixinAnnotationProcessor ap) {
         TypeHandle primaryTarget = null;
 
         // Public targets, referenced by class
@@ -223,7 +223,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
                 }
             }
         } catch (Exception ex) {
-            this.printMessage(Kind.WARNING, "Error processing public targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
+            this.printMessage(MessageType.WARNING, "Error processing public targets: " + ex.getClass().getName() + ": " + ex.getMessage());
         }
 
         // Private targets, referenced by name
@@ -236,15 +236,16 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
                 if (this.virtual) {
                     type = this.typeProvider.getSimulatedHandle(softTarget, this.mixin.asType());
                 } else if (type == null) {
-                    this.printMessage(Kind.ERROR, "Mixin target " + softTarget + " could not be found", this);
+                    this.printMessage(MessageType.MIXIN_SOFT_TARGET_NOT_FOUND, "Mixin target " + softTarget + " could not be found");
                     return null;
                 } else if (type.isImaginary()) {
-                    this.printMessage(Kind.WARNING, "Mixin target " + softTarget + " could not be fully resolved.", this,
+                    this.printMessage(MessageType.MIXIN_SOFT_TARGET_NOT_RESOLVED, "Mixin target " + softTarget + " could not be fully resolved.",
                             SuppressedBy.UNRESOLVABLE_TARGET);
                     return null;
                 } else if (type.isPublic()) {
                     SuppressedBy suppressedBy = (type.getPackage().isUnnamed()) ? SuppressedBy.DEFAULT_PACKAGE : SuppressedBy.PUBLIC_TARGET;
-                    this.printMessage(Kind.WARNING, "Mixin target " + softTarget + " is public and must be specified in value", this, suppressedBy);
+                    this.printMessage(MessageType.MIXIN_SOFT_TARGET_IS_PUBLIC, "Mixin target " + softTarget
+                            + " is public and must be specified in value", suppressedBy);
                     return null;
                 }
                 this.addSoftTarget(type, softTarget);
@@ -253,11 +254,11 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
                 }
             }
         } catch (Exception ex) {
-            this.printMessage(Kind.WARNING, "Error processing private targets: " + ex.getClass().getName() + ": " + ex.getMessage(), this);
+            this.printMessage(MessageType.WARNING, "Error processing private targets: " + ex.getClass().getName() + ": " + ex.getMessage());
         }
 
         if (primaryTarget == null) {
-            this.printMessage(Kind.ERROR, "Mixin has no targets", this);
+            this.printMessage(MessageType.MIXIN_NO_TARGETS, "Mixin has no targets");
         }
 
         return primaryTarget;
@@ -266,15 +267,15 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     /**
      * Print a message to the AP messager
      */
-    private void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin) {
-        this.messager.printMessage(kind, msg, this.mixin, this.annotation.asMirror());
+    private void printMessage(MessageType type, CharSequence msg) {
+        this.messager.printMessage(type, msg, this.mixin, this.annotation.asMirror());
     }
     
     /**
      * Print a suppressible message to the AP messager
      */
-    private void printMessage(Kind kind, CharSequence msg, AnnotatedMixin mixin, SuppressedBy suppressedBy) {
-        this.messager.printMessage(kind, msg, this.mixin, this.annotation.asMirror(), suppressedBy);
+    private void printMessage(MessageType type, CharSequence msg, SuppressedBy suppressedBy) {
+        this.messager.printMessage(type, msg, this.mixin, this.annotation.asMirror(), suppressedBy);
     }
 
     private void addSoftTarget(TypeHandle type, String reference) {
