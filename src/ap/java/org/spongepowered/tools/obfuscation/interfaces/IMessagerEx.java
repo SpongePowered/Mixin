@@ -430,21 +430,15 @@ public interface IMessagerEx extends Messager {
                 if (option == null) {
                     continue;
                 }
-                switch (option.toLowerCase(Locale.ROOT)) {
-                    case "note":
-                        type.setKind(Kind.NOTE);
-                        break;
-                    case "warning":
-                        type.setKind(Kind.WARNING);
-                        break;
-                    case "error":
-                        type.setKind(Kind.ERROR);
-                        break;
-                    case "disabled":
-                        type.setEnabled(false);
-                        break;
-                    default:
-                        // Unrecognised level
+                
+                if ("note".equalsIgnoreCase(option)) {
+                    type.setKind(Kind.NOTE);
+                } else if ("warning".equalsIgnoreCase(option)) {
+                    type.setKind(Kind.WARNING);
+                } else if ("error".equalsIgnoreCase(option)) {
+                    type.setKind(Kind.ERROR);
+                } else if ("disabled".equalsIgnoreCase(option)) {
+                    type.setEnabled(false);
                 }
             }
         }
