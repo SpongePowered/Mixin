@@ -24,15 +24,33 @@
  */
 package org.spongepowered.tools.obfuscation.mirror;
 
+import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.Visibility;
+
 /**
- * Ordinal member visibility level. This is used to represent visibility of
- * a member in a formal way from lowest to highest.
+ * A {@link MethodHandle} for classpath classes being read with ASM
  */
-public enum Visibility {
+public class MethodHandleASM extends MethodHandle {
+
+    /**
+     * The method from ASM
+     */
+    private final MethodNode method;
+
+    public MethodHandleASM(TypeHandle owner, MethodNode method) {
+        super(owner, method.name, method.desc);
+        this.method = method;
+    }
     
-    PRIVATE,
-    PROTECTED,
-    PACKAGE,
-    PUBLIC
+    @Override
+    public String getJavaSignature() {
+        return TypeUtils.getJavaSignature(this.method.desc);
+    }
     
+    @Override
+    public Visibility getVisibility() {
+        return Bytecode.getVisibility(this.method);
+    }
+
 }

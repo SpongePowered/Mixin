@@ -164,6 +164,7 @@ public final class AnnotationHandle implements IAnnotationHandle {
      * @param defaultValue default value to return if value is not present
      * @return value or default if not present or not set
      */
+    @Override
     public boolean getBoolean(String key, boolean defaultValue) {
         return this.<Boolean>getValue(key, Boolean.valueOf(defaultValue)).booleanValue();
     }
@@ -195,6 +196,7 @@ public final class AnnotationHandle implements IAnnotationHandle {
      * @param <T> list element duck type
      * @return list of values
      */
+    @Override
     public <T> List<T> getList() {
         return this.<T>getList("value");
     }
@@ -306,6 +308,10 @@ public final class AnnotationHandle implements IAnnotationHandle {
         
         return null;
     }
+
+    public static AnnotationMirror asMirror(IAnnotationHandle handle) {
+        return handle instanceof AnnotationHandle ? ((AnnotationHandle)handle).asMirror() : null;
+    }
     
     /**
      * Returns a new annotation handle for the supplied annotation mirror
@@ -329,4 +335,5 @@ public final class AnnotationHandle implements IAnnotationHandle {
     public static AnnotationHandle of(Element elem, Class<? extends Annotation> annotationClass) {
         return new AnnotationHandle(AnnotationHandle.getAnnotation(elem, annotationClass));
     }
+
 }

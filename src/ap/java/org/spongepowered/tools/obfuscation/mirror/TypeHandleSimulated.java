@@ -128,7 +128,7 @@ public class TypeHandleSimulated extends TypeHandle {
      */
     @Override
     public FieldHandle findField(String name, String type, boolean caseSensitive) {
-        return new FieldHandle(null, name, type);
+        return new FieldHandle((String)null, name, type);
     }
 
     /* (non-Javadoc)

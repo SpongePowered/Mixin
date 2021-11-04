@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingField;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
 import org.spongepowered.asm.util.asm.IAnnotatedElement;
@@ -55,7 +56,6 @@ import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
-import org.spongepowered.tools.obfuscation.mirror.Visibility;
 
 /**
  * Base class for module for {@link AnnotatedMixin} which handle different
@@ -191,6 +191,11 @@ abstract class AnnotatedMixinElementHandler {
         
         public AliasedElementName(Element element, AnnotationHandle annotation) {
             this.originalName = element.getSimpleName().toString();
+            this.aliases = annotation.<String>getList("aliases");
+        }
+        
+        public AliasedElementName(MethodHandle method, AnnotationHandle annotation) {
+            this.originalName = method.getName();
             this.aliases = annotation.<String>getList("aliases");
         }
         

@@ -25,6 +25,7 @@
 package org.spongepowered.tools.obfuscation.mirror;
 
 import org.spongepowered.asm.obfuscation.mapping.IMapping;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 
 /**
  * Abstract base class for element handles

@@ -121,6 +121,25 @@ public interface IAnnotationHandle {
     public abstract <T> T getValue(String key);
 
     /**
+     * Get the primitive boolean value with the specified key or return null if
+     * not present or not set
+     * 
+     * @param key key to fetch
+     * @param defaultValue default value to return if value is not present
+     * @return value or default if not present or not set
+     */
+    public abstract boolean getBoolean(String key, boolean defaultValue);
+
+    /**
+     * Retrieve the annotation value as a list with values of the specified
+     * type. Returns an empty list if the value is not present or not set.
+     * 
+     * @param <T> list element duck type
+     * @return list of values
+     */
+    public abstract <T> List<T> getList();
+
+    /**
      * Retrieve the annotation value with the specified key as a list with
      * values of the specified type. Returns an empty list if the value is not
      * present or not set.

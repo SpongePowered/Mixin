@@ -22,40 +22,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.tools.obfuscation.interfaces;
+package org.spongepowered.tools.obfuscation.mirror;
 
-import java.util.Collection;
-
-import javax.lang.model.element.TypeElement;
-
-import org.spongepowered.asm.util.asm.IAnnotationHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.objectweb.asm.tree.FieldNode;
+import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 
 /**
- * A mixin validator module, basically just a way of making the various sanity
- * checks modular
+ * A {@link FieldHandle} for classpath classes being read with ASM
  */
-public interface IMixinValidator {
-    
+public class FieldHandleASM extends FieldHandle {
+
     /**
-     * Validation pass
+     * The field from ASM
      */
-    public enum ValidationPass {
-        EARLY,
-        LATE,
-        FINAL
+    private final FieldNode field;
+
+    public FieldHandleASM(TypeHandle owner, FieldNode field) {
+        super(owner, field.name, field.desc);
+        this.field = field;
     }
     
-    /**
-     * Validate all the things, return false to halt processing of further
-     * validators. Raise compiler errors/warnings directly.
-     * @param pass current validation pass
-     * @param mixin Mixin being validated
-     * @param annotation Mixin annotation
-     * @param targets Mixin targets
-     * 
-     * @return False to halt processing of further validators
-     */
-    public abstract boolean validate(ValidationPass pass, TypeElement mixin, IAnnotationHandle annotation, Collection<TypeHandle> targets);
+    @Override
+    public Visibility getVisibility() {
+        return Bytecode.getVisibility(this.field);
+    }
 
 }

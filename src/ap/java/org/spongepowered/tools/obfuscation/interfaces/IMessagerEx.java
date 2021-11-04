@@ -25,7 +25,6 @@
 package org.spongepowered.tools.obfuscation.interfaces;
 
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
 import javax.annotation.processing.Messager;
@@ -302,6 +301,13 @@ public interface IMessagerEx extends Messager {
         
         private MessageType(Kind kind) {
             this.originalKind = this.kind = kind;
+        }
+        
+        /**
+         * Get whether the message is treated as an error
+         */
+        public boolean isError() {
+            return this.kind == Kind.ERROR;
         }
         
         /**

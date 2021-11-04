@@ -304,17 +304,17 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
     }
 
     private void registerFactoryForTarget(AnnotatedElementInvoker elem, TypeHandle target) {
-        EquivalencyResult equivalency = TypeUtils.isEquivalentType(this.ap.getProcessingEnvironment(), elem.getReturnType(), target.getType());
+        EquivalencyResult equivalency = TypeUtils.isEquivalentType(this.ap.getProcessingEnvironment(), elem.getReturnType(), target.getTypeMirror());
         if (equivalency.type != Equivalency.EQUIVALENT) {
             if (equivalency.type == Equivalency.EQUIVALENT_BUT_RAW && equivalency.rawType == 1) {
                 elem.printMessage(this.ap, MessageType.INVOKER_RAW_RETURN_TYPE, "Raw return type for Factory @Invoker", SuppressedBy.RAW_TYPES);
             } else if (equivalency.type == Equivalency.BOUNDS_MISMATCH) {
                 elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_GENERIC_ARGS, "Invalid Factory @Invoker return type, generic type args of "
-                        + target.getType() + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
+                        + target.getTypeMirror() + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
                 return;
             } else {
                 elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_RETURN_TYPE, "Invalid Factory @Invoker return type, expected "
-                        + target.getType() + " but found " + elem.getReturnType());
+                        + target.getTypeMirror() + " but found " + elem.getReturnType());
                 return;
             }
         }

@@ -25,6 +25,7 @@
 package org.spongepowered.tools.obfuscation.mirror;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,6 +43,7 @@ import javax.lang.model.type.TypeMirror;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Bytecode;
+import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.mapping.MappingMethodResolvable;
 
 import com.google.common.collect.ImmutableList;
@@ -159,14 +161,14 @@ public class TypeHandle {
      * @return new annotation handle, call <tt>exists</tt> on the returned
      *      handle to determine whether the annotation is present
      */
-    public AnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
+    public IAnnotationHandle getAnnotation(Class<? extends Annotation> annotationClass) {
         return AnnotationHandle.of(this.getTargetElement(), annotationClass);
     }
 
     /**
      * Returns enclosed elements (methods, fields, etc.)
      */
-    public final List<? extends Element> getEnclosedElements() {
+    protected final List<? extends Element> getEnclosedElements() {
         return TypeHandle.getEnclosedElements(this.getTargetElement());
     }
     
@@ -176,15 +178,25 @@ public class TypeHandle {
      * @param kind types of element to return
      * @param <T> list element type
      */
-    public <T extends Element> List<T> getEnclosedElements(ElementKind... kind) {
+    protected <T extends Element> List<T> getEnclosedElements(ElementKind... kind) {
         return TypeHandle.getEnclosedElements(this.getTargetElement(), kind);
+    }
+
+    /**
+     * Get whether the type handle can return a type mirror for the represented
+     * type. This is true only for types returned by mirror and is not available
+     * for simulated types or classpath types inaccessible via mirror (eg. anon
+     * classes) 
+     */
+    public boolean hasTypeMirror() {
+        return this.getTargetElement() != null;
     }
 
     /**
      * Returns the enclosed element as a type mirror, or null if this is an
      * imaginary type
      */
-    public TypeMirror getType() {
+    public TypeMirror getTypeMirror() {
         return this.getTargetElement() != null ? this.getTargetElement().asType() : null;
     }
     
@@ -218,8 +230,19 @@ public class TypeHandle {
         for (TypeMirror iface : this.getTargetElement().getInterfaces()) {
             list.add(new TypeHandle((DeclaredType)iface));
         }
-        
         return list.build();
+    }
+    
+    /**
+     * Get methods in this type
+     */
+    public List<MethodHandle> getMethods() {
+        List<MethodHandle> methods = new ArrayList<MethodHandle>();
+        for (ExecutableElement method : this.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
+            MethodHandle handle = new MethodHandle(this, method);
+            methods.add(handle);
+        }
+        return methods;
     }
 
     /**
@@ -239,7 +262,8 @@ public class TypeHandle {
     }
     
     /**
-     * Get whether the element is imaginary (inaccessible via mirror)
+     * Get whether the element is imaginary (inaccessible via mirror or
+     * classpath)
      */
     public boolean isImaginary() {
         return this.getTargetElement() == null;
@@ -310,11 +334,11 @@ public class TypeHandle {
      * of the supplied element
      * 
      * @param element Element to match
-     * @param caseSensitive True if case-sensitive comparison should be used
+     * @param matchCase True if case-sensitive comparison should be used
      * @return handle to the discovered field if matched or null if no match
      */
-    public final FieldHandle findField(VariableElement element, boolean caseSensitive) {
-        return this.findField(element.getSimpleName().toString(), TypeUtils.getTypeName(element.asType()), caseSensitive);
+    public final FieldHandle findField(VariableElement element, boolean matchCase) {
+        return this.findField(element.getSimpleName().toString(), TypeUtils.getTypeName(element.asType()), matchCase);
     }
     
     /**
@@ -335,16 +359,16 @@ public class TypeHandle {
      * 
      * @param name Field name to search for
      * @param type Field descriptor (java-style)
-     * @param caseSensitive True if case-sensitive comparison should be used
+     * @param matchCase True if case-sensitive comparison should be used
      * @return handle to the discovered field if matched or null if no match
      */
-    public FieldHandle findField(String name, String type, boolean caseSensitive) {
+    public FieldHandle findField(String name, String type, boolean matchCase) {
         String rawType = TypeUtils.stripGenerics(type);
 
         for (VariableElement field : this.<VariableElement>getEnclosedElements(ElementKind.FIELD)) {
-            if (TypeHandle.compareElement(field, name, type, caseSensitive)) {
+            if (TypeHandle.compareElement(field, name, type, matchCase)) {
                 return new FieldHandle(this.getTargetElement(), field);
-            } else if (TypeHandle.compareElement(field, name, rawType, caseSensitive)) {
+            } else if (TypeHandle.compareElement(field, name, rawType, matchCase)) {
                 return new FieldHandle(this.getTargetElement(), field, true);
             }                
         }
@@ -368,11 +392,11 @@ public class TypeHandle {
      * type of the supplied element
      * 
      * @param element Element to match
-     * @param caseSensitive True if case-sensitive comparison should be used
+     * @param matchCase True if case-sensitive comparison should be used
      * @return handle to the discovered method if matched or null if no match
      */
-    public final MethodHandle findMethod(ExecutableElement element, boolean caseSensitive) {
-        return this.findMethod(element.getSimpleName().toString(), TypeUtils.getJavaSignature(element), caseSensitive);
+    public final MethodHandle findMethod(ExecutableElement element, boolean matchCase) {
+        return this.findMethod(element.getSimpleName().toString(), TypeUtils.getJavaSignature(element), matchCase);
     }
 
     /**

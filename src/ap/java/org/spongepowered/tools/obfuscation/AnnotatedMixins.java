@@ -54,6 +54,7 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import org.objectweb.asm.Type;
 import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -69,6 +70,7 @@ import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
+import org.spongepowered.tools.obfuscation.mirror.TypeHandleASM;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandleSimulated;
 import org.spongepowered.tools.obfuscation.mirror.TypeReference;
 import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
@@ -377,8 +379,8 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
 
         for (TypeReference mixin : this.targets.getMixinsTargeting(targetType)) {
             TypeHandle handle = mixin.getHandle(this.processingEnv);
-            if (handle != null) {
-                minions.add(handle.getType());
+            if (handle != null && handle.hasTypeMirror()) {
+                minions.add(handle.getTypeMirror());
             }
         }
 
@@ -697,13 +699,43 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
 
         int lastDotPos = name.lastIndexOf('.');
         if (lastDotPos > -1) {
-            String pkg = name.substring(0, lastDotPos);
-            PackageElement packageElement = elements.getPackageElement(pkg);
-            if (packageElement != null) {
-                return new TypeHandle(packageElement, name);
+            String pkgName = name.substring(0, lastDotPos);
+            PackageElement pkg = elements.getPackageElement(pkgName);
+            if (pkg != null) {
+                // If we can resolve the package but not the class, it's possible
+                // we're dealing with a class that mirror can't access, such as
+                // an anonymous class. The class might be available via the
+                // classpath though, so let's attempt to read the class with ASM
+                TypeHandle asmTypeHandle = TypeHandleASM.of(pkg, name.substring(lastDotPos + 1), this);
+                if (asmTypeHandle != null) {
+                    return asmTypeHandle;
+                }
+                
+                // Couldn't resolve the class, so just return an imaginary handle
+                return new TypeHandle(pkg, name);
             }
         }
-
+        
+        return null;
+    }
+    
+    /**
+     * Get a TypeHandle representing the supplied type in the current processing
+     * environment
+     */
+    @Override
+    public TypeHandle getTypeHandle(Object type) {
+        if (type instanceof TypeHandle) {
+            return (TypeHandle)type;
+        } else if (type instanceof DeclaredType) {
+            return new TypeHandle((DeclaredType)type);
+        } else if (type instanceof Type) {
+            return this.getTypeHandle(((Type)type).getClassName());
+        } else if (type instanceof TypeElement) {
+            return new TypeHandle((DeclaredType)((TypeElement)type).asType());
+        } else if (type instanceof String) {
+            return this.getTypeHandle(type.toString());
+        }
         return null;
     }
 

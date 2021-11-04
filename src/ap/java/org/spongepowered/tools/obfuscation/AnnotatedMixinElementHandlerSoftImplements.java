@@ -26,8 +26,6 @@ package org.spongepowered.tools.obfuscation;
 
 import java.util.List;
 
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.DeclaredType;
 
 import org.spongepowered.asm.mixin.Interface.Remap;
@@ -37,7 +35,6 @@ import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
-import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
@@ -99,7 +96,7 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
      * @param prefix Prefix declared in the soft-implements decoration
      */
     private void processSoftImplements(Remap remap, TypeHandle iface, String prefix) {
-        for (ExecutableElement method : iface.<ExecutableElement>getEnclosedElements(ElementKind.METHOD)) {
+        for (MethodHandle method : iface.getMethods()) {
             this.processMethod(remap, iface, prefix, method);
         }
         
@@ -118,10 +115,10 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
      * @param prefix Prefix declared in the soft-implements decoration
      * @param method Interface method to search for
      */
-    private void processMethod(Remap remap, TypeHandle iface, String prefix, ExecutableElement method) {
-        String name = method.getSimpleName().toString();
-        String sig = TypeUtils.getJavaSignature(method);
-        String desc = TypeUtils.getDescriptor(method);
+    private void processMethod(Remap remap, TypeHandle iface, String prefix, MethodHandle method) {
+        String name = method.getName();
+        String sig = method.getJavaSignature();
+        String desc = method.getDesc();
         
         if (remap != Remap.ONLY_PREFIXED) {
             MethodHandle mixinMethod = this.mixin.getHandle().findMethod(name, sig);

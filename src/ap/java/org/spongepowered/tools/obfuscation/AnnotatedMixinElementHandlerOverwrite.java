@@ -34,6 +34,7 @@ import org.spongepowered.tools.obfuscation.Mappings.MappingConflictException;
 import org.spongepowered.tools.obfuscation.interfaces.IMessagerEx.MessageType;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
@@ -63,8 +64,10 @@ class AnnotatedMixinElementHandlerOverwrite extends AnnotatedMixinElementHandler
         super(ap, mixin);
     }
 
-    public void registerMerge(ExecutableElement method) {
-        this.validateTargetMethod(method, null, new AliasedElementName(method, AnnotationHandle.MISSING), "overwrite", true, true);
+    public void registerMerge(MethodHandle method) {
+        if (!method.isImaginary()) {
+            this.validateTargetMethod(method.getElement(), null, new AliasedElementName(method, AnnotationHandle.MISSING), "overwrite", true, true);
+        }
     }
 
     public void registerOverwrite(AnnotatedElementOverwrite elem) {

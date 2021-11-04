@@ -123,6 +123,16 @@ public final class Annotations {
         }
         
         @Override
+        public boolean getBoolean(String key, boolean defaultValue) {
+            return this.<Boolean>getValue(key, Boolean.valueOf(defaultValue)).booleanValue();
+        }
+        
+        @Override
+        public <T> List<T> getList() {
+            return this.<T>getList("value");
+        }
+        
+        @Override
         public <T> List<T> getList(String key) {
             return Annotations.<T>getValue(this.annotation, key, false);
         }

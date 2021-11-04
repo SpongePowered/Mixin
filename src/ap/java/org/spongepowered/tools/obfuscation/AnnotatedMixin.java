@@ -33,8 +33,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
@@ -62,6 +60,7 @@ import org.spongepowered.tools.obfuscation.interfaces.IObfuscationManager;
 import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mapping.IMappingConsumer;
 import org.spongepowered.tools.obfuscation.mirror.AnnotationHandle;
+import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
 import org.spongepowered.tools.obfuscation.struct.InjectorRemap;
@@ -76,7 +75,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     /**
      * Mixin annotation
      */
-    private final AnnotationHandle annotation;
+    private final IAnnotationHandle annotation;
 
     /**
      * Messager
@@ -106,7 +105,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     /**
      * Methods 
      */
-    private final List<ExecutableElement> methods;
+    private final List<MethodHandle> methods;
 
     /**
      * Mixin class
@@ -178,7 +177,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         this.messager = ap;
         this.mixin = type;
         this.handle = new TypeHandle(type);
-        this.methods = new ArrayList<ExecutableElement>(this.handle.<ExecutableElement>getEnclosedElements(ElementKind.METHOD));
+        this.methods = new ArrayList<MethodHandle>(this.handle.getMethods());
         this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);
         this.classRef = TypeUtils.getInternalName(type);
@@ -212,9 +211,9 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
 
         // Public targets, referenced by class
         try {
-            for (TypeMirror target : this.annotation.<TypeMirror>getList()) {
-                TypeHandle type = new TypeHandle((DeclaredType)target);
-                if (this.targets.contains(type)) {
+            for (Object target : this.annotation.<Object>getList()) {
+                TypeHandle type = this.typeProvider.getTypeHandle(target);
+                if (type == null || this.targets.contains(type)) {
                     continue;
                 }
                 this.addTarget(type);
@@ -237,16 +236,24 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
                     type = this.typeProvider.getSimulatedHandle(softTarget, this.mixin.asType());
                 } else if (type == null) {
                     this.printMessage(MessageType.MIXIN_SOFT_TARGET_NOT_FOUND, "Mixin target " + softTarget + " could not be found");
-                    return null;
+                    if (MessageType.MIXIN_SOFT_TARGET_NOT_FOUND.isError()) {
+                        return null;
+                    }
+                    type = this.typeProvider.getSimulatedHandle(softTarget, this.mixin.asType());
                 } else if (type.isImaginary()) {
                     this.printMessage(MessageType.MIXIN_SOFT_TARGET_NOT_RESOLVED, "Mixin target " + softTarget + " could not be fully resolved.",
                             SuppressedBy.UNRESOLVABLE_TARGET);
-                    return null;
+                    if (MessageType.MIXIN_SOFT_TARGET_NOT_RESOLVED.isError()) {
+                        return null;
+                    }
                 } else if (type.isPublic()) {
                     SuppressedBy suppressedBy = (type.getPackage().isUnnamed()) ? SuppressedBy.DEFAULT_PACKAGE : SuppressedBy.PUBLIC_TARGET;
+                    String must = MessageType.MIXIN_SOFT_TARGET_IS_PUBLIC.isError() ? "must" : "should";
                     this.printMessage(MessageType.MIXIN_SOFT_TARGET_IS_PUBLIC, "Mixin target " + softTarget
-                            + " is public and must be specified in value", suppressedBy);
-                    return null;
+                            + " is public and " + must + " be specified in value", suppressedBy);
+                    if (MessageType.MIXIN_SOFT_TARGET_IS_PUBLIC.isError()) {
+                        return null;
+                    }
                 }
                 this.addSoftTarget(type, softTarget);
                 if (primaryTarget == null) {
@@ -268,14 +275,14 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
      * Print a message to the AP messager
      */
     private void printMessage(MessageType type, CharSequence msg) {
-        this.messager.printMessage(type, msg, this.mixin, this.annotation.asMirror());
+        this.messager.printMessage(type, msg, this.mixin, AnnotationHandle.asMirror(this.annotation));
     }
     
     /**
      * Print a suppressible message to the AP messager
      */
     private void printMessage(MessageType type, CharSequence msg, SuppressedBy suppressedBy) {
-        this.messager.printMessage(type, msg, this.mixin, this.annotation.asMirror(), suppressedBy);
+        this.messager.printMessage(type, msg, this.mixin, AnnotationHandle.asMirror(this.annotation), suppressedBy);
     }
 
     private void addSoftTarget(TypeHandle type, String reference) {
@@ -296,7 +303,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         return this.mixin.getSimpleName().toString();
     }
 
-    public AnnotationHandle getAnnotation() {
+    public IAnnotationHandle getAnnotation() {
         return this.annotation;
     }
 
@@ -363,13 +370,25 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     }
 
     private void runFinalValidation() {
-        for (ExecutableElement method : this.methods) {
+        for (MethodHandle method : this.methods) {
             this.overwrites.registerMerge(method);
         }
     }
 
+    private void removeMethod(ExecutableElement method) {
+        MethodHandle handle = null;
+        for (MethodHandle methodHandle : this.methods) {
+            if (methodHandle.getElement() == method) {
+                handle = methodHandle;
+            }
+        }
+        if (handle != null) {
+            this.methods.remove(handle);
+        }
+    }
+
     public void registerOverwrite(ExecutableElement method, AnnotationHandle overwrite, boolean shouldRemap) {
-        this.methods.remove(method);
+        this.removeMethod(method);
         this.overwrites.registerOverwrite(new AnnotatedElementOverwrite(method, overwrite, shouldRemap));
     }
 
@@ -378,12 +397,12 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     }
 
     public void registerShadow(ExecutableElement method, AnnotationHandle shadow, boolean shouldRemap) {
-        this.methods.remove(method);
+        this.removeMethod(method);
         this.shadows.registerShadow(this.shadows.new AnnotatedElementShadowMethod(method, shadow, shouldRemap));
     }
 
     public void registerInjector(ExecutableElement method, AnnotationHandle inject, InjectorRemap remap) {
-        this.methods.remove(method);
+        this.removeMethod(method);
         AnnotatedElementInjector injectorElement = new AnnotatedElementInjector(method, inject, this, remap);
         this.injectors.registerInjector(injectorElement);
 
@@ -426,12 +445,12 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     }
     
     public void registerAccessor(ExecutableElement element, AnnotationHandle accessor, boolean shouldRemap) {
-        this.methods.remove(element);
+        this.removeMethod(element);
         this.accessors.registerAccessor(new AnnotatedElementAccessor(element, accessor, this, shouldRemap));
     }
 
     public void registerInvoker(ExecutableElement element, AnnotationHandle invoker, boolean shouldRemap) {
-        this.methods.remove(element);
+        this.removeMethod(element);
         this.accessors.registerAccessor(new AnnotatedElementInvoker(element, invoker, this, shouldRemap));
     }
 

@@ -27,6 +27,7 @@ package org.spongepowered.tools.obfuscation.mirror;
 import javax.lang.model.element.ExecutableElement;
 
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
+import org.spongepowered.asm.util.Bytecode.Visibility;
 import org.spongepowered.tools.obfuscation.mirror.mapping.MappingMethodResolvable;
 
 import com.google.common.base.Strings;
@@ -74,6 +75,14 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
         return this.element;
     }
     
+    /**
+     * Get the java signature (similar to descriptor but with java types in
+     * source form) for this element
+     */
+    public String getJavaSignature() {
+        return TypeUtils.getJavaSignature(this.element);
+    }
+
     @Override
     public Visibility getVisibility() {
         return TypeUtils.getVisibility(this.element);
@@ -97,4 +106,5 @@ public class MethodHandle extends MemberHandle<MappingMethod> {
         String desc = Strings.nullToEmpty(this.getDesc());
         return String.format("%s%s%s", owner, name, desc);
     }
+
 }
