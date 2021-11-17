@@ -172,14 +172,10 @@ public class TypeHandleASM extends TypeHandle {
     @Override
     public List<MethodHandle> getMethods() {
         Builder<MethodHandle> methods = ImmutableList.<MethodHandle>builder();
-        try {
-            for (MethodNode method : this.classNode.methods) {
-                if (!method.name.startsWith("<") && (method.access & Opcodes.ACC_SYNTHETIC) == 0) {
-                    methods.add(new MethodHandleASM(this, method));
-                }
+        for (MethodNode method : this.classNode.methods) {
+            if (!method.name.startsWith("<") && (method.access & Opcodes.ACC_SYNTHETIC) == 0) {
+                methods.add(new MethodHandleASM(this, method));
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
         }
         return methods.build();
     }

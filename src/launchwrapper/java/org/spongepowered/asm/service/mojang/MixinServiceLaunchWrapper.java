@@ -24,7 +24,6 @@
  */
 package org.spongepowered.asm.service.mojang;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -62,6 +61,7 @@ import org.spongepowered.asm.service.ITransformerProvider;
 import org.spongepowered.asm.service.MixinServiceAbstract;
 import org.spongepowered.asm.transformers.MixinClassReader;
 import org.spongepowered.asm.util.Constants;
+import org.spongepowered.asm.util.Files;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -244,7 +244,7 @@ public class MixinServiceLaunchWrapper extends MixinServiceAbstract implements I
                 try {
                     URI uri = url.toURI();
                     MixinServiceLaunchWrapper.logger.debug("Scanning {} for mixin tweaker", uri);
-                    if (!"file".equals(uri.getScheme()) || !new File(uri).exists()) {
+                    if (!"file".equals(uri.getScheme()) || !Files.toFile(uri).exists()) {
                         continue;
                     }
                     MainAttributes attributes = MainAttributes.of(uri);

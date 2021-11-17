@@ -84,7 +84,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
     public String toString() {
         try {
             URL codeSource = Fernflower.class.getProtectionDomain().getCodeSource().getLocation();
-            File file = new File(codeSource.toURI());
+            File file = org.spongepowered.asm.util.Files.toFile(codeSource);
             return file.getName();
         } catch (Exception ex) {
             return "unknown source (classpath)";

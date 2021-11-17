@@ -40,6 +40,7 @@ import java.util.jar.Attributes.Name;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import org.spongepowered.asm.util.Files;
 import org.spongepowered.asm.util.JavaVersion;
 
 import com.google.common.io.ByteSource;
@@ -99,7 +100,7 @@ public final class MainAttributes {
         }
         
         if ("file".equals(codeSource.getScheme())) {
-            File file = new File(codeSource);
+            File file = Files.toFile(codeSource);
             
             if (file.isFile()) {
                 Attributes attributes = MainAttributes.getJarAttributes(file);

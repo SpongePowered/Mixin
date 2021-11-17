@@ -210,7 +210,7 @@ public final class Bytecode {
     };
     
     private static final String[] CONSTANTS_TYPES = {
-        null,
+        "V", // null is returned as Type.VOID_TYPE
         "I",
         "I", "I", "I", "I", "I", "I",
         "J", "J",

@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.spongepowered.asm.launch.platform.MainAttributes;
+import org.spongepowered.asm.util.Files;
 
 /**
  * Container handle which directly replaces the use of classpath location URIs
@@ -64,7 +65,7 @@ public class ContainerHandleURI implements IContainerHandle {
      */
     @Deprecated
     public File getFile() {
-        return this.uri != null && "file".equals(this.uri.getScheme()) ? new File(this.uri) : null;
+        return this.uri != null && "file".equals(this.uri.getScheme()) ? Files.toFile(this.uri) : null;
     }
 
     /* (non-Javadoc)
