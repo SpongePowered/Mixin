@@ -78,7 +78,7 @@ plugin developed by [DemonWav](https://github.com/demonwav).
 ### Version History
 
 [Specifying the `minVersion` property in your configurations](https://github.com/SpongePowered/Mixin/wiki/PSA-Forward-Compatibility-Features-in-Mixin)
-is extrememly important. The following version history can be used to determine
+is extremely important. The following version history can be used to determine
 when features were introduced (and sometimes when major bugs are squashed) in
 order to help you determine which `minVersion` you should specify.
 
