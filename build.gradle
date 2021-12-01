@@ -9,6 +9,11 @@ buildscript {
     }
 }
 
+plugins {
+  id 'java'
+  id 'synthetic-modules'
+}
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 // Apply plugin
@@ -77,6 +82,7 @@ configurations {
     modlauncherImplementation   .extendsFrom implementation
     modlauncher9Implementation  .extendsFrom modlauncherImplementation
     modularityImplementation    .extendsFrom modlauncher9Implementation
+    modularityCompileOnly       .extendsFrom compileOnly
 }
 
 sourceSets {
@@ -144,6 +150,15 @@ sourceSets {
         ext.languageVersion = 16
         ext.modularityExcluded = true // don't add ourselves
     }
+}
+
+// Because Mixin aims to support a variety of environments, we have to be able to run with older versions of GSON and Guava that lack 
+// official module names. This means the same library may appear with multiple module names. We want to be able to link our module with 
+// either of these two at runtime, without having to have two versions of the library on our compile-time module path.
+// To do this, we generate empty jars with *only* a module descriptor for the module we want to be able to compile against.
+syntheticModules {
+    module 'com.google.gson'
+    module 'com.google.common'
 }
 
 // Project dependencies
