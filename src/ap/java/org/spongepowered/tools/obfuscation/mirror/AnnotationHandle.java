@@ -110,8 +110,8 @@ public final class AnnotationHandle implements IAnnotationHandle {
      * 
      * @param key key
      * @param defaultValue value to return if the key is not set or not present
-     * @return value or default if not set
      * @param <T> duck type
+     * @return value or default if not set
      */
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })

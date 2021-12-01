@@ -298,7 +298,7 @@ checkstyle {
         "year"        : project.inceptionYear
     ]
     configFile = file("checkstyle.xml")
-    toolVersion = '8.43'
+    toolVersion = '8.44'
 }
 
 // Source compiler configuration

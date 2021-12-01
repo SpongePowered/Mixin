@@ -64,8 +64,8 @@ public class Blackboard implements IGlobalPropertyService {
      * Get a value from the blackboard and duck-type it to the specified type
      * 
      * @param key blackboard key
-     * @return value
      * @param <T> duck type
+     * @return value
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -90,8 +90,8 @@ public class Blackboard implements IGlobalPropertyService {
      * 
      * @param key blackboard key
      * @param defaultValue value to return if the key is not set or is null
-     * @return value from blackboard or default value
      * @param <T> duck type
+     * @return value from blackboard or default value
      */
     @Override
     @SuppressWarnings("unchecked")

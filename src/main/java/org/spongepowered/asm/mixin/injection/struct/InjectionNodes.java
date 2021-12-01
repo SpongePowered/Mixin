@@ -184,8 +184,8 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * Get the specified decoration
          * 
          * @param key meta key
-         * @return decoration value or null if absent
          * @param <V> value type
+         * @return decoration value or null if absent
          */
         @SuppressWarnings("unchecked")
         public <V> V getDecoration(String key) {
