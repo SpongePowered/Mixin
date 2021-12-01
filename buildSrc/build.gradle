@@ -1,0 +1,23 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+repositories {
+    maven {
+        name 'sponge'
+        url 'https://repo.spongepowered.org/repository/maven-public'
+    }
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.2'
+}
+
+gradlePlugin {
+    plugins {
+        potemkinModules {
+            id = 'potemkin-modules'
+            implementationClass = 'org.spongepowered.asm.mixin.build.PotemkinModulesPlugin'
+        }
+    }
+}

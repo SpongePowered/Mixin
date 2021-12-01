@@ -7,8 +7,7 @@ dependency-reduced-pom.xml
 # Compiled #
 ############
 bin
-/build
-/build-logic/build
+build
 dist
 out
 run

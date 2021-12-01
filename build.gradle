@@ -9,11 +9,6 @@ buildscript {
     }
 }
 
-plugins {
-  id 'java'
-  id 'synthetic-modules'
-}
-
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 // Apply plugin
@@ -24,6 +19,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'potemkin-modules'
 
 // Default tasks
 defaultTasks 'licenseFormat', 'check', 'build'
@@ -152,11 +148,11 @@ sourceSets {
     }
 }
 
-// Because Mixin aims to support a variety of environments, we have to be able to run with older versions of GSON and Guava that lack 
-// official module names. This means the same library may appear with multiple module names. We want to be able to link our module with 
-// either of these two at runtime, without having to have two versions of the library on our compile-time module path.
-// To do this, we generate empty jars with *only* a module descriptor for the module we want to be able to compile against.
-syntheticModules {
+// Because Mixin aims to support a variety of environments, we have to be able to run with older versions of GSON and Guava that lack official module
+// names. This means the same library may appear with multiple module names. We want to be able to link our module with either of these two at
+// runtime, without having to have two versions of the library on our compile-time module path. To do this, we generate empty "potemkin" jars with
+// *only* a module descriptor for the module we want to be able to compile against.
+potemkinModules {
     module 'com.google.gson'
     module 'com.google.common'
 }
@@ -252,6 +248,17 @@ eclipse {
             // Mark everything else as a module
             entries.findAll { it.kind == "con" && it.path =~ /gradleclasspathcontainer$/ }.each {
                 it.entryAttributes['module'] = 'true'
+            }
+        }
+    }
+    
+    project {
+        resourceFilter {
+            appliesTo = 'FOLDERS'
+            type = 'EXCLUDE_ALL'
+            matcher {
+                id = 'org.eclipse.ui.ide.multiFilter'
+                arguments = '1.0-name-matches-false-false-buildSrc'
             }
         }
     }

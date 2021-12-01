@@ -26,7 +26,6 @@
 /**
  * Mixin module declaration
  */
-@SuppressWarnings("module") // Suppress the warnings about gson and gson below. Damn gsons, you ruined gson!
 module org.spongepowered.mixin {
 
     //
@@ -40,7 +39,7 @@ module org.spongepowered.mixin {
     requires transitive org.objectweb.asm.tree.analysis;
     requires transitive org.objectweb.asm.util;
     requires java.logging;
-
+    
     //
     // Modules we require for compilation but don't necessarily need at runtime
     //
@@ -48,16 +47,16 @@ module org.spongepowered.mixin {
     requires static transitive cpw.mods.modlauncher;
     requires static cpw.mods.securejarhandler;
     requires static transitive org.apache.logging.log4j;
-
+    
     //
     // Automatic modules we depend on, using static to avoid the forward compatibility mess
     //
     requires static jopt.simple;
-
+    
     // Guava, by file name and official module
     requires static com.google.common;
     requires static guava;
-
+    
     // Gson, by file name and official module
     requires static com.google.gson;
     requires static gson;
@@ -111,10 +110,10 @@ module org.spongepowered.mixin {
     exports org.spongepowered.tools.obfuscation.mcp;
     exports org.spongepowered.tools.obfuscation.mirror;
     exports org.spongepowered.tools.obfuscation.service;
-
+    
     opens org.spongepowered.asm.mixin.transformer
         to com.google.gson, gson;
-
+    
     //
     // Service wiring
     //
@@ -137,7 +136,7 @@ module org.spongepowered.mixin {
     uses cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
     provides cpw.mods.modlauncher.serviceapi.ILaunchPluginService
         with org.spongepowered.asm.launch.MixinLaunchPlugin;
-
+    
     uses javax.annotation.processing.Processor;
     provides javax.annotation.processing.Processor
         with org.spongepowered.tools.obfuscation.MixinObfuscationProcessorInjection,
