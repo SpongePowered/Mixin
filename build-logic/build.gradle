@@ -1,0 +1,28 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+java {
+    sourceCompatibility 'VERSION_1_8'
+    targetCompatibility 'VERSION_1_8'
+}
+
+repositories {
+    maven {
+        name 'sponge'
+        url 'https://repo.spongepowered.org/repository/maven-public'
+    }
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.2'
+}
+
+gradlePlugin {
+    plugins {
+        syntheticModules {
+            id = 'synthetic-modules'
+            implementationClass = 'org.spongepowered.asm.mixin.build.SyntheticModulesPlugin'
+        }
+    }
+}
