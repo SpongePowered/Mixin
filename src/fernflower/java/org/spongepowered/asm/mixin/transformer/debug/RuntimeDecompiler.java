@@ -45,8 +45,6 @@ import org.spongepowered.asm.service.MixinService;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import com.google.common.io.MoreFiles;
-import com.google.common.io.RecursiveDeleteOption;
 
 /**
  * Wrapper for FernFlower to support runtime-decompilation of post-mixin classes
@@ -73,7 +71,7 @@ public class RuntimeDecompiler extends IFernflowerLogger implements IDecompiler,
         this.outputPath = outputPath;
         if (this.outputPath.exists()) {
             try {
-                MoreFiles.deleteRecursively(this.outputPath.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
+                org.spongepowered.asm.util.Files.deleteRecursively(this.outputPath);
             } catch (IOException ex) {
                 this.logger.debug("Error cleaning output directory: {}", ex.getMessage());
             }

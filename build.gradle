@@ -221,7 +221,8 @@ javadoc {
     classpath += sourceSets.legacy.output
     source sourceSets.ap.allJava
     exclude {
-        it.relativePath.file && it.relativePath.pathString =~ 'tools' && !(it.name =~ /SuppressedBy|package-info/) }
+        it.relativePath.file && it.relativePath.pathString =~ 'tools' && !(it.name =~ /SuppressedBy|package-info/)
+    }
     options {
         docTitle 'Welcome to the Mixin Javadoc'
         overview 'docs/javadoc/overview.html'

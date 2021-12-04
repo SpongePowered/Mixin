@@ -25,6 +25,7 @@
 package org.spongepowered.asm.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -73,6 +74,44 @@ public final class Files {
         }
         
         return new File(uri);
+    }
+
+    /**
+     * Recursively delete a directory. Does not support symlinks but this is
+     * mainly used by mixin internals which only write files and normal
+     * directories so it should be fine
+     * 
+     * @param dir Root directory to delete
+     * @throws IOException Security errors and any other IO errors encountered
+     *      are raised as IOExceptions
+     */
+    public static void deleteRecursively(File dir) throws IOException {
+        if (dir == null || !dir.isDirectory()) {
+            return;
+        }
+        
+        try {
+            File[] files = dir.listFiles();
+            if (files == null) {
+                throw new IOException("Error enumerating directory during recursive delete operation: " + dir.getAbsolutePath());
+            }
+
+            for (File child : files) {
+                if (child.isDirectory()) {
+                    Files.deleteRecursively(child);
+                } else if (child.isFile()) {
+                    if (!child.delete()) {
+                        throw new IOException("Error deleting file during recursive delete operation: " + child.getAbsolutePath());
+                    }
+                }
+            }
+            
+            if (!dir.delete()) {
+                throw new IOException("Error deleting directory during recursive delete operation: " + dir.getAbsolutePath());
+            }
+        } catch (SecurityException ex) {
+            throw new IOException("Security error during recursive delete operation", ex);
+        }
     }
 
 }
