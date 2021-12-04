@@ -710,7 +710,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             return;
         }
 
-        if (!this.mixinPackage.endsWith(".")) {
+        if (!this.mixinPackage.endsWith(".") && !this.mixinPackage.isEmpty()) {
             this.mixinPackage += ".";
         }
         
