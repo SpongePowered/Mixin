@@ -34,7 +34,6 @@ import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.commons.ClassRemapper;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ext.IClassGenerator;
@@ -201,18 +200,17 @@ final class InnerClassGenerator implements IClassGenerator {
      * Just a basic remapping adapter, but we also decorate the transformed
      * class with a meta annotation describing the original class.
      */
-    static class InnerClassAdapter extends ClassRemapper {
+    static class InnerClassAdapter extends ClassVisitor {
         
         private final InnerClassInfo info;
         
         InnerClassAdapter(ClassVisitor cv, InnerClassInfo info) {
-            super(ASM.API_VERSION, cv, info);
+            super(ASM.API_VERSION, cv);
             this.info = info;
         }
         
         /* (non-Javadoc)
-         * @see org.objectweb.asm.commons.ClassRemapper
-         *      #visitNestHost(java.lang.String)
+         * @see org.objectweb.asm.ClassVisitor#visitNestHost(java.lang.String)
          */
         @Override
         public void visitNestHost(String nestHost) {
@@ -250,6 +248,21 @@ final class InnerClassGenerator implements IClassGenerator {
         }
         
     }
+    
+    /**
+     * ClassRemapper from ASM 5.2 onward
+     */
+    private static final String REMAPPER_CLASS = "org.objectweb.asm.commons.ClassRemapper";
+    
+    /**
+     * RemappingClassAdapter prior to ASM 5.2
+     */
+    private static final String REMAPPER_CLASS_LEGACY = "org.objectweb.asm.commons.RemappingClassAdapter";
+    
+    /**
+     * Resolved ClassRemapper class
+     */
+    private static Class<? extends ClassVisitor> clRemapper;
     
     /**
      * Logger
@@ -364,7 +377,7 @@ final class InnerClassGenerator implements IClassGenerator {
     private boolean generate(InnerClassInfo info, ClassNode classNode) {
         try {
             InnerClassGenerator.logger.debug("Generating mapped inner class {} (originally {})", info.getName(), info.getOriginalName());
-            info.accept(new InnerClassAdapter(classNode, info));
+            info.accept(new InnerClassAdapter(InnerClassGenerator.createRemappingAdapter(classNode, info), info));
             return true;
         } catch (InvalidMixinException ex) {
             throw ex;
@@ -389,6 +402,39 @@ final class InnerClassGenerator implements IClassGenerator {
             name = "Anonymous";
         }
         return String.format("%s$%s$%s", targetClass, name, UUID.randomUUID().toString().replace("-", ""));
+    }
+
+    /**
+     * Since we still technically support ASM5, and the remapping visitor class
+     * was refactored between ASM 5.0.3 and ASM 5.2, we can instatiate it using
+     * reflection in order to try both variants. Throws CNFE if the class can't
+     * be loaded for some reason
+     * 
+     * @param cv Upstream ClassVisitor
+     * @param remapper Remapper to use
+     * @return New ClassRemapper or RemappingClassAdapter
+     * @throws ReflectiveOperationException if something goes wrong
+     */
+    @SuppressWarnings("unchecked")
+    private static ClassVisitor createRemappingAdapter(ClassVisitor cv, Remapper remapper) throws ReflectiveOperationException {
+        if (InnerClassGenerator.clRemapper == null) {
+            try {
+                InnerClassGenerator.clRemapper = (Class<? extends ClassVisitor>)Class.forName(InnerClassGenerator.REMAPPER_CLASS);
+            } catch (ClassNotFoundException ex) {
+                // expected under ASM 5.0.3 since the new class doesn't exist yet 
+            }
+            
+            if (InnerClassGenerator.clRemapper == null) {
+                try {
+                    InnerClassGenerator.clRemapper = (Class<? extends ClassVisitor>)Class.forName(InnerClassGenerator.REMAPPER_CLASS_LEGACY);
+                } catch (ClassNotFoundException ex) {
+                    // Not expected
+                    throw new ClassNotFoundException(InnerClassGenerator.REMAPPER_CLASS + " or " + InnerClassGenerator.REMAPPER_CLASS_LEGACY);
+                }
+            }
+        }
+        
+        return InnerClassGenerator.clRemapper.getConstructor(ClassVisitor.class, Remapper.class).newInstance(cv, remapper);
     }
 
 }
