@@ -94,7 +94,7 @@ sourceSets {
     ap {
         compileClasspath += main.output
         ext.languageVersion = 8
-        ext.compatibility = '1.6'
+        ext.compatibility = '1.8'
     }
     fernflower {
         compileClasspath += main.output
