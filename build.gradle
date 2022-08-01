@@ -380,6 +380,8 @@ configurations.archives.artifacts.clear()
 shadowJar  {
     from sourceSets.ap.output
     classifier = 'processor'
+    relocate("org.objectweb.asm", "org.spongepowered.asm.shadow.asm")
+    relocate("com.google", "org.spongepowered.asm.shadow.com.google")
 }
 build.dependsOn(shadowJar)
 
