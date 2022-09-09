@@ -70,7 +70,7 @@ import org.spongepowered.asm.util.perf.Profiler.Section;
 /**
  * Heart of the Mixin pipeline 
  */
-class MixinProcessor {
+public class MixinProcessor {
 
     /**
      * Phase during which an error occurred, delegates to functionality in
@@ -505,7 +505,15 @@ class MixinProcessor {
         
         Collections.sort(this.pendingConfigs);
     }
-
+    
+    /**
+     * Literally only here to prevent a crash because some mods use reflection to access this method.
+     */
+    @Deprecated
+    private int prepareConfigs(MixinEnvironment environment) {
+        this.prepareConfigs(environment, this.extensions);
+    }
+    
     /**
      * Prepare mixin configs
      * 
