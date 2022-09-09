@@ -505,7 +505,15 @@ public class MixinProcessor {
         
         Collections.sort(this.pendingConfigs);
     }
-
+    
+    /**
+     * Literally only here to prevent a crash because some mods use reflection to access this method.
+     */
+    @Deprecated
+    private int prepareConfigs(MixinEnvironment environment) {
+        this.prepareConfigs(environment, this.extensions);
+    }
+    
     /**
      * Prepare mixin configs
      * 
