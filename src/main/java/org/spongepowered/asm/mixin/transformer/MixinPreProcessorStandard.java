@@ -478,7 +478,7 @@ class MixinPreProcessorStandard {
             return;
         }
         
-        String message = String.format("%s %s method %s in %s cannot reduce visibiliy of %s target method", visMethod, type, mixinMethod.name,
+        String message = String.format("%s %s method %s in %s cannot reduce visibility of %s target method", visMethod, type, mixinMethod.name,
                 this.mixin, visTarget);
         
         if (type.isOverwrite && !this.mixin.getParent().conformOverwriteVisibility()) {
