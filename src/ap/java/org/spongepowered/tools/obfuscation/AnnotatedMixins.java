@@ -371,17 +371,13 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         return this.mixins.get(mixinType);
     }
 
-    public Collection<TypeMirror> getMixinsTargeting(TypeMirror targetType) {
-        return this.getMixinsTargeting((TypeElement)((DeclaredType)targetType).asElement());
-    }
-
-    public Collection<TypeMirror> getMixinsTargeting(TypeElement targetType) {
-        List<TypeMirror> minions = new ArrayList<TypeMirror>();
+    public Collection<TypeHandle> getMixinsTargeting(TypeHandle targetType) {
+        List<TypeHandle> minions = new ArrayList<TypeHandle>();
 
         for (TypeReference mixin : this.targets.getMixinsTargeting(targetType)) {
-            TypeHandle handle = mixin.getHandle(this.processingEnv);
-            if (handle != null && handle.hasTypeMirror()) {
-                minions.add(handle.getTypeMirror());
+            TypeHandle handle = mixin.getHandle(this);
+            if (handle != null) {
+                minions.add(handle);
             }
         }
 
@@ -710,7 +706,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
         TypeElement element = this.getTypeElement(name, elements);
         if (element != null) {
             try {
-                return new TypeHandle(element);
+                return new TypeHandle(element, this);
             } catch (NullPointerException ex) {
                 // probably bad package
             }
@@ -718,7 +714,7 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
 
         if (pkg != null) {
             // Couldn't resolve the class, but could resolve the package, so just return an imaginary handle.
-            return new TypeHandle(pkg, name);
+            return new TypeHandle(pkg, name, this);
         }
 
         // Couldn't even resolve the package, all hope is lost.
@@ -816,11 +812,11 @@ final class AnnotatedMixins implements IMixinAnnotationProcessor, ITokenProvider
             String pkg = name.substring(0, lastDotPos);
             PackageElement packageElement = this.processingEnv.getElementUtils().getPackageElement(pkg);
             if (packageElement != null) {
-                return new TypeHandleSimulated(packageElement, name, simulatedTarget);
+                return new TypeHandleSimulated(packageElement, name, simulatedTarget, this);
             }
         }
 
-        return new TypeHandleSimulated(name, simulatedTarget);
+        return new TypeHandleSimulated(name, simulatedTarget, this);
     }
 
     /* (non-Javadoc)

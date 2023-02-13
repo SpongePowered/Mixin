@@ -77,7 +77,7 @@ class AnnotatedMixinElementHandlerSoftImplements extends AnnotatedMixinElementHa
             }
             
             try {
-                TypeHandle iface = new TypeHandle(interfaceAnnotation.<DeclaredType>getValue("iface"));
+                TypeHandle iface = this.ap.getTypeProvider().getTypeHandle(interfaceAnnotation.<DeclaredType>getValue("iface"));
                 String prefix = interfaceAnnotation.<String>getValue("prefix");
                 this.processSoftImplements(remap, iface, prefix);
             } catch (Exception ex) {

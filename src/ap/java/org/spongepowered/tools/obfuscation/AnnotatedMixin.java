@@ -176,7 +176,7 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
         this.mappings = this.obf.createMappingConsumer();
         this.messager = ap;
         this.mixin = type;
-        this.handle = new TypeHandle(type);
+        this.handle = new TypeHandle(type, ap.getTypeProvider());
         this.methods = new ArrayList<MethodHandle>(this.handle.getMethods());
         this.virtual = this.handle.getAnnotation(Pseudo.class).exists();
         this.annotation = this.handle.getAnnotation(Mixin.class);

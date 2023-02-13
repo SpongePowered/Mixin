@@ -76,12 +76,6 @@ public class TypeHandleASM extends TypeHandle {
      * ClassNode used for accessing information when not accessible via mirror
      */
     private final ClassNode classNode;
-    
-    /**
-     * Type handle provider, we need this since we have to resolve type handles
-     * for related classes (eg. superclass) without using mirror
-     */
-    private final ITypeHandleProvider typeProvider;
 
     /**
      * Ctor for imaginary elements, require the enclosing package and the FQ
@@ -91,9 +85,8 @@ public class TypeHandleASM extends TypeHandle {
      * @param name FQ class name
      */
     protected TypeHandleASM(PackageElement pkg, String name, ClassNode classNode, ITypeHandleProvider typeProvider) {
-        super(pkg, name);
+        super(pkg, name, typeProvider);
         this.classNode = classNode;
-        this.typeProvider = typeProvider;
     }
 
     /* (non-Javadoc)
@@ -146,8 +139,10 @@ public class TypeHandleASM extends TypeHandle {
      */
     @Override
     public TypeHandle getSuperclass() {
-        TypeHandle superClass = this.typeProvider.getTypeHandle(this.classNode.superName);
-        return superClass;
+        if (this.classNode.superName == null) {
+            return null;
+        }
+        return this.typeProvider.getTypeHandle(this.classNode.superName);
     }
 
     /* (non-Javadoc)
@@ -194,6 +189,14 @@ public class TypeHandleASM extends TypeHandle {
     @Override
     public boolean isImaginary() {
         return false;
+    }
+
+    /* (non-Javadoc)
+     * @see org.spongepowered.tools.obfuscation.mirror.TypeHandle#isInterface()
+     */
+    @Override
+    public boolean isNotInterface() {
+        return (this.classNode.access & Opcodes.ACC_INTERFACE) == 0;
     }
 
     /* (non-Javadoc)
@@ -272,7 +275,11 @@ public class TypeHandleASM extends TypeHandle {
         InputStream is = null;
         try {
             Filer filer = ap.getProcessingEnvironment().getFiler();
-            is = filer.getResource(StandardLocation.CLASS_PATH, pkg.getQualifiedName(), name + ".class").openInputStream();
+            try {
+                is = filer.getResource(StandardLocation.CLASS_PATH, pkg.getQualifiedName(), name + ".class").openInputStream();
+            } catch (FileNotFoundException ignored) {
+                is = filer.getResource(StandardLocation.PLATFORM_CLASS_PATH, pkg.getQualifiedName(), name + ".class").openInputStream();
+            }
             ClassNode classNode = new ClassNode();
             new ClassReader(is).accept(classNode, 0);
             TypeHandleASM typeHandle = new TypeHandleASM(pkg, fqName, classNode, ap.getTypeProvider());

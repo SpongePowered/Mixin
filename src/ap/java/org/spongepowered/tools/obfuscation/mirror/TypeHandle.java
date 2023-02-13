@@ -44,6 +44,7 @@ import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorByName;
 import org.spongepowered.asm.obfuscation.mapping.common.MappingMethod;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
+import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mirror.mapping.MappingMethodResolvable;
 
 import com.google.common.collect.ImmutableList;
@@ -71,6 +72,12 @@ public class TypeHandle {
      * Actual type element, this is null for inaccessible classes
      */
     private final TypeElement element;
+
+    /**
+     * Type handle provider, we need this since we have to resolve type handles
+     * for related classes (eg. superclass) without using mirror
+     */
+    protected final ITypeHandleProvider typeProvider;
     
     /**
      * Reference to this handle, for serialisation 
@@ -84,10 +91,11 @@ public class TypeHandle {
      * @param pkg Package
      * @param name FQ class name
      */
-    public TypeHandle(PackageElement pkg, String name) {
+    public TypeHandle(PackageElement pkg, String name, ITypeHandleProvider typeProvider) {
         this.name = name.replace('.', '/');
         this.pkg = pkg;
         this.element = null;
+        this.typeProvider = typeProvider;
     }
     
     /**
@@ -95,10 +103,11 @@ public class TypeHandle {
      * 
      * @param element ze element
      */
-    public TypeHandle(TypeElement element) {
+    public TypeHandle(TypeElement element, ITypeHandleProvider typeProvider) {
         this.pkg = TypeUtils.getPackage(element);
         this.name = TypeUtils.getInternalName(element);
         this.element = element;
+        this.typeProvider = typeProvider;
     }
     
     /**
@@ -106,8 +115,8 @@ public class TypeHandle {
      * 
      * @param type type
      */
-    public TypeHandle(DeclaredType type) {
-        this((TypeElement)type.asElement());
+    public TypeHandle(DeclaredType type, ITypeHandleProvider typeProvider) {
+        this((TypeElement)type.asElement(), typeProvider);
     }
     
     /* (non-Javadoc)
@@ -215,7 +224,7 @@ public class TypeHandle {
             return null;
         }
         
-        return new TypeHandle((DeclaredType)superClass);
+        return typeProvider.getTypeHandle(superClass);
     }
     
     /**
@@ -228,7 +237,7 @@ public class TypeHandle {
         
         Builder<TypeHandle> list = ImmutableList.<TypeHandle>builder();
         for (TypeMirror iface : this.getTargetElement().getInterfaces()) {
-            list.add(new TypeHandle((DeclaredType)iface));
+            list.add(typeProvider.getTypeHandle(iface));
         }
         return list.build();
     }
@@ -273,6 +282,34 @@ public class TypeHandle {
      * Get whether this handle is simulated
      */
     public boolean isSimulated() {
+        return false;
+    }
+
+    /**
+     * Gets whether this handle definitely does not represent an interface
+     */
+    public boolean isNotInterface() {
+        TypeElement target = this.getTargetElement();
+        return target != null && !target.getKind().isInterface();
+    }
+
+    /**
+     * Gets whether this handle is the same as or a supertype of the other handle
+     */
+    public boolean isAssignableFrom(TypeHandle other) {
+        if (this.getName().equals(other.getName())) {
+            return true;
+        }
+        List<TypeHandle> superTypes = new ArrayList<>();
+        if (other.getSuperclass() != null) {
+            superTypes.add(other.getSuperclass());
+        }
+        superTypes.addAll(other.getInterfaces());
+        for (TypeHandle superType : superTypes) {
+            if (this.isAssignableFrom(superType)) {
+                return true;
+            }
+        }
         return false;
     }
     

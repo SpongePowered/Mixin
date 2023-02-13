@@ -29,9 +29,6 @@ import java.util.Collection;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -94,8 +91,7 @@ public class TargetValidator extends MixinValidator {
         }
         
         for (TypeHandle target : targets) {
-            TypeElement targetType = target.getElement();
-            if (targetType != null && !(targetType.getKind() == ElementKind.INTERFACE)) {
+            if (target != null && target.isNotInterface()) {
                 this.messager.printMessage(MessageType.TARGET_VALIDATOR, "Targetted type '" + target + " of " + mixin + " is not an interface",
                         mixin);
             }
@@ -103,54 +99,27 @@ public class TargetValidator extends MixinValidator {
     }
 
     private void validateClassMixin(TypeElement mixin, Collection<TypeHandle> targets) {
-        TypeMirror superClass = mixin.getSuperclass();
+        TypeHandle superClass = this.typeHandleProvider.getTypeHandle(TypeUtils.getInternalName(mixin)).getSuperclass();
         
         for (TypeHandle target : targets) {
-            TypeMirror targetType = target.getTypeMirror();
-            if (targetType != null && !this.validateSuperClass(targetType, superClass)) {
+            if (target != null && !this.validateSuperClass(target, superClass)) {
                 this.messager.printMessage(MessageType.TARGET_VALIDATOR, "Superclass " + superClass + " of " + mixin
-                        + " was not found in the hierarchy of target class " + targetType, mixin);
+                        + " was not found in the hierarchy of target class " + target, mixin);
             }
         }
     }
 
-    private boolean validateSuperClass(TypeMirror targetType, TypeMirror superClass) {
-        if (TypeUtils.isAssignable(this.processingEnv, targetType, superClass)) {
-            return true;
-        }
-        
-        return this.validateSuperClassRecursive(targetType, superClass);
+    private boolean validateSuperClass(TypeHandle targetType, TypeHandle superClass) {
+        return superClass.isAssignableFrom(targetType) || this.checkMixinsFor(targetType, superClass);
     }
 
-    private boolean validateSuperClassRecursive(TypeMirror targetType, TypeMirror superClass) {
-        if (!(targetType instanceof DeclaredType)) {
-            return false;
-        }
-        
-        if (TypeUtils.isAssignable(this.processingEnv, targetType, superClass)) {
-            return true;
-        }
-        
-        TypeElement targetElement = (TypeElement)((DeclaredType)targetType).asElement();
-        TypeMirror targetSuper = targetElement.getSuperclass();
-        if (targetSuper.getKind() == TypeKind.NONE) {
-            return false;
-        }
-        
-        if (this.checkMixinsFor(targetSuper, superClass)) {
-            return true;
-        }
-        
-        return this.validateSuperClassRecursive(targetSuper, superClass);
-    }
-
-    private boolean checkMixinsFor(TypeMirror targetType, TypeMirror superClass) {
-        for (TypeMirror mixinType : this.getMixinsTargeting(targetType)) {
-            if (TypeUtils.isAssignable(this.processingEnv, mixinType, superClass)) {
+    private boolean checkMixinsFor(TypeHandle targetType, TypeHandle superClass) {
+        for (TypeHandle mixinType : this.getMixinsTargeting(targetType)) {
+            if (mixinType.isAssignableFrom(superClass)) {
                 return true;
             }
         }
         
-        return false;
+        return targetType.getSuperclass() != null && this.checkMixinsFor(targetType.getSuperclass(), superClass);
     }
 }

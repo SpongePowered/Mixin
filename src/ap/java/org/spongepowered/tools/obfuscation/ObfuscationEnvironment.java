@@ -196,13 +196,13 @@ public abstract class ObfuscationEnvironment implements IObfuscationEnvironment 
         }
         
         // See if we can get the superclass from the reference
-        TypeMirror superClass = type.getElement().getSuperclass();
-        if (superClass.getKind() != TypeKind.DECLARED) {
+        TypeHandle superClass = type.getSuperclass();
+        if (superClass == null) {
             return null;
         }
         
         // Well we found it, let's inflect the class name and recurse the search
-        String superClassName = ((TypeElement)((DeclaredType)superClass).asElement()).getQualifiedName().toString();
+        String superClassName = superClass.getSimpleName();
         return this.getObfMethod(method.move(superClassName.replace('.', '/')));
     }
 
