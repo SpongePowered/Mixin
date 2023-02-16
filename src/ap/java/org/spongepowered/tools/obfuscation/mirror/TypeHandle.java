@@ -294,19 +294,16 @@ public class TypeHandle {
     }
 
     /**
-     * Gets whether this handle is the same as or a supertype of the other handle
+     * Gets whether this handle is a supertype of the other handle
      */
-    public boolean isAssignableFrom(TypeHandle other) {
-        if (this.getName().equals(other.getName())) {
-            return true;
-        }
+    public boolean isSuperTypeOf(TypeHandle other) {
         List<TypeHandle> superTypes = new ArrayList<>();
         if (other.getSuperclass() != null) {
             superTypes.add(other.getSuperclass());
         }
         superTypes.addAll(other.getInterfaces());
         for (TypeHandle superType : superTypes) {
-            if (this.isAssignableFrom(superType)) {
+            if (this.name.equals(superType.name) || this.isSuperTypeOf(superType)) {
                 return true;
             }
         }

@@ -30,6 +30,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 
+import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
@@ -110,16 +111,21 @@ public class TargetValidator extends MixinValidator {
     }
 
     private boolean validateSuperClass(TypeHandle targetType, TypeHandle superClass) {
-        return targetType.isImaginary() || targetType.isSimulated() || superClass.isAssignableFrom(targetType) || this.checkMixinsFor(targetType, superClass);
+        return targetType.isImaginary() || targetType.isSimulated() || superClass.isSuperTypeOf(targetType) || this.checkMixinsFor(targetType, superClass);
     }
 
-    private boolean checkMixinsFor(TypeHandle targetType, TypeHandle superClass) {
-        for (TypeHandle mixinType : this.getMixinsTargeting(targetType)) {
-            if (mixinType.isAssignableFrom(superClass)) {
+    private boolean checkMixinsFor(TypeHandle targetType, TypeHandle superMixin) {
+        IAnnotationHandle annotation = superMixin.getAnnotation(Mixin.class);
+        for (Object target : annotation.getList()) {
+            if (this.typeHandleProvider.getTypeHandle(target).isSuperTypeOf(targetType)) {
                 return true;
             }
         }
-        
-        return targetType.getSuperclass() != null && this.checkMixinsFor(targetType.getSuperclass(), superClass);
+        for (String target : annotation.<String>getList("targets")) {
+            if (this.typeHandleProvider.getTypeHandle(target).isSuperTypeOf(targetType)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
