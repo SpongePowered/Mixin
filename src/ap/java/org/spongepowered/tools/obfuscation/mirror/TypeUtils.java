@@ -275,6 +275,9 @@ public abstract class TypeUtils {
      * @return java signature
      */
     public static String getJavaSignature(String descriptor) {
+        if (!descriptor.contains("(")) {
+            return SignaturePrinter.getTypeName(org.objectweb.asm.Type.getType(descriptor), false, true);
+        }
         return new SignaturePrinter("", descriptor).setFullyQualified(true).toDescriptor();
     }
 
