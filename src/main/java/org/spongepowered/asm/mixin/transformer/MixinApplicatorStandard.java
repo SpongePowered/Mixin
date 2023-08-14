@@ -355,8 +355,11 @@ class MixinApplicatorStandard {
             ex.prepend(this.activities);
             throw ex;
         } catch (Exception ex) {
-            throw new MixinApplicatorException(current, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst applying the mixin class:", ex,
+            throw new MixinApplicatorException(current, "Unexpected " + ex.getClass().getSimpleName() + " whilst applying the mixin class:", ex,
                     this.activities);
+        } catch (MixinError ex) {
+            throw new MixinApplicatorException(current, "Unexpected " + ex.getClass().getSimpleName() + " whilst applying the mixin class:", ex,
+                this.activities);
         }
 
         this.applySourceMap(this.context);
