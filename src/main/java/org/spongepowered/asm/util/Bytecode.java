@@ -285,14 +285,33 @@ public final class Bytecode {
      * @return found node or null if not found 
      */
     public static AbstractInsnNode findInsn(MethodNode method, int opcode) {
-        Iterator<AbstractInsnNode> findReturnIter = method.instructions.iterator();
-        while (findReturnIter.hasNext()) {
-            AbstractInsnNode insn = findReturnIter.next();
+        Iterator<AbstractInsnNode> findInsnIter = method.instructions.iterator();
+        while (findInsnIter.hasNext()) {
+            AbstractInsnNode insn = findInsnIter.next();
             if (insn.getOpcode() == opcode) {
                 return insn;
             }
         }
         return null;
+    }
+
+    /**
+     * Find all insn nodes with a matching opcode in the specified method
+     *
+     * @param method method to search
+     * @param opcode opcode to search for
+     * @return a list containing the found nodes, may be empty if not found
+     */
+    public static List<AbstractInsnNode> findAllInsns(MethodNode method, int opcode) {
+        List<AbstractInsnNode> insns = new ArrayList<AbstractInsnNode>();
+        Iterator<AbstractInsnNode> findInsnIter = method.instructions.iterator();
+        while (findInsnIter.hasNext()) {
+            AbstractInsnNode insn = findInsnIter.next();
+            if (insn.getOpcode() == opcode) {
+                insns.add(insn);
+            }
+        }
+        return insns;
     }
 
     /**
