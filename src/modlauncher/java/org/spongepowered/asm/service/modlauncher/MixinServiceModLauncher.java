@@ -29,8 +29,6 @@ import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.Optional;
 
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.TypesafeMap;
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
 import org.spongepowered.asm.logging.ILogger;
@@ -49,7 +47,9 @@ import org.spongepowered.asm.util.IConsumer;
 import com.google.common.collect.ImmutableList;
 
 import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
+import cpw.mods.modlauncher.api.TypesafeMap;
 import org.spongepowered.asm.util.VersionNumber;
 
 /**
@@ -121,7 +121,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     private CompatibilityLevel minCompatibilityLevel = CompatibilityLevel.JAVA_8;
     
     public MixinServiceModLauncher() {
-        VersionNumber apiVersion = getModLauncherApiVersion();
+        VersionNumber apiVersion = MixinServiceModLauncher.getModLauncherApiVersion();
         if (apiVersion.compareTo(MODLAUNCHER_9_SPECIFICATION_VERSION) >= 0) {
             this.createRootContainer(MixinServiceModLauncher.MODLAUNCHER_9_ROOT_CONTAINER_CLASS);
             this.minCompatibilityLevel = CompatibilityLevel.JAVA_16;
@@ -204,7 +204,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public boolean isValid() {
         try {
-            VersionNumber apiVersion = getModLauncherApiVersion();
+            VersionNumber apiVersion = MixinServiceModLauncher.getModLauncherApiVersion();
             if (apiVersion.compareTo(MixinServiceModLauncher.MODLAUNCHER_4_SPECIFICATION_VERSION) < 0) {
                 return false;
             }
@@ -315,12 +315,8 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     }
 
     private static VersionNumber getModLauncherApiVersion() {
-        Optional<String> version = Optional.empty();
-        try {
-            TypesafeMap.Key<String> versionProperty = IEnvironment.Keys.MLSPEC_VERSION.get();
-            version = Launcher.INSTANCE.environment().getProperty(versionProperty);
-        } catch (Exception ignored) {
-        }
+        TypesafeMap.Key<String> versionProperty = IEnvironment.Keys.MLSPEC_VERSION.get();
+        Optional<String> version = Launcher.INSTANCE.environment().getProperty(versionProperty);
 
         // Fall back to the package information (this is not present when loaded as a module)
         if (!version.isPresent()) {
