@@ -24,6 +24,8 @@
  */
 package org.spongepowered.asm.mixin.injection.struct;
 
+import java.util.List;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -62,10 +64,10 @@ public class ModifyConstantInjectionInfo extends InjectionInfo {
     }
 
     @Override
-    protected void parseInjectionPoints() {
+    protected void parseInjectionPoints(List<AnnotationNode> ats) {
         Type returnType = Type.getReturnType(this.method.desc);
         
-        for (AnnotationNode at : this.injectionPointAnnotations) {
+        for (AnnotationNode at : ats) {
             this.injectionPoints.add(new BeforeConstant(this.getMixin(), at, returnType.getDescriptor()));
         }
     }

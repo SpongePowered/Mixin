@@ -314,7 +314,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             activity.next("Validate Targets");
             this.targets.validate(this.expectedCallbackCount, this.requiredCallbackCount);
             activity.next("Parse Injection Points");
-            this.parseInjectionPoints();
+            this.parseInjectionPoints(this.injectionPointAnnotations);
             activity.next("Parse Injector");
             this.injector = this.parseInjector(this.annotation);
             activity.end();
@@ -370,8 +370,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
         this.targets.parse(selectors);
     }
 
-    protected void parseInjectionPoints() {
-        this.injectionPoints.addAll(InjectionPoint.parse(this, this.injectionPointAnnotations));
+    protected void parseInjectionPoints(List<AnnotationNode> ats) {
+        this.injectionPoints.addAll(InjectionPoint.parse(this, ats));
     }
 
     // stub
