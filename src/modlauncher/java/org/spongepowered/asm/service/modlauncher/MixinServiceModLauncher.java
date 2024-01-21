@@ -27,6 +27,7 @@ package org.spongepowered.asm.service.modlauncher;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.spongepowered.asm.launch.IClassProcessor;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleModLauncher;
@@ -46,7 +47,10 @@ import org.spongepowered.asm.util.IConsumer;
 import com.google.common.collect.ImmutableList;
 
 import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
+import cpw.mods.modlauncher.api.TypesafeMap;
+import org.spongepowered.asm.util.VersionNumber;
 
 /**
  * Mixin service for ModLauncher
@@ -56,7 +60,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     /**
      * Specification version to check for at startup
      */
-    private static final String MODLAUNCHER_4_SPECIFICATION_VERSION = "4.0";
+    private static final VersionNumber MODLAUNCHER_4_SPECIFICATION_VERSION = VersionNumber.parse("4.0");
     
     /**
      * Specification version for ModLauncher versions &gt;= 9.0.4, yes this is
@@ -65,8 +69,8 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
      * version 5.0 for example, and ML7 and ML8 both had specification version
      * 7.0).
      */
-    private static final String MODLAUNCHER_9_SPECIFICATION_VERSION = "8.0";
-    
+    private static final VersionNumber MODLAUNCHER_9_SPECIFICATION_VERSION = VersionNumber.parse("8.0");
+
     private static final String CONTAINER_PACKAGE = MixinServiceAbstract.LAUNCH_PACKAGE + "platform.container.";
     private static final String MODLAUNCHER_4_ROOT_CONTAINER_CLASS = MixinServiceModLauncher.CONTAINER_PACKAGE + "ContainerHandleModLauncher";
     private static final String MODLAUNCHER_9_ROOT_CONTAINER_CLASS = MixinServiceModLauncher.CONTAINER_PACKAGE + "ContainerHandleModLauncherEx";
@@ -117,15 +121,15 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     private CompatibilityLevel minCompatibilityLevel = CompatibilityLevel.JAVA_8;
     
     public MixinServiceModLauncher() {
-        final Package pkg = ITransformationService.class.getPackage();
-        if (pkg.isCompatibleWith(MixinServiceModLauncher.MODLAUNCHER_9_SPECIFICATION_VERSION)) {
+        VersionNumber apiVersion = MixinServiceModLauncher.getModLauncherApiVersion();
+        if (apiVersion.compareTo(MODLAUNCHER_9_SPECIFICATION_VERSION) >= 0) {
             this.createRootContainer(MixinServiceModLauncher.MODLAUNCHER_9_ROOT_CONTAINER_CLASS);
             this.minCompatibilityLevel = CompatibilityLevel.JAVA_16;
         } else {
             this.createRootContainer(MixinServiceModLauncher.MODLAUNCHER_4_ROOT_CONTAINER_CLASS);
         }
     }
-    
+
     /**
      * Begin init
      * 
@@ -200,9 +204,8 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
     @Override
     public boolean isValid() {
         try {
-            Launcher.INSTANCE.hashCode();
-            final Package pkg = ITransformationService.class.getPackage();
-            if (!pkg.isCompatibleWith(MixinServiceModLauncher.MODLAUNCHER_4_SPECIFICATION_VERSION)) {
+            VersionNumber apiVersion = MixinServiceModLauncher.getModLauncherApiVersion();
+            if (apiVersion.compareTo(MixinServiceModLauncher.MODLAUNCHER_4_SPECIFICATION_VERSION) < 0) {
                 return false;
             }
         } catch (Throwable th) {
@@ -309,6 +312,18 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
             this.getTransformationHandler(),
             (IClassProcessor)this.getClassTracker()
         );
+    }
+
+    private static VersionNumber getModLauncherApiVersion() {
+        TypesafeMap.Key<String> versionProperty = IEnvironment.Keys.MLSPEC_VERSION.get();
+        Optional<String> version = Launcher.INSTANCE.environment().getProperty(versionProperty);
+
+        // Fall back to the package information (this is not present when loaded as a module)
+        if (!version.isPresent()) {
+            version = Optional.ofNullable(ITransformationService.class.getPackage().getSpecificationVersion());
+        }
+
+        return version.map(VersionNumber::parse).orElse(VersionNumber.NONE);
     }
 
 }
