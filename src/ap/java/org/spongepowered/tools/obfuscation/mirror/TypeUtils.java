@@ -37,6 +37,7 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
@@ -274,6 +275,9 @@ public abstract class TypeUtils {
      * @return java signature
      */
     public static String getJavaSignature(String descriptor) {
+        if (!descriptor.contains("(")) {
+            return SignaturePrinter.getTypeName(org.objectweb.asm.Type.getType(descriptor), false, true);
+        }
         return new SignaturePrinter("", descriptor).setFullyQualified(true).toDescriptor();
     }
 
@@ -447,6 +451,10 @@ public abstract class TypeUtils {
         if (depth == 0) {
             throw new IllegalStateException("Generic symbol \"" + type + "\" is too complex, exceeded "
                     + TypeUtils.MAX_GENERIC_RECURSION_DEPTH + " iterations attempting to determine upper bound");
+        }
+        if (type instanceof IntersectionType) {
+            TypeMirror first = ((IntersectionType) type).getBounds().get(0);
+            return TypeUtils.getUpperBound0(first, --depth);
         }
         if (type instanceof DeclaredType) {
             return (DeclaredType)type;

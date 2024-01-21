@@ -46,8 +46,6 @@ import org.spongepowered.tools.obfuscation.mirror.FieldHandle;
 import org.spongepowered.tools.obfuscation.mirror.MethodHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 import org.spongepowered.tools.obfuscation.mirror.TypeUtils;
-import org.spongepowered.tools.obfuscation.mirror.TypeUtils.Equivalency;
-import org.spongepowered.tools.obfuscation.mirror.TypeUtils.EquivalencyResult;
 
 import com.google.common.base.Strings;
 
@@ -304,19 +302,11 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
     }
 
     private void registerFactoryForTarget(AnnotatedElementInvoker elem, TypeHandle target) {
-        EquivalencyResult equivalency = TypeUtils.isEquivalentType(this.ap.getProcessingEnvironment(), elem.getReturnType(), target.getTypeMirror());
-        if (equivalency.type != Equivalency.EQUIVALENT) {
-            if (equivalency.type == Equivalency.EQUIVALENT_BUT_RAW && equivalency.rawType == 1) {
-                elem.printMessage(this.ap, MessageType.INVOKER_RAW_RETURN_TYPE, "Raw return type for Factory @Invoker", SuppressedBy.RAW_TYPES);
-            } else if (equivalency.type == Equivalency.BOUNDS_MISMATCH) {
-                elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_GENERIC_ARGS, "Invalid Factory @Invoker return type, generic type args of "
-                        + target.getTypeMirror() + " are incompatible with " + elem.getReturnType() + ". " + equivalency);
-                return;
-            } else {
-                elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_RETURN_TYPE, "Invalid Factory @Invoker return type, expected "
-                        + target.getTypeMirror() + " but found " + elem.getReturnType());
-                return;
-            }
+        String returnType = TypeUtils.getTypeName(elem.getReturnType());
+        if (!returnType.equals(target.toString())) {
+            elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_RETURN_TYPE, "Invalid Factory @Invoker return type, expected "
+                    + target + " but found " + returnType);
+            return;
         }
         if (!elem.isStatic()) {
             elem.printMessage(this.ap, MessageType.FACTORY_INVOKER_NONSTATIC, "Factory @Invoker must be static");

@@ -132,16 +132,6 @@ public final class TargetMap extends HashMap<TypeReference, Set<TypeReference>> 
         Set<TypeReference> mixins = this.getMixinsFor(target);
         mixins.add(mixin);
     }
-
-    /**
-     * Get mixin classes which target the specified class
-     * 
-     * @param target Target class
-     * @return Collection of mixins registered as targetting the specified class
-     */
-    Collection<TypeReference> getMixinsTargeting(TypeElement target) {
-        return this.getMixinsTargeting(new TypeHandle(target));
-    }
     
     /**
      * Get mixin classes which target the specified class

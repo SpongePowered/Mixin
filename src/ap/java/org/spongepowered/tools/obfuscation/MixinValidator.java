@@ -28,13 +28,13 @@ import java.util.Collection;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
 
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 import org.spongepowered.tools.obfuscation.interfaces.IMessagerSuppressible;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinAnnotationProcessor;
 import org.spongepowered.tools.obfuscation.interfaces.IMixinValidator;
 import org.spongepowered.tools.obfuscation.interfaces.IOptionProvider;
+import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 import org.spongepowered.tools.obfuscation.mirror.TypeHandle;
 
 /**
@@ -57,7 +57,12 @@ public abstract class MixinValidator implements IMixinValidator {
      * Option provider 
      */
     protected final IOptionProvider options;
-    
+
+    /**
+     * Type handle provider
+     */
+    protected final ITypeHandleProvider typeHandleProvider;
+
     /**
      * Pass to run this validator in 
      */
@@ -73,6 +78,7 @@ public abstract class MixinValidator implements IMixinValidator {
         this.processingEnv = ap.getProcessingEnvironment();
         this.messager = ap;
         this.options = ap;
+        this.typeHandleProvider = ap.getTypeProvider();
         this.pass = pass;
     }
     
@@ -94,7 +100,7 @@ public abstract class MixinValidator implements IMixinValidator {
 
     protected abstract boolean validate(TypeElement mixin, IAnnotationHandle annotation, Collection<TypeHandle> targets);
 
-    protected final Collection<TypeMirror> getMixinsTargeting(TypeMirror targetType) {
+    protected final Collection<TypeHandle> getMixinsTargeting(TypeHandle targetType) {
         return AnnotatedMixins.getMixinsForEnvironment(this.processingEnv).getMixinsTargeting(targetType);
     }
 }
