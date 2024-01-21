@@ -43,6 +43,7 @@ import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.spongepowered.asm.util.asm.ASM;
+import org.spongepowered.asm.util.asm.MarkerNode;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException;
 import org.spongepowered.asm.util.throwables.SyntheticBridgeException.Problem;
 
@@ -438,6 +439,11 @@ public final class Bytecode {
     public static String describeNode(AbstractInsnNode node, boolean listFormat) {
         if (node == null) {
             return listFormat ? String.format("   %-14s ", "null") : "null";
+        }
+        
+        if (node instanceof MarkerNode) {
+            MarkerNode marker = (MarkerNode)node;
+            return String.format("[%s] Marker type=%d", marker.getLabel(), marker.type);
         }
         
         if (node instanceof LabelNode) {

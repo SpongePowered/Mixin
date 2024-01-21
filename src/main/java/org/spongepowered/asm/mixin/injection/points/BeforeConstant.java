@@ -169,7 +169,7 @@ public class BeforeConstant extends InjectionPoint {
     public BeforeConstant(InjectionPointData data) {
         super(data);
         
-        String strNullValue = data.get("nullValue", null);
+        String strNullValue = data.get("nullValue", (String)null);
         Boolean empty = strNullValue != null ? Boolean.parseBoolean(strNullValue) : null;
         
         this.ordinal = data.getOrdinal();
@@ -178,8 +178,8 @@ public class BeforeConstant extends InjectionPoint {
         this.floatValue = Floats.tryParse(data.get("floatValue", ""));
         this.longValue = Longs.tryParse(data.get("longValue", ""));
         this.doubleValue = Doubles.tryParse(data.get("doubleValue", ""));
-        this.stringValue = data.get("stringValue", null);
-        String strClassValue = data.get("classValue", null);
+        this.stringValue = data.get("stringValue", (String)null);
+        String strClassValue = data.get("classValue", (String)null);
         this.typeValue = strClassValue != null ? Type.getObjectType(strClassValue.replace('.', '/')) : null;
         
         this.matchByType = this.validateDiscriminator(data.getMixin(), "V", empty, "in @At(\"CONSTANT\") args");

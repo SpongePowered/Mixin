@@ -41,6 +41,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
+import org.spongepowered.asm.mixin.injection.struct.Constructor;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.struct.SourceMap;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
@@ -51,6 +52,7 @@ import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.ClassSignature;
+import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.perf.Profiler;
 import org.spongepowered.asm.util.perf.Profiler.Section;
 
@@ -224,7 +226,20 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
     List<MethodNode> getMethods() {
         return this.classNode.methods;
     }
-    
+
+    /**
+     * Get the class constructors
+     */
+    List<Constructor> getConstructors() {
+        List<Constructor> ctors = new ArrayList<Constructor>();
+        for (MethodNode method : this.classNode.methods) {
+            if (Constants.CTOR.equals(method.name)) {
+                ctors.add((Constructor)this.getTargetMethod(method));
+            }
+        }
+        return ctors;
+    }
+
     /**
      * Get the class fields (from the tree)
      */
@@ -345,7 +360,7 @@ final class TargetClassContext extends ClassContext implements ITargetClassConte
         String targetName = method.name + method.desc;
         Target target = this.targetMethods.get(targetName);
         if (target == null) {
-            target = new Target(this.classNode, method);
+            target = Target.of(this.classInfo, this.classNode, method);
             this.targetMethods.put(targetName, target);
         }
         return target;

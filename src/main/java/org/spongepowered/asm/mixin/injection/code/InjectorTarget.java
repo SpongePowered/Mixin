@@ -117,6 +117,27 @@ public class InjectorTarget {
     public InjectionNode getInjectionNode(AbstractInsnNode node) {
         return this.target.getInjectionNode(node);
     }
+    
+    /**
+     * Get the target method name
+     */
+    public String getName() {
+        return this.target.getName();
+    }
+    
+    /**
+     * Get the target method descriptor
+     */
+    public String getDesc() {
+        return this.target.getDesc();
+    }
+    
+    /**
+     * Get the target method signature
+     */
+    public String getSignature() {
+        return this.target.getSignature();
+    }
 
     /**
      * Get the target reference
@@ -173,10 +194,10 @@ public class InjectorTarget {
         if (slice == null) {
             MethodSlice sliceInfo = this.context.getSlice(id);
             if (sliceInfo != null) {
-                slice = sliceInfo.getSlice(this.target.method);
+                slice = sliceInfo.getSlice(this.target);
             } else {
                 // No slice exists so just wrap the method insns
-                slice = new InsnListReadOnly(this.target.method.instructions);
+                slice = new InsnListEx(this.target);
             }
             this.cache.put(id, slice);
         }
@@ -204,5 +225,6 @@ public class InjectorTarget {
         
         this.cache.clear();
     }
+
 }
 

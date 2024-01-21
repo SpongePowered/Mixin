@@ -22,46 +22,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.mixin.injection.points;
+package org.spongepowered.asm.util.asm;
 
-import java.util.Collection;
-
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.InjectionPoint.AtCode;
-import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.tree.LabelNode;
 
 /**
- * <p>This injection point simply returns the first instruction in the target
- * method body, allowing the injection to be placed at the "head" of the target
- * method. It accepts no parameters and only returns a single insn in all
- * circumstances.</p>
- * 
- * <p>Example:</p>
- * <blockquote><pre>
- *   &#064;At("HEAD")</pre>
- * </blockquote>
- * 
- * <p>Note that for constructors, use of <tt>HEAD</tt> is discouraged, see
- * instead <tt>{@link ConstructorHead CTOR_HEAD}</tt>. 
+ * A label node used as a marker in the bytecode. Does not actually visit the
+ * label when visited.
  */
-@AtCode("HEAD")
-public class MethodHead extends InjectionPoint {
-
-    public MethodHead(InjectionPointData data) {
-        super(data);
-    }
+public class MarkerNode extends LabelNode {
     
-    @Override
-    public boolean checkPriority(int targetPriority, int ownerPriority) {
-        return true;
+    /**
+     * Marks the end of the initialiser in a constructor
+     */
+    public static final int INITIALISER_TAIL = 1;
+    
+    /**
+     * The type for this marker
+     */
+    public final int type;
+
+    public MarkerNode(int type) {
+        super(null);
+        this.type = type;
     }
 
     @Override
-    public boolean find(String desc, InsnList insns, Collection<AbstractInsnNode> nodes) {
-        nodes.add(insns.getFirst());
-        return true;
+    public void accept(MethodVisitor methodVisitor) {
+        // Noop
     }
 
 }

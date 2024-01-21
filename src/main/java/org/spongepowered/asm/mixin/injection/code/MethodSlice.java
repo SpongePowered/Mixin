@@ -40,8 +40,10 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier;
 import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointAnnotationContext;
+import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
+import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 
@@ -57,7 +59,7 @@ public final class MethodSlice {
      * identified by <tt>start</tt> and <tt>end</tt> to be accessed. In essence
      * this class provides a <em>view</em> of the underlying InsnList.
      */
-    static final class InsnListSlice extends InsnListReadOnly { 
+    static final class InsnListSlice extends InsnListEx { 
     
         /**
          * ListIterator for the slice view, wraps an iterator returned by the
@@ -178,8 +180,8 @@ public final class MethodSlice {
          */
         private final int start, end;
         
-        protected InsnListSlice(InsnList inner, int start, int end) {
-            super(inner);
+        protected InsnListSlice(Target target, int start, int end) {
+            super(target);
             
             // Start and end are validated prior to construction
             this.start = start;
@@ -259,6 +261,9 @@ public final class MethodSlice {
          */
         @Override
         public boolean contains(AbstractInsnNode insn) {
+            if (insn == null) {
+                return false;
+            }
             for (AbstractInsnNode node : this.toArray()) {
                 if (node == insn) {
                     return true;
@@ -361,13 +366,13 @@ public final class MethodSlice {
     /**
      * Get a sliced insn list based on the parameters specified in this slice
      * 
-     * @param method method to slice
+     * @param target method to slice
      * @return read only slice
      */
-    public InsnListReadOnly getSlice(MethodNode method) {
-        int max = method.instructions.size() - 1;
-        int start = this.find(method, this.from, 0, 0, "from");
-        int end = this.find(method, this.to, max, start, "to");
+    public InsnListReadOnly getSlice(Target target) {
+        int max = target.insns.size() - 1;
+        int start = this.find(target, this.from, 0, 0, "from");
+        int end = this.find(target, this.to, max, start, "to");
         
         if (start > end) {
             throw new InvalidSliceException(this.owner, String.format("%s is negative size. Range(%d -> %d)", this.describe(), start, end));
@@ -378,10 +383,10 @@ public final class MethodSlice {
         }
         
         if (start == 0 && end == max) {
-            return new InsnListReadOnly(method.instructions);
+            return new InsnListEx(target);
         }
         
-        return new InsnListSlice(method.instructions, start, end);
+        return new InsnListSlice(target, start, end);
     }
 
     /**
@@ -389,7 +394,7 @@ public final class MethodSlice {
      * the index of the instruction matching the query. Returns the default
      * value if the query returns zero results.
      * 
-     * @param method Method to query
+     * @param target Method to query
      * @param injectionPoint Query to run
      * @param defaultValue Value to return if injection point is null (open
      *      ended)
@@ -397,15 +402,15 @@ public final class MethodSlice {
      * @param argument The name of the argument ("from" or "to") for debug msgs
      * @return matching insn index
      */
-    private int find(MethodNode method, InjectionPoint injectionPoint, int defaultValue, int failValue, String argument) {
+    private int find(Target target, InjectionPoint injectionPoint, int defaultValue, int failValue, String argument) {
         if (injectionPoint == null) {
             return defaultValue;
         }
         
         String description = String.format("%s(%s)", this.name, argument);
         Deque<AbstractInsnNode> nodes = new LinkedList<AbstractInsnNode>();
-        InsnListReadOnly insns = new InsnListReadOnly(method.instructions);
-        boolean result = injectionPoint.find(method.desc, insns, nodes);
+        InsnList insns = new InsnListEx(target);
+        boolean result = injectionPoint.find(target.getDesc(), insns, nodes);
         Specifier specifier = injectionPoint.getSpecifier(Specifier.FIRST);
         if (specifier == Specifier.ALL) {
             throw new InvalidSliceException(this.owner, String.format("ALL is not a valid specifier for slice %s", this.describe(description)));
@@ -424,7 +429,7 @@ public final class MethodSlice {
             this.successCountTo++;
         }
         
-        return method.instructions.indexOf(specifier == Specifier.FIRST ? nodes.getFirst() : nodes.getLast());
+        return target.indexOf(specifier == Specifier.FIRST ? nodes.getFirst() : nodes.getLast());
     }
 
     /**

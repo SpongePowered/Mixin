@@ -34,7 +34,7 @@ import org.objectweb.asm.tree.InsnList;
  * instances so that custom InjectionPoint implementations cannot modify the
  * insn list whilst inspecting it.
  */
-public class InsnListReadOnly extends InsnList {
+public abstract class InsnListReadOnly extends InsnList {
 
     private InsnList insnList;
 
@@ -218,6 +218,9 @@ public class InsnListReadOnly extends InsnList {
      */
     @Override
     public boolean contains(AbstractInsnNode insn) {
+        if (insn == null) {
+            return false;
+        }
         return this.insnList.contains(insn);
     }
 

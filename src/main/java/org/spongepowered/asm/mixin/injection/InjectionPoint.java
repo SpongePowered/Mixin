@@ -248,6 +248,35 @@ public abstract class InjectionPoint {
     }
     
     /**
+     * Boolean extensions for the At parser, mainly to avoid having to add many
+     * booleans in the future
+     */
+    public static final class Flags {
+        
+        /**
+         * Change the default target restriction from METHODS_ONLY to ALLOW_ALL
+         */
+        public static final int UNSAFE = 1;
+        
+        public static int parse(At at) {
+            int flags = 0;
+            if (at.unsafe()) {
+                flags |= Flags.UNSAFE;
+            }
+            return flags;
+        }
+
+        public static int parse(AnnotationNode at) {
+            int flags = 0;
+            if (Annotations.<Boolean>getValue(at, "unsafe", Boolean.FALSE)) {
+                flags |= InjectionPoint.Flags.UNSAFE;
+            }
+            return flags;
+        }
+        
+    }
+    
+    /**
      * Initial limit on the value of {@link At#by} which triggers warning/error
      * (based on environment)
      */
@@ -277,6 +306,7 @@ public abstract class InjectionPoint {
         InjectionPoint.registerBuiltIn(AfterStoreLocal.class);
         InjectionPoint.registerBuiltIn(BeforeFinalReturn.class);
         InjectionPoint.registerBuiltIn(BeforeConstant.class);
+        InjectionPoint.registerBuiltIn(ConstructorHead.class);
     }
     
     private final String slice;
@@ -284,13 +314,14 @@ public abstract class InjectionPoint {
     private final String id;
     private final IMessageSink messageSink;
     
+    private RestrictTargetLevel targetRestriction;
     
     protected InjectionPoint() {
         this("", Specifier.DEFAULT, null);
     }
     
     protected InjectionPoint(InjectionPointData data) {
-        this(data.getSlice(), data.getSpecifier(), data.getId(), data.getMessageSink());
+        this(data.getSlice(), data.getSpecifier(), data.getId(), data.getMessageSink(), data.getTargetRestriction());
     }
     
     public InjectionPoint(String slice, Specifier specifier, String id) {
@@ -298,10 +329,15 @@ public abstract class InjectionPoint {
     }
 
     public InjectionPoint(String slice, Specifier specifier, String id, IMessageSink messageSink) {
+        this(slice, specifier, id, messageSink, RestrictTargetLevel.METHODS_ONLY);
+    }
+    
+    public InjectionPoint(String slice, Specifier specifier, String id, IMessageSink messageSink, RestrictTargetLevel targetRestriction) {
         this.slice = slice;
         this.specifier = specifier;
         this.id = id;
         this.messageSink = messageSink;
+        this.targetRestriction = targetRestriction;
     }
     
     public String getSlice() {
@@ -347,6 +383,13 @@ public abstract class InjectionPoint {
     }
     
     /**
+     * Set a new target restriction level for this injection point
+     */
+    protected void setTargetRestriction(RestrictTargetLevel targetRestriction) {
+        this.targetRestriction = targetRestriction;
+    }
+    
+    /**
      * Returns the target restriction level for this injection point. This level
      * defines whether an injection point is valid in its current state when
      * being used by a restricted injector (currently {@link CallbackInjector}).
@@ -355,7 +398,7 @@ public abstract class InjectionPoint {
      * @return restriction level
      */
     public RestrictTargetLevel getTargetRestriction(IInjectionPointContext context) {
-        return RestrictTargetLevel.METHODS_ONLY;
+        return this.targetRestriction;
     }
 
     /**
@@ -409,6 +452,18 @@ public abstract class InjectionPoint {
             }
 
             this.components = components;
+        }
+        
+        @Override
+        public RestrictTargetLevel getTargetRestriction(IInjectionPointContext context) {
+            RestrictTargetLevel level = RestrictTargetLevel.METHODS_ONLY;
+            for (InjectionPoint component : this.components) {
+                RestrictTargetLevel componentLevel = component.getTargetRestriction(context);
+                if (componentLevel.ordinal() > level.ordinal()) {
+                    level = componentLevel;
+                }
+            }
+            return level;
         }
 
         /* (non-Javadoc)
@@ -513,6 +568,11 @@ public abstract class InjectionPoint {
         @Override
         public String toString() {
             return "InjectionPoint(" + this.getClass().getSimpleName() + ")[" + this.input + "]";
+        }
+        
+        @Override
+        public RestrictTargetLevel getTargetRestriction(IInjectionPointContext context) {
+            return this.input.getTargetRestriction(context);
         }
 
         @Override
@@ -652,7 +712,7 @@ public abstract class InjectionPoint {
      */
     public static InjectionPoint parse(IInjectionPointContext context, At at) {
         return InjectionPoint.parse(context, at.value(), at.shift(), at.by(),
-                Arrays.asList(at.args()), at.target(), at.slice(), at.ordinal(), at.opcode(), at.id());
+                Arrays.asList(at.args()), at.target(), at.slice(), at.ordinal(), at.opcode(), at.id(), InjectionPoint.Flags.parse(at));
     }
 
     /**
@@ -668,7 +728,7 @@ public abstract class InjectionPoint {
      */
     public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, At at) {
         return InjectionPoint.parse(new AnnotatedMethodInfo(context, method, parent), at.value(), at.shift(), at.by(), Arrays.asList(at.args()),
-                at.target(), at.slice(), at.ordinal(), at.opcode(), at.id());
+                at.target(), at.slice(), at.ordinal(), at.opcode(), at.id(), InjectionPoint.Flags.parse(at));
     }
     
     /**
@@ -707,12 +767,13 @@ public abstract class InjectionPoint {
         int ordinal = Annotations.<Integer>getValue(at, "ordinal", Integer.valueOf(-1));
         int opcode = Annotations.<Integer>getValue(at, "opcode", Integer.valueOf(0));
         String id = Annotations.<String>getValue(at, "id");
-
+        int flags = InjectionPoint.Flags.parse(at);
+        
         if (args == null) {
             args = ImmutableList.<String>of();
         }
 
-        return InjectionPoint.parse(context, value, shift, by, args, target, slice, ordinal, opcode, id);
+        return InjectionPoint.parse(context, value, shift, by, args, target, slice, ordinal, opcode, id, flags);
     }
 
     /**
@@ -732,12 +793,13 @@ public abstract class InjectionPoint {
      * @param ordinal Ordinal offset for supported injection points
      * @param opcode Bytecode opcode for supported injection points
      * @param id Injection point id from annotation
+     * @param flags Additional flags
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
     public static InjectionPoint parse(IMixinContext context, MethodNode method, AnnotationNode parent, String at, At.Shift shift, int by,
-            List<String> args, String target, String slice, int ordinal, int opcode, String id) {
-        return InjectionPoint.parse(new AnnotatedMethodInfo(context, method, parent), at, shift, by, args, target, slice, ordinal, opcode, id);
+            List<String> args, String target, String slice, int ordinal, int opcode, String id, int flags) {
+        return InjectionPoint.parse(new AnnotatedMethodInfo(context, method, parent), at, shift, by, args, target, slice, ordinal, opcode, id, flags);
     }
     
     /**
@@ -755,17 +817,18 @@ public abstract class InjectionPoint {
      * @param ordinal Ordinal offset for supported injection points
      * @param opcode Bytecode opcode for supported injection points
      * @param id Injection point id from annotation
+     * @param flags Additional flags
      * @return InjectionPoint parsed from the supplied data or null if parsing
      *      failed
      */
     public static InjectionPoint parse(IInjectionPointContext context, String at, At.Shift shift, int by,
-            List<String> args, String target, String slice, int ordinal, int opcode, String id) {
-        InjectionPointData data = new InjectionPointData(context, at, args, target, slice, ordinal, opcode, id);
+            List<String> args, String target, String slice, int ordinal, int opcode, String id, int flags) {
+        InjectionPointData data = new InjectionPointData(context, at, args, target, slice, ordinal, opcode, id, flags);
         Class<? extends InjectionPoint> ipClass = InjectionPoint.findClass(context.getMixin(), data);
         InjectionPoint point = InjectionPoint.create(context.getMixin(), data, ipClass);
         return InjectionPoint.shift(context, point, shift, by);
     }
-
+    
     @SuppressWarnings("unchecked")
     private static Class<? extends InjectionPoint> findClass(IMixinContext context, InjectionPointData data) {
         String type = data.getType();

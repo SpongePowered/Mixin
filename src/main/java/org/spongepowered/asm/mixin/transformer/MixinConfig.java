@@ -38,6 +38,7 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InsnList;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.MixinEnvironment.CompatibilityLevel;
+import org.spongepowered.asm.mixin.MixinEnvironment.Feature;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -57,6 +58,7 @@ import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.VersionNumber;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -210,6 +212,13 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     @SerializedName("minVersion")
     private String version;
     
+    /**
+     * List of required {@link Feature} flags, can be used with or in place
+     * of {@link #minVersion} to provide sanity checking when a config is loaded
+     */
+    @SerializedName("requiredFeatures")
+    private List<String> requiredFeatures;
+
     /**
      * Minimum compatibility level required for mixins in this set 
      */
@@ -499,7 +508,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         this.initialised = true;
         this.initCompatibilityLevel();
         this.initExtensions();
-        return this.checkVersion();
+        return this.checkVersion() && this.checkFeatures();
     }
     
     @SuppressWarnings("deprecation")
@@ -688,6 +697,35 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
         }
         
         return true;
+    }
+    
+    private boolean checkFeatures() throws MixinInitialisationError {
+        if (this.requiredFeatures == null || this.requiredFeatures.isEmpty()) {
+            return true;
+        }
+        
+        Set<String> missingFeatures = new LinkedHashSet<String>();
+        for (String featureId : this.requiredFeatures) {
+            featureId = featureId.trim().toUpperCase(Locale.ROOT);
+            if (!Feature.isActive(featureId)) {
+                missingFeatures.add(featureId);
+            }
+        }
+        
+        if (missingFeatures.isEmpty()) {
+            return true;
+        }
+        
+        String strMissingFeatures = Joiner.on(", ").join(missingFeatures);
+        this.logger.warn("Mixin config {} requires features [{}] which are not available. The mixin config will not be applied.",
+                this.name, strMissingFeatures);
+        
+        if (this.required) {
+            throw new MixinInitialisationError("Required mixin config " + this.name + " requires features [" + strMissingFeatures
+                    + " which are not available");
+        }
+
+        return false;
     }
     
     /**

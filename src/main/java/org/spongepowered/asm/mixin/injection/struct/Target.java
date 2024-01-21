@@ -42,13 +42,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
-import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.Locals.SyntheticLocalVariableNode;
 
 /**
- * Information about the current injection target, mainly just convenience
- * rather than passing a bunch of values around.
+ * Information about the current injection target (method) which bundles common
+ * injection context with the target method in order to allow injectors to
+ * interoperate.
  */
 public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     
@@ -156,6 +156,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         }
         
     }
+    
+    /**
+     * Target class info
+     */
+    public final ClassInfo classInfo;
 
     /**
      * Target class node
@@ -176,11 +181,6 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * True if the method is static 
      */
     public final boolean isStatic;
-    
-    /**
-     * True if the method is a constructor 
-     */
-    public final boolean isCtor;
     
     /**
      * Method arguments
@@ -231,23 +231,18 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * Labels for LVT ranges, generated as needed 
      */
     private LabelNode start, end;
-    
-    /**
-     * Cached delegate initialiser call
-     */
-    private DelegateInitialiser delegateInitialiser;
 
     /**
      * Make a new Target for the supplied method
      * 
      * @param method target method
      */
-    public Target(ClassNode classNode, MethodNode method) {
+    Target(ClassInfo classInfo, ClassNode classNode, MethodNode method) {
+        this.classInfo = classInfo;
         this.classNode = classNode;
         this.method = method;
         this.insns = method.instructions;
         this.isStatic = Bytecode.isStatic(method);
-        this.isCtor = method.name.equals(Constants.CTOR);
         this.arguments = Type.getArgumentTypes(method.desc);
 
         this.returnType = Type.getReturnType(method.desc);
@@ -275,6 +270,27 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      */
     public InjectionNode getInjectionNode(AbstractInsnNode node) {
         return this.injectionNodes.get(node);
+    }
+    
+    /**
+     * Get the target method name
+     */
+    public String getName() {
+        return this.method.name;
+    }
+    
+    /**
+     * Get the target method descriptor
+     */
+    public String getDesc() {
+        return this.method.desc;
+    }
+    
+    /**
+     * Get the target method signature
+     */
+    public String getSignature() {
+        return this.method.signature;
     }
     
     /**
@@ -545,7 +561,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      */
     public String getCallbackDescriptor(final boolean captureLocals, final Type[] locals, Type[] argumentTypes, int startIndex, int extra) {
         if (this.callbackDescriptor == null) {
-            this.callbackDescriptor = String.format("(%sL%s;)V", this.method.desc.substring(1, this.method.desc.indexOf(')')),
+            this.callbackDescriptor = String.format("(%sL%s;)V", this.getDesc().substring(1, this.getDesc().indexOf(')')),
                     this.getCallbackInfoClass());
         }
         
@@ -566,7 +582,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     
     @Override
     public String toString() {
-        return String.format("%s::%s%s", this.classNode.name, this.method.name, this.method.desc);
+        return String.format("%s::%s%s", this.classNode.name, this.getName(), this.getDesc());
     }
 
     @Override
@@ -637,27 +653,45 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
     }
     
     /**
-     * Find the call to <tt>super()</tt> or <tt>this()</tt> in a constructor.
-     * This attempts to locate the first call to <tt>&lt;init&gt;</tt> which
-     * isn't an inline call to another object ctor being passed into the super
-     * invocation.
+     * Insert the supplied instructions after the specified instruction 
      * 
-     * @return Call to <tt>super()</tt>, <tt>this()</tt> or
-     *      <tt>DelegateInitialiser.NONE</tt> if not found
+     * @param location Instruction to insert before
+     * @param insns Instructions to insert
      */
-    public DelegateInitialiser findDelegateInitNode() {
-        if (!this.isCtor) {
-            return DelegateInitialiser.NONE;
-        }
-        
-        if (this.delegateInitialiser == null) {
-            String superName = ClassInfo.forName(this.classNode.name).getSuperName();
-            this.delegateInitialiser = Bytecode.findDelegateInit(this.method, superName, this.classNode.name);
-        }
-        
-        return this.delegateInitialiser;
+    public void insert(InjectionNode location, final InsnList insns) {
+        this.insns.insert(location.getCurrentTarget(), insns);
     }
     
+    /**
+     * Insert the supplied instruction after the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insn Instruction to insert
+     */
+    public void insert(InjectionNode location, final AbstractInsnNode insn) {
+        this.insns.insert(location.getCurrentTarget(), insn);
+    }
+    
+    /**
+     * Insert the supplied instructions after the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insns Instructions to insert
+     */
+    public void insert(AbstractInsnNode location, final InsnList insns) {
+        this.insns.insert(location, insns);
+    }
+
+    /**
+     * Insert the supplied instruction after the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insn Instruction to insert
+     */
+    public void insert(AbstractInsnNode location, final AbstractInsnNode insn) {
+        this.insns.insert(location, insn);
+    }
+
     /**
      * Insert the supplied instructions before the specified instruction 
      * 
@@ -666,6 +700,16 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      */
     public void insertBefore(InjectionNode location, final InsnList insns) {
         this.insns.insertBefore(location.getCurrentTarget(), insns);
+    }
+
+    /**
+     * Insert the supplied instruction before the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insn Instruction to insert
+     */
+    public void insertBefore(InjectionNode location, final AbstractInsnNode insn) {
+        this.insns.insertBefore(location.getCurrentTarget(), insn);
     }
     
     /**
@@ -676,6 +720,16 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      */
     public void insertBefore(AbstractInsnNode location, final InsnList insns) {
         this.insns.insertBefore(location, insns);
+    }
+    
+    /**
+     * Insert the supplied instruction before the specified instruction 
+     * 
+     * @param location Instruction to insert before
+     * @param insn Instruction to insert
+     */
+    public void insertBefore(AbstractInsnNode location, final AbstractInsnNode insn) {
+        this.insns.insertBefore(location, insn);
     }
     
     /**
@@ -804,6 +858,13 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
             this.insns.add(this.end = new LabelNode());
         }
         return this.end;
+    }
+
+    public static Target of(ClassInfo classInfo, ClassNode classNode, MethodNode method) {
+        if (method.name.equals(Constants.CTOR)) {
+            return new Constructor(classInfo, classNode, method);
+        }
+        return new Target(classInfo, classNode, method);
     }
 
 }

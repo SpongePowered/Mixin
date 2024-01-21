@@ -31,7 +31,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
@@ -109,13 +108,12 @@ public class ModifyVariableInjector extends Injector {
     }
     
     @Override
-    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InjectorTarget injectorTarget,
-            Collection<AbstractInsnNode> nodes) {
+    protected boolean findTargetNodes(InjectorTarget target, InjectionPoint injectionPoint, Collection<AbstractInsnNode> nodes) {
         if (injectionPoint instanceof LocalVariableInjectionPoint) {
-            return ((LocalVariableInjectionPoint)injectionPoint).find(this.info, injectorTarget.getSlice(injectionPoint), nodes,
-                    injectorTarget.getTarget());
+            return ((LocalVariableInjectionPoint)injectionPoint).find(this.info, target.getSlice(injectionPoint), nodes,
+                    target.getTarget());
         }
-        return injectionPoint.find(into.desc, injectorTarget.getSlice(injectionPoint), nodes);
+        return injectionPoint.find(target.getDesc(), target.getSlice(injectionPoint), nodes);
     }
 
     /* (non-Javadoc)

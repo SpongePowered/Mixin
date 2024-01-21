@@ -39,6 +39,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
+import org.spongepowered.asm.mixin.injection.struct.Constructor;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -385,7 +386,7 @@ public class CallbackInjector extends Injector {
     @Override
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
         super.sanityCheck(target, injectionPoints);
-        this.checkTargetModifiers(target, true);
+        this.checkTargetModifiers(target, false);
     }
     
     /* (non-Javadoc)
@@ -397,6 +398,10 @@ public class CallbackInjector extends Injector {
     protected void addTargetNode(InjectorTarget injectorTarget, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
         InjectionNode injectionNode = injectorTarget.addInjectionNode(node);
         
+        if (this.cancellable && injectorTarget.getTarget() instanceof Constructor) {
+            throw new InvalidInjectionException(this.info, String.format("Found cancellable @Inject targetting a constructor in injector %s", this));
+        }
+
         for (InjectionPoint ip : nominators) {
             
             try {
@@ -711,7 +716,7 @@ public class CallbackInjector extends Injector {
 
         // Push the target method's parameters onto the stack
         if (callback.captureArgs()) {
-            Bytecode.loadArgs(callback.target.arguments, callback, this.isStatic ? 0 : 1, -1); //, callback.typeCasts);
+            Bytecode.loadArgs(callback.target.arguments, callback, callback.target.isStatic ? 0 : 1, -1); //, callback.typeCasts);
         }
         
         // Push the callback info onto the stack

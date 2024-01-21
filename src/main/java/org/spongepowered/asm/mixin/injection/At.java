@@ -209,4 +209,36 @@ public @interface At {
      */
     public boolean remap() default true;
 
+    /**
+     * In general, injecting into constructors should be treated with care,
+     * since compiled constructors - unlike regular methods - contain other
+     * structural elements of the class, including implied (when not explicit)
+     * superconstructor calls, explicit superconstructor or other delegated
+     * constructor calls, field initialisers and code from initialiser blocks,
+     * and of course the code from the original "constructor".
+     * 
+     * <p>This means that unlike targetting a regular method, where it's often
+     * possible to derive a reasonable injection point from the Java source, in
+     * a constructor such assumptions can be dangerous. For example the <tt>HEAD
+     * </tt> of a regular method will always mean "before the first
+     * instruction", however in a constructor it's not possible to reasonably
+     * ascertain what the first instruction will actually be without inspecting
+     * the bytecode. This will certainly be prior to the delegate constructor
+     * call, which might come as a surprise if the delegate constructor is not
+     * explicit. Ultimately this means that for constructor code which appears
+     * before the regular constructor body, the class can be in a
+     * partially-initialised state (during initialisers) or in a
+     * fully-uninitialised state (prior to the delegate constructor call).</p>
+     * 
+     * <p>Because of this, by default certain injectors restrict usage to only
+     * <tt>RETURN</tt> opcodes when targetting a constructor, in order to ensure
+     * that the consumers are properly aware of the potential pitfalls. Whilst
+     * it was previously necessary to create a custom injection point in order 
+     * to bypass this restriction, setting this option to <tt>true</tt> will
+     * also allow other injectors to act upon constructors, though care should
+     * be taken to ensure that the target is properly specified and attention is
+     * paid to the structure of the target bytecode.</p>  
+     */
+    public boolean unsafe() default false;
+    
 }

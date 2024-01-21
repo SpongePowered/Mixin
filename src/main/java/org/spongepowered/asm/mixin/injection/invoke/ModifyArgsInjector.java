@@ -108,7 +108,7 @@ public class ModifyArgsInjector extends InvokeInjector {
     private boolean verifyTarget(Target target) {
         String shortDesc = String.format("(L%s;)V", ArgsClassGenerator.ARGS_REF);
         if (!this.methodNode.desc.equals(shortDesc)) {
-            String targetDesc = Bytecode.changeDescriptorReturnType(target.method.desc, "V");
+            String targetDesc = Bytecode.changeDescriptorReturnType(target.getDesc(), "V");
             String longDesc = String.format("(L%s;%s", ArgsClassGenerator.ARGS_REF, targetDesc.substring(1));
             
             if (this.methodNode.desc.equals(longDesc)) {

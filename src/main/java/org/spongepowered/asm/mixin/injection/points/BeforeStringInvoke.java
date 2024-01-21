@@ -99,7 +99,7 @@ public class BeforeStringInvoke extends BeforeInvoke {
 
     public BeforeStringInvoke(InjectionPointData data) {
         super(data);
-        this.ldcValue = data.get("ldc", null);
+        this.ldcValue = data.get("ldc", (String)null);
         
         if (this.ldcValue == null) {
             throw new IllegalArgumentException(this.getClass().getSimpleName() + " requires named argument \"ldc\" to specify the desired target");

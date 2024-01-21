@@ -44,6 +44,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier;
 import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
+import org.spongepowered.asm.mixin.injection.struct.Constructor;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target.Extension;
@@ -293,7 +294,6 @@ public abstract class Injector {
      */
     private Collection<TargetNode> findTargetNodes(InjectorTarget injectorTarget, List<InjectionPoint> injectionPoints) {
         IMixinContext mixin = this.info.getMixin();
-        MethodNode method = injectorTarget.getMethod();
         Map<Integer, TargetNode> targetNodes = new TreeMap<Integer, TargetNode>();
         List<AbstractInsnNode> nodes = new ArrayList<AbstractInsnNode>(32);
         
@@ -308,7 +308,7 @@ public abstract class Injector {
                         injectorTarget, injectorTarget.getMergedBy(), injectorTarget.getMergedPriority()));
             }
 
-            if (!this.findTargetNodes(method, injectionPoint, injectorTarget, nodes)) {
+            if (!this.findTargetNodes(injectorTarget, injectionPoint, nodes)) {
                 continue;
             }
             
@@ -318,10 +318,10 @@ public abstract class Injector {
                         injectionPoint, this, nodes.size()));
             } else if (specifier != Specifier.ALL && nodes.size() > 1) {
                 AbstractInsnNode specified = nodes.get(specifier == Specifier.FIRST ? 0 : nodes.size() - 1);
-                this.addTargetNode(method, targetNodes, injectionPoint, specified);
+                this.addTargetNode(injectorTarget, targetNodes, injectionPoint, specified);
             } else {
                 for (AbstractInsnNode insn : nodes) {
-                    this.addTargetNode(method, targetNodes, injectionPoint, insn);
+                    this.addTargetNode(injectorTarget, targetNodes, injectionPoint, insn);
                 }
             }
         }
@@ -329,8 +329,8 @@ public abstract class Injector {
         return targetNodes.values();
     }
 
-    protected void addTargetNode(MethodNode method, Map<Integer, TargetNode> targetNodes, InjectionPoint injectionPoint, AbstractInsnNode insn) {
-        Integer key = method.instructions.indexOf(insn);
+    protected void addTargetNode(InjectorTarget target, Map<Integer, TargetNode> targetNodes, InjectionPoint injectionPoint, AbstractInsnNode insn) {
+        Integer key = target.getTarget().indexOf(insn);
         TargetNode targetNode = targetNodes.get(key);
         if (targetNode == null) {
             targetNode = new TargetNode(insn);
@@ -339,9 +339,8 @@ public abstract class Injector {
         targetNode.nominators.add(injectionPoint);
     }
 
-    protected boolean findTargetNodes(MethodNode into, InjectionPoint injectionPoint, InjectorTarget injectorTarget,
-            Collection<AbstractInsnNode> nodes) {
-        return injectionPoint.find(into.desc, injectorTarget.getSlice(injectionPoint), nodes);
+    protected boolean findTargetNodes(InjectorTarget target, InjectionPoint injectionPoint, Collection<AbstractInsnNode> nodes) {
+        return injectionPoint.find(target.getDesc(), target.getSlice(injectionPoint), nodes);
     }
 
     protected void sanityCheck(Target target, List<InjectionPoint> injectionPoints) {
@@ -379,19 +378,21 @@ public abstract class Injector {
      * @param node Injection location
      */
     protected void checkTargetForNode(Target target, InjectionNode node, RestrictTargetLevel targetLevel) {
-        if (target.isCtor) {
+        if (target instanceof Constructor) {
+            Constructor ctor = (Constructor)target;
+            
             if (targetLevel == RestrictTargetLevel.METHODS_ONLY) {
                 throw new InvalidInjectionException(this.info, String.format("Found %s targetting a constructor in injector %s",
                         this.annotationType, this));
             }
             
-            DelegateInitialiser superCall = target.findDelegateInitNode();
+            DelegateInitialiser superCall = ctor.findDelegateInitNode();
             if (!superCall.isPresent) {
                 throw new InjectionError(String.format("Delegate constructor lookup failed for %s target on %s", this.annotationType, this.info));
             }
             
-            int superCallIndex = target.indexOf(superCall.insn);
-            int targetIndex = target.indexOf(node.getCurrentTarget());
+            int superCallIndex = ctor.indexOf(superCall.insn);
+            int targetIndex = ctor.indexOf(node.getCurrentTarget());
             if (targetIndex <= superCallIndex) {
                 if (targetLevel == RestrictTargetLevel.CONSTRUCTORS_AFTER_DELEGATE) {
                     throw new InvalidInjectionException(this.info, String.format("Found %s targetting a constructor before %s() in injector %s",
@@ -406,7 +407,7 @@ public abstract class Injector {
             }
         }
         
-        this.checkTargetModifiers(target, true);
+        this.checkTargetModifiers(target, false);
     }
 
     protected void preInject(Target target, InjectionNode node) {

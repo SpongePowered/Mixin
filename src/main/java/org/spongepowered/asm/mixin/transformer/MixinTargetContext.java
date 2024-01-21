@@ -25,21 +25,14 @@
 package org.spongepowered.asm.mixin.transformer;
 
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.spongepowered.asm.logging.Level;
 import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -68,6 +61,8 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.SearchType;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
+import org.spongepowered.asm.mixin.transformer.struct.Initialiser;
+import org.spongepowered.asm.mixin.transformer.struct.Range;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
@@ -92,7 +87,7 @@ import com.google.common.collect.BiMap;
  * in the mixin to the appropriate members in the target class hierarchy. 
  */
 public class MixinTargetContext extends ClassContext implements IMixinContext {
-    
+
     /**
      * Logger
      */
@@ -437,7 +432,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     public boolean requireOverwriteAnnotations() {
         return this.mixin.getParent().requireOverwriteAnnotations();
     }
-    
+
     /**
      * Handles "re-parenting" the method supplied, changes all references to the
      * mixin class to refer to the target class (for field accesses and method
@@ -1006,6 +1001,95 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             newDesc.append(this.transformSingleDescriptor(arg));
         }
         return newDesc.append(')').append(this.transformSingleDescriptor(Type.getReturnType(desc))).toString();
+    }
+
+    /**
+     * Get insns corresponding to the instance initialiser (hopefully) from the
+     * supplied constructor.
+     * 
+     * @return initialiser bytecode extracted from the supplied constructor, or
+     *      null if the constructor range could not be parsed
+     */
+    final Initialiser getInitialiser() {
+        // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
+        MethodNode ctor = this.getConstructor();
+        if (ctor == null) {
+            return null;
+        }
+        
+        // Find the range of line numbers which corresponds to the constructor body
+        Range init = this.getConstructorRange(ctor);
+        if (!init.isValid()) {
+            return null;
+        }
+        
+        return new Initialiser(this, ctor, init);
+    }
+
+    /**
+     * Finds a suitable ctor for reading the instance initialiser bytecode
+     * 
+     * @return appropriate ctor or null if none found
+     */
+    private MethodNode getConstructor() {
+        MethodNode ctor = null;
+        
+        for (MethodNode method : this.getMethods()) {
+            if (Constants.CTOR.equals(method.name) && Bytecode.methodHasLineNumbers(method)) {
+                if (ctor == null) {
+                    ctor = method;
+                } else {
+                    // Not an error condition, just weird
+                    MixinTargetContext.logger.warn("Mixin {} has multiple constructors, <init>{} was selected\n", this, ctor.desc);
+                }
+            }
+        }
+        
+        return ctor;
+    }
+
+    /**
+     * Identifies line numbers in the supplied ctor which correspond to the
+     * start and end of the method body.
+     * 
+     * @param ctor constructor to scan
+     * @return range indicating the line numbers of the specified constructor
+     *      and the position of the superclass ctor invocation
+     */
+    private Range getConstructorRange(MethodNode ctor) {
+        boolean lineNumberIsValid = false;
+        AbstractInsnNode endReturn = null;
+        
+        int line = 0, start = 0, end = 0, superIndex = -1;
+        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof LineNumberNode) {
+                line = ((LineNumberNode)insn).line;
+                lineNumberIsValid = true;
+            } else if (insn instanceof MethodInsnNode) {
+                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
+                    superIndex = ctor.instructions.indexOf(insn);
+                    start = line;
+                }
+            } else if (insn.getOpcode() == Opcodes.PUTFIELD) {
+                lineNumberIsValid = false;
+            } else if (insn.getOpcode() == Opcodes.RETURN) {
+                if (lineNumberIsValid) {
+                    end = line;
+                } else {
+                    end = start;
+                    endReturn = insn;
+                }
+            }
+        }
+        
+        if (endReturn != null) {
+            LabelNode label = new LabelNode(new Label());
+            ctor.instructions.insertBefore(endReturn, label);
+            ctor.instructions.insertBefore(endReturn, new LineNumberNode(start, label));
+        }
+        
+        return new Range(start, end, superIndex);
     }
 
     /**
