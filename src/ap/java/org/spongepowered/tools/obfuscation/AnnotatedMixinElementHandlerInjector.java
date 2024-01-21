@@ -257,13 +257,13 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
             }
         }
         
-        IReferenceManager refMap = this.obf.getReferenceManager();
+        IReferenceManager refMaps = this.obf.getReferenceManager();
         try {
             // If the original owner is unspecified, and the mixin is multi-target, we strip the owner from the obf mappings
             if ((targetMember.getOwner() == null && this.mixin.isMultiTarget()) || target.isSimulated()) {
                 obfData = AnnotatedMixinElementHandler.<MappingMethod>stripOwnerData(obfData);
             }
-            refMap.addMethodMapping(this.classRef, reference, obfData);
+            refMaps.addMethodMapping(this.classRef, reference, obfData);
         } catch (ReferenceConflictException ex) {
             String conflictType = this.mixin.isMultiTarget() ? "Multi-target" : "Target";
             
@@ -274,9 +274,9 @@ class AnnotatedMixinElementHandlerInjector extends AnnotatedMixinElementHandler 
                 String newName = newMember instanceof ITargetSelectorByName ? ((ITargetSelectorByName)newMember).getName() : newMember.toString();
                 if (oldName != null && oldName.equals(newName)) {
                     obfData = AnnotatedMixinElementHandler.<MappingMethod>stripDescriptors(obfData);
-                    refMap.setAllowConflicts(true);
-                    refMap.addMethodMapping(this.classRef, reference, obfData);
-                    refMap.setAllowConflicts(false);
+                    refMaps.setAllowConflicts(true);
+                    refMaps.addMethodMapping(this.classRef, reference, obfData);
+                    refMaps.setAllowConflicts(false);
 
                     // This is bad because in notch mappings, using the bare target name might cause everything to explode
                     elem.printMessage(this.ap, MessageType.BARE_REFERENCE, "Coerced " + conflictType + " reference has conflicting descriptors for "

@@ -177,7 +177,7 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
         private final int index;
         
         Next(int index, IResolvedDescriptor next) {
-            super(null, null, next.getOwner(), next.getName(), next.getArgs(), next.getReturnType(), next.getMatches(), null);
+            super(null, null, next.getOwner(), next.getName(), next.getArgs(), next.getReturnType(), next.getMatches(), null, next.isDebug());
             this.index = index;
         }
         
@@ -239,25 +239,30 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
      */
     private final List<IAnnotationHandle> next;
     
+    /**
+     * True if matching is disabled for this selector
+     */
+    private final boolean disabled;
+    
     private DynamicSelectorDesc(IResolvedDescriptor desc) {
         this(null, desc.getId(), desc.getOwner(), desc.getName(), desc.getArgs(), desc.getReturnType(), desc.getMatches(),
-                desc.getNext());
+                desc.getNext(), desc.isDebug());
     }
     
     private DynamicSelectorDesc(DynamicSelectorDesc desc, Quantifier quantifier) {
-        this(desc.parseException, desc.id, desc.owner, desc.name, desc.args, desc.returnType, quantifier, desc.next);
+        this(desc.parseException, desc.id, desc.owner, desc.name, desc.args, desc.returnType, quantifier, desc.next, desc.disabled);
     }
     
     private DynamicSelectorDesc(DynamicSelectorDesc desc, Type owner) {
-        this(desc.parseException, desc.id, owner, desc.name, desc.args, desc.returnType, desc.matches, desc.next);
+        this(desc.parseException, desc.id, owner, desc.name, desc.args, desc.returnType, desc.matches, desc.next, desc.disabled);
     }
     
     private DynamicSelectorDesc(InvalidSelectorException ex) {
-        this(ex, null, null, null, null, null, Quantifier.NONE, null);
+        this(ex, null, null, null, null, null, Quantifier.NONE, null, true);
     }
     
     protected DynamicSelectorDesc(InvalidSelectorException ex, String id, Type owner, String name, Type[] args, Type returnType, Quantifier matches,
-            List<IAnnotationHandle> then) {
+            List<IAnnotationHandle> next,  boolean disabled) {
         this.parseException = ex;
         
         this.id = id;
@@ -267,7 +272,8 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
         this.returnType = returnType;
         this.methodDesc = returnType != null ? Bytecode.getDescriptor(returnType, args) : null;
         this.matches = matches;
-        this.next = then;
+        this.next = next;
+        this.disabled = disabled;
     }
     
     /**
@@ -281,7 +287,7 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
      */
     public static DynamicSelectorDesc parse(String input, ISelectorContext context) {
         IResolvedDescriptor descriptor = DescriptorResolver.resolve(input, context);
-        if (!descriptor.isResolved()) {
+        if (!descriptor.isResolved() && !descriptor.isDebug()) {
             String extra = input.length() == 0 ? ". " + descriptor.getResolutionInfo() : "";
             return new DynamicSelectorDesc(new InvalidSelectorException("Could not resolve @Desc(" + input + ") for " + context + extra));
         }
@@ -297,7 +303,7 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
      */
     public static DynamicSelectorDesc parse(IAnnotationHandle desc, ISelectorContext context) {
         IResolvedDescriptor descriptor = DescriptorResolver.resolve(desc, context);
-        if (!descriptor.isResolved()) {
+        if (!descriptor.isResolved() && !descriptor.isDebug()) {
             return new DynamicSelectorDesc(new InvalidSelectorException("Invalid descriptor"));
         }
         return DynamicSelectorDesc.of(descriptor);
@@ -494,7 +500,7 @@ public class DynamicSelectorDesc implements ITargetSelectorDynamic, ITargetSelec
      */
     @Override
     public <TNode> MatchResult match(ElementNode<TNode> node) {
-        if (node == null) {
+        if (node == null || this.disabled) {
             return MatchResult.NONE;
         } else if (node.isField()) {
             return this.matches(node.getOwner(), node.getName(), node.getDesc(), this.returnType.getInternalName());

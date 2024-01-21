@@ -37,6 +37,7 @@ import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
@@ -252,8 +253,8 @@ public class RedirectInjector extends InvokeInjector {
     }
 
     @Override
-    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode insn, Set<InjectionPoint> nominators) {
-        InjectionNode node = target.getInjectionNode(insn);
+    protected void addTargetNode(InjectorTarget injectorTarget, List<InjectionNode> myNodes, AbstractInsnNode insn, Set<InjectionPoint> nominators) {
+        InjectionNode node = injectorTarget.getInjectionNode(insn);
         ConstructorRedirectData ctorData = null;
         int fuzz = BeforeFieldAccess.ARRAY_SEARCH_FUZZ_DEFAULT;
         int opcode = 0;
@@ -289,7 +290,7 @@ public class RedirectInjector extends InvokeInjector {
             }
         }
         
-        InjectionNode targetNode = target.addInjectionNode(insn);
+        InjectionNode targetNode = injectorTarget.addInjectionNode(insn);
         targetNode.decorate(Meta.KEY, this.meta);
         targetNode.decorate(RedirectInjector.KEY_NOMINATORS, nominators);
         if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {

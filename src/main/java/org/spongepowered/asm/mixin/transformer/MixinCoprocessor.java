@@ -156,8 +156,8 @@ abstract class MixinCoprocessor implements IListener {
     /**
      * Perform postprocessing actions on the supplied class. This is called for
      * all classes. For passthrough classes and classes which are not mixin 
-     * targets this is called immediately after {@link process} is completed for
-     * all coprocessors. For mixin targets this is called after mixins are
+     * targets this is called immediately after {@link #process} is completed
+     * for all coprocessors. For mixin targets this is called after mixins are
      * applied.
      * 
      * @param className Name of the target class

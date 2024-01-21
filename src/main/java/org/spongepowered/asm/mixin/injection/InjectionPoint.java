@@ -162,15 +162,19 @@ public abstract class InjectionPoint {
     }
     
     /**
-     * Selector type for slice delmiters, ignored for normal injection points.
-     * <tt>Selectors</tt> can be supplied in {@link At} annotations by including
-     * a colon (<tt>:</tt>) character followed by the selector type
-     * (case-sensitive), eg:
+     * Additional specifier for injection points. <tt>Specifiers</tt> can be
+     * supplied in {@link At} annotations by including a colon (<tt>:</tt>)
+     * character followed by the specifier type (case-sensitive), eg:
      * 
      * <blockquote><pre>&#064;At(value = "INVOKE:LAST", ... )</pre></blockquote>
      */
-    public enum Selector {
-
+    public enum Specifier {
+        
+        /**
+         * Use all instructions from the query result.
+         */
+        ALL,
+        
         /**
          * Use the <em>first</em> instruction from the query result.
          */
@@ -186,13 +190,13 @@ public abstract class InjectionPoint {
          * more than one instruction this should be considered a fail-fast error
          * state and a runtime exception will be thrown.
          */
-        ONE;
+        ONE,
         
         /**
-         * Default selector type used if no selector is explicitly specified.
-         * <em>For internal use only. Currently {@link #FIRST}</em>
+         * Use the default setting as defined by the consumer. For slices this
+         * is {@link #FIRST}, for all other consumers this is {@link #ALL} 
          */
-        public static final Selector DEFAULT = Selector.FIRST;
+        DEFAULT;
         
     }
 
@@ -276,26 +280,26 @@ public abstract class InjectionPoint {
     }
     
     private final String slice;
-    private final Selector selector;
+    private final Specifier specifier;
     private final String id;
     private final IMessageSink messageSink;
     
     
     protected InjectionPoint() {
-        this("", Selector.DEFAULT, null);
+        this("", Specifier.DEFAULT, null);
     }
     
     protected InjectionPoint(InjectionPointData data) {
-        this(data.getSlice(), data.getSelector(), data.getId(), data.getMessageSink());
+        this(data.getSlice(), data.getSpecifier(), data.getId(), data.getMessageSink());
     }
     
-    public InjectionPoint(String slice, Selector selector, String id) {
-        this(slice, selector, id, null);
+    public InjectionPoint(String slice, Specifier specifier, String id) {
+        this(slice, specifier, id, null);
     }
 
-    public InjectionPoint(String slice, Selector selector, String id, IMessageSink messageSink) {
+    public InjectionPoint(String slice, Specifier specifier, String id, IMessageSink messageSink) {
         this.slice = slice;
-        this.selector = selector;
+        this.specifier = specifier;
         this.id = id;
         this.messageSink = messageSink;
     }
@@ -304,8 +308,8 @@ public abstract class InjectionPoint {
         return this.slice;
     }
     
-    public Selector getSelector() {
-        return this.selector;
+    public Specifier getSpecifier(Specifier defaultSpecifier) {
+        return this.specifier == Specifier.DEFAULT ? defaultSpecifier : this.specifier;
     }
     
     public String getId() {

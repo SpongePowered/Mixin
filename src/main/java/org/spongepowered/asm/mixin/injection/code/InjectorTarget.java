@@ -27,13 +27,15 @@ package org.spongepowered.asm.mixin.injection.code;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
+import org.spongepowered.asm.mixin.injection.selectors.TargetSelectors.SelectedMethod;
 import org.spongepowered.asm.mixin.injection.struct.Target;
+import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.util.Annotations;
 
@@ -59,9 +61,9 @@ public class InjectorTarget {
     private final Target target;
     
     /**
-     * Selector which selected this method
+     * Selected method identified by the target selector
      */
-    private final ITargetSelector selector;
+    private final SelectedMethod selectedMethod;
     
     /**
      * Name of the mixin which merged the target, if any
@@ -79,10 +81,10 @@ public class InjectorTarget {
      * @param context owner
      * @param target target
      */
-    public InjectorTarget(ISliceContext context, Target target, ITargetSelector selector) {
+    public InjectorTarget(ISliceContext context, Target target, SelectedMethod selectedMethod) {
         this.context = context;
         this.target = target;
-        this.selector = selector;
+        this.selectedMethod = selectedMethod;
         
         AnnotationNode merged = Annotations.getVisible(target.method, MixinMerged.class);
         this.mergedBy = Annotations.<String>getValue(merged, "mixin");
@@ -94,6 +96,28 @@ public class InjectorTarget {
         return this.target.toString();
     }
     
+    /**
+     * Add an injection node to this target if it does not already exist,
+     * returns the existing node if it exists
+     * 
+     * @param node Instruction node to add
+     * @return wrapper for the specified node
+     */
+    public InjectionNode addInjectionNode(AbstractInsnNode node) {
+        return this.target.addInjectionNode(node);
+    }
+    
+    /**
+     * Get an injection node from this collection if it already exists, returns
+     * null if the node is not tracked
+     * 
+     * @param node instruction node
+     * @return wrapper node or null if not tracked
+     */
+    public InjectionNode getInjectionNode(AbstractInsnNode node) {
+        return this.target.getInjectionNode(node);
+    }
+
     /**
      * Get the target reference
      */
@@ -111,8 +135,8 @@ public class InjectorTarget {
     /**
      * Get the selector which selected this target
      */
-    public ITargetSelector getSelector() {
-        return this.selector;
+    public SelectedMethod getSelectedMethod() {
+        return this.selectedMethod;
     }
     
     /**

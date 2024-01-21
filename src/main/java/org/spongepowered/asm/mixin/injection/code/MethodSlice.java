@@ -37,7 +37,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
-import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier;
 import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointAnnotationContext;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
@@ -325,6 +325,11 @@ public final class MethodSlice {
      * Descriptive name of the slice, used in exceptions
      */
     private final String name;
+    
+    /**
+     * Success counts for from and to injection points 
+     */
+    private int successCountFrom, successCountTo;
 
     /**
      * ctor
@@ -361,8 +366,8 @@ public final class MethodSlice {
      */
     public InsnListReadOnly getSlice(MethodNode method) {
         int max = method.instructions.size() - 1;
-        int start = this.find(method, this.from, 0, 0, this.name + "(from)");
-        int end = this.find(method, this.to, max, start, this.name + "(to)");
+        int start = this.find(method, this.from, 0, 0, "from");
+        int end = this.find(method, this.to, max, start, "to");
         
         if (start > end) {
             throw new InvalidSliceException(this.owner, String.format("%s is negative size. Range(%d -> %d)", this.describe(), start, end));
@@ -389,32 +394,53 @@ public final class MethodSlice {
      * @param defaultValue Value to return if injection point is null (open
      *      ended)
      * @param failValue Value to use if query fails
-     * @param description Description for error message
+     * @param argument The name of the argument ("from" or "to") for debug msgs
      * @return matching insn index
      */
-    private int find(MethodNode method, InjectionPoint injectionPoint, int defaultValue, int failValue, String description) {
+    private int find(MethodNode method, InjectionPoint injectionPoint, int defaultValue, int failValue, String argument) {
         if (injectionPoint == null) {
             return defaultValue;
         }
         
+        String description = String.format("%s(%s)", this.name, argument);
         Deque<AbstractInsnNode> nodes = new LinkedList<AbstractInsnNode>();
         InsnListReadOnly insns = new InsnListReadOnly(method.instructions);
         boolean result = injectionPoint.find(method.desc, insns, nodes);
-        Selector select = injectionPoint.getSelector();
-        if (nodes.size() != 1 && select == Selector.ONE) {
+        Specifier specifier = injectionPoint.getSpecifier(Specifier.FIRST);
+        if (specifier == Specifier.ALL) {
+            throw new InvalidSliceException(this.owner, String.format("ALL is not a valid specifier for slice %s", this.describe(description)));
+        }
+        if (nodes.size() != 1 && specifier == Specifier.ONE) {
             throw new InvalidSliceException(this.owner, String.format("%s requires 1 result but found %d", this.describe(description), nodes.size()));
         }
         
         if (!result) {
-            if (this.owner.getMixin().getOption(Option.DEBUG_VERBOSE)) {
-                MethodSlice.logger.warn("{} did not match any instructions", this.describe(description));
-            }
             return failValue;
         }
         
-        return method.instructions.indexOf(select == Selector.FIRST ? nodes.getFirst() : nodes.getLast());
+        if ("from".equals(argument)) {
+            this.successCountFrom++;
+        } else {
+            this.successCountTo++;
+        }
+        
+        return method.instructions.indexOf(specifier == Specifier.FIRST ? nodes.getFirst() : nodes.getLast());
     }
-    
+
+    /**
+     * Perform post-injection debugging and validation tasks
+     */
+    public void postInject() {
+        if (this.owner.getMixin().getOption(Option.DEBUG_VERBOSE)) {
+            if (this.from != null && this.successCountFrom == 0) {
+                MethodSlice.logger.warn("{} did not match any instructions", this.describe(this.name + "(from)"));
+            }
+            if (this.to != null && this.successCountTo == 0) {
+                MethodSlice.logger.warn("{} did not match any instructions", this.describe(this.name + "(to)"));
+            }
+        }
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */

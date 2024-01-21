@@ -515,7 +515,8 @@ public class AccessorInfo extends SpecialMethodInfo {
         try {
             return result.getSingleResult(true);
         } catch (IllegalStateException ex) {
-            throw new InvalidAccessorException(this, ex.getMessage() + " matching " + this.target + " in " + this.classNode.name + " for " + this);
+            throw new InvalidAccessorException(this, String.format("%s matching %s in %s for %s",
+                    ex.getMessage(), this.target, this.classNode.name, this));
         }
     }
     

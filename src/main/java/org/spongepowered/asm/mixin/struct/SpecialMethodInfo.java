@@ -29,8 +29,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
-import org.spongepowered.asm.util.Annotations;
-import org.spongepowered.asm.util.asm.MethodNodeEx;
 
 /**
  * Information about a special mixin method such as an injector or accessor
@@ -38,19 +36,9 @@ import org.spongepowered.asm.util.asm.MethodNodeEx;
 public class SpecialMethodInfo extends AnnotatedMethodInfo {
     
     /**
-     * Human-readable annotation type 
-     */
-    protected final String annotationType;
-    
-    /**
-     * Class
+     * Target class node
      */
     protected final ClassNode classNode;
-    
-    /**
-     * Original name of the method, if available 
-     */
-    protected final String methodName;
 
     /**
      * Mixin data
@@ -60,9 +48,7 @@ public class SpecialMethodInfo extends AnnotatedMethodInfo {
     public SpecialMethodInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
         super(mixin, method, annotation);
         this.mixin = mixin;
-        this.annotationType = this.annotation != null ? "@" + Annotations.getSimpleName(this.annotation) : "Undecorated injector";
         this.classNode = mixin.getTargetClassNode();
-        this.methodName = MethodNodeEx.getName(method);
     }
 
     /**

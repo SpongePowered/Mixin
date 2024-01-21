@@ -166,6 +166,11 @@ abstract class AnnotatedMixinElementHandler {
         }
         
         @Override
+        public String getElementDescription() {
+            return String.format("%s annotation on %s", this.getAnnotation(), this);
+        }
+        
+        @Override
         public String toString() {
             return TypeUtils.getName(this.element);
         }

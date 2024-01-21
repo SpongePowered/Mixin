@@ -40,6 +40,12 @@ public interface IResolvedDescriptor {
      * Get whether the descriptor was successfully resolved
      */
     public abstract boolean isResolved();
+    
+    /**
+     * Get whether the descriptor is for debugging and shouldn't be used as a
+     * live descriptor
+     */
+    public abstract boolean isDebug();
 
     /**
      * Get the resolved descriptor, or null if the descriptor was not resolved

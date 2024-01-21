@@ -82,6 +82,16 @@ public final class MethodSlices {
         return this.slices.get(id);
     }
     
+    /**
+     * Called to do post-injection validation/debug logging for slices
+     */
+    public void postInject() {
+        for (MethodSlice slice : this.slices.values()) {
+            slice.postInject();
+        }
+    }
+
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */

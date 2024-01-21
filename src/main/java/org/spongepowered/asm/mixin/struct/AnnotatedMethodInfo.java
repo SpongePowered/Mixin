@@ -28,16 +28,22 @@ import java.util.Locale;
 
 import javax.tools.Diagnostic.Kind;
 
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.selectors.ISelectorContext;
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.mixin.refmap.IReferenceMapper;
 import org.spongepowered.asm.util.Annotations;
+import org.spongepowered.asm.util.asm.IAnnotatedElement;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
+import org.spongepowered.asm.util.asm.MethodNodeEx;
 import org.spongepowered.asm.util.logging.MessageRouter;
+
+import com.google.common.base.Strings;
 
 /**
  * Data bundle for an annotated method in a mixin
@@ -59,12 +65,33 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
      */
     protected final AnnotationNode annotation;
     
+    /**
+     * Human-readable annotation type 
+     */
+    protected final String annotationType;
+    
+    /**
+     * Original name of the method, if available 
+     */
+    protected final String methodName;
+
     public AnnotatedMethodInfo(IMixinContext mixin, MethodNode method, AnnotationNode annotation) {
         this.context = mixin;
         this.method = method;
         this.annotation = annotation;
+        this.annotationType = this.annotation != null ? "@" + Annotations.getSimpleName(this.annotation) : "Undecorated method";
+        this.methodName = MethodNodeEx.getName(method);
     }
     
+    /**
+     * Get a human-readable description of the annotation on the method for use
+     * in error messages
+     */
+    @Override
+    public final String getElementDescription() {
+        return String.format("%s annotation on %s", this.annotationType, this.methodName);
+    }
+
     @Override
     public String remap(String reference) {
         if (this.context != null) {
@@ -158,6 +185,59 @@ public class AnnotatedMethodInfo implements IInjectionPointContext {
         if (this.context.getOption(Option.DEBUG_VERBOSE)) {
             MessageRouter.getMessager().printMessage(Kind.WARNING, String.format(format, args));
         }
+    }
+
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     * 
+     * @param method method to inspect
+     */
+    public static final String getDynamicInfo(Object method) {
+        if (method instanceof MethodNode) {
+            return AnnotatedMethodInfo.getDynamicInfo((MethodNode)method);
+        } else if (method instanceof IAnnotatedElement) {
+            return AnnotatedMethodInfo.getDynamicInfo((IAnnotatedElement)method);
+        }
+        return "";
+    }
+    
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     * 
+     * @param method method to inspect
+     */
+    public static final String getDynamicInfo(MethodNode method) {
+        return AnnotatedMethodInfo.getDynamicInfo(Annotations.handleOf(Annotations.getInvisible(method, Dynamic.class)));
+    }
+
+    /**
+     * Get info from a decorating {@link Dynamic} annotation. If the annotation
+     * is present, a descriptive string suitable for inclusion in an error
+     * message is returned. If the annotation is not present then an empty
+     * string is returned.
+     * 
+     * @param method method to inspect
+     */
+    public static final String getDynamicInfo(IAnnotatedElement method) {
+        return AnnotatedMethodInfo.getDynamicInfo(method.getAnnotation(Dynamic.class));
+    }
+
+    private static String getDynamicInfo(IAnnotationHandle annotation) {
+        if (annotation == null) {
+            return "";
+        }
+        String description = Strings.nullToEmpty(annotation.<String>getValue());
+        Type upstream = annotation.getTypeValue("mixin");
+        if (upstream != null) {
+            description = String.format("{%s} %s", upstream.getClassName(), description).trim();
+        }
+        return description.length() > 0 ? String.format(" Method is @Dynamic(%s).", description) : "";
     }
 
 }

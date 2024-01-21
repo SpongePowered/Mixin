@@ -56,6 +56,13 @@ public interface IMixinContext {
      * @return internal class name
      */
     public abstract String getClassRef();
+    
+    /**
+     * Get the name of the target class for this context
+     * 
+     * @return target class name
+     */
+    public abstract String getTargetClassName();
 
     /**
      * Get the internal name of the target class for this context

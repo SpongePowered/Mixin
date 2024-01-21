@@ -83,5 +83,11 @@ public interface ISelectorContext {
      *      not return null!
      */
     public abstract String remap(String reference);
+    
+    /**
+     * Get a human-readable description of the annotation on the method for use
+     * in error messages
+     */
+    public abstract String getElementDescription();
 
 }

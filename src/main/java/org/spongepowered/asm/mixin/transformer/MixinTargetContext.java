@@ -319,6 +319,14 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
     public TargetClassContext getTarget() {
         return this.targetClass;
     }
+    
+    /**
+     * Get the target class name
+     */
+    @Override
+    public String getTargetClassName() {
+        return this.getTarget().getClassName();
+    }
 
     /**
      * Get the target class reference

@@ -109,7 +109,7 @@ class InvokerInfo extends AccessorInfo {
         try {
             return result.getSingleResult(true);
         } catch (IllegalStateException ex) {
-            String message = ex.getMessage() + " matching " + this.target + " in " + this.classNode.name + " for " + this;
+            String message = String.format("%s matching %s in %s for %s", ex.getMessage(), this.target, this.classNode.name, this);
             if (this.type == AccessorType.METHOD_PROXY && this.specifiedName != null && this.target instanceof ITargetSelectorByName) {
                 String name = ((ITargetSelectorByName)this.target).getName();
                 if (name != null && (name.contains(".") || name.contains("/"))) {

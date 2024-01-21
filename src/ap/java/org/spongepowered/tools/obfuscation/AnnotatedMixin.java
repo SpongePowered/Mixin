@@ -467,6 +467,11 @@ class AnnotatedMixin implements IMixinContext, IAnnotatedElement {
     public String getClassName() {
         return this.getClassRef().replace('/', '.');
     }
+    
+    @Override
+    public String getTargetClassName() {
+        return this.primaryTarget.toString();
+    }
 
     @Override
     public String getTargetClassRef() {

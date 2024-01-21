@@ -28,7 +28,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier;
 
 /**
  * A <tt>Slice</tt> identifies a section of a method to search for injection
@@ -162,10 +162,10 @@ public @interface Slice {
     
     /**
      * Injection point which specifies the <em>start</em> of the slice region.
-     * {@link At}s supplied here should generally specify a {@link Selector}
+     * {@link At}s supplied here should generally use a {@link Specifier}
      * in order to identify which instruction should be used for queries which
-     * return multiple results. The selector is specified by appending the
-     * selector type to the injection point type as follows:
+     * return multiple results. The specifier is supplied by appending the
+     * specifier type to the injection point type as follows:
      * 
      * <blockquote><pre>&#064;At(value = "INVOKE:LAST", ... )</pre></blockquote>
      * 
@@ -182,9 +182,9 @@ public @interface Slice {
     /**
      * Injection point which specifies the <em>end</em> of the slice region.
      * Like {@link #from}, {@link At}s supplied here should generally specify a
-     * {@link Selector} in order to identify which instruction should be used
-     * for queries which return multiple results. The selector is specified by
-     * appending the selector type to the injection point type as follows:
+     * {@link Specifier} in order to identify which instruction should be used
+     * for queries which return multiple results. The specifier is supplied by
+     * appending the specifier type to the injection point type as follows:
      * 
      * <blockquote><pre>&#064;At(value = "INVOKE:LAST", ... )</pre></blockquote>
      * 

@@ -73,11 +73,21 @@ public final class DescriptorResolver {
          * Selector context
          */
         private final ISelectorContext context;
-
+        
+        /**
+         * True if this is a debug descriptor 
+         */
+        private final boolean debug;
+        
         Descriptor(Set<String> searched, IAnnotationHandle desc, ISelectorContext context) {
+            this(searched, desc, context, false);
+        }
+
+        Descriptor(Set<String> searched, IAnnotationHandle desc, ISelectorContext context, boolean debug) {
             this.searched = searched;
             this.desc = desc;
             this.context = context;
+            this.debug = debug;
         }
         
         /**
@@ -86,6 +96,15 @@ public final class DescriptorResolver {
         @Override
         public boolean isResolved() {
             return this.desc != null;
+        }
+        
+        /**
+         * True if this is a debugging descriptor and shouldn't be treated as
+         * fully resolved
+         */
+        @Override
+        public boolean isDebug() {
+            return this.debug;
         }
         
         /**
@@ -276,11 +295,13 @@ public final class DescriptorResolver {
      * @return Resolution result
      */
     public static IResolvedDescriptor resolve(String id, ISelectorContext context) {
+        boolean debug = false;
         IResolverObserver observer = new ResolverObserverBasic();
         if (!Strings.isNullOrEmpty(id)) {
             if (DescriptorResolver.PRINT_ID.equals(id)) {
                 observer = new ResolverObserverDebug(context);
                 id = "";
+                debug = true;
             } else {
                 observer.visit(id, "", "");
             }
@@ -288,7 +309,7 @@ public final class DescriptorResolver {
         
         IAnnotationHandle desc = DescriptorResolver.resolve(id, context, observer, context.getSelectorCoordinate(true));
         observer.postResolve();
-        return new Descriptor(observer.getSearched(), desc, context);
+        return new Descriptor(observer.getSearched(), desc, context, debug);
     }
     
     /**

@@ -127,5 +127,14 @@ public class SelectorAnnotationContext implements ISelectorContext {
     public String remap(String reference) {
         return this.parent.remap(reference);
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.injection.selectors.ISelectorContext
+     *      #getElementDescription()
+     */
+    @Override
+    public String getElementDescription() {
+        return String.format("%s in %s", this.selectorAnnotation, this.parent.getElementDescription());
+    }
 
 }

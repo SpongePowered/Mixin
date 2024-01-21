@@ -36,7 +36,7 @@ import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.IInjectionPointContext;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.InjectionPoint.Selector;
+import org.spongepowered.asm.mixin.injection.InjectionPoint.Specifier;
 import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelector;
 import org.spongepowered.asm.mixin.injection.selectors.InvalidSelectorException;
@@ -86,7 +86,7 @@ public class InjectionPointData {
     /**
      * Selector parsed from the at argument, only used by slices  
      */
-    private final Selector selector;
+    private final Specifier specifier;
 
     /**
      * Target 
@@ -131,7 +131,7 @@ public class InjectionPointData {
 
         Matcher matcher = InjectionPointData.AT_PATTERN.matcher(at);
         this.type = InjectionPointData.parseType(matcher, at);
-        this.selector = InjectionPointData.parseSelector(matcher);
+        this.specifier = InjectionPointData.parseSpecifier(matcher);
     }
 
     private void parseArgs(List<String> args) {
@@ -172,10 +172,10 @@ public class InjectionPointData {
     }
     
     /**
-     * Get the selector value parsed from the injector
+     * Get the specifier value parsed from the injector
      */
-    public Selector getSelector() {
-        return this.selector;
+    public Specifier getSpecifier() {
+        return this.specifier;
     }
     
     /**
@@ -362,7 +362,7 @@ public class InjectionPointData {
     }
 
     private static Pattern createPattern() {
-        return Pattern.compile(String.format("^(.+?)(:(%s))?$", Joiner.on('|').join(Selector.values())));
+        return Pattern.compile(String.format("^(.+?)(:(%s))?$", Joiner.on('|').join(Specifier.values())));
     }
 
     /**
@@ -380,8 +380,8 @@ public class InjectionPointData {
         return matcher.matches() ? matcher.group(1) : at;
     }
 
-    private static Selector parseSelector(Matcher matcher) {
-        return matcher.matches() && matcher.group(3) != null ? Selector.valueOf(matcher.group(3)) : Selector.DEFAULT;
+    private static Specifier parseSpecifier(Matcher matcher) {
+        return matcher.matches() && matcher.group(3) != null ? Specifier.valueOf(matcher.group(3)) : Specifier.DEFAULT;
     }
     
     private static int parseInt(String string, int defaultValue) {

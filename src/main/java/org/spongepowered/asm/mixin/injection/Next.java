@@ -24,81 +24,23 @@
  */
 package org.spongepowered.asm.mixin.injection;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.spongepowered.asm.mixin.injection.selectors.dynamic.DynamicSelectorDesc;
-import org.spongepowered.asm.mixin.injection.struct.MemberInfo;
-
 /**
- * <p>A descriptor for matching a target element, for details of usage see
- * {@link DynamicSelectorDesc}.</p>
- * 
- * <p>Unlike {@link MemberInfo Explicit Target Selectors} which can match any
- * element of a candidate member, <tt>&#064;Desc</tt> descriptors always match
- * all elements of a target explicitly. Element defaults are as follows:</p>
- * 
- * <blockquote><dl>
- *   <dt>{@link #owner}</dt>
- *   <dd>Defaults to the current target of the mixin if not specified</dd>
- *   <dt>{@link #ret}</dt>
- *   <dd>Defaults to <tt>void</tt></dd>
- *   <dt>{@link #args}</dt>
- *   <dd>Defaults to an empty array matching a target with <b>no arguments</b>,
- *      omitting this value does <em>not</em> mean "match any" signature and
- *      will explicitly match targets with no arguments. This value is ignored
- *      for fields.</dd>
- * </dl></blockquote>
- * 
- * <h4>Notes</h4>
- * 
- * <ul>
- *   <li>It should be noted that specifying the only required value
- *   ({@link #value}) will therefore match elements with owner type equal to the
- *   current mixin target, taking no arguments and returning void.</li>
- * 
- *   <li>Note that when matching fields the value of {@link #args} is ignored.
- *   </li>
- * </ul>
+ * See {@link Desc#next &#64;Desc.next}
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ })
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(Descriptors.class)
-public @interface Desc {
+public @interface Next {
     
     /**
-     * The identifier for this descriptor. Can be an implicit coordinate or a
-     * user-defined string. IDs are not case-sensitive but must be unique within
-     * a mixin or resolution scope. For more details on resolution for
-     * descriptors see {@link DynamicSelectorDesc}.
-     */
-    public String id() default "";
-
-    /**
-     * The owner of the member to match. The "owner" is the class which declares
-     * the member <b>or, ocasionally</b> the type of class upon which a virtual
-     * call is being made. For example if a class <tt>SuperType</tt> defines a
-     * method <tt>doSomething</tt>, usually <tt>owner</tt> will be
-     * <tt>SuperType</tt>. However note that where a method retrieves a
-     * reference to a derived type <tt>DerivedType</tt> which overrides
-     * <tt>doSomething</tt>, it's possible the invocation will be made using
-     * that type. To ensure usage of the correct type, inspect the disassembled
-     * bytecode for your target.
-     * 
-     * <p>When <tt>owner</tt> is not specified, it defaults to the <em>current
-     * </em> target of the mixin.</p>
-     */
-    public Class<?> owner() default void.class;
-    
-    /**
-     * The name of the member to match. Must be specified. Matched
+     * The name of the member to match. Optional. If present is matched
      * case-sensitively against targets.
      */
-    public String value();
-    
+    public String name() default "";
+
     /**
      * The return type of a method to match, or the declared type of a field.
      * Defaults to <tt>void</tt>.
@@ -110,12 +52,6 @@ public @interface Desc {
      * failing to specify this value <b>matches a target with no arguments</b>.
      */
     public Class<?>[] args() default { };
-    
-    /**
-     * The next elements of this descriptor path, evaluated in order for each
-     * recurse point.
-     */
-    public Next[] next() default { };
     
     /**
      * The minimum number of times this selector should match. By default the

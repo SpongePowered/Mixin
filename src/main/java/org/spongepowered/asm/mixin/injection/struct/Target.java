@@ -647,7 +647,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      */
     public DelegateInitialiser findDelegateInitNode() {
         if (!this.isCtor) {
-            return null;
+            return DelegateInitialiser.NONE;
         }
         
         if (this.delegateInitialiser == null) {

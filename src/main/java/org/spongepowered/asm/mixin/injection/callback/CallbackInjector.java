@@ -38,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.code.Injector;
+import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -393,13 +394,13 @@ public class CallbackInjector extends Injector {
      *      org.objectweb.asm.tree.AbstractInsnNode, java.util.Set)
      */
     @Override
-    protected void addTargetNode(Target target, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
-        InjectionNode injectionNode = target.addInjectionNode(node);
+    protected void addTargetNode(InjectorTarget injectorTarget, List<InjectionNode> myNodes, AbstractInsnNode node, Set<InjectionPoint> nominators) {
+        InjectionNode injectionNode = injectorTarget.addInjectionNode(node);
         
         for (InjectionPoint ip : nominators) {
             
             try {
-                this.checkTargetForNode(target, injectionNode, ip.getTargetRestriction(this.info));
+                this.checkTargetForNode(injectorTarget.getTarget(), injectionNode, ip.getTargetRestriction(this.info));
             } catch (InvalidInjectionException ex) {
                 throw new InvalidInjectionException(this.info, String.format("%s selector %s", ip, ex.getMessage()));
             }
@@ -412,7 +413,7 @@ public class CallbackInjector extends Injector {
             String existingId = this.ids.get(Integer.valueOf(injectionNode.getId()));
             if (existingId != null && !existingId.equals(id)) {
                 Injector.logger.warn("Conflicting id for {} insn in {}, found id {} on {}, previously defined as {}", Bytecode.getOpcodeName(node),
-                        target.toString(), id, this.info, existingId);
+                        injectorTarget.toString(), id, this.info, existingId);
                 break;
             }
             

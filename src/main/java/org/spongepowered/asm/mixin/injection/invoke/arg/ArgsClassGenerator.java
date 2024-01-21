@@ -61,8 +61,10 @@ public final class ArgsClassGenerator implements IClassGenerator {
     public static final String ARGS_REF = ArgsClassGenerator.ARGS_NAME.replace('.', '/');
     
     public static final String GETTER_PREFIX = "$";
+    
+    public static final String SYNTHETIC_PACKAGE = Constants.SYNTHETIC_PACKAGE + ".args";
 
-    private static final String CLASS_NAME_BASE = Constants.SYNTHETIC_PACKAGE + ".args.Args$";
+    private static final String CLASS_NAME_BASE = ArgsClassGenerator.SYNTHETIC_PACKAGE + ".Args$";
 
     private static final String OBJECT = "java/lang/Object";
     private static final String OBJECT_ARRAY = "[L" + ArgsClassGenerator.OBJECT + ";";
