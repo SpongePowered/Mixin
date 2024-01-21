@@ -63,8 +63,8 @@ repositories {
     }
     maven {
         // For modlauncher
-        name = 'forge'
-        url = 'https://files.minecraftforge.net/maven'
+        name = 'neoforged'
+        url = 'https://maven.neoforged.net/releases'
     }
 }
 
@@ -205,7 +205,7 @@ dependencies {
     modlauncher9Implementation ("cpw.mods:modlauncher:$modlauncherVersion") {
         exclude module: 'jopt-simple'
     }
-    modlauncher9Implementation 'cpw.mods:securejarhandler:0.9.+'
+    modlauncher9Implementation 'cpw.mods:securejarhandler:2.1.24'
     
     // asm bridge
     bridgeImplementation 'org.apache.logging.log4j:log4j-core:2.0-beta9'

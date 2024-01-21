@@ -24,11 +24,46 @@
  */
 package org.spongepowered.asm.launch;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.util.List;
+
+import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
+import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.util.Constants;
+
+import com.google.common.collect.ImmutableList;
+
+import cpw.mods.jarhandling.SecureJar;
+import cpw.mods.jarhandling.VirtualJar;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
+
 /**
- * Service for handling transforms mixin under ModLauncher, now just a concrete
- * class which extends the abstract base class used for pre-9 versions of
- * ModLauncher
+ * Service for handling transforms mixin under ModLauncher, most of the
+ * functionality is provided by the abstract base class used for pre-9 versions
+ * of ModLauncher, though we also handle SecureJarHandler requirements here, for
+ * modlauncher 10+ 
  */
 public class MixinTransformationService extends MixinTransformationServiceAbstract {
+
+    private static final String VIRTUAL_JAR_CLASS = "cpw.mods.jarhandling.VirtualJar";
+
+    @Override
+    public List<Resource> completeScan(final IModuleLayerManager layerManager) {
+        try {
+            MixinService.getService().getClassProvider().findClass(MixinTransformationService.VIRTUAL_JAR_CLASS, false);
+        } catch (ClassNotFoundException ex) {
+            // VirtualJar not supported
+            return super.completeScan(layerManager);
+        }
+        
+        try {
+            Path codeSource = Path.of(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+            VirtualJar jar = new VirtualJar("mixin_synthetic", codeSource, Constants.SYNTHETIC_PACKAGE, ArgsClassGenerator.SYNTHETIC_PACKAGE);
+            return ImmutableList.<Resource>of(new Resource(IModuleLayerManager.Layer.GAME, ImmutableList.<SecureJar>of(jar)));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
     
 }
