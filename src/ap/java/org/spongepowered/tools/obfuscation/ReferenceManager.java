@@ -155,7 +155,11 @@ public class ReferenceManager implements IReferenceManager {
         }
         
         FileObject outResource = this.ap.getProcessingEnvironment().getFiler().createResource(StandardLocation.CLASS_OUTPUT, "", fileName);
-        this.ap.printMessage(MessageType.INFO, "Writing " + description + " to " + new File(outResource.toUri()).getAbsolutePath());
+        try { // we cannot assume outResource.toUri() is a file:// uri.
+                this.ap.printMessage(MessageType.INFO, "Writing " + description + " to " + new File(outResource.toUri()).getAbsolutePath());
+        } catch (IllegalArgumentException ignored) {
+                this.ap.printMessage(MessageType.INFO, "Writing " + description + " to " + outResource.toUri());
+        }
         return new PrintWriter(outResource.openWriter());
     }
 
