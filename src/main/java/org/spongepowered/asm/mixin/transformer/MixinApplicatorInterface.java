@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.spongepowered.asm.mixin.MixinEnvironment.Feature;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionException;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Field;
@@ -96,7 +97,11 @@ class MixinApplicatorInterface extends MixinApplicatorStandard {
      */
     @Override
     protected void prepareInjections(MixinTargetContext mixin) {
-        // disabled for interface mixins
+        if (Feature.INJECTORS_IN_INTERFACE_MIXINS.isEnabled()) {
+            super.prepareInjections(mixin);
+            return;
+        }
+        
         for (MethodNode method : this.targetClass.methods) {
             try {
                 InjectionInfo injectInfo = InjectionInfo.parse(mixin, method);
@@ -117,7 +122,10 @@ class MixinApplicatorInterface extends MixinApplicatorStandard {
      */
     @Override
     protected void applyInjections(MixinTargetContext mixin) {
-        // Do nothing
+        if (Feature.INJECTORS_IN_INTERFACE_MIXINS.isEnabled()) {
+            super.applyInjections(mixin);
+            return;
+        }
     }
 
 }

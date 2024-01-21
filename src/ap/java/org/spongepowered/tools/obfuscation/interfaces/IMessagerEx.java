@@ -425,6 +425,9 @@ public interface IMessagerEx extends Messager {
             // Apply the "quiet" option if specified, or if in dev env
             MessageType.INFO.setEnabled(!(env.isDevelopmentEnvironment() || "true".equalsIgnoreCase(options.getOption(SupportedOptions.QUIET))));
             
+            // Selectively enable injector-in-interface as an error based on user option
+            MessageType.INJECTOR_IN_INTERFACE.setEnabled(options.getOption(SupportedOptions.DISABLE_INTERFACE_MIXINS, false));
+
             // Legacy option
             if ("error".equalsIgnoreCase(options.getOption(SupportedOptions.OVERWRITE_ERROR_LEVEL))) {
                 MessageType.OVERWRITE_DOCS.setKind(Kind.ERROR);

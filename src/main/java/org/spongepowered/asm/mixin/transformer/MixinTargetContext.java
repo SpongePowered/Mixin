@@ -545,6 +545,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
 
             localVarActivity.next("var=%s", local.name);
             local.desc = this.transformSingleDescriptor(Type.getType(local.desc));
+            local.signature = null;
         }
         localVarActivity.end();
     }

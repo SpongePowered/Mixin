@@ -50,6 +50,7 @@ public final class SupportedOptions {
     public static final String PLUGIN_VERSION            = "pluginVersion";
     public static final String QUIET                     = "quiet";
     public static final String SHOW_MESSAGE_TYPES        = "showMessageTypes";
+    public static final String DISABLE_INTERFACE_MIXINS  = "disableInterfaceMixins";
     
     private SupportedOptions() {}
 
@@ -70,7 +71,8 @@ public final class SupportedOptions {
             SupportedOptions.MAPPING_TYPES,
             SupportedOptions.PLUGIN_VERSION,
             SupportedOptions.QUIET,
-            SupportedOptions.SHOW_MESSAGE_TYPES
+            SupportedOptions.SHOW_MESSAGE_TYPES,
+            SupportedOptions.DISABLE_INTERFACE_MIXINS
         );
         options.addAll(
             ObfuscationServices.getInstance().getSupportedOptions()

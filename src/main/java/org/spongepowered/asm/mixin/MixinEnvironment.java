@@ -1038,14 +1038,13 @@ public final class MixinEnvironment implements ITokenProvider {
             
             @Override
             public boolean isAvailable() {
-                return false;
-//                return CompatibilityLevel.getMaxEffective().supports(LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES);
+                return CompatibilityLevel.getMaxEffective().supports(LanguageFeatures.METHODS_IN_INTERFACES);
             }
         
-//            @Override
-//            public boolean isEnabled() {
-//                return MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.PRIVATE_METHODS_IN_INTERFACES);
-//            }
+            @Override
+            public boolean isEnabled() {
+                return MixinEnvironment.getCompatibilityLevel().supports(LanguageFeatures.METHODS_IN_INTERFACES);
+            }
 
         };
         

@@ -204,6 +204,11 @@ public abstract class Injector {
      * True if the callback method is static
      */
     protected final boolean isStatic;
+    
+    /**
+     * True if the callback method is in an interface 
+     */
+    protected final boolean isInterface;
 
     /**
      * Make a new CallbackInjector for the supplied InjectionInfo
@@ -220,6 +225,7 @@ public abstract class Injector {
         this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
         this.returnType = Type.getReturnType(this.methodNode.desc);
         this.isStatic = Bytecode.isStatic(this.methodNode);
+        this.isInterface = Bytecode.hasFlag(this.classNode, Opcodes.ACC_INTERFACE);
     }
     
     @Override
@@ -439,9 +445,12 @@ public abstract class Injector {
      * @return injected insn node
      */
     protected AbstractInsnNode invokeHandler(InsnList insns, MethodNode handler) {
-        boolean isPrivate = (handler.access & Opcodes.ACC_PRIVATE) != 0;
-        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC : isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
-        MethodInsnNode insn = new MethodInsnNode(invokeOpcode, this.classNode.name, handler.name, handler.desc, false);
+        boolean isPrivate = Bytecode.hasFlag(handler, Opcodes.ACC_PRIVATE);
+        boolean isSynthetic = Bytecode.hasFlag(handler, Opcodes.ACC_SYNTHETIC);
+        int invokeOpcode = this.isStatic ? Opcodes.INVOKESTATIC :
+                           this.isInterface ? (isSynthetic && isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEINTERFACE) :
+                           isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
+        MethodInsnNode insn = new MethodInsnNode(invokeOpcode, this.classNode.name, handler.name, handler.desc, this.isInterface);
         insns.add(insn);
         this.info.addCallbackInvocation(handler);
         return insn;

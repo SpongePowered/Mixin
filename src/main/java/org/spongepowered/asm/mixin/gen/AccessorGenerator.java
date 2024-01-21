@@ -44,13 +44,19 @@ public abstract class AccessorGenerator {
     protected final AccessorInfo info;
 
     /**
-     * True for static field, false for instance field 
+     * True for static target, false for instance target 
      */
     protected final boolean targetIsStatic;
+    
+    /**
+     * True if the target is in an interface
+     */
+    protected final boolean targetIsInterface;
 
     public AccessorGenerator(AccessorInfo info, boolean isStatic) {
         this.info = info;
         this.targetIsStatic = isStatic;
+        this.targetIsInterface = info.getClassInfo().isInterface();
     }
 
     protected void checkModifiers() {
