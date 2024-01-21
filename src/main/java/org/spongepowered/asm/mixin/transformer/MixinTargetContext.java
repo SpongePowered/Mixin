@@ -1372,7 +1372,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return unique method name
      */
     String getUniqueName(MethodNode method, boolean preservePrefix) {
-        return this.targetClassInfo.getMethodMapper().getUniqueName(method, this.sessionId, preservePrefix);
+        return this.targetClassInfo.getMethodMapper().getUniqueName(this.mixin, method, this.sessionId, preservePrefix);
     }
 
     /**
@@ -1383,7 +1383,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * @return unique field name
      */
     String getUniqueName(FieldNode field) {
-        return this.targetClassInfo.getMethodMapper().getUniqueName(field, this.sessionId);
+        return this.targetClassInfo.getMethodMapper().getUniqueName(this.mixin, field, this.sessionId);
     }
     
     /**

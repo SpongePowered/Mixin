@@ -31,6 +31,7 @@ import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigSource;
 import org.spongepowered.asm.service.MixinService;
 
 import com.google.common.base.Strings;
@@ -129,23 +130,37 @@ public class Config {
         return this.name.hashCode();
     }
 
+//    /**
+//     * Factory method, create a config from the specified config file and fail
+//     * over to the specified environment if no selector is present in the config
+//     * 
+//     * @param configFile config resource
+//     * @param outer failover environment
+//     * @return new config or null if invalid config version
+//     */
+//    @Deprecated
+//    public static Config create(String configFile, MixinEnvironment outer) {
+//        return Config.create(configFile, outer, null);
+//    }
+    
     /**
      * Factory method, create a config from the specified config file and fail
      * over to the specified environment if no selector is present in the config
      * 
      * @param configFile config resource
      * @param outer failover environment
+     * @param source config source
      * @return new config or null if invalid config version
      */
     @Deprecated
-    public static Config create(String configFile, MixinEnvironment outer) {
+    public static Config create(String configFile, MixinEnvironment outer, IMixinConfigSource source) {
         Config config = Config.allConfigs.get(configFile);
         if (config != null) {
             return config;
         }
         
         try {
-            config = MixinConfig.create(configFile, outer);
+            config = MixinConfig.create(configFile, outer, source);
             if (config != null) {
                 Config.allConfigs.put(config.getName(), config);
             }
@@ -161,7 +176,7 @@ public class Config {
         if (!Strings.isNullOrEmpty(parent)) {
             Config parentConfig;
             try {
-                parentConfig = Config.create(parent, outer);
+                parentConfig = Config.create(parent, outer, source);
                 if (parentConfig != null) {
                     if (!config.get().assignParent(parentConfig)) {
                         config = null;
@@ -178,14 +193,25 @@ public class Config {
         return config;
     }
 
+//    /**
+//     * Factory method, create a config from the specified config resource
+//     * 
+//     * @param configFile config resource
+//     * @return new config or null if invalid config version 
+//     */
+//    public static Config create(String configFile) {
+//        return Config.create(configFile, (IMixinConfigSource)null);
+//    }
+    
     /**
      * Factory method, create a config from the specified config resource
      * 
      * @param configFile config resource
+     * @param source config source
      * @return new config or null if invalid config version 
      */
-    public static Config create(String configFile) {
-        return MixinConfig.create(configFile, MixinEnvironment.getDefaultEnvironment());
+    public static Config create(String configFile, IMixinConfigSource source) {
+        return MixinConfig.create(configFile, MixinEnvironment.getDefaultEnvironment(), source);
     }
 
 }

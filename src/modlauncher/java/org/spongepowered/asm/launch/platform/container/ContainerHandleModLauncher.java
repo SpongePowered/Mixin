@@ -49,6 +49,21 @@ public class ContainerHandleModLauncher extends ContainerHandleVirtual {
             this.path = path;
         }
         
+        @Override
+        public String getId() {
+            String name = this.name;
+            int lastDotPos = name.lastIndexOf('.');
+            if (lastDotPos > 0) {
+                name = name.substring(0, lastDotPos);
+            }
+            return name;
+        }
+        
+        @Override
+        public String getDescription() {
+            return this.path.toAbsolutePath().toString();
+        }
+        
         public String getName() {
             return this.name;
         }

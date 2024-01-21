@@ -132,7 +132,7 @@ class MixinCoprocessorAccessor extends MixinCoprocessor {
         // Normally the target will be renamed when the mixin is conformed to the target, if we get here
         // without this happening then we will end up invoking an undecorated method, which is bad!
         if (!method.isConformed()) {
-            String uniqueName = targetClass.getMethodMapper().getUniqueName(methodNode, this.sessionId, true);
+            String uniqueName = targetClass.getMethodMapper().getUniqueName(mixin, methodNode, this.sessionId, true);
             method.conform(uniqueName);
         }
         

@@ -52,7 +52,22 @@ public interface IMixinConfig {
      * @return the config filename (resource name)
      */
     public abstract String getName();
-
+    
+    /**
+     * Get the source which initially provide this configuration object, for
+     * example the jar which specified it.
+     * 
+     * @return the config source, or null if not provided by the service
+     */
+    public abstract IMixinConfigSource getSource();
+    
+    /**
+     * Get the id of the source id with all non-alpha characters removed. If the
+     * source is null or the source's id is null then this method returns null
+     * also.
+     */
+    public abstract String getCleanSourceId();
+    
     /**
      * Get the package containing all mixin classes
      * 

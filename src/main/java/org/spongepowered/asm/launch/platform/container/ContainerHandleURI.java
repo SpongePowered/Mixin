@@ -53,6 +53,17 @@ public class ContainerHandleURI implements IContainerHandle {
         this.attributes = MainAttributes.of(uri);
     }
     
+    @Override
+    public String getId() {
+        // Not enough information for this
+        return null;
+    }
+    
+    @Override
+    public String getDescription() {
+        return this.uri.toString();
+    }
+    
     /**
      * Get the URI for this handle
      */

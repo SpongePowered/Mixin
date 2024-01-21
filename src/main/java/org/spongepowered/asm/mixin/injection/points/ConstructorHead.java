@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.code.IInsnListEx.SpecialNodeType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.asm.MarkerNode;
 
 /**

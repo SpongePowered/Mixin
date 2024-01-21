@@ -45,6 +45,21 @@ public class ContainerHandleModLauncherEx extends ContainerHandleModLauncher {
             this.jar = resource;
         }
         
+        @Override
+        public String getId() {
+            String name = this.jar.name();
+            int lastDotPos = name.lastIndexOf('.');
+            if (lastDotPos > 0) {
+                name = name.substring(0, lastDotPos);
+            }
+            return name;
+        }
+        
+        @Override
+        public String getDescription() {
+            return this.jar.getRootPath().toAbsolutePath().toString();
+        }
+
         public String getName() {
             return this.jar.name();
         }

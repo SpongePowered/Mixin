@@ -43,7 +43,7 @@ public class MixinPlatformAgentDefault extends MixinPlatformAgentAbstract {
         String mixinConfigs = this.handle.getAttribute(ManifestAttributes.MIXINCONFIGS);
         if (mixinConfigs != null) {
             for (String config : mixinConfigs.split(",")) {
-                this.manager.addConfig(config.trim());
+                this.manager.addConfig(config.trim(), this.handle);
             }
         }
         

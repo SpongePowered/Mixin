@@ -22,35 +22,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.asm.launch.platform.container;
-
-import java.util.Collection;
-
-import org.spongepowered.asm.mixin.extensibility.IMixinConfigSource;
+package org.spongepowered.asm.mixin.extensibility;
 
 /**
- * Interface for container handles. Previously resources considered by Mixin
- * were indexed by URI but in order to provide more flexibility the container
- * handle system now wraps URIs in a more expressive object, and provides
- * support for both virtual containers and nested container resolution.
+ * Interface for loaded mixin configurations
  */
-public interface IContainerHandle extends IMixinConfigSource {
+public interface IMixinConfigSource {
 
     /**
-     * Retrieve the value of attribute with the specified name, or null if not
-     * present
-     * 
-     * @param name attribute name
-     * @return attribute value or null if not present
+     * Get the identifier for this source
      */
-    public abstract String getAttribute(String name);
+    public abstract String getId();
     
     /**
-     * Get nested containers from this container, allows a container to detect
-     * and return containers within itself. For example a folder container
-     * detecting and returning file containers, or a virtual container returning
-     * real containers after a scan.
+     * Plain text description of the config source, can be as descriptive as 
+     * necessary to help the user identify the source, for example could be the
+     * full path to the source item, or something more descriptive.
      */
-    public abstract Collection<IContainerHandle> getNestedContainers();
-
+    public abstract String getDescription();
+    
 }

@@ -62,6 +62,16 @@ public class ContainerHandleVirtual implements IContainerHandle {
         this.name = name;
     }
     
+    @Override
+    public String getId() {
+        return this.name;
+    }
+    
+    @Override
+    public String getDescription() {
+        return this.toString();
+    }
+    
     /**
      * Get the name of this container
      */

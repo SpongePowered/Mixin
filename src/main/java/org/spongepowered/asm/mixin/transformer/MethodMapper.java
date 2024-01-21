@@ -95,7 +95,7 @@ class MethodMapper {
             return;
         }
         
-        String handlerName = this.getHandlerName((MixinMethodNode)handler);
+        String handlerName = this.getHandlerName(mixin, (MixinMethodNode)handler);
         handler.name = method.conform(handlerName);
     }
     
@@ -105,11 +105,11 @@ class MethodMapper {
      * @param method mixin method
      * @return conformed handler name
      */
-    public String getHandlerName(MixinMethodNode method) {
+    public String getHandlerName(MixinInfo mixin, MixinMethodNode method) {
         String prefix = InjectionInfo.getInjectorPrefix(method.getInjectorAnnotation());
         String classUID = MethodMapper.getClassUID(method.getOwner().getClassRef());
         String methodUID = MethodMapper.getMethodUID(method.name, method.desc, !method.isSurrogate());
-        return String.format("%s$%s%s$%s", prefix, classUID, methodUID, method.name);
+        return String.format("%s$%s%s%s$%s", prefix, MethodMapper.getMixinSourceId(mixin, "$"), classUID, methodUID, method.name);
     }
 
     /**
@@ -121,10 +121,10 @@ class MethodMapper {
      *      method name prefix
      * @return Unique method name
      */
-    public String getUniqueName(MethodNode method, String sessionId, boolean preservePrefix) {
+    public String getUniqueName(MixinInfo mixin, MethodNode method, String sessionId, boolean preservePrefix) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueMethodIndex++);
-        String pattern = preservePrefix ? "%2$s_$md$%1$s$%3$s" : "md%s$%s$%s";
-        return String.format(pattern, sessionId.substring(30), method.name, uniqueIndex);
+        String pattern = preservePrefix ? "%3$s_$md$%2$s%1$s$%4$s" : "md%s$%s%s$%s";
+        return String.format(pattern, sessionId.substring(30), MethodMapper.getMixinSourceId(mixin, "$"), method.name, uniqueIndex);
     }
 
     /**
@@ -134,9 +134,26 @@ class MethodMapper {
      * @param sessionId Session ID, for uniqueness
      * @return Unique field name
      */
-    public String getUniqueName(FieldNode field, String sessionId) {
+    public String getUniqueName(MixinInfo mixin, FieldNode field, String sessionId) {
         String uniqueIndex = Integer.toHexString(this.nextUniqueFieldIndex++);
-        return String.format("fd%s$%s$%s", sessionId.substring(30), field.name, uniqueIndex);
+        return String.format("fd%s$%s%s$%s", sessionId.substring(30), MethodMapper.getMixinSourceId(mixin, "$"), field.name, uniqueIndex);
+    }
+    
+    /**
+     * Get clean sourceId from mixin
+     * 
+     * @param mixin mixin info
+     * @return clean source id with dollar suffix or empty string
+     */
+    private static String getMixinSourceId(MixinInfo mixin, String separator) {
+        String sourceId = mixin.getConfig().getCleanSourceId();
+        if (sourceId == null) {
+            return "";
+        }
+        if (sourceId.length() > 12) {
+            sourceId = sourceId.substring(0, 12);
+        }
+        return String.format("%s%s", sourceId, separator);
     }
 
     /**

@@ -32,6 +32,7 @@ import java.util.Set;
 import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.GlobalProperties.Keys;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigSource;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.Config;
@@ -66,15 +67,25 @@ public final class Mixins {
     
     private Mixins() {}
     
+//    /**
+//     * Add multiple configurations
+//     * 
+//     * @param configFiles config resources to add
+//     */
+//    public static void addConfigurations(String... configFiles) {
+//        Mixins.addConfigurations(configFiles, null);
+//    }
+    
     /**
      * Add multiple configurations
      * 
      * @param configFiles config resources to add
+     * @param source source of the configuration resource
      */
-    public static void addConfigurations(String... configFiles) {
+    public static void addConfigurations(String[] configFiles, IMixinConfigSource source) {
         MixinEnvironment fallback = MixinEnvironment.getDefaultEnvironment();
         for (String configFile : configFiles) {
-            Mixins.createConfiguration(configFile, fallback);
+            Mixins.createConfiguration(configFile, fallback, source);
         }
     }
     
@@ -84,20 +95,30 @@ public final class Mixins {
      * @param configFile path to configuration resource
      */
     public static void addConfiguration(String configFile) {
-        Mixins.createConfiguration(configFile, MixinEnvironment.getDefaultEnvironment());
+        Mixins.createConfiguration(configFile, null, null);
+    }
+    
+    /**
+     * Add a mixin configuration resource
+     * 
+     * @param configFile path to configuration resource
+     * @param source source of the configuration resource
+     */
+    public static void addConfiguration(String configFile, IMixinConfigSource source) {
+        Mixins.createConfiguration(configFile, MixinEnvironment.getDefaultEnvironment(), source);
     }
     
     @Deprecated
     static void addConfiguration(String configFile, MixinEnvironment fallback) {
-        Mixins.createConfiguration(configFile, fallback);
+        Mixins.createConfiguration(configFile, fallback, null);
     }
 
     @SuppressWarnings("deprecation")
-    private static void createConfiguration(String configFile, MixinEnvironment fallback) {
+    private static void createConfiguration(String configFile, MixinEnvironment fallback, IMixinConfigSource source) {
         Config config = null;
         
         try {
-            config = Config.create(configFile, fallback);
+            config = Config.create(configFile, fallback, source);
         } catch (Exception ex) {
             Mixins.logger.error("Error encountered reading mixin config " + configFile + ": " + ex.getClass().getName() + " " + ex.getMessage(), ex);
         }

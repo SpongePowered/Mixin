@@ -44,6 +44,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment.Phase;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
+import org.spongepowered.asm.mixin.extensibility.IMixinConfigSource;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
@@ -338,6 +339,11 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private transient String name;
     
     /**
+     * The source of this mixin config
+     */
+    private transient IMixinConfigSource source;
+    
+    /**
      * Name of the {@link IMixinConfigPlugin} to hook onto this MixinConfig 
      */
     @SerializedName("plugin")
@@ -411,7 +417,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      *      returned, or false if initialisation failed and the config should
      *      be discarded
      */
-    private boolean onLoad(IMixinService service, String name, MixinEnvironment fallbackEnvironment) {
+    private boolean onLoad(IMixinService service, String name, MixinEnvironment fallbackEnvironment, IMixinConfigSource source) {
         this.service = service;
         this.name = name;
         
@@ -972,6 +978,30 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     public String getName() {
         return this.name;
     }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.extensibility.IMixinConfig#getSource()
+     */
+    @Override
+    public IMixinConfigSource getSource() {
+        return this.source;
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.extensibility.IMixinConfig
+     *      #getCleanSourceId()
+     */
+    @Override
+    public String getCleanSourceId() {
+        if (this.source == null) {
+            return null;
+        }
+        String sourceId = this.source.getId();
+        if (sourceId == null) {
+            return null;
+        }
+        return sourceId.replaceAll("[^A-Za-z]", "");
+    }
 
     /**
      * Get the package containing all mixin classes
@@ -1312,7 +1342,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * @param outer fallback environment
      * @return new Config
      */
-    static Config create(String configFile, MixinEnvironment outer) {
+    static Config create(String configFile, MixinEnvironment outer, IMixinConfigSource source) {
         try {
             IMixinService service = MixinService.getService();
             InputStream resource = service.getResourceAsStream(configFile);
@@ -1320,7 +1350,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
                 throw new IllegalArgumentException(String.format("The specified resource '%s' was invalid or could not be read", configFile));
             }
             MixinConfig config = new Gson().fromJson(new InputStreamReader(resource), MixinConfig.class);
-            if (config.onLoad(service, configFile, outer)) {
+            if (config.onLoad(service, configFile, outer, source)) {
                 return config.getHandle();
             }
             return null;

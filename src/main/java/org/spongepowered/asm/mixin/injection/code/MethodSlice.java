@@ -43,7 +43,6 @@ import org.spongepowered.asm.mixin.injection.struct.InjectionPointAnnotationCont
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.injection.throwables.InjectionError;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidSliceException;
-import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 
