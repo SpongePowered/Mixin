@@ -31,6 +31,7 @@ import java.lang.annotation.Target;
 
 import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 
 /**
@@ -47,11 +48,12 @@ import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
  *     {@link InvalidMixinException} is thrown.
  *   </li>
  *   <li>
- *     On an {@link Inject injector} or {@link Overwrite overwritten} method,
- *     it is equivalent to setting the priority of the containing mixin to
- *     {@link Integer#MAX_VALUE} but applies only to the annotated method. This
- *     allows methods to mark themselves as effectively final, preventing their
- *     replacement by later mixins with higher priority.
+ *     On an {@link Inject injector}, {@link Overwrite overwritten}, or
+ *     {@link Redirect redirection} method, it is equivalent to setting the
+ *     priority of the containing mixin to {@link Integer#MAX_VALUE} but
+ *     applies only to the annotated method. This allows methods to mark
+ *     themselves as effectively final, preventing their replacement by later
+ *     mixins with higher priority.
  *   </li>
  * </ul>
  */
