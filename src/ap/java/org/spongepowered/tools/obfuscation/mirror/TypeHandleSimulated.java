@@ -160,7 +160,8 @@ public class TypeHandleSimulated extends TypeHandle {
 
     }
 
-    private static MethodHandle findMethodRecursive(TypeHandle target, String name, String signature, String rawSignature, boolean matchCase, ITypeHandleProvider typeProvider) {
+    private static MethodHandle findMethodRecursive(TypeHandle target, String name, String signature, String rawSignature, boolean matchCase, 
+            ITypeHandleProvider typeProvider) {
         TypeElement elem = target.getTargetElement();
         if (elem == null) {
             return null;
@@ -186,7 +187,8 @@ public class TypeHandleSimulated extends TypeHandle {
         return TypeHandleSimulated.findMethodRecursive(superClass, name, signature, rawSignature, matchCase, typeProvider);
     }
 
-    private static MethodHandle findMethodRecursive(TypeMirror target, String name, String signature, String rawSignature, boolean matchCase, ITypeHandleProvider typeProvider) {
+    private static MethodHandle findMethodRecursive(TypeMirror target, String name, String signature, String rawSignature, boolean matchCase,
+            ITypeHandleProvider typeProvider) {
         if (!(target instanceof DeclaredType)) {
             return null;
         }

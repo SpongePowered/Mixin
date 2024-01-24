@@ -295,6 +295,8 @@ public class TypeHandle {
 
     /**
      * Gets whether this handle is a supertype of the other handle
+     * 
+     * @param other the TypeHandle to compare with
      */
     public boolean isSuperTypeOf(TypeHandle other) {
         List<TypeHandle> superTypes = new ArrayList<>();

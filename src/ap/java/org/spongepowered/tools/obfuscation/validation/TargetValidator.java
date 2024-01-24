@@ -111,7 +111,8 @@ public class TargetValidator extends MixinValidator {
     }
 
     private boolean validateSuperClass(TypeHandle targetType, TypeHandle superClass) {
-        return targetType.isImaginary() || targetType.isSimulated() || superClass.isSuperTypeOf(targetType) || this.checkMixinsFor(targetType, superClass);
+        return targetType.isImaginary() || targetType.isSimulated() || superClass.isSuperTypeOf(targetType)
+                || this.checkMixinsFor(targetType, superClass);
     }
 
     private boolean checkMixinsFor(TypeHandle targetType, TypeHandle superMixin) {

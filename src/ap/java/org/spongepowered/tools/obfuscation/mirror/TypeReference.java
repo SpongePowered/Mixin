@@ -28,9 +28,6 @@ import org.spongepowered.tools.obfuscation.interfaces.ITypeHandleProvider;
 
 import java.io.Serializable;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.TypeElement;
-
 /**
  * Soft wrapper for a {@link TypeHandle} so that we can serialise it
  */
