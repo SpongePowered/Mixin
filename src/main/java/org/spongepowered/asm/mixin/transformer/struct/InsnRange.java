@@ -24,23 +24,33 @@
  */
 package org.spongepowered.asm.mixin.transformer.struct;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
+
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.LineNumberNode;
+
 /**
- * Struct for representing a range
+ * Struct for representing a range of instructions
  */
-public class Range {
+public class InsnRange {
 
     /**
-     * Start of the range
+     * Start of the range (line number)
      */
     public final int start;
     
     /**
-     * End of the range 
+     * End of the range (line number)
      */
     public final int end;
     
     /**
-     * Range marker
+     * Range marker (index of insn)
      */
     public final int marker;
 
@@ -51,7 +61,7 @@ public class Range {
      * @param end End of the range
      * @param marker Arbitrary marker value
      */
-    public Range(int start, int end, int marker) {
+    public InsnRange(int start, int end, int marker) {
         this.start = start;
         this.end = end;
         this.marker = marker;
@@ -92,6 +102,55 @@ public class Range {
     @Override
     public String toString() {
         return String.format("Range[%d-%d,%d,valid=%s)", this.start, this.end, this.marker, this.isValid());
+    }
+
+    /**
+     * Apply this range to the specified insn list
+     * 
+     * @param insns insn list to filter
+     * @param inclusive whether to include or exclude instructions
+     * @return filtered list
+     */
+    public Deque<AbstractInsnNode> apply(InsnList insns, boolean inclusive) {
+        Deque<AbstractInsnNode> filtered = new ArrayDeque<AbstractInsnNode>();
+        int line = 0;
+
+        boolean gatherNodes = false;
+        int trimAtOpcode = -1;
+        LabelNode optionalInsn = null;
+        for (Iterator<AbstractInsnNode> iter = insns.iterator(this.marker); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof LineNumberNode) {
+                line = ((LineNumberNode)insn).line;
+                AbstractInsnNode next = insns.get(insns.indexOf(insn) + 1);
+                if (line == this.end && next.getOpcode() != Opcodes.RETURN) {
+                    gatherNodes = !inclusive;
+                    trimAtOpcode = Opcodes.RETURN;
+                } else {
+                    gatherNodes = inclusive ? this.contains(line) : this.excludes(line);
+                    trimAtOpcode = -1;
+                }
+            } else if (gatherNodes) {
+                if (optionalInsn != null) {
+                    filtered.add(optionalInsn);
+                    optionalInsn = null;
+                }
+                
+                if (insn instanceof LabelNode) {
+                    optionalInsn = (LabelNode)insn;
+                } else {
+                    int opcode = insn.getOpcode();
+                    if (opcode == trimAtOpcode) {
+                        trimAtOpcode = -1;
+                        continue;
+                    }
+                    
+                    filtered.add(insn);
+                }
+            }
+        }
+        
+        return filtered;
     }
 
 }

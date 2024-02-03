@@ -24,9 +24,7 @@
  */
 package org.spongepowered.asm.mixin.transformer.struct;
 
-import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 
@@ -34,7 +32,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.mixin.MixinEnvironment;
@@ -118,59 +115,28 @@ public class Initialiser {
     private final MethodNode ctor;
     
     /**
-     * Extracted instructions
+     * Filtered instructions
      */
-    private final Deque<AbstractInsnNode> insns = new ArrayDeque<AbstractInsnNode>();
+    private Deque<AbstractInsnNode> insns;
     
-    public Initialiser(MixinTargetContext mixin, MethodNode ctor, Range range) {
+    public Initialiser(MixinTargetContext mixin, MethodNode ctor, InsnRange range) {
         this.mixin = mixin;
         this.ctor = ctor;
         this.initInstructions(range);
     }
     
-    private void initInstructions(Range range) {
+    private void initInstructions(InsnRange range) {
         // Now we know where the constructor is, look for insns which lie OUTSIDE the method body
-        int line = 0;
+        this.insns = range.apply(this.ctor.instructions, false);
 
-        boolean gatherNodes = false;
-        int trimAtOpcode = -1;
-        LabelNode optionalInsn = null;
-        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(range.marker); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn instanceof LineNumberNode) {
-                line = ((LineNumberNode)insn).line;
-                AbstractInsnNode next = ctor.instructions.get(ctor.instructions.indexOf(insn) + 1);
-                if (line == range.end && next.getOpcode() != Opcodes.RETURN) {
-                    gatherNodes = true;
-                    trimAtOpcode = Opcodes.RETURN;
-                } else {
-                    gatherNodes = range.excludes(line);
-                    trimAtOpcode = -1;
-                }
-            } else if (gatherNodes) {
-                if (optionalInsn != null) {
-                    this.insns.add(optionalInsn);
-                    optionalInsn = null;
-                }
-                
-                if (insn instanceof LabelNode) {
-                    optionalInsn = (LabelNode)insn;
-                } else {
-                    int opcode = insn.getOpcode();
-                    if (opcode == trimAtOpcode) {
-                        trimAtOpcode = -1;
-                        continue;
-                    }
-                    for (int ivalidOp : Initialiser.OPCODE_BLACKLIST) {
-                        if (opcode == ivalidOp) {
-                            // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
-                            // code which will likely break things and fix it if a real test case ever appears
-                            throw new InvalidMixinException(this.mixin, "Cannot handle " + Bytecode.getOpcodeName(opcode) + " opcode (0x"
-                                    + Integer.toHexString(opcode).toUpperCase(Locale.ROOT) + ") in class initialiser");
-                        }
-                    }
-                    
-                    this.insns.add(insn);
+        for (AbstractInsnNode insn : this.insns) {
+            int opcode = insn.getOpcode();
+            for (int ivalidOp : Initialiser.OPCODE_BLACKLIST) {
+                if (opcode == ivalidOp) {
+                    // At the moment I don't handle any transient locals because I haven't seen any in the wild, but let's avoid writing
+                    // code which will likely break things and fix it if a real test case ever appears
+                    throw new InvalidMixinException(this.mixin, "Cannot handle " + Bytecode.getOpcodeName(opcode) + " opcode (0x"
+                            + Integer.toHexString(opcode).toUpperCase(Locale.ROOT) + ") in class initialiser");
                 }
             }
         }

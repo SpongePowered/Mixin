@@ -142,6 +142,14 @@ public class InsnListEx extends InsnListReadOnly implements IInsnListEx {
                 }
                 return null;
 
+            case CTOR_BODY:
+                if (this.target instanceof Constructor) {
+                    AbstractInsnNode beforeBody = ((Constructor)this.target).findFirstBodyInsn();
+                    if (this.contains(beforeBody)) {
+                        return beforeBody;
+                    }
+                }
+                return null;
             default:
                 return null;
         }

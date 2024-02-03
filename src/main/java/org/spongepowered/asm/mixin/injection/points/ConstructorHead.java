@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.code.IInsnListEx.SpecialNodeType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionPointData;
 import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointException;
 import org.spongepowered.asm.service.MixinService;
-import org.spongepowered.asm.util.asm.MarkerNode;
 
 /**
  * <p>Like {@link MethodHead HEAD}, this injection point can be used to specify
@@ -56,9 +55,15 @@ import org.spongepowered.asm.util.asm.MarkerNode;
  * <dl>
  *   <dt>enforce=POST_DELEGATE</dt>
  *   <dd>Select the instruction immediately after the delegate constructor</dd>
- *   <dt>enforce=POST_INIT</dt>
- *   <dd>Select the instruction immediately after field initialisers, this
- *     condition can fail if no initialisers are found.</dd>
+ *   <dt>enforce=POST_MIXIN</dt>
+ *   <dd>Select the instruction immediately after all mixin-initialised field
+ *     initialisers, this is similar to POST_DELEGATE if no applied mixins have
+ *     initialisers for target class fields, except that the injection point
+ *     will be after any mixin-supplied initialisers.</dd>
+ *   <dt>enforce=PRE_BODY</dt>
+ *   <dd>Selects the first instruction in the target method body, as determined
+ *     by the line numbers. If the target method does not have line numbers
+ *     available, the result is equivalent to POST_DELEGATE.</dd>
  * </dl>
  * 
  * <p>Example default behaviour:</p>
@@ -81,7 +86,7 @@ public class ConstructorHead extends MethodHead {
     static enum Enforce {
         
         /**
-         * Use default behaviour
+         * Use default behaviour (POST_INIT)
          */
         DEFAULT,
         
@@ -93,7 +98,12 @@ public class ConstructorHead extends MethodHead {
         /**
          * Enforce selection of post-initialiser insn 
          */
-        POST_INIT;
+        POST_INIT,
+        
+        /**
+         * Enforce selection of the first body insn
+         */
+        PRE_BODY;
         
     }
 
@@ -149,30 +159,10 @@ public class ConstructorHead extends MethodHead {
             return true;
         }
         
-        AbstractInsnNode postInit = xinsns.getSpecialNode(SpecialNodeType.INITIALISER_INJECTION_POINT);
+        SpecialNodeType type = this.enforce == Enforce.PRE_BODY ? SpecialNodeType.CTOR_BODY : SpecialNodeType.INITIALISER_INJECTION_POINT;
+        AbstractInsnNode postInit = xinsns.getSpecialNode(type);
 
-        if (postInit instanceof MarkerNode) {
-            AbstractInsnNode postPostInit = postInit.getNext();
-            if (postDelegate == postInit || postDelegate == postPostInit) {
-                // If the marker is immedately after the delegate call, then we haven't actually
-                // found any initialiser insns. This is fine as long as we're not Enforce.POST_INIT
-                // which we assume will only be set by the user when they want to be sure that the
-                // initialisers are properly detected. Set this null to trigger the enforcement or
-                // fallback behaviour below.
-                postInit = null;
-            } else {
-                postInit = postPostInit;
-            }
-        }
-        
-        if (this.enforce == Enforce.POST_INIT || postInit != null) {
-            if (postInit == null) {
-                if (this.verbose) {
-                    this.logger.warn("@At(\"{}\") on {}{} targetting {} failed for enforce=POST_INIT because no initialiser was found",
-                            this.getAtCode(), this.method.name, this.method.desc, xinsns);
-                }
-                return false;
-            }
+        if (postInit != null) {
             nodes.add(postInit);
             return true;
         }

@@ -61,7 +61,6 @@ import org.spongepowered.asm.service.IMixinAuditTrail;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Bytecode;
-import org.spongepowered.asm.util.Bytecode.DelegateInitialiser;
 import org.spongepowered.asm.util.Constants;
 import org.spongepowered.asm.util.ConstraintParser;
 import org.spongepowered.asm.util.ConstraintParser.Constraint;
@@ -675,8 +674,7 @@ class MixinApplicatorStandard {
         
         // Patch the initialiser into the target class ctors
         for (Constructor ctor : this.context.getConstructors()) {
-            DelegateInitialiser superCall = ctor.findDelegateInitNode();
-            if (!superCall.isPresent || superCall.isSuper) {
+            if (ctor.isInjectable()) {
                 int extraStack = initialiser.getMaxStack() - ctor.getMaxStack();
                 if (extraStack > 0) {
                     ctor.extendStack().add(extraStack);

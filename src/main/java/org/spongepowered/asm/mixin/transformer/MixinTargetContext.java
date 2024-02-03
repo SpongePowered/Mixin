@@ -32,7 +32,6 @@ import org.spongepowered.asm.logging.Level;
 import org.spongepowered.asm.logging.ILogger;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
-import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -45,6 +44,7 @@ import org.spongepowered.asm.mixin.extensibility.IActivityContext.IActivity;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.struct.Constructor;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectorGroupInfo;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -62,7 +62,7 @@ import org.spongepowered.asm.mixin.transformer.ClassInfo.Traversal;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.meta.MixinMerged;
 import org.spongepowered.asm.mixin.transformer.struct.Initialiser;
-import org.spongepowered.asm.mixin.transformer.struct.Range;
+import org.spongepowered.asm.mixin.transformer.struct.InsnRange;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.obfuscation.RemapperChain;
@@ -178,6 +178,11 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      * upgraded if the version is below this value
      */
     private int minRequiredClassVersion = CompatibilityLevel.JAVA_6.getClassVersion();
+    
+    /**
+     * The mixin's initialiser 
+     */
+    private Initialiser initialiser;
 
     /**
      * ctor
@@ -199,6 +204,8 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         
         InnerClassGenerator icg = context.getExtensions().<InnerClassGenerator>getGenerator(InnerClassGenerator.class);
         this.innerClasses = icg.getInnerClasses(this.mixin, this.getTargetClassRef());
+        
+        this.initialiser = this.findInitialiser();
     }
     
     /**
@@ -1012,6 +1019,10 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
      *      null if the constructor range could not be parsed
      */
     final Initialiser getInitialiser() {
+        return this.initialiser;
+    }
+    
+    private Initialiser findInitialiser() {
         // Try to find a suitable constructor, we need a constructor with line numbers in order to extract the initialiser 
         MethodNode ctor = this.getConstructor();
         if (ctor == null) {
@@ -1019,12 +1030,18 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         }
         
         // Find the range of line numbers which corresponds to the constructor body
-        Range init = this.getConstructorRange(ctor);
+        InsnRange init = Constructor.getRange(ctor);
         if (!init.isValid()) {
             return null;
         }
         
-        return new Initialiser(this, ctor, init);
+        Initialiser initialiser = new Initialiser(this, ctor, init);
+        for (Constructor targetCtor : this.getTarget().getConstructors()) {
+            if (targetCtor.isInjectable()) {
+                targetCtor.inspect(initialiser);
+            }
+        }
+        return initialiser;
     }
 
     /**
@@ -1047,50 +1064,6 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         }
         
         return ctor;
-    }
-
-    /**
-     * Identifies line numbers in the supplied ctor which correspond to the
-     * start and end of the method body.
-     * 
-     * @param ctor constructor to scan
-     * @return range indicating the line numbers of the specified constructor
-     *      and the position of the superclass ctor invocation
-     */
-    private Range getConstructorRange(MethodNode ctor) {
-        boolean lineNumberIsValid = false;
-        AbstractInsnNode endReturn = null;
-        
-        int line = 0, start = 0, end = 0, superIndex = -1;
-        for (Iterator<AbstractInsnNode> iter = ctor.instructions.iterator(); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn instanceof LineNumberNode) {
-                line = ((LineNumberNode)insn).line;
-                lineNumberIsValid = true;
-            } else if (insn instanceof MethodInsnNode) {
-                if (insn.getOpcode() == Opcodes.INVOKESPECIAL && Constants.CTOR.equals(((MethodInsnNode)insn).name) && superIndex == -1) {
-                    superIndex = ctor.instructions.indexOf(insn);
-                    start = line;
-                }
-            } else if (insn.getOpcode() == Opcodes.PUTFIELD) {
-                lineNumberIsValid = false;
-            } else if (insn.getOpcode() == Opcodes.RETURN) {
-                if (lineNumberIsValid) {
-                    end = line;
-                } else {
-                    end = start;
-                    endReturn = insn;
-                }
-            }
-        }
-        
-        if (endReturn != null) {
-            LabelNode label = new LabelNode(new Label());
-            ctor.instructions.insertBefore(endReturn, label);
-            ctor.instructions.insertBefore(endReturn, new LineNumberNode(start, label));
-        }
-        
-        return new Range(start, end, superIndex);
     }
 
     /**

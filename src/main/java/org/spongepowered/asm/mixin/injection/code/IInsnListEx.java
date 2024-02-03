@@ -48,7 +48,14 @@ public interface IInsnListEx {
         /**
          * The location for injected initialisers in a constructor 
          */
-        INITIALISER_INJECTION_POINT
+        INITIALISER_INJECTION_POINT,
+        
+        /**
+         * The location after field initialisers but before the first
+         * constructor body instruction, requires line numbers to be present in
+         * the target class
+         */
+        CTOR_BODY
         
     }
     
