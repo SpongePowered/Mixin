@@ -55,11 +55,29 @@ public class SpecialMethodInfo extends AnnotatedMethodInfo {
      * Get the class node for this injection
      * 
      * @return the class containing the injector and the target
+     * @deprecated use getTargetClassNode instead
      */
+    @Deprecated
     public final ClassNode getClassNode() {
         return this.classNode;
     }
+
+    /**
+     * Get the target class node for this injection
+     * 
+     * @return the class containing the injector and the target
+     */
+    public final ClassNode getTargetClassNode() {
+        return this.classNode;
+    }
     
+    /**
+     * Get the class metadata for the target class
+     */
+    public final ClassInfo getTargetClassInfo() {
+        return this.mixin.getTargetClassInfo();
+    }
+
     /**
      * Get the class metadata for the mixin
      */

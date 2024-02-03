@@ -52,7 +52,7 @@ public class AccessorGeneratorObjectFactory extends AccessorGeneratorMethodProxy
         int size = Bytecode.getArgsSize(this.argTypes) + (returnSize * 2);
         MethodNode method = this.createMethod(size, size);
         
-        String className = this.info.getClassNode().name;
+        String className = this.info.getTargetClassNode().name;
         method.instructions.add(new TypeInsnNode(Opcodes.NEW, className));
         method.instructions.add(new InsnNode(returnSize == 1 ? Opcodes.DUP : Opcodes.DUP2));
         Bytecode.loadArgs(this.argTypes, method.instructions, 0);

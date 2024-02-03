@@ -84,7 +84,7 @@ public class AccessorGeneratorFieldSetter extends AccessorGeneratorField {
         }
         method.instructions.add(new VarInsnNode(this.targetType.getOpcode(Opcodes.ILOAD), stackSpace));
         int opcode = this.targetIsStatic ? Opcodes.PUTSTATIC : Opcodes.PUTFIELD;
-        method.instructions.add(new FieldInsnNode(opcode, this.info.getClassNode().name, this.targetField.name, this.targetField.desc));
+        method.instructions.add(new FieldInsnNode(opcode, this.info.getTargetClassNode().name, this.targetField.name, this.targetField.desc));
         method.instructions.add(new InsnNode(Opcodes.RETURN));
         return method;
     }

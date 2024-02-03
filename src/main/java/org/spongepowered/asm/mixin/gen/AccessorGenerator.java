@@ -56,7 +56,7 @@ public abstract class AccessorGenerator {
     public AccessorGenerator(AccessorInfo info, boolean isStatic) {
         this.info = info;
         this.targetIsStatic = isStatic;
-        this.targetIsInterface = info.getClassInfo().isInterface();
+        this.targetIsInterface = info.getTargetClassInfo().isInterface();
     }
 
     protected void checkModifiers() {

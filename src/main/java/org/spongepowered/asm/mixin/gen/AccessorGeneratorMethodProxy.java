@@ -80,7 +80,7 @@ public class AccessorGeneratorMethodProxy extends AccessorGenerator {
         int opcode = this.targetIsStatic ? Opcodes.INVOKESTATIC :
             this.targetIsInterface ? (isSynthetic && isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEINTERFACE) :
             isPrivate ? Opcodes.INVOKESPECIAL : Opcodes.INVOKEVIRTUAL;
-        method.instructions.add(new MethodInsnNode(opcode, this.info.getClassNode().name, this.targetMethod.name, this.targetMethod.desc,
+        method.instructions.add(new MethodInsnNode(opcode, this.info.getTargetClassNode().name, this.targetMethod.name, this.targetMethod.desc,
                 this.targetIsInterface));
         method.instructions.add(new InsnNode(this.returnType.getOpcode(Opcodes.IRETURN)));
         return method;

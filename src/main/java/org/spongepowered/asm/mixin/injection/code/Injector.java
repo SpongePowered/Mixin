@@ -219,7 +219,7 @@ public abstract class Injector {
         this.info = info;
         this.annotationType = annotationType;
 
-        this.classNode = info.getClassNode();
+        this.classNode = info.getTargetClassNode();
         this.methodNode = info.getMethod();
         
         this.methodArgs = Type.getArgumentTypes(this.methodNode.desc);
