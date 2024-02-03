@@ -420,6 +420,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     private boolean onLoad(IMixinService service, String name, MixinEnvironment fallbackEnvironment, IMixinConfigSource source) {
         this.service = service;
         this.name = name;
+        this.source = source;
         
         // If parent is specified, don't perform postinit until parent is assigned
         if (!Strings.isNullOrEmpty(this.parentName)) {
