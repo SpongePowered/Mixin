@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.spongepowered.asm.logging.ILogger;
+import org.spongepowered.asm.logging.Level;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
@@ -40,6 +41,7 @@ import org.spongepowered.asm.mixin.transformer.ext.IHotSwap;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinReloadException;
 import org.spongepowered.asm.service.IMixinService;
 import org.spongepowered.asm.service.MixinService;
+import org.spongepowered.asm.service.ServiceNotAvailableError;
 import org.spongepowered.asm.transformers.MixinClassReader;
 import org.spongepowered.asm.util.asm.ASM;
 
@@ -76,23 +78,23 @@ public class MixinAgent implements IHotSwap {
             }
             
             try {
-                MixinAgent.logger.info("Redefining class {}", className);
+                MixinAgent.log(Level.INFO, "Redefining class {}", className);
                 return MixinAgent.this.classTransformer.transformClassBytes(null, className, classfileBuffer);
             } catch (Throwable th) {
-                MixinAgent.logger.error("Error while re-transforming class {}", className, th);
+                MixinAgent.log(Level.ERROR, "Error while re-transforming class {}", className, th);
                 return MixinAgent.ERROR_BYTECODE;
             }
         }
 
         private List<String> reloadMixin(String className, ClassNode classNode) {
-            MixinAgent.logger.info("Redefining mixin {}", className);
+            MixinAgent.log(Level.INFO, "Redefining mixin {}", className);
             try {
                 return MixinAgent.this.classTransformer.reload(className.replace('/', '.'), classNode);
             } catch (MixinReloadException e) {
-                MixinAgent.logger.error("Mixin {} cannot be reloaded, needs a restart to be applied: {} ", e.getMixinInfo(), e.getMessage());
+                MixinAgent.log(Level.ERROR, "Mixin {} cannot be reloaded, needs a restart to be applied: {} ", e.getMixinInfo(), e.getMessage());
             } catch (Throwable th) {
                 // catch everything as otherwise it is ignored
-                MixinAgent.logger.error("Error while finding targets for mixin {}", className, th);
+                MixinAgent.log(Level.ERROR, "Error while finding targets for mixin {}", className, th);
             }
             return null;
         }
@@ -109,18 +111,18 @@ public class MixinAgent implements IHotSwap {
             
             for (String target : targets) {
                 String targetName = target.replace('/', '.');
-                MixinAgent.logger.debug("Re-transforming target class {}", target);
+                MixinAgent.log(Level.DEBUG, "Re-transforming target class {}", target);
                 try {
                     Class<?> targetClass = service.getClassProvider().findClass(targetName);
                     byte[] targetBytecode = MixinAgent.classLoader.getOriginalTargetBytecode(targetName);
                     if (targetBytecode == null) {
-                        MixinAgent.logger.error("Target class {} bytecode is not registered", targetName);
+                        MixinAgent.log(Level.ERROR, "Target class {} bytecode is not registered", targetName);
                         return false;
                     }
                     targetBytecode = MixinAgent.this.classTransformer.transformClassBytes(null, targetName, targetBytecode);
                     MixinAgent.instrumentation.redefineClasses(new ClassDefinition(targetClass, targetBytecode));
                 } catch (Throwable th) {
-                    MixinAgent.logger.error("Error while re-transforming target class {}", target, th);
+                    MixinAgent.log(Level.ERROR, "Error while re-transforming target class {}", target, th);
                     return false;
                 }
             }
@@ -139,8 +141,6 @@ public class MixinAgent implements IHotSwap {
      * Class loader used to load mixin classes
      */
     static final MixinAgentClassLoader classLoader = new MixinAgentClassLoader();
-
-    static final ILogger logger = MixinService.getService().getLogger("mixin.agent");
 
     /**
      * Instance used to register the transformer
@@ -195,7 +195,7 @@ public class MixinAgent implements IHotSwap {
     public static void init(Instrumentation instrumentation) {
         MixinAgent.instrumentation = instrumentation;
         if (!MixinAgent.instrumentation.isRedefineClassesSupported()) {
-            MixinAgent.logger.error("The instrumentation doesn't support re-definition of classes");
+            MixinAgent.log(Level.ERROR, "The instrumentation doesn't support re-definition of classes");
         }
         for (MixinAgent agent : MixinAgent.agents) {
             agent.initTransformer();
@@ -227,6 +227,21 @@ public class MixinAgent implements IHotSwap {
      */
     public static void agentmain(String arg, Instrumentation instrumentation) {
         MixinAgent.init(instrumentation);
+    }
+
+    /**
+     * Wrapper for logger since we can't access the log abstraction in premain
+     * 
+     * @param level the logging level
+     * @param message the message to log
+     * @param params parameters to the message
+     */
+    public static void log(Level level, String message, Object... params) {
+        try {
+            MixinService.getService().getLogger("mixin.agent").log(level, message, params);
+        } catch (ServiceNotAvailableError err) {
+            System.err.printf("MixinAgent: %s: %s", level.name(), String.format(message, params));
+        }
     }
 
 }
