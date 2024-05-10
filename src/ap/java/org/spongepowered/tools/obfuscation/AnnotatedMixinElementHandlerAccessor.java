@@ -138,7 +138,7 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
     static class AnnotatedElementInvoker extends AnnotatedElementAccessor {
         
         private AccessorType type = AccessorType.METHOD_PROXY;
-
+        
         public AnnotatedElementInvoker(ExecutableElement element, AnnotationHandle annotation, IMixinContext context, boolean shouldRemap) {
             super(element, annotation, context, shouldRemap);
         }
@@ -165,7 +165,7 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
             
             for (String prefix : AccessorType.OBJECT_FACTORY.getExpectedPrefixes()) {
                 if (prefix.equals(accessorName.prefix)
-                        && (Constants.CTOR.equals(accessorName.name) || target.getSimpleName().equals(accessorName.name))) {
+                        && (Constants.CTOR.equals(accessorName.name) || target.getSimpleName().equalsIgnoreCase(accessorName.name))) {
                     this.type = AccessorType.OBJECT_FACTORY;
                     return;
                 }
@@ -173,8 +173,16 @@ class AnnotatedMixinElementHandlerAccessor extends AnnotatedMixinElementHandler 
         }
         
         @Override
+        public String getAnnotationValue() {
+            String value = super.getAnnotationValue();
+            return (this.type == AccessorType.OBJECT_FACTORY && value == null) ? this.returnType.toString() : value;
+        }
+        
+        @Override
         public boolean shouldRemap() {
-            return (this.type == AccessorType.METHOD_PROXY || this.getAnnotationValue() != null) && super.shouldRemap();
+            return (this.type == AccessorType.OBJECT_FACTORY
+                    || this.type == AccessorType.METHOD_PROXY
+                    || this.getAnnotationValue() != null) && super.shouldRemap();
         }
 
         @Override
