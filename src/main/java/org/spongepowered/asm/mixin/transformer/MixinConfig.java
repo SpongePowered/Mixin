@@ -76,21 +76,46 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     static class InjectorOptions {
         
+        /**
+         * Specifies the default value for <tt>require</tt> to be used when no
+         * explicit value is defined on the injector. Setting this value to 1
+         * essentially makes all injectors in the config automatically required.
+         * Individual injectors can still be marked optional by explicitly
+         * setting their <tt>require</tt> value to 0. 
+         */
         @SerializedName("defaultRequire")
         int defaultRequireValue = 0;
         
+        /**
+         * Specifies the name for injector groups which have no explicit group
+         * name defined. It is recommended to set this value when grouping
+         * injectors to support global injector groupings in the future.
+         */
         @SerializedName("defaultGroup")
         String defaultGroup = "default";
         
+        /**
+         * The namespace for custom injection points and dynamic selectors
+         */
         @SerializedName("namespace")
         String namespace;
         
+        /**
+         * List of fully-qualified custom injection point classes to register
+         */
         @SerializedName("injectionPoints")
         List<String> injectionPoints;
         
+        /**
+         * List of fully-qualified dynamic selector classes to register
+         */
         @SerializedName("dynamicSelectors")
         List<String> dynamicSelectors;
         
+        /**
+         * Allows the max Shift.By value to adjusted from the environment
+         * default, max value is 5
+         */
         @SerializedName("maxShiftBy")
         int maxShiftBy = InjectionPoint.DEFAULT_ALLOWED_SHIFT_BY;
 
@@ -113,9 +138,18 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      */
     static class OverwriteOptions {
         
+        /**
+         * Flag which specifies whether an overwrite with lower visibility than
+         * its target is allowed to be applied, the visibility will be upgraded
+         * if the target method is nonprivate but the merged method is private.
+         */
         @SerializedName("conformVisibility")
         boolean conformAccessModifiers;
         
+        /**
+         * Changes the default always-overwrite behaviour of mixins to
+         * explicitly require {@link Overwrite} annotations on overwrite methods
+         */
         @SerializedName("requireAnnotations")
         boolean requireOverwriteAnnotations;
         
@@ -1052,7 +1086,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
     }
     
     /**
-     * Get whether visibility levelfor overwritten methods should be conformed
+     * Get whether visibility level for overwritten methods should be conformed
      * to the target class
      * 
      * @return true if conform is enabled

@@ -127,6 +127,13 @@ public class BeforeNew extends InjectionPoint {
     public boolean hasDescriptor() {
         return this.desc != null;
     }
+    
+    /**
+     * Gets the descriptor from the injection point, can return null
+     */
+    public String getDescriptor() {
+        return this.desc;
+    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -152,7 +159,7 @@ public class BeforeNew extends InjectionPoint {
         
         if (this.desc != null) {
             for (TypeInsnNode newNode : newNodes) {
-                if (this.findCtor(insns, newNode)) {
+                if (BeforeNew.findInitNodeFor(insns, newNode, this.desc) != null) {
                     nodes.add(newNode);
                     found = true;
                 }
@@ -162,18 +169,21 @@ public class BeforeNew extends InjectionPoint {
         return found;
     }
 
-    protected boolean findCtor(InsnList insns, TypeInsnNode newNode) {
+    public static MethodInsnNode findInitNodeFor(InsnList insns, TypeInsnNode newNode, String desc) {
         int indexOf = insns.indexOf(newNode);
+        int depth = 0;
         for (Iterator<AbstractInsnNode> iter = insns.iterator(indexOf); iter.hasNext();) {
             AbstractInsnNode insn = iter.next();
             if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
                 MethodInsnNode methodNode = (MethodInsnNode)insn;
-                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc) && methodNode.desc.equals(this.desc)) {
-                    return true;
+                if (Constants.CTOR.equals(methodNode.name) && --depth == 0) {
+                    return methodNode.owner.equals(newNode.desc) && (desc == null || methodNode.desc.equals(desc)) ? methodNode : null;
                 }
+            } else if (insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.NEW) {
+                depth++;
             }
         }
-        return false;
+        return null;
     }
 
     private boolean matchesOwner(TypeInsnNode insn) {

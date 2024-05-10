@@ -136,6 +136,8 @@ public class RedirectInjector extends InvokeInjector {
         
         public static final String KEY = "ctor";
         
+        String desc = null;
+        
         boolean wildcard = false;
         
         int injected = 0;
@@ -281,8 +283,10 @@ public class RedirectInjector extends InvokeInjector {
         
         for (InjectionPoint ip : nominators) {
             if (ip instanceof BeforeNew) {
-                ctorData = this.getCtorRedirect((BeforeNew)ip);
-                ctorData.wildcard = !((BeforeNew)ip).hasDescriptor();
+                BeforeNew beforeNew = (BeforeNew)ip;
+                ctorData = this.getCtorRedirect(beforeNew);
+                ctorData.wildcard = !beforeNew.hasDescriptor();
+                ctorData.desc = beforeNew.getDescriptor();
             } else if (ip instanceof BeforeFieldAccess) {
                 BeforeFieldAccess bfa = (BeforeFieldAccess)ip;
                 fuzz = bfa.getFuzzFactor();
@@ -614,7 +618,7 @@ public class RedirectInjector extends InvokeInjector {
         
         final TypeInsnNode newNode = (TypeInsnNode)node.getCurrentTarget();
         final AbstractInsnNode dupNode = target.get(target.indexOf(newNode) + 1);
-        final MethodInsnNode initNode = target.findInitNodeFor(newNode);
+        final MethodInsnNode initNode = target.findInitNodeFor(newNode, meta.desc);
         
         if (initNode == null) {
             meta.throwOrCollect(new InvalidInjectionException(this.info, String.format("%s ctor invocation was not found in %s",

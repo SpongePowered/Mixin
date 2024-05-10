@@ -53,8 +53,7 @@ public class MixinTransformationService extends MixinTransformationServiceAbstra
     @Override
     public List<Resource> completeScan(final IModuleLayerManager layerManager) {
         try {
-            if (this.detectVirtualJar(layerManager))
-            {
+            if (this.detectVirtualJar(layerManager)) {
                 try {
                     return ImmutableList.<Resource>of(this.createVirtualJar(layerManager));
                 } catch (URISyntaxException e) {

@@ -32,7 +32,6 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.logging.Level;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;

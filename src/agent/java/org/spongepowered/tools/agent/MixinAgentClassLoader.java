@@ -27,7 +27,6 @@ package org.spongepowered.tools.agent;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.logging.Level;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;

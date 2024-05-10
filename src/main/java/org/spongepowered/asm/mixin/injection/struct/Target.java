@@ -39,6 +39,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.points.BeforeNew;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.util.Bytecode;
@@ -636,20 +637,11 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * <tt>NEW</tt> insn 
      * 
      * @param newNode NEW insn
+     * @param desc Descriptor to match
      * @return INVOKESPECIAL opcode of ctor, or null if not found
      */
-    public MethodInsnNode findInitNodeFor(TypeInsnNode newNode) {
-        int start = this.indexOf(newNode);
-        for (Iterator<AbstractInsnNode> iter = this.insns.iterator(start); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                MethodInsnNode methodNode = (MethodInsnNode)insn;
-                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
-                    return methodNode;
-                }
-            }
-        }
-        return null;
+    public MethodInsnNode findInitNodeFor(TypeInsnNode newNode, String desc) {
+        return BeforeNew.findInitNodeFor(this.insns, newNode, desc);
     }
     
     /**
