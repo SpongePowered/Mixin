@@ -578,7 +578,7 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
                     
                     if (!targetClass.hasSuperClass(classNode.superName, ClassInfo.Traversal.SUPER)) {
                         ClassInfo superClass = ClassInfo.forName(classNode.superName);
-                        if (superClass.isMixin()) {
+                        if (superClass != null && superClass.isMixin()) {
                             // If superclass is a mixin, check for hierarchy derp
                             for (ClassInfo superTarget : superClass.getTargets()) {
                                 if (targetClasses.contains(superTarget)) {
