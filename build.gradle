@@ -402,7 +402,10 @@ if (project.doSignJar) {
                     keypass: project.keyStoreSecret,
                     tsaurl: project.timestampAuthority,
                     preservelastmodified: 'true',
-                    verbose: true
+                    verbose: true,
+                    storetype: project.keyStoreType,
+                    providerclass: project.antSignProviderClass,
+                    providerarg: project.antSignProviderArg
                 )
             }
         }
