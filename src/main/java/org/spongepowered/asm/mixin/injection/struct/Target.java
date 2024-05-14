@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -633,7 +634,37 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
 
     /**
      * Find the first <tt>&lt;init&gt;</tt> invocation after the specified
-     * <tt>NEW</tt> insn 
+     * <tt>NEW</tt> insn
+     * 
+     * @param newNode NEW insn
+     * @return INVOKESPECIAL opcode of ctor, or null if not found
+     * 
+     * @deprecated Use {@link #findInitNodeFor(TypeInsnNode, String)} instead:
+     *      this method only matches the first matching <tt>&lt;init&gt;</tt>
+     *      after the specified <tt>NEW</tt>, it also does not filter based on
+     *      the descriptor passed into <tt>BeforeNew</tt>.
+     */
+    @Deprecated
+    public MethodInsnNode findInitNodeFor(TypeInsnNode newNode) {
+        int start = this.indexOf(newNode);
+        for (Iterator<AbstractInsnNode> iter = this.insns.iterator(start); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
+                MethodInsnNode methodNode = (MethodInsnNode)insn;
+                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
+                    return methodNode;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Find the matching <tt>&lt;init&gt;</tt> invocation after the specified
+     * <tt>NEW</tt> insn, ensuring that the supplied descriptor matches. If the
+     * supplied descriptor is <tt>null</tt> then any invocation matches. If
+     * additional <tt>NEW</tt> insns are encountered then corresponding
+     * <tt>&lt;init&gt;</tt> calls are skipped.
      * 
      * @param newNode NEW insn
      * @param desc Descriptor to match
