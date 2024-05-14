@@ -38,6 +38,7 @@ import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.GlobalProperties;
 import org.spongepowered.asm.launch.GlobalProperties.Keys;
 import org.spongepowered.asm.launch.MixinBootstrap;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.extensibility.IEnvironmentTokenProvider;
 import org.spongepowered.asm.mixin.injection.At;
@@ -330,7 +331,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Parent for environment settings
          */
-        ENVIRONMENT(Inherit.ALWAYS_FALSE, "env"),
+        ENVIRONMENT(Inherit.ALWAYS_FALSE, true, "env"),
         
         /**
          * Force refmap obf type when required 
@@ -412,7 +413,20 @@ public final class MixinEnvironment implements ITokenProvider {
          * Behaviour for initialiser injections, current supported options are
          * "default" and "safe"
          */
-        INITIALISER_INJECTION_MODE("initialiserInjectionMode", "default");
+        INITIALISER_INJECTION_MODE("initialiserInjectionMode", "default"),
+        
+        /**
+         * Parent for tunable settings
+         */
+        TUNABLE(Inherit.ALWAYS_FALSE, true, "tunable"),
+        
+        /**
+         * Tunable for the Mixin ClassReader behaviour, setting this option to
+         * <tt>true</tt> will cause the Mixin ClassReader to read mixin bytecode
+         * with {@link ClassReader#EXPAND_FRAMES} flag which restores the
+         * behaviour from versions 0.8.6 and below, newer versions default to 0.
+         */
+        CLASSREADER_EXPAND_FRAMES(Option.TUNABLE, Inherit.INDEPENDENT, "classReaderExpandFrames", true, "false");
         
         /**
          * Type of inheritance for options
@@ -459,6 +473,11 @@ public final class MixinEnvironment implements ITokenProvider {
          * Inheritance behaviour for this option 
          */
         final Inherit inheritance;
+        
+        /**
+         * Do not print this option in the masthead output  
+         */
+        final boolean isHidden;
 
         /**
          * Java property name
@@ -488,6 +507,10 @@ public final class MixinEnvironment implements ITokenProvider {
             this(null, inheritance, property, true);
         }
         
+        private Option(Inherit inheritance, boolean hidden, String property) {
+            this(null, inheritance, hidden, property, true);
+        }
+        
         private Option(String property, boolean flag) {
             this(null, property, flag);
         }
@@ -500,29 +523,58 @@ public final class MixinEnvironment implements ITokenProvider {
             this(parent, Inherit.INHERIT, property, true);
         }
         
+        private Option(Option parent, boolean hidden, String property) {
+            this(parent, Inherit.INHERIT, hidden, property, true);
+        }
+        
         private Option(Option parent, Inherit inheritance, String property) {
             this(parent, inheritance, property, true);
+        }
+        
+        private Option(Option parent, Inherit inheritance, boolean hidden, String property) {
+            this(parent, inheritance, hidden, property, true);
         }
         
         private Option(Option parent, String property, boolean isFlag) {
             this(parent, Inherit.INHERIT, property, isFlag, null);
         }
         
+        private Option(Option parent, boolean hidden, String property, boolean isFlag) {
+            this(parent, Inherit.INHERIT, hidden, property, isFlag, null);
+        }
+        
         private Option(Option parent, Inherit inheritance, String property, boolean isFlag) {
             this(parent, inheritance, property, isFlag, null);
+        }
+        
+        private Option(Option parent, Inherit inheritance, boolean hidden, String property, boolean isFlag) {
+            this(parent, inheritance, hidden, property, isFlag, null);
         }
         
         private Option(Option parent, String property, String defaultStringValue) {
             this(parent, Inherit.INHERIT, property, false, defaultStringValue);
         }
         
+        private Option(Option parent, boolean hidden, String property, String defaultStringValue) {
+            this(parent, Inherit.INHERIT, hidden, property, false, defaultStringValue);
+        }
+        
         private Option(Option parent, Inherit inheritance, String property, String defaultStringValue) {
             this(parent, inheritance, property, false, defaultStringValue);
         }
         
+        private Option(Option parent, Inherit inheritance, boolean hidden, String property, String defaultStringValue) {
+            this(parent, inheritance, hidden, property, false, defaultStringValue);
+        }
+        
         private Option(Option parent, Inherit inheritance, String property, boolean isFlag, String defaultStringValue) {
+            this(parent, inheritance, false, property, false, defaultStringValue);
+        }
+        
+        private Option(Option parent, Inherit inheritance, boolean hidden, String property, boolean isFlag, String defaultStringValue) {
             this.parent = parent;
             this.inheritance = inheritance;
+            this.isHidden = hidden;
             this.property = (parent != null ? parent.property : Option.PREFIX) + "." + property;
             this.defaultValue = defaultStringValue;
             this.isFlag = isFlag;
@@ -1300,6 +1352,9 @@ public final class MixinEnvironment implements ITokenProvider {
             printer.kv("Global Property Service Class", MixinService.getGlobalPropertyService().getClass().getName());
             printer.kv("Logger Adapter Type", MixinService.getService().getLogger("mixin").getType()).hr();
             for (Option option : Option.values()) {
+                if (option.isHidden) {
+                    continue;
+                }
                 StringBuilder indent = new StringBuilder();
                 for (int i = 0; i < option.depth; i++) {
                     indent.append("- ");

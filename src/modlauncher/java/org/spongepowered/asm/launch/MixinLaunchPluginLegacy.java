@@ -204,11 +204,16 @@ public class MixinLaunchPluginLegacy implements ILaunchPluginService, IClassByte
 
     @Override
     public ClassNode getClassNode(String name) throws ClassNotFoundException, IOException {
-        return this.getClassNode(name, true);
+        return this.getClassNode(name, true, 0);
     }
 
     @Override
     public ClassNode getClassNode(String name, boolean runTransformers) throws ClassNotFoundException, IOException {
+        return this.getClassNode(name, runTransformers, ClassReader.EXPAND_FRAMES);
+    }
+    
+    @Override
+    public ClassNode getClassNode(String name, boolean runTransformers, int readerFlags) throws ClassNotFoundException, IOException {
         if (!runTransformers) {
             throw new IllegalArgumentException("ModLauncher service does not currently support retrieval of untransformed bytecode");
         }
@@ -235,7 +240,7 @@ public class MixinLaunchPluginLegacy implements ILaunchPluginService, IClassByte
         if (classBytes != null && classBytes.length != 0) {
             ClassNode classNode = new ClassNode();
             ClassReader classReader = new MixinClassReader(classBytes, canonicalName);
-            classReader.accept(classNode, ClassReader.EXPAND_FRAMES);
+            classReader.accept(classNode, readerFlags);
             return classNode;
         }
         

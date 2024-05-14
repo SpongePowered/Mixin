@@ -54,4 +54,17 @@ public interface IClassBytecodeProvider {
      */
     public abstract ClassNode getClassNode(String name, boolean runTransformers) throws ClassNotFoundException, IOException;
 
+
+    /**
+     * Retrieve transformed class as an ASM tree
+     * 
+     * @param name full class name
+     * @param runTransformers true to run transformers when loading the class
+     * @param readerFlags Flags to pass in to ClassReader.accept
+     * @return tree
+     * @throws ClassNotFoundException if class not found
+     * @throws IOException propagated
+     */
+    public abstract ClassNode getClassNode(String name, boolean runTransformers, int readerFlags) throws ClassNotFoundException, IOException;
+
 }

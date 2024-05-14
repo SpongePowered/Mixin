@@ -1308,7 +1308,8 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
                     this.logger.error("Classloader restrictions [{}] encountered loading {}, name: {}", restrictions, this, mixinClassName);
                 }
             }
-            classNode = this.service.getBytecodeProvider().getClassNode(mixinClassName, true);
+            int readerFlags = this.parent.getEnvironment().getOption(Option.CLASSREADER_EXPAND_FRAMES) ? ClassReader.EXPAND_FRAMES : 0;
+            classNode = this.service.getBytecodeProvider().getClassNode(mixinClassName, true, readerFlags);
         } catch (ClassNotFoundException ex) {
             throw new ClassNotFoundException(String.format("The specified mixin '%s' was not found", mixinClassName));
         } catch (IOException ex) {
