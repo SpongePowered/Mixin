@@ -55,12 +55,6 @@ public abstract class MixinServiceAbstract implements IMixinService {
     protected static final String SERVICE_PACKAGE = "org.spongepowered.asm.service.";
 
     /**
-     * Logger adapter, replacement for log4j2 logger as services should use
-     * their own loggers now in order to avoid contamination
-     */
-    private static ILogger logger;
-
-    /**
      * Cached logger adapters 
      */
     private static final Map<String, ILogger> loggers = new HashMap<String, ILogger>();
@@ -86,12 +80,6 @@ public abstract class MixinServiceAbstract implements IMixinService {
      */
     private String sideName;
     
-    protected MixinServiceAbstract() {
-        if (MixinServiceAbstract.logger == null) {
-            MixinServiceAbstract.logger = this.getLogger("mixin");
-        }
-    }
-
     /* (non-Javadoc)
      * @see org.spongepowered.asm.service.IMixinService#prepare()
      */
@@ -226,7 +214,7 @@ public abstract class MixinServiceAbstract implements IMixinService {
                     return this.sideName = side;
                 }
             } catch (Exception ex) {
-                MixinServiceAbstract.logger.catching(ex);
+                this.getLogger("mixin").catching(ex);
             }
         }
         
