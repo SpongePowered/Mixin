@@ -25,18 +25,20 @@
 package org.spongepowered.asm.launch;
 
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
+import java.util.Set;
 
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
 import org.spongepowered.asm.service.MixinService;
 import org.spongepowered.asm.util.Constants;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
+import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
+import cpw.mods.jarhandling.SecureJar.Provider;
 import cpw.mods.jarhandling.VirtualJar;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
 
@@ -53,16 +55,18 @@ public class MixinTransformationService extends MixinTransformationServiceAbstra
     @Override
     public List<Resource> completeScan(final IModuleLayerManager layerManager) {
         try {
+            Path codeSource = Path.of(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+
             if (this.detectVirtualJar(layerManager)) {
                 try {
-                    return ImmutableList.<Resource>of(this.createVirtualJar(layerManager));
+                    return ImmutableList.<Resource>of(this.createVirtualJar(codeSource));
                 } catch (URISyntaxException e) {
                     throw new RuntimeException(e);
                 }
             }
             
             try {
-                return ImmutableList.<Resource>of(this.createShim(layerManager));
+                return ImmutableList.<Resource>of(this.createShim(codeSource));
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
@@ -82,16 +86,16 @@ public class MixinTransformationService extends MixinTransformationServiceAbstra
         }
     }
 
-    private Resource createVirtualJar(final IModuleLayerManager layerManager) throws URISyntaxException {
-        Path codeSource = Path.of(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+    private Resource createVirtualJar(final Path codeSource) throws URISyntaxException {
         VirtualJar jar = new VirtualJar("mixin_synthetic", codeSource, Constants.SYNTHETIC_PACKAGE, ArgsClassGenerator.SYNTHETIC_PACKAGE);
         return new Resource(IModuleLayerManager.Layer.GAME, ImmutableList.<SecureJar>of(jar));
     }
 
-    private Resource createShim(IModuleLayerManager layerManager) throws URISyntaxException {
-        URL resource = this.getClass().getResource("/shims/mixin_synthetic.zip");
-        Path path = Paths.get(resource.toURI());
-        SecureJar jar = SecureJar.from(path);
+    @SuppressWarnings("removal")
+    private Resource createShim(final Path codeSource) throws URISyntaxException {
+        Path path = codeSource.resolve("mixin_synthetic");
+        Set<String> packages = ImmutableSet.<String>of(Constants.SYNTHETIC_PACKAGE, ArgsClassGenerator.SYNTHETIC_PACKAGE);
+        SecureJar jar = SecureJar.from(sj -> JarMetadata.fromFileName(path, packages, ImmutableList.<Provider>of()), codeSource);
         return new Resource(IModuleLayerManager.Layer.GAME, ImmutableList.<SecureJar>of(jar));
     }
     
