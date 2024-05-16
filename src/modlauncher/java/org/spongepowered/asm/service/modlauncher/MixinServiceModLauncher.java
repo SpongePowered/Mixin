@@ -323,7 +323,7 @@ public class MixinServiceModLauncher extends MixinServiceAbstract {
             version = Optional.ofNullable(ITransformationService.class.getPackage().getSpecificationVersion());
         }
 
-        return version.map(VersionNumber::parse).orElse(VersionNumber.NONE);
+        return version.<VersionNumber>map(VersionNumber::parse).orElse(VersionNumber.NONE);
     }
 
 }

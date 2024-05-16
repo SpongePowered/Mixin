@@ -299,7 +299,7 @@ public class TypeHandle {
      * @param other the TypeHandle to compare with
      */
     public boolean isSuperTypeOf(TypeHandle other) {
-        List<TypeHandle> superTypes = new ArrayList<>();
+        List<TypeHandle> superTypes = new ArrayList<TypeHandle>();
         if (other.getSuperclass() != null) {
             superTypes.add(other.getSuperclass());
         }

@@ -40,6 +40,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.code.InjectorTarget;
 import org.spongepowered.asm.mixin.injection.points.BeforeFieldAccess;
 import org.spongepowered.asm.mixin.injection.points.BeforeNew;
+import org.spongepowered.asm.mixin.injection.struct.ArgOffsets;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -392,6 +393,7 @@ public class RedirectInjector extends InvokeInjector {
         Extension extraLocals = target.extendLocals().add(invoke.handlerArgs).add(1);
         Extension extraStack = target.extendStack().add(1); // Normally only need 1 extra stack pos to store target ref 
         int[] argMap = this.storeArgs(target, invoke.handlerArgs, insns, 0);
+        ArgOffsets offsets = new ArgOffsets(this.isStatic ? 0 : 1, invoke.targetArgs.length);
         if (invoke.captureTargetArgs > 0) {
             int argSize = Bytecode.getArgsSize(target.arguments, 0, invoke.captureTargetArgs);
             extraLocals.add(argSize);
@@ -403,7 +405,7 @@ public class RedirectInjector extends InvokeInjector {
         if (invoke.coerceReturnType && invoke.returnType.getSort() >= Type.ARRAY) {
             insns.add(new TypeInsnNode(Opcodes.CHECKCAST, invoke.returnType.getInternalName()));
         }
-        target.replaceNode(invoke.node, champion, insns);
+        target.replaceNode(invoke.node, champion, insns).decorate(ArgOffsets.KEY, offsets);
         extraLocals.apply();
         extraStack.apply();
     }

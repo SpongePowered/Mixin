@@ -162,9 +162,16 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
          * @param value meta value
          * @param <V> value type
          */
+        @SuppressWarnings("unchecked")
         public <V> InjectionNode decorate(String key, V value) {
             if (this.decorations == null) {
                 this.decorations = new HashMap<String, Object>();
+            }
+            if (value instanceof IChainedDecoration<?> && this.decorations.containsKey(key)) {
+                Object previous = this.decorations.get(key);
+                if (previous.getClass().equals(value.getClass())) {
+                    ((IChainedDecoration<Object>)value).replace(previous);
+                }
             }
             this.decorations.put(key, value);
             return this;
@@ -190,6 +197,20 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
         @SuppressWarnings("unchecked")
         public <V> V getDecoration(String key) {
             return (V) (this.decorations == null ? null : this.decorations.get(key));
+        }
+        
+        /**
+         * Get the specified decoration or default value
+         * 
+         * @param key meta key
+         * @param defaultValue default value to return
+         * @param <V> value type
+         * @return decoration value or null if absent
+         */
+        @SuppressWarnings("unchecked")
+        public <V> V getDecoration(String key, V defaultValue) {
+            V existing = (V) (this.decorations == null ? null : this.decorations.get(key));
+            return existing != null ? existing : defaultValue;
         }
 
         /* (non-Javadoc)
@@ -258,11 +279,12 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
      * @param oldNode node being replaced
      * @param newNode node to replace with
      */
-    public void replace(AbstractInsnNode oldNode, AbstractInsnNode newNode) {
+    public InjectionNode replace(AbstractInsnNode oldNode, AbstractInsnNode newNode) {
         InjectionNode injectionNode = this.get(oldNode);
         if (injectionNode != null) {
             injectionNode.replace(newNode);
-        }        
+        }
+        return injectionNode;
     }
     
     /**
@@ -271,11 +293,12 @@ public class InjectionNodes extends ArrayList<InjectionNodes.InjectionNode> {
      * 
      * @param node node being removed
      */
-    public void remove(AbstractInsnNode node) {
+    public InjectionNode remove(AbstractInsnNode node) {
         InjectionNode injectionNode = this.get(node);
         if (injectionNode != null) {
             injectionNode.remove();
         }        
+        return injectionNode;
     }
     
 }

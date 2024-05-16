@@ -33,6 +33,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgsClassGenerator;
+import org.spongepowered.asm.mixin.injection.struct.ArgOffsets;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -78,20 +79,25 @@ public class ModifyArgsInjector extends InvokeInjector {
     @Override
     protected void injectAtInvoke(Target target, InjectionNode node) {
         MethodInsnNode targetMethod = (MethodInsnNode)node.getCurrentTarget();
-        
         Type[] args = Type.getArgumentTypes(targetMethod.desc);
+        ArgOffsets offsets = node.getDecoration(ArgOffsets.KEY);
+        if (offsets != null) {
+            args = offsets.apply(args);
+        }
+        String targetMethodDesc = Type.getMethodDescriptor(Type.getReturnType(targetMethod.desc), args);
+        
         if (args.length == 0) {
             throw new InvalidInjectionException(this.info, "@ModifyArgs injector " + this + " targets a method invocation "
-                    + targetMethod.name + targetMethod.desc + " with no arguments!");
+                    + targetMethod.name + targetMethodDesc + " with no arguments!");
         }
         
-        String clArgs = this.argsClassGenerator.getArgsClass(targetMethod.desc, this.info.getMixin().getMixin()).getName();
+        String clArgs = this.argsClassGenerator.getArgsClass(targetMethodDesc, this.info.getMixin().getMixin()).getName();
         boolean withArgs = this.verifyTarget(target);
 
         InsnList insns = new InsnList();
         Extension extraStack = target.extendStack().add(1);
         
-        this.packArgs(insns, clArgs, targetMethod);
+        this.packArgs(insns, clArgs, targetMethodDesc);
         
         if (withArgs) {
             extraStack.add(target.arguments);
@@ -121,8 +127,8 @@ public class ModifyArgsInjector extends InvokeInjector {
         return false;
     }
 
-    private void packArgs(InsnList insns, String clArgs, MethodInsnNode targetMethod) {
-        String factoryDesc = Bytecode.changeDescriptorReturnType(targetMethod.desc, "L" + clArgs + ";");
+    private void packArgs(InsnList insns, String clArgs, String targetMethodDesc) {
+        String factoryDesc = Bytecode.changeDescriptorReturnType(targetMethodDesc, "L" + clArgs + ";");
         insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, clArgs, "of", factoryDesc, false));
         insns.add(new InsnNode(Opcodes.DUP));
         

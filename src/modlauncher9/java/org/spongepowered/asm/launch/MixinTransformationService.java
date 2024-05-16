@@ -93,8 +93,8 @@ public class MixinTransformationService extends MixinTransformationServiceAbstra
 
     @SuppressWarnings("removal")
     private Resource createShim(final Path codeSource) throws URISyntaxException {
-        Path path = codeSource.resolve("mixin_synthetic");
-        Set<String> packages = ImmutableSet.<String>of(Constants.SYNTHETIC_PACKAGE, ArgsClassGenerator.SYNTHETIC_PACKAGE);
+        final Path path = codeSource.resolve("mixin_synthetic");
+        final Set<String> packages = ImmutableSet.<String>of(Constants.SYNTHETIC_PACKAGE, ArgsClassGenerator.SYNTHETIC_PACKAGE);
         SecureJar jar = SecureJar.from(sj -> JarMetadata.fromFileName(path, packages, ImmutableList.<Provider>of()), codeSource);
         return new Resource(IModuleLayerManager.Layer.GAME, ImmutableList.<SecureJar>of(jar));
     }

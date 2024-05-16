@@ -85,7 +85,7 @@ public class Blackboard implements IGlobalPropertyService {
      */
     @SuppressWarnings("unchecked")
     @Override
-    public void setProperty(IPropertyKey key, Object value) {
+    public void setProperty(IPropertyKey key, final Object value) {
         this.blackboard.computeIfAbsent(((Key<Object>)key).key, k -> value);
     }
 

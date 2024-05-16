@@ -33,6 +33,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.spongepowered.asm.mixin.injection.InjectionPoint;
 import org.spongepowered.asm.mixin.injection.InjectionPoint.RestrictTargetLevel;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.struct.ArgOffsets;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
 import org.spongepowered.asm.mixin.injection.struct.InjectionNodes.InjectionNode;
 import org.spongepowered.asm.mixin.injection.struct.Target;
@@ -110,7 +111,13 @@ public class ModifyArgInjector extends InvokeInjector {
     protected void injectAtInvoke(Target target, InjectionNode node) {
         MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
         Type[] args = Type.getArgumentTypes(methodNode.desc);
+        ArgOffsets offsets = node.getDecoration(ArgOffsets.KEY);
+        if (offsets != null) {
+            args = offsets.apply(args);
+        }
+        
         int argIndex = this.findArgIndex(target, args);
+        
         InsnList insns = new InsnList();
         Extension extraLocals = target.extendLocals();
         
