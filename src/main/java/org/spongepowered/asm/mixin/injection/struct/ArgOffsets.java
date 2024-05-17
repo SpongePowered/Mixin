@@ -27,8 +27,12 @@ package org.spongepowered.asm.mixin.injection.struct;
 import org.objectweb.asm.Type;
 
 /**
- * Decoration which stores a mapping of new argument offsets to original
- * argument offsets.
+ * Decoration which stores a linear offset of arguments when a node replacement
+ * results in a call to a method with the same arguments as the original
+ * (replaced) call but offset by some fixed amount. Since ModifyArg and
+ * ModifyArgs always assume the method args are on the top of the stack (which
+ * they must be), this essentially results in just chopping off a fixed number
+ * of arguments from the start of the method.
  */
 public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     
@@ -38,14 +42,14 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     public static final String KEY = "argOffsets";
     
     /**
-     *  Default offsets
+     * The offset for the start of the args
      */
-    public static final ArgOffsets UNITY = new ArgOffsets(0, 1024);
+    private final int offset;
     
     /**
-     * Mapping of original offsets to new offsets
+     * The total number of (original) args
      */
-    private final int[] mapping;
+    private final int length;
     
     /**
      * If this offset collection replaces a previous mapping, chain to the next
@@ -56,23 +60,12 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     /**
      * Create contiguous offsets starting from start and continuing for length
      * 
-     * @param start start index
+     * @param offset start index
      * @param length length
      */
-    public ArgOffsets(int start, int length) {
-        this.mapping = new int[length];
-        for (int i = 0; i < length; i++) {
-            this.mapping[i] = start++;
-        }
-    }
-    
-    /**
-     * Create an offset collection from an explicit array
-     * 
-     * @param offsets offsets to store
-     */
-    public ArgOffsets(int... offsets) {
-        this.mapping = offsets;
+    public ArgOffsets(int offset, int length) {
+        this.offset = offset;
+        this.length = length;
     }
 
     /* (non-Javadoc)
@@ -89,7 +82,7 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * Get the size of this mapping collection
      */
     public int getLength() {
-        return this.mapping.length;
+        return this.length;
     }
     
     /**
@@ -99,7 +92,7 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * @return The original index based on this mapping
      */
     public int getArgIndex(int index) {
-        int offsetIndex = this.mapping[index];
+        int offsetIndex = index + this.offset;
         return this.next != null ? this.next.getArgIndex(offsetIndex) : offsetIndex;
     }
 
@@ -110,8 +103,8 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * @return Unmapped arguments
      */
     public Type[] apply(Type[] args) {
-        Type[] transformed = new Type[this.mapping.length];
-        for (int i = 0; i < this.mapping.length; i++) {
+        Type[] transformed = new Type[this.length];
+        for (int i = 0; i < this.length; i++) {
             int offset = this.getArgIndex(i);
             if (offset < args.length) {
                 transformed[i] = args[offset];
