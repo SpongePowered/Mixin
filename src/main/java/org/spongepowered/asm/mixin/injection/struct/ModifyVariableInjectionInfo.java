@@ -32,6 +32,7 @@ import org.spongepowered.asm.mixin.injection.modify.LocalVariableDiscriminator;
 import org.spongepowered.asm.mixin.injection.modify.ModifyVariableInjector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.AnnotationType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.HandlerPrefix;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.InjectorOrder;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
@@ -39,6 +40,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 @AnnotationType(ModifyVariable.class)
 @HandlerPrefix("localvar")
+@InjectorOrder(InjectorOrder.BUILTIN_MODIFYVARIABLE)
 public class ModifyVariableInjectionInfo extends InjectionInfo {
 
     public ModifyVariableInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

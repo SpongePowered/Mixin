@@ -31,6 +31,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.ModifyArgsInjector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.AnnotationType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.HandlerPrefix;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.InjectorOrder;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
@@ -38,6 +39,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 @AnnotationType(ModifyArgs.class)
 @HandlerPrefix("args")
+@InjectorOrder(InjectorOrder.BUILTIN_MODIFYARG)
 public class ModifyArgsInjectionInfo extends InjectionInfo {
 
     public ModifyArgsInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

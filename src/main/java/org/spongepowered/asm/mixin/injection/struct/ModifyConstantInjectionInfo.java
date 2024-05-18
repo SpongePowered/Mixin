@@ -36,6 +36,7 @@ import org.spongepowered.asm.mixin.injection.invoke.ModifyConstantInjector;
 import org.spongepowered.asm.mixin.injection.points.BeforeConstant;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.AnnotationType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.HandlerPrefix;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.InjectorOrder;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 import com.google.common.base.Strings;
@@ -45,6 +46,7 @@ import com.google.common.base.Strings;
  */
 @AnnotationType(ModifyConstant.class)
 @HandlerPrefix("constant")
+@InjectorOrder(InjectorOrder.BUILTIN_MODIFYCONSTANT)
 public class ModifyConstantInjectionInfo extends InjectionInfo {
 
     private static final String CONSTANT_ANNOTATION_CLASS = Constant.class.getName().replace('.', '/');

@@ -31,6 +31,7 @@ import org.spongepowered.asm.mixin.injection.code.Injector;
 import org.spongepowered.asm.mixin.injection.invoke.RedirectInjector;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.AnnotationType;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.HandlerPrefix;
+import org.spongepowered.asm.mixin.injection.struct.InjectionInfo.InjectorOrder;
 import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
 
 /**
@@ -38,6 +39,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 @AnnotationType(Redirect.class)
 @HandlerPrefix("redirect")
+@InjectorOrder(InjectorOrder.BUILTIN_REDIRECT)
 public class RedirectInjectionInfo extends InjectionInfo {
 
     public RedirectInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

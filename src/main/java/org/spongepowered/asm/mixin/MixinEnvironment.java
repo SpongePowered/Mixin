@@ -1086,7 +1086,7 @@ public final class MixinEnvironment implements ITokenProvider {
         /**
          * Support for the use of injector annotations in interface mixins 
          */
-        INJECTORS_IN_INTERFACE_MIXINS(false) {
+        INJECTORS_IN_INTERFACE_MIXINS {
             
             @Override
             public boolean isAvailable() {
@@ -1108,6 +1108,10 @@ public final class MixinEnvironment implements ITokenProvider {
          * the future to disable certain features globally for testing reasons.
          */
         private boolean enabled;
+        
+        private Feature() {
+            this(false);
+        }
         
         private Feature(boolean enabled) {
             this.enabled = enabled;
