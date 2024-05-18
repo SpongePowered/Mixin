@@ -103,7 +103,7 @@ class MixinApplicatorStandard {
         /**
          * Enumerate injectors and scan for injection points 
          */
-        PREINJECT,
+        INJECT_PREPARE,
         
         /**
          * Apply accessors and invokers 
@@ -111,9 +111,14 @@ class MixinApplicatorStandard {
         ACCESSOR,
         
         /**
+         * Apply preinjection steps on injectors from previous pass 
+         */
+        INJECT_PREINJECT,
+        
+        /**
          * Apply injectors from previous pass 
          */
-        INJECT
+        INJECT_APPLY
 
     }
     
@@ -224,7 +229,7 @@ class MixinApplicatorStandard {
                 IActivity applyActivity = this.activities.begin("Mixin");
                 
                 Set<Integer> orders = MixinApplicatorStandard.ORDERS_NONE;
-                if (pass == ApplicatorPass.INJECT) {
+                if (pass == ApplicatorPass.INJECT_APPLY) {
                     orders = new TreeSet<Integer>();
                     for (MixinTargetContext context : mixinContexts) {
                         context.getInjectorOrders(orders);
@@ -303,7 +308,7 @@ class MixinApplicatorStandard {
                 this.applyInitialisers(mixin);
                 break;
                 
-            case PREINJECT:
+            case INJECT_PREPARE:
                 activity.next("Prepare Injections");
                 this.prepareInjections(mixin);
                 break;
@@ -313,7 +318,12 @@ class MixinApplicatorStandard {
                 this.applyAccessors(mixin);
                 break;
                 
-            case INJECT:
+            case INJECT_PREINJECT:
+                activity.next("Apply Injections");
+                this.applyPreInjections(mixin);
+                break;
+                
+            case INJECT_APPLY:
                 activity.next("Apply Injections");
                 this.applyInjections(mixin, injectorOrder);
                 break;
@@ -718,6 +728,17 @@ class MixinApplicatorStandard {
         mixin.prepareInjections();
     }
     
+    /**
+     * Run preinject application on all injectors discovered in the previous
+     * pass
+     * 
+     * @param mixin Mixin being applied
+     * @param injectorOrder injector order for this pass
+     */
+    protected void applyPreInjections(MixinTargetContext mixin) {
+        mixin.applyPreInjections();
+    }
+
     /**
      * Apply all injectors discovered in the previous pass
      * 

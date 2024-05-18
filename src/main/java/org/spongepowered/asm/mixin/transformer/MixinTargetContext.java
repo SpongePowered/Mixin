@@ -1410,6 +1410,29 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
             orders.add(injectInfo.getOrder());
         }
     }
+    
+    /**
+     * Run the preinject step for all discovered injectors
+     */
+    void applyPreInjections() {
+        this.activities.clear();
+        
+        try {
+            IActivity applyActivity = this.activities.begin("PreInject");
+            IActivity preInjectActivity = this.activities.begin("?");
+            for (InjectionInfo injectInfo : this.injectors) {
+                preInjectActivity.next(injectInfo.toString());
+                injectInfo.preInject();
+            }
+            applyActivity.end();
+        } catch (InvalidMixinException ex) {
+            ex.prepend(this.activities);
+            throw ex;
+        } catch (Exception ex) {
+            throw new InvalidMixinException(this, "Unexpecteded " + ex.getClass().getSimpleName() + " whilst transforming the mixin class:", ex,
+                    this.activities);
+        }
+    }
 
     /**
      * Apply injectors discovered in the {@link #prepareInjections()} pass
@@ -1427,14 +1450,7 @@ public class MixinTargetContext extends ClassContext implements IMixinContext {
         }
         
         try {
-            IActivity applyActivity = this.activities.begin("PreInject");
-            IActivity preInjectActivity = this.activities.begin("?");
-            for (InjectionInfo injectInfo : injectors) {
-                preInjectActivity.next(injectInfo.toString());
-                injectInfo.preInject();
-            }
-
-            applyActivity.next("Inject");
+            IActivity applyActivity = this.activities.begin("Inject");
             IActivity injectActivity = this.activities.begin("?");
             for (InjectionInfo injectInfo : injectors) {
                 injectActivity.next(injectInfo.toString());

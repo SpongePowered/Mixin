@@ -117,6 +117,19 @@ class MixinApplicatorInterface extends MixinApplicatorStandard {
     
     /* (non-Javadoc)
      * @see org.spongepowered.asm.mixin.transformer.MixinApplicator
+     *      #applyPreInjections(
+     *      org.spongepowered.asm.mixin.transformer.MixinTargetContext)
+     */
+    @Override
+    protected void applyPreInjections(MixinTargetContext mixin) {
+        if (Feature.INJECTORS_IN_INTERFACE_MIXINS.isEnabled()) {
+            super.applyPreInjections(mixin);
+            return;
+        }
+    }
+    
+    /* (non-Javadoc)
+     * @see org.spongepowered.asm.mixin.transformer.MixinApplicator
      *      #applyInjections(
      *      org.spongepowered.asm.mixin.transformer.MixinTargetContext, int)
      */
