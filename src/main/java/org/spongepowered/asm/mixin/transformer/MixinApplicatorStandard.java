@@ -673,19 +673,31 @@ class MixinApplicatorStandard {
         MethodNode target = this.findTargetMethod(method);
 
         if (target != null) {
-            AbstractInsnNode returnNode = Bytecode.findInsn(target, Opcodes.RETURN);
-            
-            if (returnNode != null) {
+            List<AbstractInsnNode> returnNodes = Bytecode.findAllInsns(target, Opcodes.RETURN);
+            if (!returnNodes.isEmpty()) {
+                // Replace all existing return instructions with a GOTO to the start of the newly appended code
+                LabelNode appendedCodeStartLabel = new LabelNode();
+                for (AbstractInsnNode returnNode : returnNodes) {
+                    target.instructions.set(returnNode, new JumpInsnNode(Opcodes.GOTO, appendedCodeStartLabel));
+                }
+                target.instructions.add(appendedCodeStartLabel);
+
+                // Append all the new code to the end of the target method, excluding line numbers
                 Iterator<AbstractInsnNode> injectIter = method.instructions.iterator();
                 while (injectIter.hasNext()) {
                     AbstractInsnNode insn = injectIter.next();
-                    if (!(insn instanceof LineNumberNode) && insn.getOpcode() != Opcodes.RETURN) {
-                        target.instructions.insertBefore(returnNode, insn);
+                    if (!(insn instanceof LineNumberNode)) {
+                        injectIter.remove();
+                        target.instructions.add(insn);
                     }
                 }
                 
                 target.maxLocals = Math.max(target.maxLocals, method.maxLocals);
                 target.maxStack = Math.max(target.maxStack, method.maxStack);
+
+                // Merge incoming try-catch blocks into the target method
+                target.tryCatchBlocks.addAll(method.tryCatchBlocks);
+                // We could probably copy over local variable information as well?
             }
             
             return;
