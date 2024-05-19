@@ -124,14 +124,13 @@ public @interface ModifyArg {
     public At at();
     
     /**
-     * <p>Gets the argument index on the target to set. It is not necessary to
-     * set this value if there is only one argument of the modifier type in the
-     * hooked method's signature. For example if the target method accepts a
-     * boolean, an integer and a String, and the modifier method accepts and
-     * returns an integer, then the integer parameter will be automatically
-     * selected.</p>
+     * <p>The zero-based, absolute index of the argument to set on the target.</p>
      * 
-     * <p>The index is zero-based.</p>
+     * <p>It is not necessary to set this value if there is only one argument of
+     * the modifier type in the hooked method's signature. For example if the target
+     * method accepts a boolean, an integer and a String, and the modifier method
+     * accepts and returns an integer, then the integer parameter will be automatically
+     * selected.</p>
      * 
      * @return argument index to modify or -1 for automatic
      */
