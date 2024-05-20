@@ -82,6 +82,10 @@ public class AfterInvoke extends BeforeInvoke {
         }
         
         insn = InjectionPoint.nextNode(insns, insn);
+        if(insn instanceof TypeInsnNode && insn.getOpcode() == Opcodes.CHECKCAST) {
+            insn = InjectionPoint.nextNode(insns, insn);
+        }
+        
         if (insn instanceof VarInsnNode && insn.getOpcode() >= Opcodes.ISTORE) {
             insn = InjectionPoint.nextNode(insns, insn);
         }
