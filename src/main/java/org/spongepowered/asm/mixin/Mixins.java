@@ -198,7 +198,7 @@ public final class Mixins {
     }
 
     /**
-     * Register a gloabl error handler class
+     * Register a global error handler class
      * 
      * @param handlerName Fully qualified class name
      */
