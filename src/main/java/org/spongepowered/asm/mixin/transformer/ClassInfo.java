@@ -938,8 +938,8 @@ public final class ClassInfo {
     /**
      * Get all mixins which target this class
      */
-    Set<MixinInfo> getMixins() {
-        return this.isMixin ? Collections.<MixinInfo>emptySet() : Collections.<MixinInfo>unmodifiableSet(this.mixins);
+    public Set<IMixinInfo> getMixins() {
+        return this.isMixin ? Collections.<IMixinInfo>emptySet() : Collections.<IMixinInfo>unmodifiableSet(this.mixins);
     }
 
     /**
@@ -954,6 +954,13 @@ public final class ClassInfo {
      */
     public boolean isMixin() {
         return this.isMixin;
+    }
+
+    /**
+     * Get mixin metadata for this class, if it is a mixin
+     */
+    public IMixinInfo getMixinInfo() {
+        return this.mixin;
     }
     
     /**
