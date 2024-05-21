@@ -638,25 +638,9 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * 
      * @param newNode NEW insn
      * @return INVOKESPECIAL opcode of ctor, or null if not found
-     * 
-     * @deprecated Use {@link #findInitNodeFor(TypeInsnNode, String)} instead:
-     *      this method only matches the first matching <tt>&lt;init&gt;</tt>
-     *      after the specified <tt>NEW</tt>, it also does not filter based on
-     *      the descriptor passed into <tt>BeforeNew</tt>.
      */
-    @Deprecated
     public MethodInsnNode findInitNodeFor(TypeInsnNode newNode) {
-        int start = this.indexOf(newNode);
-        for (Iterator<AbstractInsnNode> iter = this.insns.iterator(start); iter.hasNext();) {
-            AbstractInsnNode insn = iter.next();
-            if (insn instanceof MethodInsnNode && insn.getOpcode() == Opcodes.INVOKESPECIAL) {
-                MethodInsnNode methodNode = (MethodInsnNode)insn;
-                if (Constants.CTOR.equals(methodNode.name) && methodNode.owner.equals(newNode.desc)) {
-                    return methodNode;
-                }
-            }
-        }
-        return null;
+        return this.findInitNodeFor(newNode, null);
     }
 
     /**
