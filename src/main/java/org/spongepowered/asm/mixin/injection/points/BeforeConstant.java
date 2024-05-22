@@ -97,7 +97,7 @@ import com.google.common.primitives.Longs;
  * 
  * <p>Examples:</p>
  * <blockquote><pre>
- *   <del>// Find all integer constans with value 4</del>
+ *   <del>// Find all integer constants with value 4</del>
  *   &#064;At(value = "CONSTANT", args = "intValue=4")</pre>
  * </blockquote> 
  * <blockquote><pre>
