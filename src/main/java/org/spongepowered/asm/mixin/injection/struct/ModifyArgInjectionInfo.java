@@ -40,7 +40,7 @@ import org.spongepowered.asm.util.Annotations;
  */
 @AnnotationType(ModifyArg.class)
 @HandlerPrefix("modify")
-@InjectorOrder(InjectorOrder.BUILTIN_MODIFYARG)
+@InjectorOrder(InjectorOrder.DEFAULT)
 public class ModifyArgInjectionInfo extends InjectionInfo {
 
     public ModifyArgInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

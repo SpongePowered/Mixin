@@ -178,5 +178,27 @@ public @interface ModifyConstant {
      * @return Constraints for this annotation
      */
     public String constraints() default "";
+    
+    /**
+     * By default almost all injectors for a target class apply their injections
+     * at the same time. In other words, if multiple mixins target the same
+     * class then injectors are applied in priority order (since the mixins
+     * themselves are merged in priority order, and injectors run in the order
+     * they were merged). Redirect injectors apply in a later pass.
+     * 
+     * <p>The default order for redirect injectors is <tt>10000</tt>, and all
+     * other injectors use <tt>1000</tt>.</p>
+     * 
+     * <p>Specifying a value for <tt>order</tt> alters this default behaviour
+     * and causes the injector to inject either earlier or later than it
+     * normally would. For example specifying <tt>9900</tt> will cause the
+     * injector to apply before others, while <tt>11000</tt> will apply later.
+     * Injectors with the same <tt>order</tt> will still apply in order of their
+     * mixin's <tt>priority</tt>.
+     * 
+     * @return the application order for this injector, uses default REDIRECT
+     *      order (10000) if not specified
+     */
+    public int order() default 10000;    
 
 }

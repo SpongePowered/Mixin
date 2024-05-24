@@ -46,7 +46,7 @@ import com.google.common.base.Strings;
  */
 @AnnotationType(ModifyConstant.class)
 @HandlerPrefix("constant")
-@InjectorOrder(InjectorOrder.BUILTIN_MODIFYCONSTANT)
+@InjectorOrder(InjectorOrder.REDIRECT)
 public class ModifyConstantInjectionInfo extends InjectionInfo {
 
     private static final String CONSTANT_ANNOTATION_CLASS = Constant.class.getName().replace('.', '/');

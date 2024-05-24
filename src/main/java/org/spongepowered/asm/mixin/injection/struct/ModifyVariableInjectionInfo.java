@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 @AnnotationType(ModifyVariable.class)
 @HandlerPrefix("localvar")
-@InjectorOrder(InjectorOrder.BUILTIN_MODIFYVARIABLE)
+@InjectorOrder(InjectorOrder.DEFAULT)
 public class ModifyVariableInjectionInfo extends InjectionInfo {
 
     public ModifyVariableInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

@@ -123,88 +123,41 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     /**
      * Decoration for subclasses which specifies the order (phase) in which the
      * injector should be applied relative to other injectors. Built-in
-     * injectors all have predefined orders which allows custom injectors to
-     * specify their own order either as an explicit priority (eg. LATE) or
-     * relative to a known injector (eg. InjectorOrder.BUILTIN_REDIRECT - 100).
+     * injectors except for redirectors all run at DEFAULT unless specified in
+     * the injector annotation.
      * 
-     * <p>Built-in injectors are grouped into three separate phases rather than
-     * split into individual phases, in order to retain the existing behaviour
-     * of mixin priority. Injectors in the same order are sorted by mixin
-     * priority and declaration order within the mixin as always.</p>
+     * <p>Injectors in the same order are sorted by mixin priority and
+     * declaration order within the mixin as always.</p>
      */
     @Retention(RetentionPolicy.RUNTIME)
     @java.lang.annotation.Target(ElementType.TYPE)
     public @interface InjectorOrder {
-        
-        /**
-         * The lowest possible order, avoid using this unlesss you are insane
-         */
-        public static final int FIRST = Integer.MIN_VALUE;
-        
-        /**
-         * A very early injector, will run before injectors such as ModifyArgs
-         * and ModifyVariable, as well as before EARLY injectors 
-         */
-        public static final int VERY_EARLY = 100;
-        
-        /**
-         * An early injector, will run before injectors suchs as ModifyArgs
-         * and ModifyVariable 
-         */
-        public static final int EARLY = 250;
-        
-        /**
-         * Built-in order for ModifyArg injectors
-         */
-        public static final int BUILTIN_MODIFYARG = 500;
 
         /**
-         * Built-in order for ModifyArgs injectors
+         * An early injector, run before most injectors
          */
-        public static final int BUILTIN_MODIFYARGS = 500;
-
-        /**
-         * Built-in order for ModifyVariable injectors
-         */
-        public static final int BUILTIN_MODIFYVARIABLE = 500;
+        public static final int EARLY = 0;
         
         /**
-         * Default order
+         * Default order, all injectors except redirect run here unless manually
+         * adjusted
          */
         public static final int DEFAULT = 1000;
-        
-        /**
-         * Built-in order for Inject injectors
-         */
-        public static final int BUILTIN_CALLBACKS = 1000;
 
         /**
-         * Late injector, runs after most injectors except VERY_LATE and
-         * Redirect injectors 
+         * Late injector, runs after most injectors but before redirects 
          */
         public static final int LATE = 2000;
         
         /**
-         * Built-in order for ModifyConstant injectors
-         */
-        public static final int BUILTIN_MODIFYCONSTANT = 5000;
-        
-        /**
          * Built-in order for Redirect injectors
          */
-        public static final int BUILTIN_REDIRECT = 5000;
+        public static final int REDIRECT = 10000;
         
         /**
-         * Very late injector, runs after nearly all injectors including
-         * Redirect injectors 
+         * Injector which should run after redirect injector 
          */
-        public static final int VERY_LATE = 10000;
-        
-        /**
-         * The highest possible order, using this causes the universe to
-         * implode, bringing about the end of days.
-         */
-        public static final int LAST = Integer.MAX_VALUE;
+        public static final int AFTER_REDIRECT = 20000;
         
         /**
          * String prefix for conforming handler methods
@@ -362,6 +315,12 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
     private List<String> messages;
     
     /**
+     * Injector order, parsed from either the injector annotation or uses the
+     * default for this injection type 
+     */
+    private int order;
+    
+    /**
      * ctor
      * 
      * @param mixin Mixin data
@@ -400,6 +359,8 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             this.readInjectionPoints();
             activity.next("Parse Requirements");
             this.parseRequirements();
+            activity.next("Parse Order");
+            this.parseOrder();
             activity.next("Parse Selectors");
             this.parseSelectors();
             activity.next("Find Targets");
@@ -448,6 +409,17 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
             this.maxCallbackCount = Math.max(Math.max(this.requiredCallbackCount, 1), allow);
         }
     }
+    
+    protected void parseOrder() {
+        Integer userOrder = Annotations.<Integer>getValue(this.annotation, "order");
+        if (userOrder != null) {
+            this.order = userOrder.intValue();
+            return;
+        }
+
+        InjectorOrder injectorDefault = this.getClass().<InjectorOrder>getAnnotation(InjectorOrder.class);
+        this.order = injectorDefault != null ? injectorDefault.value() : InjectorOrder.DEFAULT;
+    }
 
     protected void parseSelectors() {
         Set<ITargetSelector> selectors = new LinkedHashSet<ITargetSelector>();
@@ -484,8 +456,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Get the application order for this injector type
      */
     public int getOrder() {
-        InjectorOrder injectorOrder = this.getClass().<InjectorOrder>getAnnotation(InjectorOrder.class);
-        return injectorOrder != null ? injectorOrder.value() : InjectorOrder.DEFAULT;
+        return this.order;
     }
     
     /**

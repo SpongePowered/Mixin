@@ -39,7 +39,7 @@ import org.spongepowered.asm.mixin.transformer.MixinTargetContext;
  */
 @AnnotationType(ModifyArgs.class)
 @HandlerPrefix("args")
-@InjectorOrder(InjectorOrder.BUILTIN_MODIFYARG)
+@InjectorOrder(InjectorOrder.DEFAULT)
 public class ModifyArgsInjectionInfo extends InjectionInfo {
 
     public ModifyArgsInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {

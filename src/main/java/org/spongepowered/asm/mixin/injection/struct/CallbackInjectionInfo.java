@@ -41,7 +41,7 @@ import com.google.common.base.Strings;
  * Information about a callback to inject, usually specified by {@link Inject}
  */
 @AnnotationType(Inject.class)
-@InjectorOrder(InjectorOrder.BUILTIN_CALLBACKS)
+@InjectorOrder(InjectorOrder.DEFAULT)
 public class CallbackInjectionInfo extends InjectionInfo {
 
     protected CallbackInjectionInfo(MixinTargetContext mixin, MethodNode method, AnnotationNode annotation) {
