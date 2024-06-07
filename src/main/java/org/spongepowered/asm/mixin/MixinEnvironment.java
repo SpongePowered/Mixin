@@ -568,7 +568,7 @@ public final class MixinEnvironment implements ITokenProvider {
         }
         
         private Option(Option parent, Inherit inheritance, String property, boolean isFlag, String defaultStringValue) {
-            this(parent, inheritance, false, property, false, defaultStringValue);
+            this(parent, inheritance, false, property, isFlag, defaultStringValue);
         }
         
         private Option(Option parent, Inherit inheritance, boolean hidden, String property, boolean isFlag, String defaultStringValue) {
