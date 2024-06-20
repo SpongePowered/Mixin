@@ -27,6 +27,8 @@ package org.spongepowered.asm.mixin.injection.struct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,11 +50,13 @@ import org.spongepowered.asm.mixin.injection.throwables.InvalidInjectionPointExc
 import org.spongepowered.asm.mixin.refmap.IMixinContext;
 import org.spongepowered.asm.util.Annotations;
 import org.spongepowered.asm.util.Annotations.Handle;
+import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.IMessageSink;
 import org.spongepowered.asm.util.asm.IAnnotationHandle;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
 
 /**
  * Data read from an {@link org.spongepowered.asm.mixin.injection.At} annotation
@@ -64,7 +68,7 @@ public class InjectionPointData {
      * Regex for recognising at declarations
      */
     private static final Pattern AT_PATTERN = InjectionPointData.createPattern(); 
-
+    
     /**
      * K/V arguments parsed from the "args" node in the {@link At} annotation 
      */
@@ -383,7 +387,37 @@ public class InjectionPointData {
         }
         return defaultOpcode;
     }
-    
+
+    /**
+     * Get a list of opcodes specified in the injection point arguments. The
+     * opcodes can be specified as raw integer values or as their corresponding
+     * constant name from the {@link Opcodes} interface. All the values should
+     * be separated by spaces or commas. The returned array is sorted in order
+     * to make it suitable for use with the {@link Arrays#binarySearch} method.
+     * 
+     * @param key argument name
+     * @param defaultValue value to return if the key is not specified
+     * @return parsed opcodes as array or default value if the key is not
+     *      specified in the args
+     */
+    public int[] getOpcodeList(String key, int[] defaultValue) {
+        String value = this.args.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        
+        Set<Integer> parsed = new TreeSet<Integer>();
+        String[] values = value.split("[ ,;]");
+        for (String strOpcode : values) {
+            int opcode = Bytecode.parseOpcodeName(strOpcode.trim());
+            if (opcode > 0) {
+                parsed.add(opcode);
+            }                
+        }
+        
+        return Ints.toArray(parsed);
+    }
+
     /**
      * Get the id specified on the injection point (or null if not specified)
      */

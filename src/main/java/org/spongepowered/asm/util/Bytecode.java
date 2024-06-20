@@ -527,6 +527,57 @@ public final class Bytecode {
         
         return opcode >= 0 ? String.valueOf(opcode) : "UNKNOWN";
     }
+    
+    /**
+     * Uses reflection to find a matching constant in the {@link Opcodes}
+     * interface for the specified opcode name. Supported formats are raw
+     * numeric values, bare constant names (eg. <tt>ACONST_NULL</tt>) or
+     * qualified names (eg. <tt>Opcodes.ACONST_NULL</tt>). Returns the value if
+     * found or -1 if not matched. Note that no validation is performed on
+     * numeric opcode values.
+     * 
+     * @param opcodeName Opcode string to match
+     * @return matched opcode value or -1 if not matched.
+     */
+    public static int parseOpcodeName(String opcodeName) {
+        if (opcodeName == null) {
+            return -1;
+        }
+        
+        if (opcodeName.matches("^1[0-9]{0,2}|[1-9][0-9]?$")) {
+            return Integer.parseInt(opcodeName);
+        }
+        
+        if (opcodeName.startsWith("Opcodes.")) {
+            opcodeName = opcodeName.substring(8);
+        }
+        
+        if (!opcodeName.matches("^[A-Z][A-Z0-9_]+$")) {
+            return -1;
+        }
+        
+        return Bytecode.parseOpcodeName(opcodeName, "UNINITIALIZED_THIS", 1);
+    }
+
+    private static int parseOpcodeName(String opcodeName, String start, int min) {
+        boolean found = false;
+        
+        try {
+            for (java.lang.reflect.Field f : Opcodes.class.getDeclaredFields()) {
+                if (!found && !f.getName().equals(start)) {
+                    continue;
+                }
+                found = true;
+                if (f.getType() == Integer.TYPE && f.getName().equalsIgnoreCase(opcodeName)) {
+                    return f.getInt(null);
+                }
+            }
+        } catch (Exception ex) {
+            // well this is embarrassing
+        }
+        
+        return -1;
+    }
 
     /**
      * Returns true if the supplied method contains any line number information
