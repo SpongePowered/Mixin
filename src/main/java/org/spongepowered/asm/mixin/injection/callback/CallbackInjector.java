@@ -594,8 +594,8 @@ public class CallbackInjector extends Injector {
         printer.kv("Target Max LOCALS", callback.target.getMaxLocals());
         printer.kv("Initial Frame Size", callback.frameSize);
         printer.kv("Callback Name", this.info.getMethodName());
-        printer.kv("Instruction", "%s %s", callback.node.getClass().getSimpleName(),
-                Bytecode.getOpcodeName(callback.node.getCurrentTarget().getOpcode()));
+        printer.kv("Instruction", "%s %s", callback.node.getCurrentTarget().getClass().getSimpleName(),
+                Bytecode.describeNode(callback.node.getCurrentTarget()));
         printer.hr();
         if (callback.locals.length > callback.frameSize) {
             printer.add("  %s  %20s  %s", "LOCAL", "TYPE", "NAME");
