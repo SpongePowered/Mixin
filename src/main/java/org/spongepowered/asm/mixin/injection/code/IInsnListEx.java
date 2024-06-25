@@ -102,4 +102,33 @@ public interface IInsnListEx {
      * @return the special node or null if not available
      */
     public abstract AbstractInsnNode getSpecialNode(SpecialNodeType type);
+
+    
+    /**
+     * Get whether this list is decorated with the specified key
+     * 
+     * @param key meta key
+     * @return true if the specified decoration exists
+     */
+    public abstract boolean hasDecoration(String key);
+    
+    /**
+     * Get the specified decoration
+     * 
+     * @param key meta key
+     * @param <V> value type
+     * @return decoration value or null if absent
+     */
+    public abstract <V> V getDecoration(String key);
+    
+    /**
+     * Get the specified decoration or default value
+     * 
+     * @param key meta key
+     * @param defaultValue default value to return
+     * @param <V> value type
+     * @return decoration value or default value if absent
+     */
+    public abstract <V> V getDecoration(String key, V defaultValue);
+
 }

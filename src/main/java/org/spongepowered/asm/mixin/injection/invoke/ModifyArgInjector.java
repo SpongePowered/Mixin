@@ -111,7 +111,7 @@ public class ModifyArgInjector extends InvokeInjector {
     protected void injectAtInvoke(Target target, InjectionNode node) {
         MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
         Type[] args = Type.getArgumentTypes(methodNode.desc);
-        ArgOffsets offsets = node.getDecoration(ArgOffsets.KEY);
+        ArgOffsets offsets = node.<ArgOffsets>getDecoration(ArgOffsets.KEY);
         if (offsets != null) {
             args = offsets.apply(args);
         }

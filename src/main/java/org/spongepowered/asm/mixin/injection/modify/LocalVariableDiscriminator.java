@@ -102,7 +102,7 @@ public class LocalVariableDiscriminator {
         }
         
         /**
-         * Injection info 
+         * Injection info
          */
         final InjectionInfo info;
         

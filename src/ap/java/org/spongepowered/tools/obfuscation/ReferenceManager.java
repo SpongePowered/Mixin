@@ -27,14 +27,11 @@ package org.spongepowered.tools.obfuscation;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.net.URI;
 import java.util.List;
 
 import javax.annotation.processing.Filer;
-import javax.annotation.processing.FilerException;
 import javax.tools.FileObject;
-import javax.tools.JavaFileManager.Location;
 import javax.tools.StandardLocation;
 
 import org.spongepowered.asm.mixin.injection.selectors.ITargetSelectorRemappable;

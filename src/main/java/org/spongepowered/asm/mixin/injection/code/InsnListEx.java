@@ -24,8 +24,12 @@
  */
 package org.spongepowered.asm.mixin.injection.code;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.spongepowered.asm.mixin.injection.struct.Constructor;
+import org.spongepowered.asm.mixin.injection.struct.IChainedDecoration;
 import org.spongepowered.asm.mixin.injection.struct.Target;
 import org.spongepowered.asm.mixin.transformer.struct.Initialiser;
 import org.spongepowered.asm.mixin.transformer.struct.Initialiser.InjectionMode;
@@ -40,7 +44,12 @@ public class InsnListEx extends InsnListReadOnly implements IInsnListEx {
     /**
      * The target method
      */
-    private final Target target;
+    protected final Target target;
+    
+    /**
+     * Decorations on this insn list
+     */
+    private Map<String, Object> decorations;
 
     public InsnListEx(Target target) {
         super(target.insns);
@@ -153,6 +162,89 @@ public class InsnListEx extends InsnListReadOnly implements IInsnListEx {
             default:
                 return null;
         }
+    }
+    
+    /**
+     * Decorate this insn list with arbitrary metadata for use by
+     * context-specific injection points
+     * 
+     * @param key meta key
+     * @param value meta value
+     * @param <V> value type
+     * @return fluent
+     */
+    @SuppressWarnings("unchecked")
+    public <V> InsnListEx decorate(String key, V value) {
+        if (this.decorations == null) {
+            this.decorations = new HashMap<String, Object>();
+        }
+        if (value instanceof IChainedDecoration<?> && this.decorations.containsKey(key)) {
+            Object previous = this.decorations.get(key);
+            if (previous.getClass().equals(value.getClass())) {
+                ((IChainedDecoration<Object>)value).replace(previous);
+            }
+        }
+        this.decorations.put(key, value);
+        return this;
+    }
+    
+    /**
+     * Strip a specific decoration from this list if the decoration exists
+     * 
+     * @param key meta key
+     * @return fluent
+     */
+    public InsnListEx undecorate(String key) {
+        if (this.decorations != null) {
+            this.decorations.remove(key);
+        }
+        return this;
+    }
+    
+    /**
+     * Strip all decorations from this list
+     * 
+     * @return fluent
+     */
+    public InsnListEx undecorate() {
+        this.decorations = null;
+        return this;
+    }
+    
+    /**
+     * Get whether this list is decorated with the specified key
+     * 
+     * @param key meta key
+     * @return true if the specified decoration exists
+     */
+    public boolean hasDecoration(String key) {
+        return this.decorations != null && this.decorations.get(key) != null;
+    }
+    
+    /**
+     * Get the specified decoration
+     * 
+     * @param key meta key
+     * @param <V> value type
+     * @return decoration value or null if absent
+     */
+    @SuppressWarnings("unchecked")
+    public <V> V getDecoration(String key) {
+        return (V) (this.decorations == null ? null : this.decorations.get(key));
+    }
+    
+    /**
+     * Get the specified decoration or default value
+     * 
+     * @param key meta key
+     * @param defaultValue default value to return
+     * @param <V> value type
+     * @return decoration value or null if absent
+     */
+    @SuppressWarnings("unchecked")
+    public <V> V getDecoration(String key, V defaultValue) {
+        V existing = (V) (this.decorations == null ? null : this.decorations.get(key));
+        return existing != null ? existing : defaultValue;
     }
 
 }
