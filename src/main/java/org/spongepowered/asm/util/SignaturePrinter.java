@@ -148,14 +148,15 @@ public class SignaturePrinter {
      */
     public void setModifiers(MethodNode method) {
         String returnType = SignaturePrinter.getTypeName(Type.getReturnType(method.desc), false, this.fullyQualified);
+        String staticType = (method.access & Opcodes.ACC_STATIC) != 0 ? "static " : "";
         if ((method.access & Opcodes.ACC_PUBLIC) != 0) {
-            this.setModifiers("public " + returnType);
+            this.setModifiers("public " + staticType + returnType);
         } else if ((method.access & Opcodes.ACC_PROTECTED) != 0) {
-            this.setModifiers("protected " + returnType);
+            this.setModifiers("protected " + staticType + returnType);
         } else if ((method.access & Opcodes.ACC_PRIVATE) != 0) {
-            this.setModifiers("private " + returnType);
+            this.setModifiers("private " + staticType + returnType);
         } else {
-            this.setModifiers(returnType);
+            this.setModifiers(staticType + returnType);
         }
     }
     

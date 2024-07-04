@@ -36,6 +36,7 @@ import java.util.Set;
 
 import org.spongepowered.asm.logging.Level;
 import org.spongepowered.asm.logging.ILogger;
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -50,6 +51,7 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.MixinEnvironment.Option;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -2002,7 +2004,8 @@ public final class ClassInfo {
         ClassInfo info = ClassInfo.cache.get(className);
         if (info == null) {
             try {
-                ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(className);
+                int flags = MixinEnvironment.getCurrentEnvironment().getOption(Option.CLASSREADER_EXPAND_FRAMES) ? ClassReader.EXPAND_FRAMES : 0;
+                ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(className, true, flags);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
                 ClassInfo.logger.catching(Level.TRACE, ex);

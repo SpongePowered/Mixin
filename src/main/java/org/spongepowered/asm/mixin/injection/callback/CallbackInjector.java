@@ -178,7 +178,7 @@ public class CallbackInjector extends Injector {
             List<String> argNames = null;
             
             if (locals != null) {
-                int baseArgIndex = CallbackInjector.this.isStatic() ? 0 : 1;
+                int baseArgIndex = target.isStatic ? 0 : 1;
                 argNames = new ArrayList<String>();
                 for (int l = 0; l <= locals.length; l++) {
                     if (l == this.frameSize) {
