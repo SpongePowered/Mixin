@@ -31,10 +31,41 @@ import org.objectweb.asm.Type;
  * results in a call to a method with the same arguments as the original
  * (replaced) call but offset by some fixed amount. Since ModifyArg and
  * ModifyArgs always assume the method args are on the top of the stack (which
- * they must be), this essentially results in just chopping off a fixed number
- * of arguments from the start of the method.
+ * they must be), this results in locating the original method args as as a
+ * contiguous "window" of arguments somewhere in the middle of the args as they
+ * exist at application time.
+ * 
+ * <p>Injectors which mutate the arguments of an invocation should apply this
+ * decoration to indicate the starting offset and size of the window which
+ * contains the original args.</p>
  */
 public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
+    
+    /**
+     * No-op arg offsets to be used when we just want unaltered arg offsets
+     */
+    private static class Default extends ArgOffsets {
+
+        public Default() {
+            super(0, 255);
+        }
+        
+        @Override
+        public int getArgIndex(int index) {
+            return index;
+        }
+        
+        @Override   
+        public Type[] apply(Type[] args) {
+            return args;
+        }
+
+    }
+    
+    /**
+     * Null offsets
+     */
+    public static ArgOffsets DEFAULT = new ArgOffsets.Default();
     
     /**
      * Decoration key for this decoration type 
@@ -42,7 +73,7 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     public static final String KEY = "argOffsets";
     
     /**
-     * The offset for the start of the args
+     * The offset for the start of the (original) args within the new args
      */
     private final int offset;
     

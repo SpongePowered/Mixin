@@ -160,6 +160,7 @@ public class RedirectInjector extends InvokeInjector {
     static class RedirectedInvokeData extends InjectorData {
         
         final MethodInsnNode node;
+        final boolean isStatic;
         final Type returnType;
         final Type[] targetArgs;
         final Type[] handlerArgs;
@@ -167,9 +168,10 @@ public class RedirectInjector extends InvokeInjector {
         RedirectedInvokeData(Target target, MethodInsnNode node) {
             super(target);
             this.node = node;
+            this.isStatic = node.getOpcode() == Opcodes.INVOKESTATIC;
             this.returnType = Type.getReturnType(node.desc);
             this.targetArgs = Type.getArgumentTypes(node.desc);
-            this.handlerArgs = node.getOpcode() == Opcodes.INVOKESTATIC
+            this.handlerArgs = this.isStatic
                     ? this.targetArgs
                     : ObjectArrays.concat(Type.getObjectType(node.owner), this.targetArgs);
         }
@@ -393,7 +395,7 @@ public class RedirectInjector extends InvokeInjector {
         Extension extraLocals = target.extendLocals().add(invoke.handlerArgs).add(1);
         Extension extraStack = target.extendStack().add(1); // Normally only need 1 extra stack pos to store target ref 
         int[] argMap = this.storeArgs(target, invoke.handlerArgs, insns, 0);
-        ArgOffsets offsets = new ArgOffsets(this.isStatic ? 0 : 1, invoke.targetArgs.length);
+        ArgOffsets offsets = new ArgOffsets(invoke.isStatic ? 0 : 1, invoke.targetArgs.length);
         if (invoke.captureTargetArgs > 0) {
             int argSize = Bytecode.getArgsSize(target.arguments, 0, invoke.captureTargetArgs);
             extraLocals.add(argSize);
@@ -405,7 +407,8 @@ public class RedirectInjector extends InvokeInjector {
         if (invoke.coerceReturnType && invoke.returnType.getSort() >= Type.ARRAY) {
             insns.add(new TypeInsnNode(Opcodes.CHECKCAST, invoke.returnType.getInternalName()));
         }
-        target.replaceNode(invoke.node, champion, insns).decorate(ArgOffsets.KEY, offsets);
+        target.replaceNode(invoke.node, champion, insns);
+        node.decorate(ArgOffsets.KEY, offsets);
         extraLocals.apply();
         extraStack.apply();
     }

@@ -440,6 +440,22 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      *      of the supplied args array
      */
     public int[] generateArgMap(Type[] args, int start) {
+        return this.generateArgMap(args, start, false);
+    }
+    
+    /**
+     * Generate an array containing local indexes for the specified args,
+     * returns an array of identical size to the supplied array with an
+     * allocated local index in each corresponding position
+     * 
+     * @param args Argument types
+     * @param start starting index
+     * @param fresh allocate fresh locals only, do not reuse existing argmap
+     *      slots
+     * @return array containing a corresponding local arg index for each member
+     *      of the supplied args array
+     */
+    public int[] generateArgMap(Type[] args, int start, boolean fresh) {
         if (this.argMapVars == null) {
             this.argMapVars = new ArrayList<Integer>();
         }
@@ -447,7 +463,7 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
         int[] argMap = new int[args.length];
         for (int arg = start, index = 0; arg < args.length; arg++) {
             int size = args[arg].getSize();
-            argMap[arg] = this.allocateArgMapLocal(index, size);
+            argMap[arg] = fresh ? this.allocateLocals(size) : this.allocateArgMapLocal(index, size);
             index += size;
         }
         return argMap;
@@ -744,10 +760,10 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param location Instruction to replace
      * @param insn Instruction to replace with
      */
-    public InjectionNode replaceNode(AbstractInsnNode location, AbstractInsnNode insn) {
+    public void replaceNode(AbstractInsnNode location, AbstractInsnNode insn) {
         this.insns.insertBefore(location, insn);
         this.insns.remove(location);
-        return this.injectionNodes.replace(location, insn);
+        this.injectionNodes.replace(location, insn);
     }
     
     /**
@@ -758,10 +774,10 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param champion Instruction which notionally replaces the original insn
      * @param insns Instructions to actually insert (must contain champion)
      */
-    public InjectionNode replaceNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList insns) {
+    public void replaceNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList insns) {
         this.insns.insertBefore(location, insns);
         this.insns.remove(location);
-        return this.injectionNodes.replace(location, champion);
+        this.injectionNodes.replace(location, champion);
     }
     
     /**
@@ -773,10 +789,10 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param before Instructions to actually insert (must contain champion)
      * @param after Instructions to insert after the specified location
      */
-    public InjectionNode wrapNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList before, InsnList after) {
+    public void wrapNode(AbstractInsnNode location, AbstractInsnNode champion, InsnList before, InsnList after) {
         this.insns.insertBefore(location, before);
         this.insns.insert(location, after);
-        return this.injectionNodes.replace(location, champion);
+        this.injectionNodes.replace(location, champion);
     }
 
     /**
@@ -786,9 +802,9 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * @param location Instruction to replace
      * @param insns Instructions to replace with
      */
-    public InjectionNode replaceNode(AbstractInsnNode location, InsnList insns) {
+    public void replaceNode(AbstractInsnNode location, InsnList insns) {
         this.insns.insertBefore(location, insns);
-        return this.removeNode(location);
+        this.removeNode(location);
     }
     
     /**
@@ -797,9 +813,9 @@ public class Target implements Comparable<Target>, Iterable<AbstractInsnNode> {
      * 
      * @param insn instruction to remove
      */
-    public InjectionNode removeNode(AbstractInsnNode insn) {
+    public void removeNode(AbstractInsnNode insn) {
         this.insns.remove(insn);
-        return this.injectionNodes.remove(insn);
+        this.injectionNodes.remove(insn);
     }
 
     /**

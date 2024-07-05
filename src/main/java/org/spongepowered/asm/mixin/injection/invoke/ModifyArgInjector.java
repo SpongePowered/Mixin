@@ -111,20 +111,25 @@ public class ModifyArgInjector extends InvokeInjector {
     protected void injectAtInvoke(Target target, InjectionNode node) {
         MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
         Type[] args = Type.getArgumentTypes(methodNode.desc);
-        ArgOffsets offsets = node.<ArgOffsets>getDecoration(ArgOffsets.KEY);
-        if (offsets != null) {
-            args = offsets.apply(args);
-        }
+        ArgOffsets offsets = node.<ArgOffsets>getDecoration(ArgOffsets.KEY, ArgOffsets.DEFAULT);
+        boolean nested = node.hasDecoration(ArgOffsets.KEY);
+        Type[] originalArgs = offsets.apply(args);
         
-        int argIndex = this.findArgIndex(target, args);
+        int argIndex = offsets.getArgIndex(this.findArgIndex(target, originalArgs));
+        int baseIndex = offsets.getArgIndex(0);
         
         InsnList insns = new InsnList();
         Extension extraLocals = target.extendLocals();
         
         if (this.singleArgMode) {
-            this.injectSingleArgHandler(target, extraLocals, args, argIndex, insns);
+            this.injectSingleArgHandler(target, extraLocals, args, argIndex, insns, nested);
         } else {
-            this.injectMultiArgHandler(target, extraLocals, args, argIndex, insns);
+            if (!Arrays.equals(originalArgs, this.methodArgs)) {
+                throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
+                        + Bytecode.getDescriptor(originalArgs) + ", expected " + Bytecode.getDescriptor(this.methodArgs));
+            }
+
+            this.injectMultiArgHandler(target, extraLocals, args, baseIndex, argIndex, insns, nested);
         }
         
         target.insns.insertBefore(methodNode, insns);
@@ -135,8 +140,9 @@ public class ModifyArgInjector extends InvokeInjector {
     /**
      * Inject handler opcodes for a single arg handler
      */
-    private void injectSingleArgHandler(Target target, Extension extraLocals, Type[] args, int argIndex, InsnList insns) {
-        int[] argMap = this.storeArgs(target, args, insns, argIndex);
+    private void injectSingleArgHandler(Target target, Extension extraLocals, Type[] args, int argIndex, InsnList insns, boolean nested) {
+        int[] argMap = target.generateArgMap(args, argIndex, nested);
+        this.storeArgs(target, args, insns, argMap, argIndex, args.length, null, null);
         this.invokeHandlerWithArgs(args, insns, argMap, argIndex, argIndex + 1);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
         extraLocals.add((argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize());
@@ -145,15 +151,13 @@ public class ModifyArgInjector extends InvokeInjector {
     /**
      * Inject handler opcodes for a multi arg handler
      */
-    private void injectMultiArgHandler(Target target, Extension extraLocals, Type[] args, int argIndex, InsnList insns) {
-        if (!Arrays.equals(args, this.methodArgs)) {
-            throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
-                    + Bytecode.getDescriptor(args) + ", expected " + Bytecode.getDescriptor(this.methodArgs));
-        }
-
-        int[] argMap = this.storeArgs(target, args, insns, 0);
-        this.pushArgs(args, insns, argMap, 0, argIndex);
-        this.invokeHandlerWithArgs(args, insns, argMap, 0, args.length);
+    private void injectMultiArgHandler(Target target, Extension extraLocals, Type[] args, int baseIndex, int argIndex, InsnList insns,
+            boolean nested) {
+        int[] argMap = target.generateArgMap(args, baseIndex, nested);
+        int[] handlerArgMap = baseIndex == 0 ? argMap : Arrays.copyOfRange(argMap, baseIndex, baseIndex + this.methodArgs.length);
+        this.storeArgs(target, args, insns, argMap, baseIndex, args.length, null, null);
+        this.pushArgs(args, insns, argMap, baseIndex, argIndex);
+        this.invokeHandlerWithArgs(this.methodArgs, insns, handlerArgMap, 0, this.methodArgs.length);
         this.pushArgs(args, insns, argMap, argIndex + 1, args.length);
         extraLocals.add((argMap[argMap.length - 1] - target.getMaxLocals()) + args[args.length - 1].getSize());
     }
