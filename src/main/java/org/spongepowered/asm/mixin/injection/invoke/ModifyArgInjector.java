@@ -115,6 +115,11 @@ public class ModifyArgInjector extends InvokeInjector {
         boolean nested = node.hasDecoration(ArgOffsets.KEY);
         Type[] originalArgs = offsets.apply(args);
         
+        if (originalArgs.length == 0) {
+            throw new InvalidInjectionException(this.info, "@ModifyArg injector " + this + " targets a method invocation "
+                    + ((MethodInsnNode)node.getOriginalTarget()).name + "()" + Type.getReturnType(methodNode.desc) + " with no arguments!");
+        }
+
         int argIndex = offsets.getArgIndex(this.findArgIndex(target, originalArgs));
         int baseIndex = offsets.getStartIndex();
         
@@ -125,7 +130,7 @@ public class ModifyArgInjector extends InvokeInjector {
             this.injectSingleArgHandler(target, extraLocals, args, argIndex, insns, nested);
         } else {
             if (!Arrays.equals(originalArgs, this.methodArgs)) {
-                throw new InvalidInjectionException(this.info, "@ModifyArg method " + this + " targets a method with an invalid signature "
+                throw new InvalidInjectionException(this.info, "@ModifyArg injector " + this + " targets a method with an invalid signature "
                         + Bytecode.getDescriptor(originalArgs) + ", expected " + Bytecode.getDescriptor(this.methodArgs));
             }
 

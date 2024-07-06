@@ -88,7 +88,7 @@ public class ModifyArgsInjector extends InvokeInjector {
         
         if (originalArgs.length == 0) {
             throw new InvalidInjectionException(this.info, "@ModifyArgs injector " + this + " targets a method invocation "
-                    + methodNode.name + targetMethodDesc + " with no arguments!");
+                    + ((MethodInsnNode)node.getOriginalTarget()).name + targetMethodDesc + " with no arguments!");
         }
         
         String clArgs = this.argsClassGenerator.getArgsClass(targetMethodDesc, this.info.getMixin().getMixin()).getName();

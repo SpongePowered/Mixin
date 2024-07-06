@@ -95,9 +95,6 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * @param length length
      */
     public ArgOffsets(int offset, int length) {
-        if (length < 1) {
-            throw new IllegalArgumentException("Invalid length " + length + " for ArgOffsets window");
-        }
         this.offset = offset;
         this.length = length;
     }
@@ -121,10 +118,17 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     }
     
     /**
-     * Get the size of this mapping collection
+     * Get the size of the offset window
      */
     public int getLength() {
         return this.length;
+    }
+    
+    /**
+     * Get whether this argument offset window is empty
+     */
+    public boolean isEmpty() {
+        return this.length == 0;
     }
     
     /**
@@ -142,7 +146,7 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * @return the offset index for the end of the window (inclusive)
      */
     public int getEndIndex() {
-        return this.getArgIndex(this.length - 1);
+        return this.isEmpty() ? this.getStartIndex() : this.getArgIndex(this.length - 1);
     }
     
     /**
