@@ -95,8 +95,19 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
      * @param length length
      */
     public ArgOffsets(int offset, int length) {
+        if (length < 1) {
+            throw new IllegalArgumentException("Invalid length " + length + " for ArgOffsets window");
+        }
         this.offset = offset;
         this.length = length;
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return String.format("ArgOffsets[start=%d(%d),length=%d]", this.offset, this.getStartIndex(), this.length);
     }
 
     /* (non-Javadoc)
@@ -117,12 +128,45 @@ public class ArgOffsets implements IChainedDecoration<ArgOffsets> {
     }
     
     /**
+     * Compute the argument index for the start of the window (offet 0)
+     * 
+     * @return the offset index for the start of the window (inclusive)
+     */
+    public int getStartIndex() {
+        return this.getArgIndex(0);
+    }
+    
+    /**
+     * Compute the argument index for the end of the window (offset length)
+     * 
+     * @return the offset index for the end of the window (inclusive)
+     */
+    public int getEndIndex() {
+        return this.getArgIndex(this.length - 1);
+    }
+    
+    /**
      * Compute the argument index for the specified new index
      * 
      * @param index The new index to compute
      * @return The original index based on this mapping
      */
     public int getArgIndex(int index) {
+        return this.getArgIndex(index, false);
+    }
+        
+    /**
+     * Compute the argument index for the specified new index
+     * 
+     * @param index The new index to compute
+     * @param mustBeInWindow Throw an exception if the requested index exceeds
+     *      the length of the defined window
+     * @return The original index based on this mapping
+     */
+    public int getArgIndex(int index, boolean mustBeInWindow) {
+        if (mustBeInWindow && index > this.length) {
+            throw new IndexOutOfBoundsException("The specified arg index " + index + " is greater than the window size " + this.length);
+        }
         int offsetIndex = index + this.offset;
         return this.next != null ? this.next.getArgIndex(offsetIndex) : offsetIndex;
     }

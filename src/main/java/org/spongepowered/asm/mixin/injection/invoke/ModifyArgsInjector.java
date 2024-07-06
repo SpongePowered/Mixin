@@ -78,17 +78,17 @@ public class ModifyArgsInjector extends InvokeInjector {
      */
     @Override
     protected void injectAtInvoke(Target target, InjectionNode node) {
-        MethodInsnNode targetMethod = (MethodInsnNode)node.getCurrentTarget();
-        Type[] args = Type.getArgumentTypes(targetMethod.desc);
-        ArgOffsets offsets = node.<ArgOffsets>getDecoration(ArgOffsets.KEY);
-        if (offsets != null) {
-            args = offsets.apply(args);
-        }
-        String targetMethodDesc = Type.getMethodDescriptor(Type.getReturnType(targetMethod.desc), args);
+        MethodInsnNode methodNode = (MethodInsnNode)node.getCurrentTarget();
+        Type[] args = Type.getArgumentTypes(methodNode.desc);
+        ArgOffsets offsets = node.<ArgOffsets>getDecoration(ArgOffsets.KEY, ArgOffsets.DEFAULT);
+        Type[] originalArgs = offsets.apply(args);
+        int endIndex = offsets.getArgIndex(originalArgs.length);
         
-        if (args.length == 0) {
+        String targetMethodDesc = Type.getMethodDescriptor(Type.getReturnType(methodNode.desc), originalArgs);
+        
+        if (originalArgs.length == 0) {
             throw new InvalidInjectionException(this.info, "@ModifyArgs injector " + this + " targets a method invocation "
-                    + targetMethod.name + targetMethodDesc + " with no arguments!");
+                    + methodNode.name + targetMethodDesc + " with no arguments!");
         }
         
         String clArgs = this.argsClassGenerator.getArgsClass(targetMethodDesc, this.info.getMixin().getMixin()).getName();
@@ -97,6 +97,7 @@ public class ModifyArgsInjector extends InvokeInjector {
         InsnList insns = new InsnList();
         Extension extraStack = target.extendStack().add(1);
         
+        int[] afterWindowArgMap = this.storeArgs(target, args, insns, endIndex);
         this.packArgs(insns, clArgs, targetMethodDesc);
         
         if (withArgs) {
@@ -105,10 +106,11 @@ public class ModifyArgsInjector extends InvokeInjector {
         }
         
         this.invokeHandler(insns);
-        this.unpackArgs(insns, clArgs, args);
-        
+        this.unpackArgs(insns, clArgs, originalArgs);
+        this.pushArgs(args, insns, afterWindowArgMap, endIndex, args.length);
+
         extraStack.apply();
-        target.insns.insertBefore(targetMethod, insns);
+        target.insns.insertBefore(methodNode, insns);
     }
 
     private boolean verifyTarget(Target target) {

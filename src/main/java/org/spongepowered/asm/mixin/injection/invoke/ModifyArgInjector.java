@@ -116,7 +116,7 @@ public class ModifyArgInjector extends InvokeInjector {
         Type[] originalArgs = offsets.apply(args);
         
         int argIndex = offsets.getArgIndex(this.findArgIndex(target, originalArgs));
-        int baseIndex = offsets.getArgIndex(0);
+        int baseIndex = offsets.getStartIndex();
         
         InsnList insns = new InsnList();
         Extension extraLocals = target.extendLocals();
