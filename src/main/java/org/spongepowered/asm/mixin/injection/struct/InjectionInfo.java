@@ -318,7 +318,7 @@ public abstract class InjectionInfo extends SpecialMethodInfo implements ISliceC
      * Injector order, parsed from either the injector annotation or uses the
      * default for this injection type 
      */
-    private int order;
+    private int order = InjectorOrder.DEFAULT;
     
     /**
      * ctor
