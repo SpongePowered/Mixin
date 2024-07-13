@@ -113,10 +113,6 @@ public class Constructor extends Target {
 
         for (AbstractInsnNode initialiserInsn : initialiser.getInsns()) {
             if (initialiserInsn.getOpcode() == Opcodes.PUTFIELD) {
-                FieldInsnNode fieldInsn = (FieldInsnNode)initialiserInsn;
-                if (!fieldInsn.owner.equals(this.targetName)) {
-                    continue;
-                }
                 this.mixinInitialisedFields.add(Constructor.fieldKey((FieldInsnNode)initialiserInsn));
             }
         }
