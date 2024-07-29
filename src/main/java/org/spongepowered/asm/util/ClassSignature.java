@@ -1144,7 +1144,7 @@ public class ClassSignature {
             
             other.conform(typeVars);
         } catch (IllegalStateException ex) {
-            // Oh crap, this means we couldn't conform one or more type params!
+            // Oh crap, this means we couldn't confirm one or more type params!
             ex.printStackTrace();
             return;
         }
