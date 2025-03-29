@@ -204,8 +204,11 @@ public final class MixinService {
         Iterator<IMixinService> iter = this.serviceLoader.iterator();
         List<String> badServices = new ArrayList<String>();
         int brokenServiceCount = 0;
-        while (iter.hasNext()) {
+        while (true) {
             try {
+                if (!iter.hasNext()) {
+                    break;
+                }
                 IMixinService service = iter.next();
                 if (this.bootedServices.contains(service.getClass().getName())) {
                     MixinService.logBuffer.debug("MixinService [{}] was successfully booted in {}", service.getName(),
