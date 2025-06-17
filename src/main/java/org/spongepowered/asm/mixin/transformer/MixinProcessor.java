@@ -251,7 +251,7 @@ class MixinProcessor {
         for (String target : unhandled) {
             try {
                 auditLogger.info("Force-loading class {}", target);
-                this.service.getClassProvider().findClass(target, true);
+                this.service.getClassProvider().findClass(target, false);
             } catch (ClassNotFoundException ex) {
                 auditLogger.error("Could not force-load " + target, ex);
             }
