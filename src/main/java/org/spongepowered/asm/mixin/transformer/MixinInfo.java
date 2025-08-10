@@ -60,6 +60,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import org.spongepowered.asm.mixin.injection.Surrogate;
 import org.spongepowered.asm.mixin.injection.struct.InjectionInfo;
+import org.spongepowered.asm.mixin.throwables.MixinException;
 import org.spongepowered.asm.mixin.transformer.ClassInfo.Method;
 import org.spongepowered.asm.mixin.transformer.ext.Extensions;
 import org.spongepowered.asm.mixin.transformer.throwables.InvalidMixinException;
@@ -1285,7 +1286,12 @@ class MixinInfo implements Comparable<MixinInfo>, IMixinInfo {
     MixinTargetContext createContextFor(TargetClassContext target) {
         MixinClassNode classNode = this.getClassNode(ClassReader.EXPAND_FRAMES);
         Section preTimer = this.profiler.begin("pre");
-        MixinTargetContext context = this.type.createPreProcessor(classNode).prepare(this.extensions).createContextFor(target);
+        MixinTargetContext context;
+        try {
+            context = this.type.createPreProcessor(classNode).prepare(this.extensions).createContextFor(target);
+        } catch (MixinException exception) {
+            throw new MixinException("An critical error was encountered during applying mixin class " + this.className, exception);
+        }
         preTimer.end();
         return context;
     }
