@@ -2004,7 +2004,7 @@ public final class ClassInfo {
         ClassInfo info = ClassInfo.cache.get(className);
         if (info == null) {
             try {
-                int flags = MixinEnvironment.getCurrentEnvironment().getOption(Option.CLASSREADER_EXPAND_FRAMES) ? ClassReader.EXPAND_FRAMES : 0;
+                int flags = MixinEnvironment.getCurrentEnvironment().getOption(Option.CLASSREADER_EXPAND_FRAMES) ? ClassReader.EXPAND_FRAMES | ClassReader.SKIP_DEBUG : ClassReader.SKIP_DEBUG;
                 ClassNode classNode = MixinService.getService().getBytecodeProvider().getClassNode(className, true, flags);
                 info = new ClassInfo(classNode);
             } catch (Exception ex) {
