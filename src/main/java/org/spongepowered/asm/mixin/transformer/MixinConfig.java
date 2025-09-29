@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.io.Closeables;
 import org.spongepowered.asm.logging.Level;
 import org.spongepowered.asm.logging.ILogger;
 import org.spongepowered.asm.launch.MixinInitialisationError;
@@ -1381,13 +1382,15 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
      * @return new Config
      */
     static Config create(String configFile, MixinEnvironment outer, IMixinConfigSource source) {
+        InputStreamReader reader = null;
         try {
             IMixinService service = MixinService.getService();
             InputStream resource = service.getResourceAsStream(configFile);
             if (resource == null) {
                 throw new IllegalArgumentException(String.format("The specified resource '%s' was invalid or could not be read", configFile));
             }
-            MixinConfig config = new Gson().fromJson(new InputStreamReader(resource), MixinConfig.class);
+            reader = new InputStreamReader(resource);
+            MixinConfig config = new Gson().fromJson(reader, MixinConfig.class);
             if (config.onLoad(service, configFile, outer, source)) {
                 return config.getHandle();
             }
@@ -1396,6 +1399,8 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             throw ex;
         } catch (Exception ex) {
             throw new IllegalArgumentException(String.format("The specified resource '%s' was invalid or could not be read", configFile), ex);
+        } finally {
+            Closeables.closeQuietly(reader);
         }
     }
 
