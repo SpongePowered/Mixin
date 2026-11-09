@@ -66,19 +66,25 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
      * Passthrough mapper, used as failover 
      */
     public static final ReferenceMapper DEFAULT_MAPPER = new ReferenceMapper(true, "invalid");
+    
+    /**
+     * Refmaps which were already read by {@link #readShared}, keyed by
+     * resource path
+     */
+    private static final Map<String, ReferenceMapper> cache = new HashMap<String, ReferenceMapper>();
 
     /**
      * "Default" mappings. The set of mappings to use as "default" is specified
      * by the AP. Each entry is keyed by the owning mixin, with the value map
      * containing the actual remappings for each owner
      */
-    private final Map<String, Map<String, String>> mappings = Maps.newHashMap();
+    private final Map<String, Map<String, String>> mappings;
     
     /**
      * All mapping sets, keyed by environment type, eg. "notch", "searge". The
      * format of each map within this map is the same as for {@link #mappings}
      */
-    private final Map<String, Map<String, Map<String, String>>> data = Maps.newHashMap();
+    private final Map<String, Map<String, Map<String, String>>> data;
     
     /**
      * True if this refmap cannot be written. Only true for the
@@ -111,6 +117,21 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
     private ReferenceMapper(boolean readOnly, String resource) {
         this.readOnly = readOnly;
         this.resource = resource;
+        this.mappings = Maps.newHashMap();
+        this.data = Maps.newHashMap();
+    }
+    
+    /**
+     * Create a refmap which shares the mappings of an existing refmap
+     * but has its own context, used by {@link #readShared}.
+     * 
+     * @param shared refmap to share mappings with
+     */
+    private ReferenceMapper(ReferenceMapper shared) {
+        this.readOnly = shared.readOnly;
+        this.resource = shared.resource;
+        this.mappings = shared.mappings;
+        this.data = shared.data;
     }
     
     /* (non-Javadoc)
@@ -277,6 +298,26 @@ public final class ReferenceMapper implements IReferenceMapper, Serializable {
         }
         
         return ReferenceMapper.DEFAULT_MAPPER;
+    }
+    
+    /**
+     * Read a refmap from the specified resource, reusing cached mappings if
+     * available. The returned refmap object has its own context but shares its
+     * mappings.
+     * 
+     * @param resourcePath Resource to read from
+     * @return new refmap or {@link #DEFAULT_MAPPER} if reading fails
+     */
+    public static ReferenceMapper readShared(String resourcePath) {
+        ReferenceMapper shared = ReferenceMapper.cache.get(resourcePath);
+        if (shared == null) {
+            shared = ReferenceMapper.read(resourcePath);
+            if (shared.isDefault()) {
+                return shared;
+            }
+            ReferenceMapper.cache.put(resourcePath, shared);
+        }
+        return new ReferenceMapper(shared);
     }
     
     /**
