@@ -807,7 +807,7 @@ final class MixinConfig implements Comparable<MixinConfig>, IMixinConfig {
             }
         }
         
-        this.refMapper = ReferenceMapper.read(this.refMapperConfig);
+        this.refMapper = ReferenceMapper.readShared(this.refMapperConfig);
         
         if (!suppressRefMapWarning && this.refMapper.isDefault() && !this.env.getOption(Option.DISABLE_REFMAP)) {
             this.logger.warn("Reference map '{}' for {} could not be read. If this is a development environment you can ignore this message",
